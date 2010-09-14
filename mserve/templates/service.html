@@ -1,0 +1,28 @@
+
+{% extends "base.html" %}
+
+{% block title %}MServe Service{% endblock %}
+
+{% block heading%}{{service.name}}{% endblock %}
+
+{% block content %}
+
+<h3>Data Stagers</h3>
+<ul>
+    {% for stager in stagers %}
+        <li>{{ stager.name }}&nbsp;<a href="/m/stager/{{ stager.id }}/">{{ stager.id }}</a></li>
+    {% endfor %}
+</ul>
+{% if not stagers %}
+    <ul><li>Empty</li></ul>
+{% endif %}
+<h3>Create New Stager</h3>
+
+<form action="../../api/stager/" method="post" enctype="multipart/form-data" >
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+
+{% endblock %}
+
+

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}MServe Container{% endblock %}
+
+{% block heading%}{{container.name}}{% endblock %}
+
+{% block content %}
+
+<h3>Data Services</h3>
+<ul>
+    {% for service in services %}
+        <li>{{ service.name }}&nbsp;<a href="/m/service/{{ service.id }}/">{{ service.id }}</a></li>
+    {% endfor %}
+</ul>
+{% if not services %}
+    <ul><li>Empty</li></ul>
+{% endif %}
+<h3>Create New Service</h3>
+
+<form action="../../api/service/" method="post">
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+
+{% endblock %}

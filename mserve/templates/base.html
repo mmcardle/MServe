@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <style type="text/css" media="screen">
+body {
+
+    background: #e7e7e7;
+    font-family: sans-serif;
+    font-size: 11pt;
+
+}
+
+h1,h2,h3,h4,h5,h6 {
+    color:#0000AA;
+}
+
+a, a:visited {
+    text-decoration: none;
+    border:none;
+    color:#AA0000;
+}
+a img {
+    border:none;
+}
+
+#sidebar {
+    vertical-align: top;
+    margin-top: 20px;
+    padding: 15px;
+
+}
+</style>
+    <link rel="stylesheet" href="style.css" />
+    <title>{% block title %}MServe{% endblock %}</title>
+</head>
+
+<body>
+    <h3>{% block heading %}MServe{% endblock %}</h3>
+    <table >
+        <tr>
+            <th id="sidebar">
+                {% block sidebar %}
+                <div><a href="/m/home/">Home</a></div>
+                <div><a href="/admin/">Admin</a></div>
+                {% endblock %}
+            </th>
+            <td>
+                {% block content %}{% endblock %}
+            </td>
+        </tr>
+
+    </table>
+</body>
+</html>

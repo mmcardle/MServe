@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}MServe Home{% endblock %}
+
+{% block content %}
+
+<h3>Containers</h3>
+<ul>
+    {% for hosting in hostingcontainers.all %}
+    <li>{{ hosting.name }}&nbsp;<a href="/m/container/{{ hosting.id }}/">{{ hosting.id }}</a></li>
+    {% endfor %}
+</ul>
+{% if not hostingcontainers %}
+<ul><li>Empty</li></ul>
+{% endif %}
+<h3>Create New Hosting Container</h3>
+<form action="../api/hosting/" method="post">
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+{% endblock %}
+
+
