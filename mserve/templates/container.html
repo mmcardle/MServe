@@ -17,7 +17,7 @@
 {% endif %}
 <h3>Create New Service</h3>
 
-<form action="../../api/service/" method="post">
+<form action="../../api/{{container.id}}/service/" method="post">
     {{ form.as_p }}
     <input type="submit" value="Submit" />
 </form>

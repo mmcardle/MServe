@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}MServe Authority{% endblock %}
+
+{% block heading%}{{auth.authname}}{% endblock %}
+
+
+{% block content %}
+
+<h3>Details</h3>
+<div class="auth">
+    <div class="authname">{{auth.authname}}</div>
+    {% for auth in auth.methods %}
+        <span class="method">{{auth}}</span>
+    {% endfor %}
+    <!--<div class="authid"><a href="/m/auth/{{auth.id}}" >{{auth.id}}</a></div>-->
+</div>
+
+<h3>Sub Authorities</h3>
+
+<div class="subauth">
+{% for auth in subauths %}
+        <div class="method">{{auth}} <a href="/m/auth/{{auth.id}}" >{{auth.id}}</a></div>
+{% endfor %}
+</div>
+
+{% if not subauths %}
+    <div>None</div>
+{% endif %}
+
+<h3>Create Sub Authority</h3>
+
+<form action="../../api/{{auth.id}}/subauth/" method="post">
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+
+
+{% block auths %}
+{% endblock auths %}
+
+
+{% endblock %}

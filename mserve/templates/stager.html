@@ -6,7 +6,15 @@
 
 {% block content %}
 
+<h3>Details</h3>
 <p>{{stager.file}}</p>
-<p><img title="{{stager.name}}" alt="{{stager.name}}" src="/m/media/{{stager.file}}" /></p>
+<p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/m/media/{{stager.file}}" /></p>
+
+<h3>Create Auth</h3>
+
+<form action="../../api/stager/{{stager.id}}/auth/" method="post" >
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
 
 {% endblock %}

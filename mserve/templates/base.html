@@ -2,6 +2,10 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+      google.load('visualization', '1', {packages: ['orgchart']});
+    </script>
     <style type="text/css" media="screen">
 body {
 
@@ -24,14 +28,33 @@ a img {
     border:none;
 }
 
+td {
+        vertical-align: top;
+}
+
 #sidebar {
     vertical-align: top;
     margin-top: 20px;
     padding: 15px;
 
 }
+
+.auth {
+    margin: 2px;
+}
+
+.authname {
+    padding:2px;
+    margin-top: 5px;
+    font-weight: bold;
+    font-size: 16px;
+}
+.method, .authid {
+    padding:6px;
+}
+
 </style>
-    <link rel="stylesheet" href="style.css" />
+    <!--<link rel="stylesheet" href="style.css" />-->
     <title>{% block title %}MServe{% endblock %}</title>
 </head>
 
@@ -39,14 +62,39 @@ a img {
     <h3>{% block heading %}MServe{% endblock %}</h3>
     <table >
         <tr>
-            <th id="sidebar">
+            <th id="sidebar" width="10%">
                 {% block sidebar %}
-                <div><a href="/m/home/">Home</a></div>
-                <div><a href="/admin/">Admin</a></div>
+                    <div><a href="/m/home/">Home</a></div>
+                    <div><a href="/admin/">Admin</a></div>
+                    <div><a href="/m/map/">Map</a></div>
                 {% endblock %}
             </th>
-            <td>
+            <td >
                 {% block content %}{% endblock %}
+
+            </td >
+            <td>
+                {% block auths %}
+                <h3>Auths</h3>
+
+                {% if auths %}
+                    
+                    {% for auth in auths %}
+                    <div class="auth">
+                        <div class="authname">{{auth.authname}}</div>
+                        {% for auth in auth.methods %}
+                            <span class="method">{{auth}}</span>
+                        {% endfor %}
+                        <div class="authid"><a href="/m/auth/{{auth.id}}" >{{auth.id}}</a></div>
+                    </div>
+                    {% endfor %}
+                    
+                {% endif %}
+
+                {% if not auths%}
+                    <div>None</div>
+                {% endif %}
+                {% endblock auths %}
             </td>
         </tr>
 

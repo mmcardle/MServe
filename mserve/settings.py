@@ -3,6 +3,16 @@
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    datefmt='%m-%d %H:%M',
+    #change as needed
+    filename='mserve.log',
+    filemode='a'
+)
+
 ADMINS = (
     # ('Your Name', 'your_email@domain.com'),
 )
@@ -72,7 +82,7 @@ TEMPLATE_DIRS = (
     # Change to where your chechout is
     "/home/mm/dev/pp-dataservice/mserve/templates",
     # Change to where the admin templates are
-    "/usr/lib/pymodules/python2.6/django/contrib/admin/templates/"
+    "/usr/lib/pymodules/python2.6/django/contrib/admin/templates/",
     
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
