@@ -32,7 +32,7 @@ class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
     model = HostingContainer
 
-    def create(self, request):
+    def create(self, request ,fmt):
         form = HostingContainerForm(request.POST) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
@@ -44,7 +44,13 @@ class HostingContainerHandler(BaseHandler):
             hostingcontainerauth.description = "Full access to the container"
             hostingcontainerauth.setmethods(methods)
             hostingcontainerauth.save()
-            return HttpResponseRedirect(base)
+
+            if fmt == "j" or fmt =="json":
+                return hostingcontainer
+            if fmt == "h" or fmt =="html":
+                return HttpResponseRedirect(base)
+            else:
+                return hostingcontainer
         else:
             return HttpResponse("<html>"+str(form)+"</html>")
 
@@ -52,7 +58,7 @@ class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = DataService
 
-    def create(self, request, containerid):
+    def create(self, request, containerid ,fmt):
         form = DataServiceForm(request.POST) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
@@ -61,7 +67,12 @@ class DataServiceHandler(BaseHandler):
             container = HostingContainer.objects.get(id=containerid)
             dataservice = DataService(name=name,container=container)
             dataservice.save()
-            return HttpResponseRedirect(container_base+containerid+"/")
+            if fmt == "j" or fmt =="json":
+                return dataservice
+            if fmt == "h" or fmt =="html":
+                return HttpResponseRedirect(container_base+containerid+"/")
+            else:
+                return dataservice
         else:
             return HttpResponse(form)
 
@@ -69,7 +80,7 @@ class DataStagerHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = DataStager
 
-    def create(self, request, serviceid):
+    def create(self, request, serviceid ,fmt):
         form = DataStagerForm(request.POST,request.FILES) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
@@ -90,7 +101,12 @@ class DataStagerHandler(BaseHandler):
             datastagerauth_monitor.description = "Collect usage reports"
             datastagerauth_monitor.save()
 
-            return HttpResponseRedirect(service_base+serviceid+"/")
+            if fmt == "j" or fmt =="json":
+                return datastager
+            if fmt == "h" or fmt =="html":
+                return HttpResponseRedirect(service_base+serviceid+"/")
+            else:
+                return datastager
         else:
             return HttpResponse("<html>"+str(form)+"</html>")
 
@@ -98,11 +114,11 @@ class DataStagerAuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = DataStagerAuth
     
-    def create(self, request, id):
+    def create(self, request, stagerid ,fmt):
         form = DataStagerAuthForm(request.POST) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
-            stagerid = id
+            id = str(stagerid)
             authname = form.cleaned_data['authname']
             methods_csv = form.cleaned_data['methods_csv']
             description= form.cleaned_data['description']
@@ -110,18 +126,24 @@ class DataStagerAuthHandler(BaseHandler):
 
             methods_encoded = base64.b64encode(pickle.dumps(methodslist))
 
-            stager = DataStager.objects.get(id=stagerid)
+            stager = DataStager.objects.get(id=id)
             datastagerauth = DataStagerAuth(stager=stager,authname=authname,methods_encoded=methods_encoded,description=description)
             datastagerauth.save()
-            return HttpResponseRedirect(stager_base+id+"/")
+
+            if fmt == "j" or fmt =="json":
+                return datastagerauth
+            if fmt == "h" or fmt =="html":
+                return HttpResponseRedirect(stager_base+id+"/")
+            else:
+                return datastagerauth
         else:
             return HttpResponse("<html>"+str(form)+"</html>")
 
-class SubAuthHandler(BaseHandler):
+class AuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = SubAuth
 
-    def create(self, request, auth):
+    def create(self, request, auth, fmt):
         form = SubAuthForm(request.POST) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
@@ -140,17 +162,24 @@ class SubAuthHandler(BaseHandler):
             join = JoinAuth(parent=parent,child=child)
             join.save()
 
-            return HttpResponseRedirect(auth_base+str(auth)+"/")
+            if fmt == "j" or fmt =="json":
+                return subauth
+            if fmt == "h" or fmt =="html":
+                return HttpResponseRedirect(auth_base+str(auth)+"/")
+            else:
+                return subauth
+            
         else:
             return HttpResponse("<html>"+str(form)+"</html>")
 
-
-class AuthHandler(BaseHandler):
-    allowed_methods = ('GET')
-    model = SubAuth
-
     def read(self, request, id):
 
+
+        '''
+        Have to add the case where this could be a hosting container or data
+        service auth.
+        '''
+        
         try:
             stagerauth = DataStagerAuth.objects.get(id=id)
             logging.info("%s a DataStagerAuth" % (id))
@@ -204,7 +233,7 @@ class AuthHandler(BaseHandler):
                 done = True
 
         if dsAuth is None:
-            return HttpResponseBadRequest("Bad Request")
+            return HttpResponseBadRequest("Bad Request %s " % (id))
 
         if "get" in methods_intersection:
             return HttpResponseRedirect("/m/"+dsAuth.stager.file.url)

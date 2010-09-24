@@ -63,7 +63,6 @@ class Row:
     parent = ""
     tip = ""
     def __init__(self,name,parent,value,tip):
-        print "good"
         self.name = name
         self.value = value
         self.tip = tip
