@@ -1,23 +1,40 @@
-"""
-This file demonstrates two different styles of tests (one doctest and one
-unittest). These will both pass when you run "manage.py test".
-
-Replace these with more appropriate tests for your application.
-"""
-
 from django.test import TestCase
 
 class SimpleTest(TestCase):
-    def test_basic_addition(self):
-        """
-        Tests that 1 + 1 always equals 2.
-        """
-        self.failUnlessEqual(1 + 1, 2)
+    def test_objects(self):
+        from dataservice.models import HostingContainer
+        from dataservice.models import DataService
+        from dataservice.models import DataStager
+        from dataservice.models import DataStagerAuth
+        from dataservice.models import SubAuth
 
-__test__ = {"doctest": """
-Another way to test that 1 + 1 is equal to 2.
+        container = HostingContainer(name="HostingContainer1")
+        container.save()
+        container2 = HostingContainer.objects.get(id=container.id)
+        self.failUnlessEqual(container, container2)
+        
+        service = DataService(name="DataService",container=container)
+        service.save()
+        service2 = DataService.objects.get(id=service.id)
+        self.failUnlessEqual(service, service2)
+        
+        stager = DataStager(name="DataStager",service=service)
+        stager.save()
+        stager2 = DataStager.objects.get(id=stager.id)
+        self.failUnlessEqual(stager, stager2)
 
->>> 1 + 1 == 2
-True
-"""}
+        datastagerauth = DataStagerAuth(authname="DataStagerAuth",stager=stager)
+        datastagerauth.save()
+        datastagerauth2 = DataStagerAuth.objects.get(id=datastagerauth.id)
+        self.failUnlessEqual(datastagerauth, datastagerauth2)
 
+        subauth = SubAuth(authname="SubAuth")
+        subauth.save()
+        subauth2 = SubAuth.objects.get(id=subauth.id)
+        self.failUnlessEqual(subauth, subauth2)
+
+        subauth.delete()
+        datastagerauth.delete()
+        stager.delete()
+        service.delete()
+        container.delete()
