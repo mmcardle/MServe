@@ -8,6 +8,7 @@ admin.autodiscover()
 from piston.resource import Resource
 from dataservice.handlers import HostingContainerHandler
 from dataservice.handlers import DataServiceHandler
+from dataservice.handlers import DataServiceHandlerEx
 from dataservice.handlers import DataStagerHandler
 from dataservice.handlers import DataStagerAuthHandler
 from dataservice.handlers import AuthHandler
@@ -21,6 +22,7 @@ managedresources_container_handler = Resource(ManagedResourcesContainerHandler)
 managedresources_service_handler = Resource(ManagedResourcesServiceHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
+dataservice_handler_ex = Resource(DataServiceHandlerEx)
 datastager_handler = Resource(DataStagerHandler)
 datastager_auth_handler = Resource(DataStagerAuthHandler)
 auth_handler = Resource(AuthHandler)
@@ -42,8 +44,9 @@ urlpatterns = patterns('',
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
 
     # Container Methods
-    url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/', managedresources_container_handler),
-    url(r'^containerapi/managementproperty/(?P<containerid>[^/]+)/', managementproperty_handler),
+    url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_handler_ex),
+    url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/$', managedresources_container_handler),
+    url(r'^containerapi/managementproperty/(?P<containerid>[^/]+)/$', managementproperty_handler),
 
     # Service Methods
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/', managedresources_service_handler),

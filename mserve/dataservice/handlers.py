@@ -39,7 +39,7 @@ class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
     model = HostingContainer
     exclude = ()
-
+    
     def read(self, request, containerid):
         container = HostingContainer.objects.get(id=containerid)
         if request.META["HTTP_ACCEPT"] == "application/json":
@@ -50,7 +50,10 @@ class HostingContainerHandler(BaseHandler):
         auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
         services = DataService.objects.filter(container=container.id)
         properties = ManagementProperty.objects.filter(container=container.id)
+
         form = DataServiceForm()
+        form.fields['cid'].initial = container.id
+
         managementpropertyform = ManagementPropertyForm()
         dict = {}
         dict["container"] = container
@@ -74,9 +77,19 @@ class HostingContainerHandler(BaseHandler):
             hostingcontainerauth.setmethods(methods)
             hostingcontainerauth.save()
 
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return hostingcontainer
+
             return redirect('/container/'+str(hostingcontainer.id))
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
+
+
+def create_data_service(request,containerid,name):
+    container = HostingContainer.objects.get(id=containerid)
+    dataservice = DataService(name=name,container=container)
+    dataservice.save()
+    return dataservice
 
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST')
@@ -103,10 +116,30 @@ class DataServiceHandler(BaseHandler):
         form = DataServiceForm(request.POST) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
+            containerid = form.cleaned_data['cid']
             name = form.cleaned_data['name']
-            container = form.cleaned_data['container']
-            dataservice = DataService(name=name,container=container)
-            dataservice.save()
+            dataservice = create_data_service(request,containerid,name)
+
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return dataservice
+
+            return redirect('/service/'+str(dataservice.id))
+        else:
+            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+
+class DataServiceHandlerEx(DataServiceHandler):
+
+    def create(self, request, containerid):
+        print "DataServiceHandlerEx"
+        form = DataServiceForm(request.POST) # A form bound to the POST data
+        if form.is_valid(): # All validation rules pass
+            # Process the data in form.cleaned_data
+            name = form.cleaned_data['name']
+            dataservice = create_data_service(request,containerid,name)
+
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return dataservice
+
             return redirect('/service/'+str(dataservice.id))
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
@@ -168,6 +201,9 @@ class DataStagerHandler(BaseHandler):
             datastagerauth_monitor.setmethods(methods_monitor)
             datastagerauth_monitor.description = "Collect usage reports"
             datastagerauth_monitor.save()
+
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return datastager
 
             return redirect('/stager/'+str(datastager.id))
         else:
@@ -311,6 +347,9 @@ class DataStagerAuthHandler(BaseHandler):
 
             datastagerauth = DataStagerAuth(stager=stager,authname=authname,methods_encoded=methods_encoded,description=description)
             datastagerauth.save()
+            
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return datastagerauth
 
             return redirect('/auth/'+str(datastagerauth.id))
         else:
