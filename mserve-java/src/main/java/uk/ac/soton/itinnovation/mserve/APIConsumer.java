@@ -35,7 +35,7 @@ public class APIConsumer {
 
             getServices(id);
 
-            makeServicePOST(id);
+            makeServiceURL(id);
             makeServiceREST(id);
 
         } catch (JSONException ex) {
@@ -47,21 +47,23 @@ public class APIConsumer {
         }
     }
 
-    public static void makeServicePOST(String id) throws MalformedURLException {
+    public static void makeServiceURL(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/containerapi/makeserviceinstance/" + id  +"/");
-        makeService(url,id);
+        String content = "name=ServiceFromJava";
+        makeService(url,id,content);
     }
 
     public static void makeServiceREST(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/service/" );
-        makeService(url,id);
+        String content = "name=ServiceFromJava&cid="+id;
+        makeService(url,id,content);
     }
 
-    public static void makeService(URL url, String id) {
+    public static void makeService(URL url, String id, String content) {
         try {
             
 
-            String output = doPostToURL(url,id);
+            String output = doPostToURL(url,id, content);
 
             JSONObject arr = new JSONObject(output);
 
@@ -119,7 +121,7 @@ public class APIConsumer {
         }
     }
 
-    public static String doPostToURL(URL url, String id) {
+    public static String doPostToURL(URL url, String id, String content) {
         try {
 
             URLConnection connection;
@@ -139,7 +141,6 @@ public class APIConsumer {
             connection.setRequestProperty("Accept", "application/json");
             // Send POST output.
             printout = new DataOutputStream(connection.getOutputStream());
-            String content = "name=ServiceFromJava&cid="+id;
             printout.writeBytes(content);
             printout.flush();
             printout.close();
