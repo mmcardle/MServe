@@ -2,12 +2,15 @@
 
 {% block title %}MServe Authority{% endblock %}
 
-{% block heading%}{{auth.authname}}{% endblock %}
-
+{% block heading%}{{stager.name}}{% endblock %}
 
 {% block content %}
 
 <h3>Details</h3>
+<p>{{stager.name}}</p>
+<p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/files/media/{{stager.file}}" /></p>
+
+
 <div class="auth">
     <div class="authname">{{auth.authname}}</div>
     {% for auth in auth.methods %}
@@ -16,28 +19,14 @@
     <!--<div class="authid"><a href="/m/auth/{{auth.id}}" >{{auth.id}}</a></div>-->
 </div>
 
-<h3>Sub Authorities</h3>
+<h3>Create Sub Authority </h3>
 
-<div class="subauth">
-{% for auth in subauths %}
-        <div class="method">{{auth}} <a href="/m/auth/{{auth.id}}" >{{auth.id}}</a></div>
-{% endfor %}
-</div>
-
-{% if not subauths %}
-    <div>None</div>
-{% endif %}
-
-<h3>Create Sub Authority</h3>
-
-<form action="../../api/makeauth/{{auth.id}}/h/" method="post">
+<form action="/auth/" method="post">
     {{ form.as_p }}
+    <input type="hidden" name="parent" value="{{ auth.id }}" />
     <input type="submit" value="Submit" />
 </form>
 
-
-{% block auths %}
-{% endblock auths %}
 
 
 {% endblock %}

@@ -4,6 +4,7 @@ from mserve.dataservice.models import DataService
 from mserve.dataservice.models import DataServiceAuth
 from mserve.dataservice.models import DataStager
 from mserve.dataservice.models import DataStagerAuth
+from mserve.dataservice.models import ManagementProperty
 from mserve.dataservice.models import JoinAuth
 from mserve.dataservice.models import SubAuth
 from mserve.dataservice.forms import HostingContainerForm
@@ -12,6 +13,7 @@ from mserve.dataservice.forms import DataStagerForm
 from mserve.dataservice.forms import DataStagerAuthForm
 from mserve.dataservice.forms import SubAuthForm
 from mserve.dataservice.forms import UploadFileForm
+from mserve.dataservice.forms import ManagementPropertyForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 
@@ -27,12 +29,17 @@ def container(request,id):
     container = HostingContainer.objects.get(id=id)
     auths = HostingContainerAuth.objects.filter(hostingcontainer=container)
     services = DataService.objects.filter(container=container)
+    properties = ManagementProperty.objects.filter(container=container)
     form = DataServiceForm()
+    managementpropertyform = ManagementPropertyForm()
     dict = {}
     dict["container"] = container
     dict["services"] = services
+    dict["properties"] = properties
     dict["form"] = form
+    dict["managementpropertyform"] = managementpropertyform
     dict["auths"] = auths
+    dict["error"] = request.GET["error"]
     return render_to_response('container.html', dict)
 
 def service(request,id):

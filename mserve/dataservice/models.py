@@ -30,6 +30,11 @@ class HostingContainer(NamedBase):
             self.id = random_id()
         super(HostingContainer, self).save()
 
+class ManagementProperty(models.Model):
+    container = models.ForeignKey(HostingContainer)
+    property   = models.CharField(primary_key=True, max_length=200)
+    value = models.CharField(max_length=200)
+
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
     status = models.CharField(max_length=200)
@@ -40,7 +45,7 @@ class DataService(NamedBase):
 
 class DataStager(NamedBase):
     service = models.ForeignKey(DataService)
-    file = models.FileField(upload_to="stagers/%Y/%m/%d")
+    file = models.FileField(upload_to="%Y/%m/%d")
     def save(self):
         if not self.id:
             self.id = random_id()

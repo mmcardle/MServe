@@ -10,7 +10,7 @@
 <h3>Data Stagers</h3>
 <ul>
     {% for stager in stagers %}
-        <li>{{ stager.name }}&nbsp;<a href="/m/stager/{{ stager.id }}/">{{ stager.id }}</a></li>
+        <li>{{ stager.name }}&nbsp;<a href="/stager/{{ stager.id }}/">{{ stager.id }}</a></li>
     {% endfor %}
 </ul>
 {% if not stagers %}
@@ -18,7 +18,7 @@
 {% endif %}
 <h3>Create New Stager</h3>
 
-<form action="../../api/makestager/{{service.id}}/h/" method="post" enctype="multipart/form-data" >
+<form action="/stager/" method="post" enctype="multipart/form-data" >
     {{ form.as_p }}
     <input type="submit" value="Submit" />
 </form>

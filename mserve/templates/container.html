@@ -9,7 +9,7 @@
 <h3>Data Services</h3>
 <ul>
     {% for service in services %}
-        <li>{{ service.name }}&nbsp;<a href="/m/service/{{ service.id }}/">{{ service.id }}</a></li>
+        <li>{{ service.name }}&nbsp;<a href="/service/{{ service.id }}/">{{ service.id }}</a></li>
     {% endfor %}
 </ul>
 {% if not services %}
@@ -17,9 +17,36 @@
 {% endif %}
 <h3>Create New Service</h3>
 
-<form action="../../api/makeserviceinstance/{{container.id}}/h/" method="post">
+<form action="/service/" method="post">
     {{ form.as_p }}
     <input type="submit" value="Submit" />
 </form>
 
+
+
 {% endblock %}
+
+{% block rightcontent %}
+
+<h3>Management Properties</h3>
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Actions</th></tr>
+    {% for property in properties%}
+    <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
+            <form style="display: inline" action="/service/" method="post">
+                <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
+            </form>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+
+<h5>Set Management Property</h5>
+
+<form action="/containerapi/managementproperty/{{container.id}}/" method="POST">
+    {{ managementpropertyform.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+
+{% endblock rightcontent %}

@@ -64,16 +64,16 @@ td {
         <tr>
             <th id="sidebar" width="10%">
                 {% block sidebar %}
-                    <div><a href="/m/home/">Home</a></div>
+                    <div><a href="/home/">Home</a></div>
                     <div><a href="/admin/">Admin</a></div>
-                    <div><a href="/m/map/">Map</a></div>
+                    <div><a href="/map/">Map</a></div>
                 {% endblock %}
             </th>
             <td >
                 {% block content %}{% endblock %}
-
             </td >
             <td>
+                {% block rightcontent %}{% endblock %}
                 {% block auths %}
                 <h3>Auths</h3>
 
@@ -85,7 +85,7 @@ td {
                         {% for auth in auth.methods %}
                             <span class="method">{{auth}}</span>
                         {% endfor %}
-                        <div class="authid"><a href="/m/auth/{{auth.id}}" >{{auth.id}}</a></div>
+                        <div class="authid"><a href="/auth/{{auth.id}}" >{{auth.id}}</a></div>
                     </div>
                     {% endfor %}
                     
