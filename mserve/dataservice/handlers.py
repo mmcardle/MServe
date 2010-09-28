@@ -11,6 +11,7 @@ from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
 from dataservice.forms import HostingContainerForm
 from dataservice.forms import DataServiceForm
+from dataservice.forms import DataServiceURLForm
 from dataservice.forms import DataStagerForm
 from dataservice.forms import DataStagerAuthForm
 from dataservice.forms import SubAuthForm
@@ -127,11 +128,10 @@ class DataServiceHandler(BaseHandler):
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
-class DataServiceHandlerEx(DataServiceHandler):
+class DataServiceURLHandler(DataServiceHandler):
 
     def create(self, request, containerid):
-        print "DataServiceHandlerEx"
-        form = DataServiceForm(request.POST) # A form bound to the POST data
+        form = DataServiceURLForm(request.POST) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
             name = form.cleaned_data['name']

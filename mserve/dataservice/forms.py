@@ -18,6 +18,11 @@ class ManagementPropertyForm(ModelForm):
         exclude=['container']
         model = ManagementProperty
 
+class DataServiceURLForm(ModelForm):
+    class Meta:
+        exclude=['id','status','container']
+        model = DataService
+
 class DataServiceForm(ModelForm):
     cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     
