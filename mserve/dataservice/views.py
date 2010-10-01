@@ -12,7 +12,6 @@ from mserve.dataservice.forms import DataServiceForm
 from mserve.dataservice.forms import DataStagerForm
 from mserve.dataservice.forms import DataStagerAuthForm
 from mserve.dataservice.forms import SubAuthForm
-from mserve.dataservice.forms import UploadFileForm
 from mserve.dataservice.forms import ManagementPropertyForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response

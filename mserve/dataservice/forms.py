@@ -30,14 +30,17 @@ class DataServiceForm(ModelForm):
         exclude=['id','status','container']
         model = DataService
 
-class DataStagerForm(ModelForm):
+class DataStagerURLForm(ModelForm):
     class Meta:
-        exclude=['name','id','status']
+        exclude=['name','id','service']
         model = DataStager
 
-class UploadFileForm(forms.Form):
-    title = forms.CharField(max_length=50)
-    file  = forms.FileField()
+class DataStagerForm(ModelForm):
+    sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+
+    class Meta:
+        exclude=['name','id','service']
+        model = DataStager
 
 class DataStagerAuthForm(ModelForm):
     methods_csv = forms.CharField(max_length=200)
