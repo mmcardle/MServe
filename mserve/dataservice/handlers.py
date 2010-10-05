@@ -1,11 +1,11 @@
-from django.http import HttpResponseBadRequest
-from django.http import HttpResponseForbidden
 from piston.handler import BaseHandler
 from dataservice.models import HostingContainer
 from dataservice.models import HostingContainerAuth
 from dataservice.models import DataService
 from dataservice.models import DataStager
 from dataservice.models import DataStagerAuth
+from dataservice.models import Usage
+from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
@@ -20,11 +20,14 @@ from dataservice.forms import ManagementPropertyForm
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.http import HttpResponseForbidden
+from django.http import HttpResponseBadRequest
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 from django.core import serializers
+
+import usage_store as usage_store
 
 import pickle
 import base64
@@ -53,6 +56,8 @@ class HostingContainerHandler(BaseHandler):
         services = DataService.objects.filter(container=container.id)
         properties = ManagementProperty.objects.filter(container=container.id)
 
+        usage = usage_store.container_usage(container.id)
+
         form = DataServiceForm()
         form.fields['cid'].initial = container.id
 
@@ -64,6 +69,7 @@ class HostingContainerHandler(BaseHandler):
         dict["form"] = form
         dict["managementpropertyform"] = managementpropertyform
         dict["auths"] = auths
+        dict["usage"] = usage
         return render_to_response('container.html', dict)
 
     def create(self, request):
@@ -71,13 +77,7 @@ class HostingContainerHandler(BaseHandler):
         if form.is_valid(): # All validation rules pass
             # Process the data in form.cleaned_data
             name = form.cleaned_data['name']
-            hostingcontainer = HostingContainer(name=name)
-            hostingcontainer.save()
-            hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="owner")
-            methods = ["makeServiceInstance","getServiceMetadata","getDependencies","getProvides","setResourceLookup","getUsageSummary"]
-            hostingcontainerauth.description = "Full access to the container"
-            hostingcontainerauth.setmethods(methods)
-            hostingcontainerauth.save()
+            hostingcontainer = create_hosting(request,name)
 
             if request.META["HTTP_ACCEPT"] == "application/json":
                 return hostingcontainer
@@ -87,11 +87,56 @@ class HostingContainerHandler(BaseHandler):
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 
+def create_hosting(request,name):
+    hostingcontainer = HostingContainer(name=name)
+    hostingcontainer.save()
+    hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="owner")
+    methods = ["makeServiceInstance","getServiceMetadata","getDependencies","getProvides","setResourceLookup","getUsageSummary"]
+    hostingcontainerauth.description = "Full access to the container"
+    hostingcontainerauth.setmethods(methods)
+    hostingcontainerauth.save()
+
+    usage_store.container_usage(hostingcontainer.id)
+
+    return hostingcontainer
+
 def create_data_service(request,containerid,name):
     container = HostingContainer.objects.get(id=containerid)
     dataservice = DataService(name=name,container=container)
     dataservice.save()
+
+    usage_store.service_usage(dataservice.id)
+
+    numservices = len(DataService.objects.filter(container=container))
+    usage_store.record(containerid,usage_store.metric_service,numservices)
+
     return dataservice
+
+def create_data_stager(request,serviceid,file):
+    service = DataService.objects.get(id=serviceid)
+    if file==None:
+        datastager = DataStager(name="Empty File",service=service)
+    else:
+        datastager = DataStager(name=file.name,service=service,file=file)
+    datastager.save()
+    datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
+    methods_owner = ["get", "put", "post", "delete"]
+    datastagerauth_owner.setmethods(methods_owner)
+    datastagerauth_owner.description = "Owner of the data"
+    datastagerauth_owner.save()
+
+    datastagerauth_monitor = DataStagerAuth(stager=datastager,authname="monitor")
+    methods_monitor = ["getUsageSummary"]
+    datastagerauth_monitor.setmethods(methods_monitor)
+    datastagerauth_monitor.description = "Collect usage reports"
+    datastagerauth_monitor.save()
+
+    usage_store.stager_usage(datastager.id)
+
+    numstagers = len(DataStager.objects.filter(service=service))
+    usage_store.record(serviceid,usage_store.metric_stager,numstagers)
+
+    return datastager
 
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST')
@@ -107,11 +152,13 @@ class DataServiceHandler(BaseHandler):
 
     def render(self, service, form=DataStagerForm()):
         stagers = DataStager.objects.filter(service=service)
+        usage = usage_store.service_usage(service.id)
         form.fields['sid'].initial = service.id
         dict = {}
         dict["service"] = service
         dict["stagers"] = stagers
         dict["form"] = form
+        dict["usage"] = usage
         return render_to_response('service.html', dict)
 
     def create(self, request):
@@ -129,7 +176,7 @@ class DataServiceHandler(BaseHandler):
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
-class DataServiceURLHandler(DataServiceHandler):
+class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
         form = DataServiceURLForm(request.POST) # A form bound to the POST data
@@ -145,23 +192,6 @@ class DataServiceURLHandler(DataServiceHandler):
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
-def create_data_stager(request,serviceid,file):
-    service = DataService.objects.get(id=serviceid)
-    datastager = DataStager(name=file.name,service=service,file=file)
-    datastager.save()
-    datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
-    methods_owner = ["get", "put", "post", "delete"]
-    datastagerauth_owner.setmethods(methods_owner)
-    datastagerauth_owner.description = "Owner of the data"
-    datastagerauth_owner.save()
-
-    datastagerauth_monitor = DataStagerAuth(stager=datastager,authname="monitor")
-    methods_monitor = ["getUsageSummary"]
-    datastagerauth_monitor.setmethods(methods_monitor)
-    datastagerauth_monitor.description = "Collect usage reports"
-    datastagerauth_monitor.save()
-    return datastager
-
 class DataStagerHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = DataStager
@@ -169,17 +199,25 @@ class DataStagerHandler(BaseHandler):
     
     def read(self, request, id):
         stager = DataStager.objects.get(pk=id)
+        base = NamedBase.objects.get(pk=id)
+
         if request.META["HTTP_ACCEPT"] == "application/json":
             return stager
         return self.render(stager)
 
     def render(self, stager):
+        base = NamedBase.objects.get(pk=stager.id)
+        usage = usage_store.stager_usage(stager.id)
         auths = DataStagerAuth.objects.filter(stager=stager)
         form = DataStagerAuthForm()
+        print stager.file
         dict = {}
+        if stager.file == '' or stager.file == None:
+            dict["altfile"] = "/files/media/empty.png"
         dict["stager"] = stager
         dict["form"] = form
         dict["auths"] = auths
+        dict["usage"] = usage
         return render_to_response('stager.html', dict)
 
     def render_partial(self, stager, auth, show=False):
@@ -192,19 +230,25 @@ class DataStagerHandler(BaseHandler):
         form = SubAuthForm()
         dict = {}
         dict["stager"] = stager
+        if stager.file == '' or stager.file == None:
+            dict["altfile"] = "/files/media/empty.png"
         if not show:
-            stager.file = "/forbidden.png"
+            stager.file = None
+            dict["altfile"] = "/files/media/forbidden.png"
+    
         dict["form"] = form
         dict["auths"] = subauths
-        return render_to_response('auth.html', dict)
+        print dict
+        return render_to_response('stager.html', dict)
 
     def create(self, request):
-        print "DataStagerHandler create"
         form = DataStagerForm(request.POST,request.FILES) # A form bound to the POST data
         if form.is_valid(): # All validation rules pass
-            print "DataStagerHandler valid form"
             # Process the data in form.cleaned_data
-            file = request.FILES['file']
+            if request.FILES.has_key('file'):
+                file = request.FILES['file']
+            else:
+                file = None
             serviceid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
             datastager = create_data_stager(request, serviceid, file)
@@ -214,13 +258,9 @@ class DataStagerHandler(BaseHandler):
 
             return redirect('/stager/'+str(datastager.id)+"/")
         else:
-            print "DataStagerHandler invalid form %s " % (form)
-            print "request FILES  %s" % (request.FILES)
-            #print "request %s" % (request)
-            return HttpResponse(form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
-class DataStagerURLHandler(DataStagerHandler):
+class DataStagerURLHandler(BaseHandler):
 
     def create(self, request, serviceid):
         form = DataStagerURLForm(request.POST,request.FILES) # A form bound to the POST data

@@ -16,12 +16,30 @@ from mserve.dataservice.forms import ManagementPropertyForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 
+from django.http import HttpResponse
+
+import usage_store as usage_store
+
+class Sleeper(object):
+
+    def main(self, request, length):
+        import time
+        sleeptime = int(length)
+        time.sleep(sleeptime)
+        return HttpResponse("Sleep for %s"%sleeptime)
+
+sleeper = Sleeper()
+sleep = sleeper.main
+
+
 def home(request):
     form = HostingContainerForm()
     hostings = HostingContainer.objects.all()
+    usagesummary = usage_store.usage_summary()
     dict = {}
     dict["hostingcontainers"] = hostings
     dict["form"] = form
+    dict["usagesummary"] = usagesummary
     return render_to_response('home.html', dict)
 
 def container(request,id):

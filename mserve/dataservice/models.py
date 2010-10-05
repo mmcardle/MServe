@@ -8,6 +8,36 @@ ID_FIELD_LENGTH = 200
 def random_id():
     return str(uuid.uuid4())
 
+class Usage(models.Model):
+    base = models.ForeignKey('NamedBase')
+    created = models.DateTimeField(auto_now_add=True,null=True)
+    metric = models.CharField(max_length=4096)
+    value  = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+
+    def __unicode__(self):
+        return "%s created=%s value=%s " % (self.metric,self.created,self.value);
+
+class UsageRate(models.Model):
+    base       = models.ForeignKey('NamedBase')
+    current    = models.DateTimeField(auto_now=True) # When the current rate was reported
+    metric     = models.CharField(primary_key=True, max_length=4096) 
+    rate       = models.DecimalField(max_digits=20,decimal_places=10,default=0) # The current rate
+    usageSoFar = models.DecimalField(max_digits=20,decimal_places=10,default=0) # Cumulative unreported usage before that point
+
+    def __unicode__(self):
+        return "%s time=%s value=%s " % (self.metric,self.time,self.value);
+
+class UsageSummary(models.Model):
+    metric = models.CharField(primary_key=True, max_length=4096)
+    n      = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+    sum    = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+    min    = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+    max    = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+    sums   = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+
+    def __unicode__(self):
+        return "%s {n=%s,sum=%s,min=%s,max=%s,sums=%s}" % (self.metric,self.n,self.sum,self.min,self.max,self.sums);
+
 class Base(models.Model):
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
 
@@ -17,14 +47,15 @@ class Base(models.Model):
 class NamedBase(Base):
     name = models.CharField(max_length=200)
 
-    class Meta:
-        abstract = True
+    #class Meta:
+        #abstract = True
 
     def __unicode__(self):
         return self.name;
 
 class HostingContainer(NamedBase):
     status = models.CharField(max_length=200)
+
     def save(self):
         if not self.id:
             self.id = random_id()
@@ -45,7 +76,7 @@ class DataService(NamedBase):
 
 class DataStager(NamedBase):
     service = models.ForeignKey(DataService)
-    file = models.FileField(upload_to="%Y/%m/%d")
+    file = models.FileField(upload_to="%Y/%m/%d",blank=True,null=True)
     def save(self):
         if not self.id:
             self.id = random_id()

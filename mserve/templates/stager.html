@@ -8,7 +8,13 @@
 
 <h3>Details</h3>
 <p>{{stager.name}}</p>
-<p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/files/media/{{stager.file}}" /></p>
+
+{% if stager.file %}
+    <p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/files/media/{{stager.file}}" /></p>
+{% endif %}
+{% if not stager.file %}
+    <p><img  title="No File" alt="No File" src="{{altfile}}" /></p>
+{% endif %}
 
 <h3>Create Auth</h3>
 

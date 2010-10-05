@@ -52,6 +52,12 @@ td {
 .method, .authid {
     padding:6px;
 }
+.table_usage th {
+    text-align: left;
+}
+.table_usage td {
+    text-align: center;
+}
 
 </style>
     <!--<link rel="stylesheet" href="style.css" />-->
@@ -95,6 +101,52 @@ td {
                     <div>None</div>
                 {% endif %}
                 {% endblock auths %}
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td colspan="2">
+                <h3>Usage</h3>
+                {%block usage %}
+                {% if usage %}
+                    <table class="table_usage" cellpadding="5" cellspacing="5">
+                        <tr><th align="left">Metric</th><td>Time</td><td>Value</td></tr>
+                        {% for usage in usage%}
+                            <tr>
+                                <th>{{usage.metric}}</th>
+                                <td>{{usage.created}}</td>
+                                <td>{{usage.value}}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+
+                {% if not usage %}
+                    <div>None</div>
+                {% endif %}
+
+                <h3>UsageSummary</h3>
+                {% if usagesummary %}
+                    <table class="table_usage" cellpadding="5" cellspacing="5">
+                        <tr><th align="left">Metric</th><td>Num</td><td>Sum</td><td>Min</td><td>Max</td><td>Sums</td></tr>
+                        {% for usagesummary in usagesummary %}
+                            <tr>
+                                <th>{{usagesummary.metric}}</th>
+                                <td>{{usagesummary.n}}</td>
+                                <td>{{usagesummary.sum}}</td>
+                                <td>{{usagesummary.min}}</td>
+                                <td>{{usagesummary.max}}</td>
+                                <td>{{usagesummary.sums}}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+
+                {% if not usagesummary %}
+                    <div>None</div>
+                {% endif %}
+
+                {%endblock usage %}
             </td>
         </tr>
 

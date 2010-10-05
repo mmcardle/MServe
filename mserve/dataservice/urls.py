@@ -31,6 +31,8 @@ auth_handler = Resource(AuthHandler)
 
 urlpatterns = patterns('',
 
+    (r'^sleep/(?P<length>[^/]+)/',  'dataservice.views.sleep'),
+
     # REST Methods for POST
     url(r'^container/$', hosting_handler),
     url(r'^service/$', dataservice_handler),

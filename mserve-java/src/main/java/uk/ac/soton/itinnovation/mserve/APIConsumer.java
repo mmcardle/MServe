@@ -1,12 +1,9 @@
 package uk.ac.soton.itinnovation.mserve;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,8 +12,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,7 +19,6 @@ import org.json.JSONObject;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.MultipartPostMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.multipart.FilePart;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
@@ -35,13 +29,13 @@ public class APIConsumer {
 
     private static String protocol = "http://";
     private static String host = "localhost:8000";
-    private static File file = new File("/home/mm/images/lock.png");
+    private static File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
 
     public static void main(String[] args) {
         try {
 
             String path = "/container/";
-            String resource = "2b341f65-a736-479b-848a-2ea55c048799";
+            String resource = "216be7ae-d6e9-4dce-991b-3d8499cb56b0";
             URL containerurl = new URL(protocol + host + path + resource);
 
             String output = getOutputFromURL(containerurl);
@@ -58,13 +52,13 @@ public class APIConsumer {
 
             String stagerid1 = makeStagerREST(serviceid1);
 
-            System.out.println("New Stager form REST" + stagerid1);
+            System.out.println("New Stager from REST" + stagerid1);
+
+            String emptystagerid1 = makeEmptyStagerREST(serviceid1);
+
+            System.out.println("New Empty Stager from REST" + emptystagerid1);
 
             getStagers(serviceid1);
-
-            //deleteStager(stagerid1);
-
-            //deleteService(serviceid1);
 
             String serviceid2 = makeServiceREST(id);
 
@@ -75,6 +69,10 @@ public class APIConsumer {
             getStagers(serviceid2);
 
             System.out.println("New Stager from URL " + stagerid2);
+
+            //deleteStager(stagerid1);
+
+            //deleteService(serviceid1);
 
             //deleteStager(stagerid2);
 
@@ -120,7 +118,6 @@ public class APIConsumer {
     public static String makeService(URL url, String id, String content) {
         try {
             
-
             String output = doPostToURL(url,id, content);
 
             JSONObject ob = new JSONObject(output);
@@ -146,6 +143,17 @@ public class APIConsumer {
         }
     }
 
+    public static String  makeEmptyStagerREST(String id) throws MalformedURLException {
+        try {
+            String url = new String(protocol + host + "/stager/");
+            String json = doFilePostToREST(url, id, null);
+            JSONObject ob = new JSONObject(json);
+            return ob.getString("id");
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
     public static String  makeStagerREST(String id) throws MalformedURLException {
         try {
             String url = new String(protocol + host + "/stager/");
@@ -162,10 +170,17 @@ public class APIConsumer {
             HttpClient client = new HttpClient();
             PostMethod filePost = new PostMethod(url);
             filePost.setRequestHeader("Accept", "application/json");
-            Part[] parts = {
-                new StringPart("sid", id),
-                new FilePart("file", f)
-            };
+            Part[] parts = null;
+            if(f!=null){
+                parts = new Part[]{
+                    new StringPart("sid", id),
+                    new FilePart("file", f)
+                };
+            }else{
+                parts = new Part[]{
+                    new StringPart("sid", id),
+                };
+            }
             filePost.setRequestEntity(
                     new MultipartRequestEntity(parts, filePost.getParams()));
 
