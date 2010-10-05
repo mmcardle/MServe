@@ -20,6 +20,7 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.multipart.FilePart;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
@@ -30,12 +31,13 @@ public class APIConsumer {
     private static String protocol = "http://";
     private static String host = "localhost:8000";
     private static File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
+    private static File file2 = new File("/home/mm/Pictures/muppits/DSC_0669.jpg");
 
     public static void main(String[] args) {
         try {
 
             String path = "/container/";
-            String resource = "216be7ae-d6e9-4dce-991b-3d8499cb56b0";
+            String resource = "e6e13661-c277-4ea9-ba45-0306f7e290e6";
             URL containerurl = new URL(protocol + host + path + resource);
 
             String output = getOutputFromURL(containerurl);
@@ -55,6 +57,9 @@ public class APIConsumer {
             System.out.println("New Stager from REST" + stagerid1);
 
             String emptystagerid1 = makeEmptyStagerREST(serviceid1);
+            
+            putToEmptyStagerREST(emptystagerid1);
+            putToEmptyStagerURL(emptystagerid1);
 
             System.out.println("New Empty Stager from REST" + emptystagerid1);
 
@@ -99,6 +104,28 @@ public class APIConsumer {
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public static String putToEmptyStagerURL(String id) throws MalformedURLException {
+        try {
+            URL url = new URL(protocol + host + "/stagerapi/update/" + id  +"/");
+            String json = doFilePutToURL(url.toString(), id, file2);
+            JSONObject ob = new JSONObject(json);
+            return ob.getString("id");
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public static String putToEmptyStagerREST(String id) throws MalformedURLException {
+        try {
+            URL url = new URL(protocol + host + "/stager/");
+            String json = doFilePutToURL(url.toString(), id, file2);
+            JSONObject ob = new JSONObject(json);
+            return ob.getString("id");
+        } catch (JSONException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -161,6 +188,39 @@ public class APIConsumer {
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
         } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public static String doFilePutToURL(String url, String id, File f) {
+        try{
+            HttpClient client = new HttpClient();
+            PutMethod filePost = new PutMethod(url);
+            filePost.setRequestHeader("Accept", "application/json");
+            Part[] parts = {
+                new StringPart("sid", id),
+                new FilePart("file", f)
+            };
+            filePost.setRequestEntity(
+                    new MultipartRequestEntity(parts, filePost.getParams()));
+
+            client.executeMethod(filePost);
+
+            InputStream stream = filePost.getResponseBodyAsStream();
+
+            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+            String output = "";
+            String str;
+            while (null != ((str = buf.readLine()))) {
+                System.out.println(str);
+                output += str;
+            }
+            buf.close();
+            filePost.releaseConnection();
+
+            return output;
+
+        }catch(IOException ex){
             throw new RuntimeException(ex);
         }
     }

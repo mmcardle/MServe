@@ -13,6 +13,8 @@ from dataservice.forms import HostingContainerForm
 from dataservice.forms import DataServiceForm
 from dataservice.forms import DataServiceURLForm
 from dataservice.forms import DataStagerForm
+from dataservice.forms import UpdateDataStagerForm
+from dataservice.forms import UpdateDataStagerFormURL
 from dataservice.forms import DataStagerURLForm
 from dataservice.forms import DataStagerAuthForm
 from dataservice.forms import SubAuthForm
@@ -192,8 +194,9 @@ class DataServiceURLHandler(BaseHandler):
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
+
 class DataStagerHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
+    allowed_methods = ('GET','POST','PUT')
     model = DataStager
     fields = ('name', 'id', 'pk', 'file')
     
@@ -204,6 +207,26 @@ class DataStagerHandler(BaseHandler):
         if request.META["HTTP_ACCEPT"] == "application/json":
             return stager
         return self.render(stager)
+
+    def update(self, request):
+        form = UpdateDataStagerForm(request.POST,request.FILES) # A form bound to the POST data
+        if form.is_valid(): # All validation rules pass
+            # Process the data in form.cleaned_data
+            file = request.FILES['file']
+            stagerid = form.cleaned_data['sid']
+            #service = DataService.objects.get(id=serviceid)
+            datastager = DataStager.objects.get(pk=stagerid)
+            datastager.file = file
+            datastager.save()
+
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return datastager
+
+            return redirect('/stager/'+str(datastager.id)+"/")
+        else:
+            print "UpdateDataStagerForm"
+            print form
+            return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
     def render(self, stager):
         base = NamedBase.objects.get(pk=stager.id)
@@ -261,6 +284,26 @@ class DataStagerHandler(BaseHandler):
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class DataStagerURLHandler(BaseHandler):
+    
+    def update(self, request, stagerid):
+        print "DataStagerURLHandler"
+        form = UpdateDataStagerFormURL(request.POST,request.FILES) # A form bound to the POST data
+        if form.is_valid(): # All validation rules pass
+            # Process the data in form.cleaned_data
+            file = request.FILES['file']
+            #stagerid = form.cleaned_data['sid']
+            #service = DataService.objects.get(id=serviceid)
+            datastager = DataStager.objects.get(pk=stagerid)
+            datastager.file = file
+            datastager.name = file.name
+            datastager.save()
+
+            if request.META["HTTP_ACCEPT"] == "application/json":
+                return datastager
+
+            return redirect('/stager/'+str(datastager.id)+"/")
+        else:
+            return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
     def create(self, request, serviceid):
         form = DataStagerURLForm(request.POST,request.FILES) # A form bound to the POST data
@@ -277,6 +320,7 @@ class DataStagerURLHandler(BaseHandler):
         else:
             print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
+
 
 class ManagedResourcesContainerHandler(BaseHandler):
     allowed_methods = ('GET')

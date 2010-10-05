@@ -42,6 +42,19 @@ class DataStagerForm(ModelForm):
         exclude=['name','id','service']
         model = DataStager
 
+class UpdateDataStagerForm(ModelForm):
+    sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+
+    class Meta:
+        exclude=['name','id','service']
+        model = DataStager
+
+class UpdateDataStagerFormURL(ModelForm):
+
+    class Meta:
+        exclude=['name','id','service']
+        model = DataStager
+
 class DataStagerAuthForm(ModelForm):
     methods_csv = forms.CharField(max_length=200)
     class Meta:

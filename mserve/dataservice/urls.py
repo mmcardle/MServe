@@ -56,6 +56,8 @@ urlpatterns = patterns('',
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/', managedresources_service_handler),
 
+    # Stager Methods
+    url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
 
     # Media URLs
     (r'^files/media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
