@@ -4,6 +4,8 @@ from mserve.dataservice.models import DataService
 from mserve.dataservice.models import DataServiceAuth
 from mserve.dataservice.models import DataStager
 from mserve.dataservice.models import DataStagerAuth
+from mserve.dataservice.models import Usage
+from mserve.dataservice.models import UsageRate
 from mserve.dataservice.models import ManagementProperty
 from mserve.dataservice.models import JoinAuth
 from mserve.dataservice.models import SubAuth
@@ -35,11 +37,15 @@ sleep = sleeper.main
 def home(request):
     form = HostingContainerForm()
     hostings = HostingContainer.objects.all()
-    usagesummary = usage_store.usage_summary()
+    usagesummary = usage_store.usagesummary()
+    usagerate = UsageRate.objects.all()
+    usage = Usage.objects.all()
     dict = {}
     dict["hostingcontainers"] = hostings
     dict["form"] = form
+    dict["usage"] = usage
     dict["usagesummary"] = usagesummary
+    dict["usagerate"] = usagerate
     return render_to_response('home.html', dict)
 
 def container(request,id):

@@ -10,7 +10,7 @@
 <h3>Data Stagers</h3>
 <ul>
     {% for stager in stagers %}
-        <li>{{ stager.name }}&nbsp;<a href="/stager/{{ stager.id }}/">{{ stager.id }}</a></li>
+        <li><a href="/stager/{{ stager.id }}/">{{ stager.name }}</a></li>
     {% endfor %}
 </ul>
 {% if not stagers %}

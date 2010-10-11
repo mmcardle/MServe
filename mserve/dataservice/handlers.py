@@ -5,6 +5,8 @@ from dataservice.models import DataService
 from dataservice.models import DataStager
 from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
+from dataservice.models import UsageRate
+from dataservice.models import UsageSummary
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
@@ -42,10 +44,14 @@ stager_base     = "/stager/"
 auth_base       = "/auth/"
 
 class HostingContainerHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST')
+    allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
     fields = ('name', 'id', 'pk' )
     exclude = ()
+
+    def delete(self, request, containerid):
+        print "Deleting Container %s " % containerid
+        delete_container(request,containerid)
     
     def read(self, request, containerid):
         container = HostingContainer.objects.get(id=containerid)
@@ -58,7 +64,8 @@ class HostingContainerHandler(BaseHandler):
         services = DataService.objects.filter(container=container.id)
         properties = ManagementProperty.objects.filter(container=container.id)
 
-        usage = usage_store.container_usage(container.id)
+        usagerates = UsageRate.objects.all()
+        usage = Usage.objects.all()
 
         form = DataServiceForm()
         form.fields['cid'].initial = container.id
@@ -72,14 +79,15 @@ class HostingContainerHandler(BaseHandler):
         dict["managementpropertyform"] = managementpropertyform
         dict["auths"] = auths
         dict["usage"] = usage
+        dict["usagerate"] = usagerates
         return render_to_response('container.html', dict)
 
     def create(self, request):
-        form = HostingContainerForm(request.POST) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = HostingContainerForm(request.POST) 
+        if form.is_valid(): 
+            
             name = form.cleaned_data['name']
-            hostingcontainer = create_hosting(request,name)
+            hostingcontainer = create_container(request,name)
 
             if request.META["HTTP_ACCEPT"] == "application/json":
                 return hostingcontainer
@@ -89,7 +97,7 @@ class HostingContainerHandler(BaseHandler):
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 
-def create_hosting(request,name):
+def create_container(request,name):
     hostingcontainer = HostingContainer(name=name)
     hostingcontainer.save()
     hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="owner")
@@ -98,23 +106,47 @@ def create_hosting(request,name):
     hostingcontainerauth.setmethods(methods)
     hostingcontainerauth.save()
 
-    usage_store.container_usage(hostingcontainer.id)
+    usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
     return hostingcontainer
+
+def delete_container(request,containerid):
+    usage_store.stoprecording(containerid,usage_store.metric_container)
+    container = HostingContainer.objects.get(id=containerid)
+    logging.info("Deleteing service %s %s" % (container.name,containerid))
+
+    usages = Usage.objects.filter(base=container)
+    for usage in usages:
+        usage.base = None
+        usage.save()
+
+    container.delete()
+    print "Container Deleted %s " % containerid
 
 def create_data_service(request,containerid,name):
     container = HostingContainer.objects.get(id=containerid)
     dataservice = DataService(name=name,container=container)
     dataservice.save()
 
-    usage_store.service_usage(dataservice.id)
-
-    numservices = len(DataService.objects.filter(container=container))
-    usage_store.record(containerid,usage_store.metric_service,numservices)
+    usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
 
     return dataservice
 
+def delete_service(request,serviceid):
+    usage_store.stoprecording(serviceid,usage_store.metric_service)
+    service = DataService.objects.get(id=serviceid)
+    logging.info("Deleteing service %s %s" % (service.name,serviceid))
+
+    usages = Usage.objects.filter(base=service)
+    for usage in usages:
+        usage.base = None
+        usage.save()
+
+    service.delete()
+    print "Service Deleted %s " % serviceid
+
 def create_data_stager(request,serviceid,file):
+    print dir(file)
     service = DataService.objects.get(id=serviceid)
     if file==None:
         datastager = DataStager(name="Empty File",service=service)
@@ -133,18 +165,37 @@ def create_data_stager(request,serviceid,file):
     datastagerauth_monitor.description = "Collect usage reports"
     datastagerauth_monitor.save()
 
-    usage_store.stager_usage(datastager.id)
+    usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
 
-    numstagers = len(DataStager.objects.filter(service=service))
-    usage_store.record(serviceid,usage_store.metric_stager,numstagers)
+    if file is not None:
+        usage_store.startrecording(datastager.id,usage_store.metric_disc,file.size)
 
     return datastager
 
+def delete_stager(request,stagerid):
+    usage_store.stoprecording(stagerid,usage_store.metric_stager)
+    usage_store.stoprecording(stagerid,usage_store.metric_disc)
+    stager = DataStager.objects.get(id=stagerid)
+    logging.info("Deleteing stager %s %s" % (stager.name,stagerid))
+
+    usages = Usage.objects.filter(base=stager)
+    for usage in usages:
+        print "Saving Usage %s " % usage
+        usage.base = None
+        usage.save()
+
+    stager.delete()
+    print "Stager Deleted %s " % stagerid
+
 class DataServiceHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
+    allowed_methods = ('GET','POST','DELETE')
     model = DataService
     fields = ('name', 'id', 'pk' )
     exclude = ()
+
+    def delete(self, request, serviceid):
+        print "Deleting Service %s " % serviceid
+        delete_service(request,serviceid)
     
     def read(self, request, serviceid):
         service = DataService.objects.get(id=serviceid)
@@ -154,19 +205,17 @@ class DataServiceHandler(BaseHandler):
 
     def render(self, service, form=DataStagerForm()):
         stagers = DataStager.objects.filter(service=service)
-        usage = usage_store.service_usage(service.id)
         form.fields['sid'].initial = service.id
         dict = {}
         dict["service"] = service
         dict["stagers"] = stagers
         dict["form"] = form
-        dict["usage"] = usage
         return render_to_response('service.html', dict)
 
     def create(self, request):
-        form = DataServiceForm(request.POST) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = DataServiceForm(request.POST) 
+        if form.is_valid(): 
+            
             containerid = form.cleaned_data['cid']
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
@@ -181,9 +230,9 @@ class DataServiceHandler(BaseHandler):
 class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
-        form = DataServiceURLForm(request.POST) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = DataServiceURLForm(request.POST) 
+        if form.is_valid(): 
+            
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
 
@@ -196,27 +245,33 @@ class DataServiceURLHandler(BaseHandler):
 
 
 class DataStagerHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT')
+    allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataStager
     fields = ('name', 'id', 'pk', 'file')
+
+    def delete(self, request, stagerid):
+        print "Deleting Stager %s " % stagerid
+        delete_stager(request,stagerid)
     
-    def read(self, request, id):
-        stager = DataStager.objects.get(pk=id)
-        base = NamedBase.objects.get(pk=id)
+    def read(self, request, stagerid):
+        stager = DataStager.objects.get(pk=stagerid)
+        base = NamedBase.objects.get(pk=stagerid)
 
         if request.META["HTTP_ACCEPT"] == "application/json":
             return stager
         return self.render(stager)
 
     def update(self, request):
-        form = UpdateDataStagerForm(request.POST,request.FILES) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = UpdateDataStagerForm(request.POST,request.FILES) 
+        if form.is_valid(): 
+            
             file = request.FILES['file']
             stagerid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
             datastager = DataStager.objects.get(pk=stagerid)
             datastager.file = file
+            usage_store.startrecording(stagerid,usage_store.metric_disc,file.size)
+
             datastager.save()
 
             if request.META["HTTP_ACCEPT"] == "application/json":
@@ -230,9 +285,9 @@ class DataStagerHandler(BaseHandler):
 
     def render(self, stager):
         base = NamedBase.objects.get(pk=stager.id)
-        usage = usage_store.stager_usage(stager.id)
         auths = DataStagerAuth.objects.filter(stager=stager)
         form = DataStagerAuthForm()
+        form.fields['dsid'].initial = stager.id
         print stager.file
         dict = {}
         if stager.file == '' or stager.file == None:
@@ -240,10 +295,10 @@ class DataStagerHandler(BaseHandler):
         dict["stager"] = stager
         dict["form"] = form
         dict["auths"] = auths
-        dict["usage"] = usage
+        dict["formtarget"] = "/stagerauth/"
         return render_to_response('stager.html', dict)
 
-    def render_partial(self, stager, auth, show=False):
+    def render_subauth(self, stager, auth, show=False):
         sub_auths = JoinAuth.objects.filter(parent=auth.id)
         subauths = []
         for sub in sub_auths:
@@ -251,6 +306,7 @@ class DataStagerHandler(BaseHandler):
             subauths.append(subauth)
 
         form = SubAuthForm()
+        form.fields['id_parent'].initial = auth.id
         dict = {}
         dict["stager"] = stager
         if stager.file == '' or stager.file == None:
@@ -261,13 +317,14 @@ class DataStagerHandler(BaseHandler):
     
         dict["form"] = form
         dict["auths"] = subauths
+        dict["formtarget"] = "/auth/"
         print dict
         return render_to_response('stager.html', dict)
 
     def create(self, request):
-        form = DataStagerForm(request.POST,request.FILES) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = DataStagerForm(request.POST,request.FILES) 
+        if form.is_valid(): 
+            
             if request.FILES.has_key('file'):
                 file = request.FILES['file']
             else:
@@ -286,13 +343,10 @@ class DataStagerHandler(BaseHandler):
 class DataStagerURLHandler(BaseHandler):
     
     def update(self, request, stagerid):
-        print "DataStagerURLHandler"
-        form = UpdateDataStagerFormURL(request.POST,request.FILES) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = UpdateDataStagerFormURL(request.POST,request.FILES) 
+        if form.is_valid(): 
+            
             file = request.FILES['file']
-            #stagerid = form.cleaned_data['sid']
-            #service = DataService.objects.get(id=serviceid)
             datastager = DataStager.objects.get(pk=stagerid)
             datastager.file = file
             datastager.name = file.name
@@ -306,9 +360,9 @@ class DataStagerURLHandler(BaseHandler):
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
     def create(self, request, serviceid):
-        form = DataStagerURLForm(request.POST,request.FILES) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = DataStagerURLForm(request.POST,request.FILES) 
+        if form.is_valid(): 
+            
             file = request.FILES['file']
             #service = DataService.objects.get(id=serviceid)
             datastager = create_data_stager(request, serviceid, file)
@@ -354,6 +408,17 @@ class ManagedResourcesServiceHandler(BaseHandler):
         return response
 
 
+class UsageSummaryHandler(BaseHandler):
+    allowed_methods = ('GET')
+
+    def read(self,request, containerid):
+        usage_summarys = usage_store.container_usagesummary(containerid)
+        progress = usage_store.container_progress(containerid)
+        usage = {}
+        usage["summary"] = usage_summarys
+        usage["inprogress"] = progress
+        return usage
+
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
 
@@ -366,9 +431,9 @@ class ManagementPropertyHandler(BaseHandler):
         return properties_json
 
     def create(self, request, containerid):
-        form = ManagementPropertyForm(request.POST) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = ManagementPropertyForm(request.POST) 
+        if form.is_valid(): 
+            
             property = form.cleaned_data['property']
             container = HostingContainer.objects.get(id=containerid)
             try:
@@ -448,13 +513,14 @@ class DataStagerAuthHandler(BaseHandler):
         return render_to_response('error.html', dict)
     
     def create(self, request):
-        form = DataStagerAuthForm(request.POST) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = DataStagerAuthForm(request.POST) 
+        if form.is_valid(): 
+            print form
             authname = form.cleaned_data['authname']
             methods_csv = form.cleaned_data['methods_csv']
             description= form.cleaned_data['description']
-            stager = form.cleaned_data['stager']
+            stagerid = form.cleaned_data['dsid']
+            stager = DataStager.objects.get(pk=stagerid)
             methodslist = methods_csv.split(',')
 
             methods_encoded = base64.b64encode(pickle.dumps(methodslist))
@@ -467,6 +533,7 @@ class DataStagerAuthHandler(BaseHandler):
 
             return redirect('/auth/'+str(datastagerauth.id))
         else:
+            print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class AuthHandler(BaseHandler):
@@ -474,9 +541,9 @@ class AuthHandler(BaseHandler):
     model = SubAuth
 
     def create(self, request):
-        form = SubAuthForm(request.POST) # A form bound to the POST data
-        if form.is_valid(): # All validation rules pass
-            # Process the data in form.cleaned_data
+        form = SubAuthForm(request.POST) 
+        if form.is_valid(): 
+            
             authname = form.cleaned_data['authname']
             methods_csv = form.cleaned_data['methods_csv']
             description= form.cleaned_data['description']
@@ -493,6 +560,7 @@ class AuthHandler(BaseHandler):
             return redirect('/auth/'+str(subauth.id))
             
         else:
+            print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
     def read(self, request, id):
@@ -509,9 +577,9 @@ class AuthHandler(BaseHandler):
             handler = DataStagerHandler()
             
             if 'get' in methods:
-                return handler.render_partial(stagerauth.stager, stagerauth, show=True)
+                return handler.render_subauth(stagerauth.stager, stagerauth, show=True)
             else:
-                return handler.render_partial(stagerauth.stager, stagerauth, show=False)
+                return handler.render_subauth(stagerauth.stager, stagerauth, show=False)
         except ObjectDoesNotExist:
             pass
 
@@ -567,9 +635,9 @@ class AuthHandler(BaseHandler):
         handler = DataStagerHandler()
 
         if 'get' in methods:
-            return handler.render_partial(dsAuth.stager, auth, show=True)
+            return handler.render_subauth(dsAuth.stager, auth, show=True)
         else:
-            return handler.render_partial(dsAuth.stager, auth, show=False)
+            return handler.render_subauth(dsAuth.stager, auth, show=False)
 
         if "get" in methods_intersection:
             return HttpResponseRedirect("/files"+dsAuth.stager.file.url)

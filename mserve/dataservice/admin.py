@@ -4,6 +4,8 @@ from dataservice.models import DataService
 from dataservice.models import DataServiceAuth
 from dataservice.models import DataStager
 from dataservice.models import DataStagerAuth
+from dataservice.models import Usage
+from dataservice.models import UsageRate
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from django.contrib import admin
@@ -14,5 +16,7 @@ admin.site.register(DataService)
 admin.site.register(DataServiceAuth)
 admin.site.register(DataStager)
 admin.site.register(DataStagerAuth)
+admin.site.register(Usage)
+admin.site.register(UsageRate)
 admin.site.register(SubAuth)
 admin.site.register(JoinAuth)

@@ -56,14 +56,15 @@ class UpdateDataStagerFormURL(ModelForm):
         model = DataStager
 
 class DataStagerAuthForm(ModelForm):
+    dsid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     methods_csv = forms.CharField(max_length=200)
     class Meta:
-        exclude=['id','methods_encoded']
+        exclude=['id','methods_encoded','stager']
         model = DataStagerAuth
 
 class SubAuthForm(ModelForm):
     methods_csv = forms.CharField(max_length=200)
-    id_parent = forms.CharField(max_length=200)
+    id_parent = forms.CharField(max_length=200,widget=forms.HiddenInput)
     class Meta:
         exclude=['id','methods_encoded']
         model = SubAuth

@@ -5,35 +5,111 @@ import base64
 
 ID_FIELD_LENGTH = 200
 
+fmt = "%3.2f"
+
 def random_id():
     return str(uuid.uuid4())
 
 class Usage(models.Model):
-    base = models.ForeignKey('NamedBase')
+    base = models.ForeignKey('NamedBase',null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True,null=True)
     metric = models.CharField(max_length=4096)
-    value  = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+    value  = models.FloatField()
 
+    def fmt_ctime(self):
+        return self.created.ctime()
+
+    def fmt_value(self):
+        import usage_store as usage_store
+        if self.metric == usage_store.metric_disc:
+            return sizeof_fmt(self.value)
+        else:
+            return "%3.2f" % (self.value)
+    
     def __unicode__(self):
-        return "%s created=%s value=%s " % (self.metric,self.created,self.value);
+        return "%s created=%s value=%f " % (self.metric,self.created,self.value);
 
 class UsageRate(models.Model):
     base       = models.ForeignKey('NamedBase')
     current    = models.DateTimeField(auto_now=True) # When the current rate was reported
-    metric     = models.CharField(primary_key=True, max_length=4096) 
-    rate       = models.DecimalField(max_digits=20,decimal_places=10,default=0) # The current rate
-    usageSoFar = models.DecimalField(max_digits=20,decimal_places=10,default=0) # Cumulative unreported usage before that point
+    metric     = models.CharField(max_length=4096)
+    rate       = models.FloatField() # The current rate
+    usageSoFar = models.FloatField() # Cumulative unreported usage before that point
 
     def __unicode__(self):
-        return "%s time=%s value=%s " % (self.metric,self.time,self.value);
+        return "%s reported=%s rate=%f usageSoFar=%f" % (self.metric,self.current,self.rate,self.usageSoFar);
+
+    def ctime(self):
+        return self.current.ctime()
+
+    def time_since_last_report(self):
+        import datetime
+        import time
+        now = datetime.datetime.now()
+        #t1 = time.mktime(datetime.datetime.now().timetuple())
+        #t2 = time.mktime(self.current.timetuple())
+        #print float(now) - float(self.current)
+        x = now - self.current
+        y = datetime.timedelta(seconds=x.seconds,days=x.days)
+        return y
+
+    def path(self):
+        import usage_store as usage_store
+        if self.metric == usage_store.metric_container:
+            return "/container/"
+        if self.metric == usage_store.metric_service:
+            return "/service/"
+        if self.metric == usage_store.metric_stager:
+            return "/stager/"
+        return "/error/"
+
+    def calc_rate(self):
+        import usage_store as usage_store
+        if self.metric == usage_store.metric_disc:
+            return sizeof_fmt(self.rate)
+        else:
+            return self.rate
+    
+    def calc_so_far(self):
+        import datetime
+        import time
+        import usage_store as usage_store
+        now = datetime.datetime.now()
+
+        t2 = time.mktime(now.timetuple())+float("0.%s"%now.microsecond)
+        t1 = time.mktime(self.current.timetuple())+float("0.%s" % self.current.microsecond)
+
+        x = (t2 - t1) * self.rate
+        return fmt % (x)
+
+def sizeof_fmt(num):
+    for x in ['bytes','KB','MB','GB','TB']:
+        if num < 1024.0:
+            return "%3.1f%s" % (num, x)
+        num /= 1024.0
 
 class UsageSummary(models.Model):
     metric = models.CharField(primary_key=True, max_length=4096)
-    n      = models.DecimalField(max_digits=20,decimal_places=10,default=0)
-    sum    = models.DecimalField(max_digits=20,decimal_places=10,default=0)
-    min    = models.DecimalField(max_digits=20,decimal_places=10,default=0)
-    max    = models.DecimalField(max_digits=20,decimal_places=10,default=0)
-    sums   = models.DecimalField(max_digits=20,decimal_places=10,default=0)
+    n      = models.FloatField(default=0.0)
+    sum    = models.FloatField(default=0.0)
+    min    = models.FloatField(default=0.0)
+    max    = models.FloatField()
+    sums   = models.FloatField()
+
+    def fmt_n(self):
+        return fmt % (self.n)
+
+    def fmt_sum(self):
+        return fmt % (self.sum)
+    
+    def fmt_min(self):
+        return fmt % (self.min)
+    
+    def fmt_max(self):
+        return fmt % (self.max)
+    
+    def fmt_sums(self):
+        return fmt % (self.sums)
 
     def __unicode__(self):
         return "%s {n=%s,sum=%s,min=%s,max=%s,sums=%s}" % (self.metric,self.n,self.sum,self.min,self.max,self.sums);
@@ -75,6 +151,7 @@ class DataService(NamedBase):
         super(DataService, self).save()
 
 class DataStager(NamedBase):
+    # TODO : Add bitmask to Datastager for deleted,remote, input,output, etc
     service = models.ForeignKey(DataService)
     file = models.FileField(upload_to="%Y/%m/%d",blank=True,null=True)
     def save(self):

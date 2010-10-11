@@ -10,13 +10,14 @@
 body {
 
     background: #e7e7e7;
-    font-family: sans-serif;
-    font-size: 11pt;
+    font-family: Tahoma, sans-serif;
+    font-size: 10pt;
 
 }
 
 h1,h2,h3,h4,h5,h6 {
     color:#0000AA;
+    margin:2px;
 }
 
 a, a:visited {
@@ -52,11 +53,19 @@ td {
 .method, .authid {
     padding:6px;
 }
-.table_usage th {
+.table_usage th,.table_usage td {
+    padding:1px;
     text-align: left;
 }
+.table_usage th {
+    text-align: right;
+    border:1px outset gray;
+    background-color: #EEEEEE;
+    padding-left: 3px;
+    min-width: 50px;
+}
 .table_usage td {
-    text-align: center;
+    text-align: right;
 }
 
 </style>
@@ -106,16 +115,38 @@ td {
         <tr>
             <td></td>
             <td colspan="2">
-                <h3>Usage</h3>
+
+                <h3>Current Usage</h3>
+                {% if usagerate %}
+                    <table class="table_usage" cellpadding="5" cellspacing="5">
+                        <tr><th align="left">Metric</th><th>Name</th><th>Last Report</th><th>Rate</th><th>Usage</th><th>Time</th></tr>
+                        {% for usagerate in usagerate%}
+                            <tr>
+                                <td style="text-align: left;">{{usagerate.metric}}</td>
+                                <td><a href="{{usagerate.path}}{{usagerate.base.id}}/">{{usagerate.base}}</a></td>
+                                <td>{{usagerate.ctime}}</td>
+                                <td>{{usagerate.calc_rate}}</td>
+                                <td>{{usagerate.calc_so_far}}</td>
+                                <td>{{usagerate.time_since_last_report}}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+
+                {% if not usagerate %}
+                    <div>None</div>
+                {% endif %}
+
+                <h3>Previous Usage</h3>
                 {%block usage %}
                 {% if usage %}
                     <table class="table_usage" cellpadding="5" cellspacing="5">
-                        <tr><th align="left">Metric</th><td>Time</td><td>Value</td></tr>
+                        <tr><th align="left">Metric</th><th>Time</th><th>Value</th></tr>
                         {% for usage in usage%}
                             <tr>
-                                <th>{{usage.metric}}</th>
-                                <td>{{usage.created}}</td>
-                                <td>{{usage.value}}</td>
+                                <td style="text-align: left;">{{usage.metric}}</td>
+                                <td>{{usage.fmt_ctime}}</td>
+                                <td>{{usage.fmt_value}}</td>
                             </tr>
                         {% endfor %}
                     </table>
@@ -128,15 +159,15 @@ td {
                 <h3>UsageSummary</h3>
                 {% if usagesummary %}
                     <table class="table_usage" cellpadding="5" cellspacing="5">
-                        <tr><th align="left">Metric</th><td>Num</td><td>Sum</td><td>Min</td><td>Max</td><td>Sums</td></tr>
+                        <tr><th align="left">Metric</th><th>Num</th><th>Sum</th><th>Min</th><th>Max</th><th>Sums</th></tr>
                         {% for usagesummary in usagesummary %}
                             <tr>
-                                <th>{{usagesummary.metric}}</th>
-                                <td>{{usagesummary.n}}</td>
-                                <td>{{usagesummary.sum}}</td>
-                                <td>{{usagesummary.min}}</td>
-                                <td>{{usagesummary.max}}</td>
-                                <td>{{usagesummary.sums}}</td>
+                                <td  style="text-align: left;">{{usagesummary.metric}}</td>
+                                <td>{{usagesummary.fmt_n}}</td>
+                                <td>{{usagesummary.fmt_sum}}</td>
+                                <td>{{usagesummary.fmt_min}}</td>
+                                <td>{{usagesummary.fmt_max}}</td>
+                                <td>{{usagesummary.fmt_sums}}</td>
                             </tr>
                         {% endfor %}
                     </table>

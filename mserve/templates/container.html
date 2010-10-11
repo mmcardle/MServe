@@ -9,7 +9,7 @@
 <h3>Data Services</h3>
 <ul>
     {% for service in services %}
-        <li>{{ service.name }}&nbsp;<a href="/service/{{ service.id }}/">{{ service.id }}</a></li>
+        <li><a href="/service/{{ service.id }}/">{{ service.name }}</a></li>
     {% endfor %}
 </ul>
 {% if not services %}

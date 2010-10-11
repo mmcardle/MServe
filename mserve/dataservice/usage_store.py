@@ -4,12 +4,16 @@ from dataservice.models import DataService
 from dataservice.models import DataStager
 from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
+from dataservice.models import UsageRate
 from dataservice.models import UsageSummary
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
 from django.core.exceptions import ObjectDoesNotExist
+import datetime
+import time
+import sys
 
 # Metrics for objects
 metric_stager = "http://prestoprime/stager"
@@ -17,85 +21,96 @@ metric_container = "http://prestoprime/container"
 metric_service = "http://prestoprime/service"
 
 # Metrics for Stagers
-metric_discspace = "http://prestoprime/discspace"
+metric_disc = "http://prestoprime/disc"
+
+metrics = [metric_stager,metric_service,metric_container,metric_disc]
 
 def record(id,metric,value):
-    print "Recording %s for metric %s value=%s" % (id,metric,value)
     base = NamedBase.objects.get(pk=id)
-    print base
-    print Usage.objects.filter(base=base)
+    usage = Usage(base=base,metric=metric,value=value)
+    usage.save()
+
+def startrecording(id,metric,rate):
+    base = NamedBase.objects.get(pk=id)
+    usagerate = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0)
+    usagerate.save()
+
+def stoprecording(id,metric):
+    base = NamedBase.objects.get(pk=id)
+    usagerate = UsageRate.objects.get(base=base,metric=metric)
+    lastRateTime, lastRate, lastUsage = usagerate.current,usagerate.rate,usagerate.usageSoFar
+
+    now = datetime.datetime.now()
+
+    t2 = time.mktime(now.timetuple())+float("0.%s"%now.microsecond)
+    t1 = time.mktime(lastRateTime.timetuple())+float("0.%s"%lastRateTime.microsecond)
+
+    usage = float(lastUsage) + float(lastRate) * (t2 - t1)
+    print "Stop Recording Usage = %s" % usage
+    record(id, metric, usage)
+    usagerate.delete()
     
-    print Usage.objects.filter(base=base,metric=metric)
-    a = Usage.objects.filter(base=base,metric=metric).update(value=value)
-    print Usage.objects.filter(base=base,metric=metric)
+def stager_usagesummary(stagerid):
+    summary = []
+    stager = DataStager.objects.get(pk=stagerid)
+    summary.extend(usagesummary_by_base(stager))
+    return summary
+    
+def service_usagesummary(serviceid):
+    summary = []
+    service  = DataService.objects.get(pk=serviceid)
+    stagers = DataStager.objects.filter(service=service)
+    for stager in stagers:
+        summary.extend(stager_usagesummary(stager.id))
+    summary.extend(usagesummary_by_base(service))
+    return summary
 
-def usage_summary():
+def container_usagesummary(containerid):
+    summary = []
+    container = HostingContainer.objects.get(pk=containerid)
+    services  = DataService.objects.filter(container=container)
+    for service in services:
+        summary.extend(service_usagesummary(service.id))
+    summary.extend(usagesummary_by_base(container))
+    return summary
 
-    stager_summary = UsageSummary(metric=metric_stager,n=DataStager.objects.count,min=0,max=DataStager.objects.count,sums=0)
-    service_summary = UsageSummary(metric=metric_service,n=DataService.objects.count,min=0,max=DataService.objects.count,sums=0)
-    container_summary = UsageSummary(metric=metric_container,n=HostingContainer.objects.count,min=0,max=HostingContainer.objects.count,sums=0)
+def usagesummary_by_base(base):
+    summary = []
+    for metric in metrics:
+        summary.extend(usagesummary_by_metric_base(metric,base))
+    return summary
 
-    return [stager_summary,service_summary,container_summary]
+def usage_to_summary(usages,metric):
+    n,sum,umax,sums = 0,0,0,0
+    umin  = sys.float_info.max
+    for u in usages:
+        n = n + 1
+        sum = sum + u.value
+        umax = max(umax,u.value)
+        umin = min(min,u.value)
+        sums = sums + (u.value*u.value)
 
-def container_usage(id):
-    print "Container Usage - %s" % id
-    usagelist = None
-    try:
-        usagelist = Usage.objects.filter(base=id)
-        print "Usage - %s" % usagelist
-        if len(usagelist) == 0:
-            print "Usage = 0"
-            return __init_container_usage(id)
-    except ObjectDoesNotExist:
-        return __init_container_usage(id)
+    summary = UsageSummary(metric=metric,n=n,sum=sum,min=umin,max=umax,sums=sums)
+    return summary
 
-    return usagelist
+def usagesummary_by_metric_base(metric,base):
+    print "find usage %s %s" % (metric,base)
+    usages = Usage.objects.filter(metric=metric,base=base)
+    if len(usages) ==0 :
+        return []
+    return usage_to_summary(usages,metric)
 
-def __init_container_usage(id):
-    print "Init Usage for container - %s" % id
-    base = NamedBase.objects.get(pk=id)
-    serviceusage = Usage(metric=metric_service,base=base)
-    serviceusage.save()
-    print "Service Usage- %s" % serviceusage
-    usagelist = [serviceusage]
-    print "created new usage %s" % usagelist
-    return usagelist
+def usagesummary_by_metric(metric):
+    usages = Usage.objects.filter(metric=metric)
+    if len(usages) ==0 :
+        return []
+    return usage_to_summary(usages,metric)
 
-def service_usage(id):
-    print "service usage"
-    usagelist = None
-    try:
-        usagelist = Usage.objects.filter(base=id)
-        print "usage list %s"  % usagelist
-        if len(usagelist) == 0:
-            return __init_service_usage(id)
-    except ObjectDoesNotExist:
-        return __init_service_usage(id)
-    print "usage list %s"  % usagelist
-    return usagelist
+def usagesummary():
+    summary = []
+    for metric in metrics:
+        summary.append(usagesummary_by_metric(metric))
+    return summary
 
-def __init_service_usage(id):
-    base = NamedBase.objects.get(pk=id)
-    serviceusage = Usage(metric=metric_stager,base=base)
-    serviceusage.save()
-    usagelist = [serviceusage]
-    print "init usage %s"  % usagelist
-    return usagelist
-
-def stager_usage(id):   
-    usagelist = None
-    try:
-        usagelist = Usage.objects.filter(base=id)
-        if len(usagelist) == 0:
-            return __init_stager_usage(id)
-    except ObjectDoesNotExist:
-        return __init_stager_usage(id)
-
-    return usagelist
-
-def __init_stager_usage(id):
-    base = NamedBase.objects.get(pk=id)
-    discusage = Usage(metric=metric_discspace,base=base)
-    discusage.save()
-    usagelist = [discusage]
-    return usagelist
+def container_progress(containerid):
+    return []

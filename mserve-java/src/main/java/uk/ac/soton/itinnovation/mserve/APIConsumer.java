@@ -18,6 +18,7 @@ import org.json.JSONObject;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
@@ -34,11 +35,19 @@ public class APIConsumer {
     private static File file2 = new File("/home/mm/Pictures/muppits/DSC_0669.jpg");
 
     public static void main(String[] args) {
+        deleteStager("6ac95bb3-cb7a-404f-baad-51c2c6a10d37");
+
+    }
+    public static void main2(String[] args) {
         try {
 
             String path = "/container/";
-            String resource = "e6e13661-c277-4ea9-ba45-0306f7e290e6";
-            URL containerurl = new URL(protocol + host + path + resource);
+
+            URL url = new URL(protocol + host + path);
+
+            String containerid = createContainer(url);
+
+            URL containerurl = new URL(protocol + host + path + containerid);
 
             String output = getOutputFromURL(containerurl);
 
@@ -75,13 +84,24 @@ public class APIConsumer {
 
             System.out.println("New Stager from URL " + stagerid2);
 
-            //deleteStager(stagerid1);
+            deleteStager(stagerid1);
+            deleteStager(emptystagerid1);
 
-            //deleteService(serviceid1);
+            try{
+              //do what you want to do before sleeping
+              Thread.currentThread().sleep(5000);//sleep for 1000 ms
+              //do what you want to do after sleeptig
+            }
+            catch(InterruptedException ie){
+                //If this thread was intrrupted by nother thread
+            }
 
-            //deleteStager(stagerid2);
+            deleteStager(stagerid2);
 
-            //deleteService(serviceid2);
+            deleteService(serviceid1);
+            deleteService(serviceid2);
+
+            deleteContainer(containerid);
 
             /*List<String> services = getServices(id);
 
@@ -123,6 +143,7 @@ public class APIConsumer {
         try {
             URL url = new URL(protocol + host + "/stager/");
             String json = doFilePutToURL(url.toString(), id, file2);
+            System.out.println(""+json);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
         } catch (JSONException ex) {
@@ -212,7 +233,6 @@ public class APIConsumer {
             String output = "";
             String str;
             while (null != ((str = buf.readLine()))) {
-                System.out.println(str);
                 output += str;
             }
             buf.close();
@@ -252,7 +272,6 @@ public class APIConsumer {
             String output = "";
             String str;
             while (null != ((str = buf.readLine()))) {
-                System.out.println(str);
                 output += str;
             }
             buf.close();
@@ -284,7 +303,37 @@ public class APIConsumer {
             String output = "";
             String str;
             while (null != ((str = buf.readLine()))) {
-                System.out.println(str);
+                output += str;
+            }
+            buf.close();
+            filePost.releaseConnection();
+
+            return output;
+
+        }catch(IOException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public static String doPostToURL(String url, String name) {
+        try{
+            HttpClient client = new HttpClient();
+            PostMethod filePost = new PostMethod(url);
+            filePost.setRequestHeader("Accept", "application/json");
+            Part[] parts = {
+                new StringPart("name", name)
+            };
+            filePost.setRequestEntity(
+                    new MultipartRequestEntity(parts, filePost.getParams()));
+
+            client.executeMethod(filePost);
+
+            InputStream stream = filePost.getResponseBodyAsStream();
+
+            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+            String output = "";
+            String str;
+            while (null != ((str = buf.readLine()))) {
                 output += str;
             }
             buf.close();
@@ -308,15 +357,15 @@ public class APIConsumer {
             ArrayList<String> ids = new ArrayList<String>();
 
             if(arr.length()>0){
-                System.out.println("Services from /containerapi/getmanagedresources/");
-                System.out.println("==================");
+                //System.out.println("Services from /containerapi/getmanagedresources/");
+                //System.out.println("==================");
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject ob = arr.getJSONObject(i);
-                    System.out.println("\t"+ob);
+                    //System.out.println("\t"+ob);
                     String serviceid = ob.getString("pk");
                     ids.add(serviceid);
                 }
-                System.out.println("==================");
+                //System.out.println("==================");
             }
             
             return ids;
@@ -378,14 +427,14 @@ public class APIConsumer {
 
             ArrayList<String> ids = new ArrayList<String>();
             if(arr.length()>0){
-                System.out.println("Stagers from /serviceapi/getmanagedresources/");
-                System.out.println("==================");
+                //System.out.println("Stagers from /serviceapi/getmanagedresources/");
+                //System.out.println("==================");
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject ob = arr.getJSONObject(i);
-                    System.out.println("Stager  " + ob);
+                    //System.out.println("Stager  " + ob);
                     ids.add(ob.getString("pk"));
                 }
-                System.out.println("==================");
+                //System.out.println("==================");
             }
             return ids;
 
@@ -449,6 +498,10 @@ public class APIConsumer {
 
             client.executeMethod(method);
 
+            if(method.getStatusCode()!=200){
+                throw new RuntimeException("Response is "+method.getStatusText()+" code="+method.getStatusCode());
+            }
+
             InputStream stream = method.getResponseBodyAsStream();
 
             BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
@@ -464,6 +517,113 @@ public class APIConsumer {
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static String deleteContainer(String containerid) {
+        try{
+
+            String url = new String(protocol + host + "/container/"+containerid+"/");
+
+            HttpClient client = new HttpClient();
+            DeleteMethod filePost = new DeleteMethod(url);
+            filePost.setRequestHeader("Accept", "application/json");
+
+            int result = client.executeMethod(filePost);
+
+            InputStream stream = filePost.getResponseBodyAsStream();
+
+            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+            String output = "";
+            String str;
+            while (null != ((str = buf.readLine()))) {
+                output += str;
+            }
+            buf.close();
+            filePost.releaseConnection();
+
+            System.out.println("Delete Container " + containerid + " result="+result);
+
+            return output;
+
+        }catch(IOException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+    private static String deleteService(String serviceid) {
+        try{
+
+            String url = new String(protocol + host + "/service/"+serviceid+"/");
+
+            HttpClient client = new HttpClient();
+            DeleteMethod filePost = new DeleteMethod(url);
+            filePost.setRequestHeader("Accept", "application/json");
+
+            int result = client.executeMethod(filePost);
+
+            InputStream stream = filePost.getResponseBodyAsStream();
+
+            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+            String output = "";
+            String str;
+            while (null != ((str = buf.readLine()))) {
+                output += str;
+            }
+            buf.close();
+            filePost.releaseConnection();
+
+            System.out.println("Delete Service " + serviceid + " result="+result);
+
+            return output;
+
+        }catch(IOException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static String deleteStager(String stagerid1) {
+        try{
+
+            String url = new String(protocol + host + "/stager/"+stagerid1+"/");
+
+            HttpClient client = new HttpClient();
+            DeleteMethod filePost = new DeleteMethod(url);
+            filePost.setRequestHeader("Accept", "application/json");
+
+            int result = client.executeMethod(filePost);
+
+            InputStream stream = filePost.getResponseBodyAsStream();
+
+            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+            String output = "";
+            String str;
+            while (null != ((str = buf.readLine()))) {
+                output += str;
+            }
+            buf.close();
+            filePost.releaseConnection();
+
+            System.out.println("Delete Stager " + stagerid1 + " result="+result);
+
+            return output;
+
+        }catch(IOException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static String createContainer(URL url) {
+        try{
+            String output = doPostToURL(url.toString(), "ContainerFromJava");
+
+            JSONObject ob = new JSONObject(output);
+
+            System.out.println("Container " + ob);
+
+            return  ob.getString("id");
+
+        } catch (JSONException ex) {
             throw new RuntimeException(ex);
         }
     }

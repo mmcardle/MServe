@@ -17,6 +17,7 @@ from dataservice.handlers import AuthHandler
 from dataservice.handlers import ManagedResourcesContainerHandler
 from dataservice.handlers import ManagedResourcesServiceHandler
 from dataservice.handlers import ManagementPropertyHandler
+from dataservice.handlers import UsageSummaryHandler
 
 hosting_handler = Resource(HostingContainerHandler)
 managedresources_container_handler = Resource(ManagedResourcesContainerHandler)
@@ -28,6 +29,7 @@ datastager_handler = Resource(DataStagerHandler)
 datastager_url_handler = Resource(DataStagerURLHandler)
 datastager_auth_handler = Resource(DataStagerAuthHandler)
 auth_handler = Resource(AuthHandler)
+usagesummary_handler = Resource(UsageSummaryHandler)
 
 urlpatterns = patterns('',
 
@@ -43,7 +45,7 @@ urlpatterns = patterns('',
     # REST Methods for GET
     url(r'^container/(?P<containerid>[^/]+)/', hosting_handler),
     url(r'^service/(?P<serviceid>[^/]+)/', dataservice_handler),
-    url(r'^stager/(?P<id>[^/]+)/', datastager_handler),
+    url(r'^stager/(?P<stagerid>[^/]+)/', datastager_handler),
     url(r'^stagerauth/(?P<stagerauthid>[^/]+)/', datastager_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
 
@@ -51,6 +53,7 @@ urlpatterns = patterns('',
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/$', managedresources_container_handler),
     url(r'^containerapi/managementproperty/(?P<containerid>[^/]+)/$', managementproperty_handler),
+    url(r'^containerapi/getusagesummary/(?P<containerid>[^/]+)/$', usagesummary_handler),
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
