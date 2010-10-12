@@ -1,0 +1,63 @@
+<h3>Current Usage</h3>
+{% if usagerate %}
+    <table class="table_usage" cellpadding="5" cellspacing="5">
+        <tr><th align="left">Metric</th><th>Name</th><th>Last Report</th><th>Rate</th><th>Usage</th><th>Time</th></tr>
+        {% for usagerate in usagerate%}
+            <tr>
+                <td style="text-align: left;">{{usagerate.metric}}</td>
+                <td><a href="{{usagerate.path}}{{usagerate.base.id}}/">{{usagerate.base}}</a></td>
+                <td>{{usagerate.ctime}}</td>
+                <td>{{usagerate.calc_rate}}</td>
+                <td>{{usagerate.calc_so_far}}</td>
+                <td>{{usagerate.time_since_last_report}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+{% if not usagerate %}
+    <div>None</div>
+{% endif %}
+
+<h3>Previous Usage</h3>
+{%block usage %}
+{% if usage %}
+    <table class="table_usage" cellpadding="5" cellspacing="5">
+        <tr><th align="left">Metric</th><th>Time</th><th>Value</th></tr>
+        {% for usage in usage%}
+            <tr>
+                <td style="text-align: left;">{{usage.metric}}</td>
+                <td>{{usage.fmt_ctime}}</td>
+                <td>{{usage.fmt_value}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+{% if not usage %}
+    <div>None</div>
+{% endif %}
+
+<h3>UsageSummary</h3>
+{% if usagesummary %}
+    <table class="table_usage" cellpadding="5" cellspacing="5">
+        <tr><th align="left">Metric</th><th>Num</th><th>Sum</th><th>Min</th><th>Max</th><th>Avg</th><th>Sums</th></tr>
+        {% for usagesummary in usagesummary %}
+            <tr>
+                <td  style="text-align: left;">{{usagesummary.metric}}</td>
+                <td>{{usagesummary.fmt_n}}</td>
+                <td>{{usagesummary.fmt_sum}}</td>
+                <td>{{usagesummary.fmt_min}}</td>
+                <td>{{usagesummary.fmt_max}}</td>
+                <td>{{usagesummary.fmt_avg}}</td>
+                <td>{{usagesummary.fmt_sums}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+{% if not usagesummary %}
+    <div>None</div>
+{% endif %}
+
+{%endblock usage %}

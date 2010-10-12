@@ -7,10 +7,12 @@ from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
 from dataservice.models import UsageRate
 from dataservice.models import UsageSummary
+from dataservice.models import UsageReport
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
+from dataservice.models import Event
 from dataservice.forms import HostingContainerForm
 from dataservice.forms import DataServiceForm
 from dataservice.forms import DataServiceURLForm
@@ -33,6 +35,7 @@ from django.core import serializers
 
 import usage_store as usage_store
 
+import time
 import pickle
 import base64
 import logging
@@ -43,6 +46,7 @@ service_base    = "/service/"
 stager_base     = "/stager/"
 auth_base       = "/auth/"
 
+
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
@@ -50,7 +54,7 @@ class HostingContainerHandler(BaseHandler):
     exclude = ()
 
     def delete(self, request, containerid):
-        print "Deleting Container %s " % containerid
+        logging.info("Deleting Container %s " % containerid)
         delete_container(request,containerid)
     
     def read(self, request, containerid):
@@ -64,8 +68,9 @@ class HostingContainerHandler(BaseHandler):
         services = DataService.objects.filter(container=container.id)
         properties = ManagementProperty.objects.filter(container=container.id)
 
-        usagerates = UsageRate.objects.all()
-        usage = Usage.objects.all()
+        usagerates = UsageRate.objects.filter(base=container)
+        usage = Usage.objects.filter(base=container)
+        usagesummary = usage_store.container_usagesummary(container)
 
         form = DataServiceForm()
         form.fields['cid'].initial = container.id
@@ -80,6 +85,7 @@ class HostingContainerHandler(BaseHandler):
         dict["auths"] = auths
         dict["usage"] = usage
         dict["usagerate"] = usagerates
+        dict["usagesummary"] = usagesummary
         return render_to_response('container.html', dict)
 
     def create(self, request):
@@ -108,6 +114,8 @@ def create_container(request,name):
 
     usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
+    reportevent(hostingcontainer)
+
     return hostingcontainer
 
 def delete_container(request,containerid):
@@ -120,8 +128,10 @@ def delete_container(request,containerid):
         usage.base = None
         usage.save()
 
+    reportevent(container)
+
     container.delete()
-    print "Container Deleted %s " % containerid
+    logging.info("Container Deleted %s " % containerid)
 
 def create_data_service(request,containerid,name):
     container = HostingContainer.objects.get(id=containerid)
@@ -130,6 +140,8 @@ def create_data_service(request,containerid,name):
 
     usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
 
+    reportevent(dataservice)
+    
     return dataservice
 
 def delete_service(request,serviceid):
@@ -139,14 +151,15 @@ def delete_service(request,serviceid):
 
     usages = Usage.objects.filter(base=service)
     for usage in usages:
-        usage.base = None
+        usage.base = service.container
         usage.save()
 
+    reportevent(service)
+
     service.delete()
-    print "Service Deleted %s " % serviceid
+    logging.info("Service Deleted %s " % serviceid)
 
 def create_data_stager(request,serviceid,file):
-    print dir(file)
     service = DataService.objects.get(id=serviceid)
     if file==None:
         datastager = DataStager(name="Empty File",service=service)
@@ -166,6 +179,8 @@ def create_data_stager(request,serviceid,file):
     datastagerauth_monitor.save()
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
+    
+    reportevent(datastager)
 
     if file is not None:
         usage_store.startrecording(datastager.id,usage_store.metric_disc,file.size)
@@ -180,12 +195,39 @@ def delete_stager(request,stagerid):
 
     usages = Usage.objects.filter(base=stager)
     for usage in usages:
-        print "Saving Usage %s " % usage
-        usage.base = None
+        logging.info("Saving Usage %s " % usage)
+        usage.base = stager.service
         usage.save()
 
     stager.delete()
-    print "Stager Deleted %s " % stagerid
+    logging.info("Stager Deleted %s " % stagerid)
+
+
+def reportevent(base):
+    
+    toreport = []
+
+    if hasattr(base,"hostingcontainer"):
+        toreport =  [base]
+
+    if hasattr(base,"dataservice"):
+        #service   = DataService.objects.get(pk=base.pk)
+        container = HostingContainer.objects.get(dataservice=base)
+        toreport =  [container,base]
+
+    if hasattr(base,"datastager"):
+        service   = DataService.objects.get(datastager=base)
+        container = HostingContainer.objects.get(dataservice=service)
+        toreport =  [container,service,base]
+
+    for ob in toreport:
+        events = Event.objects.filter(base=ob)
+        logging.info("Reporting %s events for %s " % (len(events),ob))
+        for ev in events:
+            logging.info("\tEvent %s " % (ev))
+            ev.reportnum = ev.reportnum + 1
+            ev.save()
+            logging.info("\tEvent %s Done" % (ev))
 
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
@@ -194,7 +236,7 @@ class DataServiceHandler(BaseHandler):
     exclude = ()
 
     def delete(self, request, serviceid):
-        print "Deleting Service %s " % serviceid
+        logging.info("Deleting Service %s " % serviceid)
         delete_service(request,serviceid)
     
     def read(self, request, serviceid):
@@ -210,6 +252,9 @@ class DataServiceHandler(BaseHandler):
         dict["service"] = service
         dict["stagers"] = stagers
         dict["form"] = form
+        dict["usage"] = Usage.objects.filter(base=service)
+        dict["usagerate"] = UsageRate.objects.filter(base=service)
+        dict["usagesummary"] = usage_store.service_usagesummary(service.id)
         return render_to_response('service.html', dict)
 
     def create(self, request):
@@ -219,6 +264,8 @@ class DataServiceHandler(BaseHandler):
             containerid = form.cleaned_data['cid']
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
+
+            container = HostingContainer.objects.get(pk=containerid)
 
             if request.META["HTTP_ACCEPT"] == "application/json":
                 return dataservice
@@ -250,7 +297,7 @@ class DataStagerHandler(BaseHandler):
     fields = ('name', 'id', 'pk', 'file')
 
     def delete(self, request, stagerid):
-        print "Deleting Stager %s " % stagerid
+        logging.info("Deleting Stager %s " % stagerid)
         delete_stager(request,stagerid)
     
     def read(self, request, stagerid):
@@ -279,8 +326,6 @@ class DataStagerHandler(BaseHandler):
 
             return redirect('/stager/'+str(datastager.id)+"/")
         else:
-            print "UpdateDataStagerForm"
-            print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
     def render(self, stager):
@@ -288,7 +333,6 @@ class DataStagerHandler(BaseHandler):
         auths = DataStagerAuth.objects.filter(stager=stager)
         form = DataStagerAuthForm()
         form.fields['dsid'].initial = stager.id
-        print stager.file
         dict = {}
         if stager.file == '' or stager.file == None:
             dict["altfile"] = "/files/media/empty.png"
@@ -296,6 +340,9 @@ class DataStagerHandler(BaseHandler):
         dict["form"] = form
         dict["auths"] = auths
         dict["formtarget"] = "/stagerauth/"
+        dict["usage"] = Usage.objects.filter(base=stager)
+        dict["usagerate"] = UsageRate.objects.filter(base=stager)
+        dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
         return render_to_response('stager.html', dict)
 
     def render_subauth(self, stager, auth, show=False):
@@ -318,7 +365,6 @@ class DataStagerHandler(BaseHandler):
         dict["form"] = form
         dict["auths"] = subauths
         dict["formtarget"] = "/auth/"
-        print dict
         return render_to_response('stager.html', dict)
 
     def create(self, request):
@@ -372,9 +418,7 @@ class DataStagerURLHandler(BaseHandler):
 
             return redirect('/stager/'+str(datastager.id))
         else:
-            print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
-
 
 class ManagedResourcesContainerHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -407,17 +451,37 @@ class ManagedResourcesServiceHandler(BaseHandler):
 
         return response
 
-
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self,request, containerid):
-        usage_summarys = usage_store.container_usagesummary(containerid)
-        progress = usage_store.container_progress(containerid)
-        usage = {}
-        usage["summary"] = usage_summarys
-        usage["inprogress"] = progress
-        return usage
+    def read(self,request, containerid, last_report):
+
+        lr = int(last_report)
+
+        sleeptime = 10
+        container = HostingContainer.objects.get(pk=containerid)
+
+        ev, created = Event.objects.get_or_create(base=container)
+
+        logging.info("last_report=%s" % lr)
+        logging.info(ev)
+        logging.info(created)
+
+        if lr != -1:
+            while lr == ev.reportnum:
+                logging.info("Waiting for event %s " % ev)
+                time.sleep(sleeptime)
+                ev = Event.objects.get(pk=ev.pk)
+        
+        inprogress = UsageRate.objects.filter(base=container)
+        summarys = usage_store.container_usagesummary(containerid)
+
+        dict = {}
+        dict["reportnum"] = ev.reportnum
+        dict["summarys"] = summarys
+        dict["inprogress"] = inprogress
+
+        return dict
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
@@ -438,7 +502,6 @@ class ManagementPropertyHandler(BaseHandler):
             container = HostingContainer.objects.get(id=containerid)
             try:
                 existingmanagementproperty = ManagementProperty.objects.get(property=property,container=container)
-                print existingmanagementproperty
                 if existingmanagementproperty is not None:
                     return HttpResponseError("That Property allready exists")
             except ObjectDoesNotExist:
@@ -476,7 +539,7 @@ class DataStagerAuthHandler(BaseHandler):
 
             return render_to_response('auth.html', dict)
         except ObjectDoesNotExist:
-            print "DataStagerAuth  doesn't exist."
+            logging.info("DataStagerAuth  doesn't exist.")
 
         try:
             container_auth = HostingContainerAuth.objects.get(id=id)
@@ -485,7 +548,7 @@ class DataStagerAuthHandler(BaseHandler):
 
             return render_to_response('auth.html', dict)
         except ObjectDoesNotExist:
-            print "HostingContainer Auth doesn't exist."
+            logging.info("HostingContainer Auth doesn't exist.")
 
         try:
             dataservice_auths = DataServiceAuth.objects.get(id=id)
@@ -494,7 +557,7 @@ class DataStagerAuthHandler(BaseHandler):
 
             return render_to_response('auth.html', dict)
         except ObjectDoesNotExist:
-            print "HostingContainer Auth doesn't exist."
+            logging.info("HostingContainer Auth doesn't exist.")
 
         try:
             sub_auth = SubAuth.objects.get(id=id)
@@ -506,7 +569,7 @@ class DataStagerAuthHandler(BaseHandler):
 
             return render_to_response('auth.html', dict)
         except ObjectDoesNotExist:
-            print "Sub Auth doesn't exist."
+            logging.info("Sub Auth doesn't exist.")
 
         dict = {}
         dict["error"] = "That Authority does not exist"
@@ -515,7 +578,6 @@ class DataStagerAuthHandler(BaseHandler):
     def create(self, request):
         form = DataStagerAuthForm(request.POST) 
         if form.is_valid(): 
-            print form
             authname = form.cleaned_data['authname']
             methods_csv = form.cleaned_data['methods_csv']
             description= form.cleaned_data['description']
@@ -533,7 +595,6 @@ class DataStagerAuthHandler(BaseHandler):
 
             return redirect('/auth/'+str(datastagerauth.id))
         else:
-            print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class AuthHandler(BaseHandler):
@@ -560,7 +621,6 @@ class AuthHandler(BaseHandler):
             return redirect('/auth/'+str(subauth.id))
             
         else:
-            print form
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
     def read(self, request, id):

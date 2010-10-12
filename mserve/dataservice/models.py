@@ -10,6 +10,13 @@ fmt = "%3.2f"
 def random_id():
     return str(uuid.uuid4())
 
+class Event(models.Model):
+    base = models.ForeignKey('NamedBase')
+    reportnum = models.IntegerField(default=0)
+
+    def __unicode__(self):
+        return "%s reportnum=%s " % (self.base,self.reportnum);
+
 class Usage(models.Model):
     base = models.ForeignKey('NamedBase',null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True,null=True)
@@ -87,32 +94,52 @@ def sizeof_fmt(num):
         if num < 1024.0:
             return "%3.1f%s" % (num, x)
         num /= 1024.0
+    return "%3.1f%s" % (num, 'TB')
 
 class UsageSummary(models.Model):
     metric = models.CharField(primary_key=True, max_length=4096)
     n      = models.FloatField(default=0.0)
     sum    = models.FloatField(default=0.0)
     min    = models.FloatField(default=0.0)
-    max    = models.FloatField()
-    sums   = models.FloatField()
+    max    = models.FloatField(default=0.0)
+    sums   = models.FloatField(default=0.0)
+
+    def __fmt(self,num):
+        import usage_store as usage_store
+        if self.metric in usage_store.byte_metrics:
+            return sizeof_fmt(num)
+        else:
+            return fmt % (num)
 
     def fmt_n(self):
         return fmt % (self.n)
 
     def fmt_sum(self):
-        return fmt % (self.sum)
+        return self.__fmt(self.sum)
     
     def fmt_min(self):
-        return fmt % (self.min)
+        return self.__fmt(self.min)
     
     def fmt_max(self):
-        return fmt % (self.max)
+        return self.__fmt(self.max)
     
     def fmt_sums(self):
-        return fmt % (self.sums)
+        import locale
+        locale.setlocale(locale.LC_ALL, "")
+        return locale.format(fmt, self.sums, True)
+
+    def fmt_avg(self):
+        if self.n == 0:
+            return self.__fmt(self.sum)
+        return self.__fmt(self.sum/self.n)
 
     def __unicode__(self):
         return "%s {n=%s,sum=%s,min=%s,max=%s,sums=%s}" % (self.metric,self.n,self.sum,self.min,self.max,self.sums);
+
+
+class UsageReport(models.Model):
+    summarys = models.ManyToManyField(UsageSummary)
+    inprogress = models.ManyToManyField(UsageRate)
 
 class Base(models.Model):
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)

@@ -33,8 +33,6 @@ usagesummary_handler = Resource(UsageSummaryHandler)
 
 urlpatterns = patterns('',
 
-    (r'^sleep/(?P<length>[^/]+)/',  'dataservice.views.sleep'),
-
     # REST Methods for POST
     url(r'^container/$', hosting_handler),
     url(r'^service/$', dataservice_handler),
@@ -53,7 +51,7 @@ urlpatterns = patterns('',
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/$', managedresources_container_handler),
     url(r'^containerapi/managementproperty/(?P<containerid>[^/]+)/$', managementproperty_handler),
-    url(r'^containerapi/getusagesummary/(?P<containerid>[^/]+)/$', usagesummary_handler),
+    url(r'^containerapi/getusagesummary/(?P<containerid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
@@ -67,6 +65,7 @@ urlpatterns = patterns('',
 
     # HTML Views
     (r'^home/',  'dataservice.views.home'),
+    (r'^usage/',  'dataservice.views.usage'),
     (r'map/',  'dataservice.views.map'),
     
     # Root

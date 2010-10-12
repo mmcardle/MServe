@@ -13,8 +13,6 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,7 +28,7 @@ import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
 import org.apache.commons.httpclient.methods.multipart.StringPart;
 
-public class APIConsumer {
+public class APIUsageConsumer {
 
     private static String protocol = "http://";
     private static String host = "localhost";
@@ -40,41 +38,45 @@ public class APIConsumer {
 
     public static void main(String[] args) {
         try {
-            //deleteStager("7199c292-c39c-4224-8198-e0763fee0b5a");
-            deleteStager("2a20f0ec-db1d-4d42-9cfb-55965c017f80");
-            deleteStager("97bf19a6-2997-438b-bf02-58606217b32a");
 
-            /*String service = makeServiceREST("a29254f7-eb58-4bbb-8cac-cd134195f739");
-            
-            sleep();
-            
-            String stager1 = makeStagerREST(service);
-            
-            String stager2 = makeStagerURL(service);
-            
-            sleep();
-            
-            deleteStager(stager1);
-            
-            sleep();
-            
-            deleteStager(stager2);
-            
-            sleep();
-            
-            deleteService("ca9078d7-9927-4761-8b40-86eefad90b82");*/
+            String path = "/container/";
+
+            URL url = new URL(protocol + host + path);
+
+            String containerid = "a29254f7-eb58-4bbb-8cac-cd134195f739";
+
+            URL containerurl = new URL(protocol + host + "/containerapi/getusagesummary/"+containerid+"/");
+
+            while(true){
+                try{
+
+                    Thread.currentThread().sleep(1000);
+
+                    String usage = getOutputFromURL(containerurl);
+
+                    JSONArray ob = new JSONArray(usage);
+
+                    for(int i =0; i< ob.length(); i++){
+                      System.out.println(ob.get(i));
+                    }
+
+                }
+                catch(InterruptedException ie){
+                    //If this thread was intrrupted by nother thread
+                }catch(JSONException ex){
+
+                }
+            }
 
 
-        } catch (Exception ex) {
-            Logger.getLogger(APIConsumer.class.getName()).log(Level.SEVERE, null, ex);
+
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
         }
-
     }
 
-    public static void sleep(){
-            try{Thread.currentThread().sleep(5000);
-            }catch(InterruptedException ie){}
-    }
     public static void main2(String[] args) {
         try {
 
@@ -84,80 +86,36 @@ public class APIConsumer {
 
             String containerid = createContainer(url);
 
-            URL containerurl = new URL(protocol + host + path + containerid);
+            URL containerurl = new URL(protocol + host + "/containerapi/getusagesummary/"+containerid+"/");
 
-            String output = getOutputFromURL(containerurl);
+            int n = 0;
+            while(n<10){
+                try{
 
-            System.out.println("Container " + output);
+                    String service = makeServiceURL(containerid);
 
-            JSONObject jsonObject = new JSONObject(output);
+                    String stager = makeStagerURL(service);
 
-            String id = jsonObject.getString("id");
+                    Thread.currentThread().sleep(10000);
 
-            String serviceid1 = makeServiceREST(id);
+                    deleteStager(stager);
+                    deleteService(service);
 
-            getServices(id);
+                    String usage = getOutputFromURL(containerurl);
 
-            String stagerid1 = makeStagerREST(serviceid1);
 
-            System.out.println("New Stager from REST" + stagerid1);
+                    
 
-            String emptystagerid1 = makeEmptyStagerREST(serviceid1);
-            
-            putToEmptyStagerREST(emptystagerid1);
-            putToEmptyStagerURL(emptystagerid1);
+                    n++;
 
-            System.out.println("New Empty Stager from REST" + emptystagerid1);
-
-            getStagers(serviceid1);
-
-            String serviceid2 = makeServiceREST(id);
-
-            getServices(id);
-
-            String stagerid2 = makeStagerURL(serviceid2);
-
-            getStagers(serviceid2);
-
-            System.out.println("New Stager from URL " + stagerid2);
-
-            deleteStager(stagerid1);
-            deleteStager(emptystagerid1);
-
-            try{
-              //do what you want to do before sleeping
-              Thread.currentThread().sleep(5000);//sleep for 1000 ms
-              //do what you want to do after sleeptig
-            }
-            catch(InterruptedException ie){
-                //If this thread was intrrupted by nother thread
-            }
-
-            deleteStager(stagerid2);
-
-            deleteService(serviceid1);
-            deleteService(serviceid2);
-
-            //deleteContainer(containerid);
-
-            /*List<String> services = getServices(id);
-
-            for(String serviceid : services){
-                printServiceInfo(serviceid);
-                List<String> stagerids = getStagers(serviceid);
-                if(stagerids.size()>0){
-                    System.out.println("REST");
-                    System.out.println("====");
-                    for(String stagerid : stagerids){
-                        printStagerInfo(stagerid);
-                    }
-                    System.out.println("====");
                 }
-            }*/
+                catch(InterruptedException ie){
+                    //If this thread was intrrupted by nother thread
+                }
+            }
             
 
-        } catch (JSONException ex) {
-            throw new RuntimeException(ex);
+            
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         } catch (IOException ex) {
@@ -243,7 +201,6 @@ public class APIConsumer {
         try {
             String url = new String(protocol + host + "/stager/");
             String json = doFilePostToREST(url, id, file);
-            System.out.println(json);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
         } catch (JSONException ex) {
@@ -546,7 +503,6 @@ public class APIConsumer {
             String output = "";
             String str;
             while (null != ((str = buf.readLine()))) {
-                System.out.println(str);
                 output += str;
             }
             buf.close();
@@ -657,6 +613,8 @@ public class APIConsumer {
             String name = "ContainerFromJava ";
 
             String output = doPostToURL(url.toString(), name );
+
+            System.out.println("Output " + output);
 
             JSONObject ob = new JSONObject(output);
 

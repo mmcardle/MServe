@@ -33,6 +33,15 @@ class Sleeper(object):
 sleeper = Sleeper()
 sleep = sleeper.main
 
+def usage(request):
+    usagesummary = usage_store.usagesummary()
+    usagerate = UsageRate.objects.all()
+    usage = Usage.objects.all()
+    dict = {}
+    dict["usage"] = usage
+    dict["usagesummary"] = usagesummary
+    dict["usagerate"] = usagerate
+    return render_to_response('allusage.html', dict)
 
 def home(request):
     form = HostingContainerForm()
