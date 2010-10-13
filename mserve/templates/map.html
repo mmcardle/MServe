@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block script %}
+    <script type="text/javascript">
+      google.load('visualization', '1', {packages: ['orgchart']});
+    </script>
+{% endblock %}
+
 {% block title %}MServe{% endblock %}
 
 {% block heading%}Map{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block script %}
+    <script type="text/javascript">
+      google.load('visualization', '1', {packages: ['table']});
+    </script>
+{% endblock %}
+
+{% block title %}MServe{% endblock %}
+
+{% block heading%}Map{% endblock %}
+
+{% block content %}
+    <script type="text/javascript">
+    function drawVisualization() {
+      // Create and populate the data table.
+      //{% autoescape off %}
+      var JSONObject = {{ viz_data }};
+      //{% endautoescape  %}
+      var data = new google.visualization.DataTable(JSONObject, 0.5);
+      var formatter = new google.visualization.TableNumberFormat(
+          {suffix: "b", negativeColor: 'red', negativeParens: true});
+      formatter.format(data, 3);
+      // Create and draw the visualization.
+      visualization = new google.visualization.Table(document.getElementById('table'));
+      visualization.draw(data, {'allowHtml': true});
+    }
+
+    google.setOnLoadCallback(drawVisualization);
+    </script>
+
+    <h3>Visualization</h3>
+
+        <div id="table" style="width: 800px; height: 600px;"></div>
+    {% block auths %}
+    {% endblock auths %}
+
+{% endblock %}

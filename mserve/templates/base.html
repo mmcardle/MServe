@@ -3,9 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
     <script type="text/javascript" src="http://www.google.com/jsapi"></script>
-    <script type="text/javascript">
-      google.load('visualization', '1', {packages: ['orgchart']});
-    </script>
+    {% block script %}{% endblock %}
     <style type="text/css" media="screen">
 body {
 
@@ -83,6 +81,7 @@ td {
                     <div><a href="/admin/">Admin</a></div>
                     <div><a href="/usage/">Usage</a></div>
                     <div><a href="/map/">Map</a></div>
+                    <div><a href="/viz/">Vizualization</a></div>
                 {% endblock %}
             </th>
             <td >

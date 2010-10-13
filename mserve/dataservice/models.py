@@ -2,6 +2,8 @@ from django.db import models
 import uuid
 import pickle
 import base64
+import os
+import time
 
 ID_FIELD_LENGTH = 200
 
@@ -10,12 +12,18 @@ fmt = "%3.2f"
 def random_id():
     return str(uuid.uuid4())
 
-class Event(models.Model):
+def create_filename(instance, filename):
+    timeformat = time.strftime("%Y/%m/%d/")
+    return os.path.join('files', timeformat ,instance.id ,filename)
+
+class UsageReport(models.Model):
     base = models.ForeignKey('NamedBase')
     reportnum = models.IntegerField(default=0)
+    summarys   = models.ManyToManyField("UsageSummary")
+    inprogress = models.ManyToManyField("UsageRate")
 
     def __unicode__(self):
-        return "%s reportnum=%s " % (self.base,self.reportnum);
+        return "Usage Report for %s reportnum=%s" % (self.base,self.reportnum);
 
 class Usage(models.Model):
     base = models.ForeignKey('NamedBase',null=True, blank=True)
@@ -34,7 +42,7 @@ class Usage(models.Model):
             return "%3.2f" % (self.value)
     
     def __unicode__(self):
-        return "%s created=%s value=%f " % (self.metric,self.created,self.value);
+        return "%s %s created=%s value=%f " % (self.base,self.metric,self.created,self.value);
 
 class UsageRate(models.Model):
     base       = models.ForeignKey('NamedBase')
@@ -44,7 +52,7 @@ class UsageRate(models.Model):
     usageSoFar = models.FloatField() # Cumulative unreported usage before that point
 
     def __unicode__(self):
-        return "%s reported=%s rate=%f usageSoFar=%f" % (self.metric,self.current,self.rate,self.usageSoFar);
+        return "%s %s reported=%s rate=%f usageSoFar=%f" % (self.base,self.metric,self.current,self.rate,self.usageSoFar)
 
     def ctime(self):
         return self.current.ctime()
@@ -66,7 +74,7 @@ class UsageRate(models.Model):
             return "/container/"
         if self.metric == usage_store.metric_service:
             return "/service/"
-        if self.metric == usage_store.metric_stager:
+        if self.metric == usage_store.metric_stager or usage_store.metric_stager:
             return "/stager/"
         return "/error/"
 
@@ -137,10 +145,6 @@ class UsageSummary(models.Model):
         return "%s {n=%s,sum=%s,min=%s,max=%s,sums=%s}" % (self.metric,self.n,self.sum,self.min,self.max,self.sums);
 
 
-class UsageReport(models.Model):
-    summarys = models.ManyToManyField(UsageSummary)
-    inprogress = models.ManyToManyField(UsageRate)
-
 class Base(models.Model):
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
 
@@ -177,10 +181,12 @@ class DataService(NamedBase):
             self.id = random_id()
         super(DataService, self).save()
 
+
 class DataStager(NamedBase):
     # TODO : Add bitmask to Datastager for deleted,remote, input,output, etc
     service = models.ForeignKey(DataService)
-    file = models.FileField(upload_to="%Y/%m/%d",blank=True,null=True)
+    file = models.FileField(upload_to=create_filename,blank=True,null=True)
+    #file = models.FileField(upload_to="%Y/%m/%d/",blank=True,null=True)
     def save(self):
         if not self.id:
             self.id = random_id()

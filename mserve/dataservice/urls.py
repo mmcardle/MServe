@@ -66,7 +66,8 @@ urlpatterns = patterns('',
     # HTML Views
     (r'^home/',  'dataservice.views.home'),
     (r'^usage/',  'dataservice.views.usage'),
-    (r'map/',  'dataservice.views.map'),
+    (r'^map/',  'dataservice.views.map'),
+    (r'^viz/',  'dataservice.views.viz'),
     
     # Root
     (r'^$',  'dataservice.views.home'),

@@ -1,4 +1,5 @@
 from piston.handler import BaseHandler
+from piston.utils import rc, throttle
 from dataservice.models import HostingContainer
 from dataservice.models import HostingContainerAuth
 from dataservice.models import DataService
@@ -12,7 +13,7 @@ from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
-from dataservice.models import Event
+from dataservice.models import UsageReport
 from dataservice.forms import HostingContainerForm
 from dataservice.forms import DataServiceForm
 from dataservice.forms import DataServiceURLForm
@@ -114,7 +115,7 @@ def create_container(request,name):
 
     usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
-    reportevent(hostingcontainer)
+    reportusage(hostingcontainer)
 
     return hostingcontainer
 
@@ -128,7 +129,7 @@ def delete_container(request,containerid):
         usage.base = None
         usage.save()
 
-    reportevent(container)
+    reportusage(container)
 
     container.delete()
     logging.info("Container Deleted %s " % containerid)
@@ -140,7 +141,7 @@ def create_data_service(request,containerid,name):
 
     usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
 
-    reportevent(dataservice)
+    reportusage(dataservice)
     
     return dataservice
 
@@ -154,7 +155,7 @@ def delete_service(request,serviceid):
         usage.base = service.container
         usage.save()
 
-    reportevent(service)
+    reportusage(service)
 
     service.delete()
     logging.info("Service Deleted %s " % serviceid)
@@ -180,7 +181,7 @@ def create_data_stager(request,serviceid,file):
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
     
-    reportevent(datastager)
+    reportusage(datastager)
 
     if file is not None:
         usage_store.startrecording(datastager.id,usage_store.metric_disc,file.size)
@@ -194,17 +195,20 @@ def delete_stager(request,stagerid):
     logging.info("Deleteing stager %s %s" % (stager.name,stagerid))
 
     usages = Usage.objects.filter(base=stager)
+    logging.info("Deleteing stager usage")
     for usage in usages:
         logging.info("Saving Usage %s " % usage)
         usage.base = stager.service
         usage.save()
 
+    reportusage(stager)
+
     stager.delete()
     logging.info("Stager Deleted %s " % stagerid)
 
 
-def reportevent(base):
-    
+def reportusage(base):
+    logging.info("Report usage %s" % base)
     toreport = []
 
     if hasattr(base,"hostingcontainer"):
@@ -221,13 +225,12 @@ def reportevent(base):
         toreport =  [container,service,base]
 
     for ob in toreport:
-        events = Event.objects.filter(base=ob)
-        logging.info("Reporting %s events for %s " % (len(events),ob))
-        for ev in events:
-            logging.info("\tEvent %s " % (ev))
-            ev.reportnum = ev.reportnum + 1
-            ev.save()
-            logging.info("\tEvent %s Done" % (ev))
+        logging.info("Reporting usage for %s "%ob)
+        reports = UsageReport.objects.filter(base=ob)
+        for r in reports:
+            logging.info("\tReport %s "%r)
+            r.reportnum = r.reportnum + 1
+            r.save()
 
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
@@ -299,7 +302,9 @@ class DataStagerHandler(BaseHandler):
     def delete(self, request, stagerid):
         logging.info("Deleting Stager %s " % stagerid)
         delete_stager(request,stagerid)
-    
+
+
+    @throttle(2, 1*60)
     def read(self, request, stagerid):
         stager = DataStager.objects.get(pk=stagerid)
         base = NamedBase.objects.get(pk=stagerid)
@@ -453,6 +458,9 @@ class ManagedResourcesServiceHandler(BaseHandler):
 
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
+    model = UsageReport
+    fields = ('summarys','inprogress','reportnum','id')
+    #exclude =()
 
     def read(self,request, containerid, last_report):
 
@@ -461,27 +469,33 @@ class UsageSummaryHandler(BaseHandler):
         sleeptime = 10
         container = HostingContainer.objects.get(pk=containerid)
 
-        ev, created = Event.objects.get_or_create(base=container)
+        usagereport, created = UsageReport.objects.get_or_create(base=container)
 
-        logging.info("last_report=%s" % lr)
-        logging.info(ev)
-        logging.info(created)
+        logging.info("Report = %s" % usagereport)
 
         if lr != -1:
-            while lr == ev.reportnum:
-                logging.info("Waiting for event %s " % ev)
+            while lr == usagereport.reportnum:
+                logging.info("Waiting for report=%s lastreport=%s" % (usagereport.reportnum,lr))
                 time.sleep(sleeptime)
-                ev = Event.objects.get(pk=ev.pk)
-        
+                usagereport = UsageReport.objects.get(pk=usagereport.pk)
+
+
         inprogress = UsageRate.objects.filter(base=container)
         summarys = usage_store.container_usagesummary(containerid)
 
-        dict = {}
-        dict["reportnum"] = ev.reportnum
-        dict["summarys"] = summarys
-        dict["inprogress"] = inprogress
+        usagereport.summarys = summarys
 
-        return dict
+        for summary in summarys:
+            summary.save()
+
+        for ip in inprogress:
+            ip.save()
+
+        usagereport.inprogress = inprogress
+        usagereport.save()
+
+        return usagereport
+
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')

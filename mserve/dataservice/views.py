@@ -33,6 +33,58 @@ class Sleeper(object):
 sleeper = Sleeper()
 sleep = sleeper.main
 
+def viz(request):
+    dict={}
+
+    hostings = HostingContainer.objects.all()
+
+    rows = []
+    for hosting in hostings:
+        services = DataService.objects.filter(container=hosting)
+        totalservices = len(services)
+        totalstagers = 0
+        totaldisc = 0.0
+        for service in services:
+            stagers = DataStager.objects.filter(service=service)
+            totalstagers += len(stagers)
+            for stager in stagers:
+                totaldisc    += stager.file.size
+
+        n = {"c":[{"v": str(hosting.name)}, {"v": totalservices}, {"v": totalstagers}, {"v": totaldisc}]}
+        rows.append(n)
+
+
+    viz_data = {
+        "cols":
+                [   {"id": 'container', "label": 'Container', "type": 'string'},
+                    {"id": 'services', "label": 'Services', "type": 'number'},
+                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
+                    {"id": 'stagers', "disc": 'Disc', "type": 'number'}
+                ],
+        "rows": [
+                    {"c":[{"v": 'Work'},     {"v": 11}]},
+                    {"c":[{"v": 'Eat'},     {"v": 2 }]},
+                    {"c":[{"v": 'Commute'}, {"v": 2 }]}
+                ]
+            }
+    import logging
+    logging.info(viz_data)
+    
+    viz_data = {
+        "cols":
+                [   {"id": 'container', "label": 'Container', "type": 'string'},
+                    {"id": 'services', "label": 'Services', "type": 'number'},
+                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
+                    {"id": 'disc', "label": 'Disc', "type": 'number'}
+                ],
+        "rows": rows
+            }
+
+    
+    logging.info(viz_data)
+    dict["viz_data"] = viz_data
+    return render_to_response('viz.html', dict)
+
 def usage(request):
     usagesummary = usage_store.usagesummary()
     usagerate = UsageRate.objects.all()
@@ -106,6 +158,8 @@ class Row:
         self.value = value
         self.tip = tip
         self.parent = parent
+
+
 
 def map(request):
     dict = {}
