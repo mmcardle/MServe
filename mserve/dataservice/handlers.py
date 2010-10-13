@@ -1,5 +1,4 @@
 from piston.handler import BaseHandler
-from piston.utils import rc, throttle
 from dataservice.models import HostingContainer
 from dataservice.models import HostingContainerAuth
 from dataservice.models import DataService
@@ -304,7 +303,6 @@ class DataStagerHandler(BaseHandler):
         delete_stager(request,stagerid)
 
 
-    @throttle(2, 1*60)
     def read(self, request, stagerid):
         stager = DataStager.objects.get(pk=stagerid)
         base = NamedBase.objects.get(pk=stagerid)
