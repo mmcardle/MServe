@@ -39,6 +39,7 @@ import time
 import pickle
 import base64
 import logging
+#import magic
 
 base            = "/home/"
 container_base  = "/container/"
@@ -166,6 +167,14 @@ def create_data_stager(request,serviceid,file):
     else:
         datastager = DataStager(name=file.name,service=service,file=file)
     datastager.save()
+
+    #if datastager.file:
+    #    m = magic.open(magic.MAGIC_MIME)
+    #    m.load()
+    #    mimetype = m.file(datastager.file.path)
+    #    datastager.mimetype = mimetype
+    #    datastager.save()
+
     datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
     methods_owner = ["get", "put", "post", "delete"]
     datastagerauth_owner.setmethods(methods_owner)
@@ -279,17 +288,22 @@ class DataServiceHandler(BaseHandler):
 class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
-        form = DataServiceURLForm(request.POST) 
+        logging.info("Request DataServiceURLHandler %s " % request)
+        form = DataServiceURLForm(request.POST)
+        logging.info("Request data = %s" % form)
         if form.is_valid(): 
-            
+            logging.info("Form valid = %s" % form)
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
 
             if request.META["HTTP_ACCEPT"] == "application/json":
+                logging.info("Returning JSON = " % dataservice)
                 return dataservice
 
+            logging.info("Returning Redirect = %s" % dataservice)
             return redirect('/service/'+str(dataservice.id))
         else:
+            logging.info("Form Invalid = %s" % form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 
