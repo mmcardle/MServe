@@ -7,15 +7,20 @@ from dataservice.models import Usage
 from dataservice.models import UsageRate
 from dataservice.models import UsageSummary
 from dataservice.models import UsageReport
+from dataservice.models import AggregateUsageRate
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Max
+
 import datetime
 import time
 import sys
 import logging
+
+
 
 # Metrics for objects
 metric_stager = "http://prestoprime/stager"
@@ -35,7 +40,7 @@ def record(id,metric,value):
 
 def startrecording(id,metric,rate):
     base = NamedBase.objects.get(pk=id)
-    usagerate = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0)
+    usagerate = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
     usagerate.save()
 
 def stoprecording(id,metric):
@@ -112,6 +117,98 @@ def service_usagesummary(serviceid):
         aggregate.sums += s.sums
 
     return dict.values()
+
+
+def stager_inprogresssummary(stager):
+    inprogress = []
+    for p in UsageRate.objects.filter(base=stager):
+        inprogress.append(p)
+    return inprogress
+
+def service_inprogresssummary(service):
+
+    inprogress = []
+    stagers = DataStager.objects.filter(service=service)
+    for stager in stagers:
+        for s in stager_inprogresssummary(stager):
+            inprogress.append(s)
+
+    for p in UsageRate.objects.filter(base=service):
+        inprogress.append(p)
+
+    return inprogress
+
+def container_inprogresssummary(container):
+    c = HostingContainer.objects.get(pk=container)
+    services = DataService.objects.filter(container=container)
+    inprogress = []
+    for service in services:
+        for s in service_inprogresssummary(service):
+            inprogress.append(s)
+
+    for p in UsageRate.objects.filter(base=container):
+        inprogress.append(p)
+
+    maxdate = None
+    for inp in inprogress:
+        if maxdate == None:
+            maxdate = inp.current
+        else:
+            maxdate = max(maxdate,inp.current)
+
+    logging.info("Maxdate = %s " % maxdate)
+
+    for ur in inprogress:
+        __update_usagereport__(ur,maxdate)
+
+    #urs = UsageRate.objects.filter(base=container,metric=metric_container)
+
+    aggregates = {}
+
+    for metric in metrics:
+
+        logging.info("Container %s" % container)
+        aggregates[metric] = agg = AggregateUsageRate(base=c,current=maxdate)
+        agg.usageSoFar = 0.0
+        agg.rate = 0.0
+        agg.metric=metric
+
+    for usage in inprogress:
+        logging.info("Usage = %s " % usage)
+        agg_ur = aggregates[usage.metric]
+        #base       = models.ForeignKey('NamedBase')
+        #current    = models.DateTimeField() # When the current rate was reported
+        #metric     = models.CharField(max_length=4096)
+        #rate       = models.FloatField() # The current rate
+        #usageSoFar = models.FloatField() # Cumulative unreported usage before that point
+        agg_ur.rate = agg_ur.rate + usage.rate
+        agg_ur.usageSoFar = agg_ur.usageSoFar + usage.usageSoFar
+        agg_ur.count = agg_ur.count+1
+
+    return aggregates.values()
+    #maxu = UsageRate.objects.filter(base=container,metric=metric_container).aggregate(Max('usageSoFar'))['usageSoFar__max']
+    #logging.info("max usageSoFar %s " % maxu)
+
+    return inprogress
+
+def __update_usagereport__(usagereport,todate):
+    c = usagereport.current
+    if c == todate:
+        logging.info("Not Updating %s  to %s " % (usagereport.base,todate))
+        return
+    logging.info("Updating %s from %s to %s " % (usagereport.base,usagereport.current,todate))
+    logging.info("time %s  " % (todate-usagereport.current))
+
+    td = todate-usagereport.current
+    dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
+
+    amount = dif*usagereport.rate
+
+    usagereport.usageSoFar = usagereport.usageSoFar + amount
+    usagereport.current = todate
+    usagereport.save()
+
+    logging.info("Update to %s " % usagereport)
 
 def container_usagesummary(containerid):
     summary = []

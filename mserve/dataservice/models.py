@@ -4,6 +4,7 @@ import pickle
 import base64
 import os
 import time
+import logging
 
 ID_FIELD_LENGTH = 200
 
@@ -21,7 +22,7 @@ class UsageReport(models.Model):
     base = models.ForeignKey('NamedBase')
     reportnum = models.IntegerField(default=0)
     summarys   = models.ManyToManyField("UsageSummary")
-    inprogress = models.ManyToManyField("UsageRate")
+    inprogress = models.ManyToManyField("AggregateUsageRate")
 
     def __unicode__(self):
         return "Usage Report for %s reportnum=%s" % (self.base,self.reportnum);
@@ -47,13 +48,14 @@ class Usage(models.Model):
 
 class UsageRate(models.Model):
     base       = models.ForeignKey('NamedBase')
-    current    = models.DateTimeField(auto_now=True) # When the current rate was reported
+    current    = models.DateTimeField() # When the current rate was reported
     metric     = models.CharField(max_length=4096)
     rate       = models.FloatField() # The current rate
     usageSoFar = models.FloatField() # Cumulative unreported usage before that point
 
     def __unicode__(self):
         return "%s %s reported=%s rate=%f usageSoFar=%f" % (self.base,self.metric,self.current,self.rate,self.usageSoFar)
+
 
     def ctime(self):
         return self.current.ctime()
@@ -97,6 +99,14 @@ class UsageRate(models.Model):
 
         x = (t2 - t1) * self.rate
         return fmt % (x)
+
+class AggregateUsageRate(models.Model):
+    base       = models.ForeignKey('NamedBase')
+    current    = models.DateTimeField() # When the current rate was reported
+    metric     = models.CharField(max_length=4096)
+    rate       = models.FloatField() # The current rate
+    usageSoFar = models.FloatField() # Cumulative unreported usage before that point
+    count = models.IntegerField(default=0)
 
 def sizeof_fmt(num):
     for x in ['bytes','KB','MB','GB','TB']:

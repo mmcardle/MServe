@@ -7,7 +7,6 @@ from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
 from dataservice.models import UsageRate
 from dataservice.models import UsageSummary
-from dataservice.models import UsageReport
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
@@ -33,7 +32,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
-from django.core import serializers
 
 import usage_store as usage_store
 
@@ -521,8 +519,8 @@ class UsageSummaryHandler(BaseHandler):
                 time.sleep(sleeptime)
                 usagereport = UsageReport.objects.get(pk=usagereport.pk)
 
+        inprogress = usage_store.container_inprogresssummary(containerid)
 
-        inprogress = UsageRate.objects.filter(base=container)
         summarys = usage_store.container_usagesummary(containerid)
 
         usagereport.summarys = summarys
