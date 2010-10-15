@@ -8,9 +8,9 @@ src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js">
 
 <script type="text/javascript" language="javascript">
 
-    var flashvars = { file:"/mservemedia/{{stager.file}}",autostart:"false" };
+    var flashvars = { file:"/mservedata/{{stager.file}}",autostart:"false" };
     var params = { allowfullscreen:"true", allowscriptaccess:"always" };
     var attributes = { id:"player1", name:"player1" };
-    swfobject.embedSWF("/files/media/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
+    swfobject.embedSWF("media/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
 
 </script>

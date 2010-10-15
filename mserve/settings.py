@@ -47,12 +47,12 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = '/etc/mserve/media/'
+MEDIA_ROOT = '/etc/mserve/wwwroot/mservedata/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
 # Examples: "http://media.lawrence.com", "http://example.com/media/"
-MEDIA_URL = '/media/'
+MEDIA_URL = '/mservemedia/'
 
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
 # trailing slash.
@@ -79,7 +79,7 @@ ROOT_URLCONF = 'mserve.urls'
 
 TEMPLATE_DIRS = (
 
-    # Change to where your chechout is
+    # Change to where your checkout is
     "/home/mm/dev/pp-dataservice/mserve/templates",
     # Change to where the admin templates are
     "/usr/lib/pymodules/python2.6/django/contrib/admin/templates/",
