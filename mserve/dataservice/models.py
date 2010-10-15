@@ -196,7 +196,8 @@ class DataStager(NamedBase):
     # TODO : Add bitmask to Datastager for deleted,remote, input,output, etc
     service = models.ForeignKey(DataService)
     file = models.FileField(upload_to=create_filename,blank=True,null=True)
-    mimetype =  models.CharField(max_length=200,blank=True,null=True)
+    mimetype = models.CharField(max_length=200,blank=True,null=True)
+    checksum = models.CharField(max_length=32, blank=True, null=True)
     #file = models.FileField(upload_to="%Y/%m/%d/",blank=True,null=True)
     def save(self):
         if not self.id:

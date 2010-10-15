@@ -1,3 +1,24 @@
+Prerequisites for Ubuntu 10.10 desktop
+======================================
+
+sudo apt-get install lighttpd
+sudo apt-get install python-django
+sudo-apt-get install python-setuptools
+sudo apt-get install python-flup
+sudo apt-get install mercurial
+
+hg clone http://bitbucket.org/david/django-oauth
+cd django-oauth
+python setup.py install
+
+hg clone http://bitbucket.org/jespern/django-piston
+cd django-piston
+python setup.py install
+
+sudo apt-get install git
+git clone git://soave.it-innovation.soton.ac.uk/git/pp-dataservice
+
+
 MServe
 ======
 
