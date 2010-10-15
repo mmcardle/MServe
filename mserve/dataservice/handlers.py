@@ -105,15 +105,16 @@ class HostingContainerHandler(BaseHandler):
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 
-def md5_for_file(filename):
-    f = open(filename)
+def md5_for_file(file):
+    """Return hex md5 digest for a Django FieldFile"""
+    file.open()
     md5 = hashlib.md5()
     while True:
-        data = f.read(8192)  # multiple of 128 bytes is best
+        data = file.read(8192)  # multiple of 128 bytes is best
         if not data:
             break
         md5.update(data)
-    f.close()
+    file.close()
     return md5.hexdigest()
 
 def create_container(request,name):

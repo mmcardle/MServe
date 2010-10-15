@@ -7,8 +7,12 @@
 {% block content %}
 
 <h3>Details</h3>
-<p>{{stager.name}}</p>
-<p>{{stager.checksum}}</p>
+<dl>
+    <dt>Name</dt>
+    <dd>{{stager.name}}</dd>
+    <dt>Checksum</dt>
+    <dd>{{stager.checksum}}</dd>
+</dl>
 
 {% load mservetags %}
 
