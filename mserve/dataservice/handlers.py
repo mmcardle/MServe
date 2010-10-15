@@ -7,6 +7,7 @@ from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
 from dataservice.models import UsageRate
 from dataservice.models import UsageSummary
+from dataservice.models import AggregateUsageRate
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
@@ -498,11 +499,15 @@ class ManagedResourcesServiceHandler(BaseHandler):
         report.save()
         return report
 
+class AggregateUsageRateHandler(BaseHandler):
+    model =  AggregateUsageRate
+    exclude =('pk','base','id')
+
+
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
     model = UsageReport
-    fields = ('summarys','inprogress','reportnum','id')
-    #exclude =()
+    fields = ('summarys','inprogress','reportnum')
 
     def read(self,request, containerid, last_report):
 
