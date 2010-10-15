@@ -9,11 +9,29 @@
 <h3>Details</h3>
 <p>{{stager.name}}</p>
 
-{% if stager.file %}
-    <p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/files/media/{{stager.file}}" /></p>
-{% endif %}
-{% if not stager.file %}
-    <p><img  title="No File" alt="No File" src="{{altfile}}" /></p>
+{% load mservetags %}
+
+{% if stager.mimetype %}
+
+    {% if stager.mimetype|startswith:"video"  %}
+        {% include "mediaplayer.html" %}
+    {% endif %}
+
+
+    {% if stager.mimetype|startswith:"image"  %}
+        {% if stager.file %}
+            <p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/mservemedia/{{stager.file}}" /></p>
+        {% endif %}
+        {% if not stager.file %}
+            <p><img  title="No File" alt="No File" src="{{altfile}}" /></p>
+        {% endif %}
+
+    {% endif %}
+
+{% else%}
+
+<em>Mimetype not set</em>
+
 {% endif %}
 
 <h3>Create Auth</h3>

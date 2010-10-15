@@ -39,7 +39,7 @@ import time
 import pickle
 import base64
 import logging
-#import magic
+import magic
 
 base            = "/home/"
 container_base  = "/container/"
@@ -168,12 +168,12 @@ def create_data_stager(request,serviceid,file):
         datastager = DataStager(name=file.name,service=service,file=file)
     datastager.save()
 
-    #if datastager.file:
-    #    m = magic.open(magic.MAGIC_MIME)
-    #    m.load()
-    #    mimetype = m.file(datastager.file.path)
-    #    datastager.mimetype = mimetype
-    #    datastager.save()
+    if datastager.file:
+        m = magic.open(magic.MAGIC_MIME)
+        m.load()
+        mimetype = m.file(datastager.file.path)
+        datastager.mimetype = mimetype
+        datastager.save()
 
     datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
     methods_owner = ["get", "put", "post", "delete"]
