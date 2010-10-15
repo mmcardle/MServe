@@ -13,6 +13,8 @@ from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
 from dataservice.models import UsageReport
+from dataservice.models import ContainerResourcesReport
+from dataservice.models import ServiceResourcesReport
 from dataservice.forms import HostingContainerForm
 from dataservice.forms import DataServiceForm
 from dataservice.forms import DataServiceURLForm
@@ -47,12 +49,14 @@ service_base    = "/service/"
 stager_base     = "/stager/"
 auth_base       = "/auth/"
 
+sleeptime = 10
+
 
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
-    fields = ('name', 'id', 'pk' )
-    exclude = ()
+    fields = ('name', 'id' )
+    exclude = ('pk')
 
     def delete(self, request, containerid):
         logging.info("Deleting Container %s " % containerid)
@@ -220,16 +224,25 @@ def reportusage(base):
     toreport = []
 
     if hasattr(base,"hostingcontainer"):
+
         toreport =  [base]
 
     if hasattr(base,"dataservice"):
-        #service   = DataService.objects.get(pk=base.pk)
         container = HostingContainer.objects.get(dataservice=base)
+        container_report,created = ContainerResourcesReport.objects.get_or_create(base=container)
+        container_report.reportnum = container_report.reportnum+1
+        container_report.save()
+
         toreport =  [container,base]
 
     if hasattr(base,"datastager"):
         service   = DataService.objects.get(datastager=base)
         container = HostingContainer.objects.get(dataservice=service)
+
+        service_report,created = ServiceResourcesReport.objects.get_or_create(base=service)
+        service_report.reportnum = service_report.reportnum+1
+        service_report.save()
+
         toreport =  [container,service,base]
 
     for ob in toreport:
@@ -240,11 +253,12 @@ def reportusage(base):
             r.reportnum = r.reportnum + 1
             r.save()
 
+
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
-    fields = ('name', 'id', 'pk' )
-    exclude = ()
+    fields = ('name', 'id' )
+    exclude = ('pk')
 
     def delete(self, request, serviceid):
         logging.info("Deleting Service %s " % serviceid)
@@ -310,7 +324,8 @@ class DataServiceURLHandler(BaseHandler):
 class DataStagerHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataStager
-    fields = ('name', 'id', 'pk', 'file')
+    fields = ('name', 'id', 'file')
+    exclude = ('pk')
 
     def delete(self, request, stagerid):
         logging.info("Deleting Stager %s " % stagerid)
@@ -439,34 +454,51 @@ class DataStagerURLHandler(BaseHandler):
 
 class ManagedResourcesContainerHandler(BaseHandler):
     allowed_methods = ('GET')
+    model = ContainerResourcesReport
+    fields = ('services','base','reportnum')
+    exclude = ('pk')
+    
+    def read(self, request, containerid, last_known):
 
-    def read(self, request, containerid):
-
+        last = int(last_known)
         container = HostingContainer.objects.get(id=containerid)
 
+        report,created = ContainerResourcesReport.objects.get_or_create(base=container)
+
+        if last is not -1:
+            while last == report.reportnum:
+                logging.info("Waiting for new services lastreport=%s" % (last))
+                time.sleep(sleeptime)
+                report = ContainerResourcesReport.objects.get(base=container)
+
         services = DataService.objects.filter(container=container)
-
-        response = HttpResponse(mimetype="application/json")
-
-        json_serializer = serializers.get_serializer("json")()
-        json_serializer.serialize(services, ensure_ascii=False ,stream=response)
-
-        return response
+        report.services = services
+        report.save()
+        return report
 
 class ManagedResourcesServiceHandler(BaseHandler):
     allowed_methods = ('GET')
+    model = ServiceResourcesReport
+    fields = ('stagers','meta','base','reportnum')
 
-    def read(self, request, serviceid):
-        
+
+    def read(self, request, serviceid, last_known):
+
+        last = int(last_known)
         service = DataService.objects.get(id=serviceid)
+
+        report,created = ServiceResourcesReport.objects.get_or_create(base=service)
+
+        if last is not -1:
+            while last == report.reportnum:
+                logging.info("Waiting for new stagers lastreport=%s" % (last))
+                time.sleep(sleeptime)
+                report = ServiceResourcesReport.objects.get(base=service)
+        
         stagers = DataStager.objects.filter(service=service)
-
-        response = HttpResponse(mimetype="application/json")
-
-        json_serializer = serializers.get_serializer("json")()
-        json_serializer.serialize(stagers, ensure_ascii=False ,stream=response)
-
-        return response
+        report.stagers = stagers
+        report.save()
+        return report
 
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -477,8 +509,6 @@ class UsageSummaryHandler(BaseHandler):
     def read(self,request, containerid, last_report):
 
         lr = int(last_report)
-
-        sleeptime = 10
         container = HostingContainer.objects.get(pk=containerid)
 
         usagereport, created = UsageReport.objects.get_or_create(base=container)

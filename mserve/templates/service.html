@@ -25,6 +25,13 @@
 
 {% endblock %}
 
+{% block rightcontent %}
+
+<h3>Actions</h3>
+
+<a href="/serviceapi/getmanagedresources/{{service.id}}/-1/" >Managed Resources</a>
+
+{% endblock %}
 
 {% block bottomcontent %}
 {% include "usage.html" %}

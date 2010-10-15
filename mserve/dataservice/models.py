@@ -193,6 +193,24 @@ class DataStager(NamedBase):
             self.id = random_id()
         super(DataStager, self).save()
 
+class ContainerResourcesReport(models.Model):
+    base = models.ForeignKey('NamedBase')
+    reportnum = models.IntegerField(default=0)
+    services   = models.ManyToManyField(DataService,related_name="con2ser")
+    meta       = models.CharField(max_length=200,blank=True,null=True)
+
+    def __unicode__(self):
+        return "Container Managed Services Report for %s reportnum=%s" % (self.base,self.reportnum);
+
+class ServiceResourcesReport(models.Model):
+    base = models.ForeignKey('NamedBase')
+    reportnum = models.IntegerField(default=0)
+    stagers   = models.ManyToManyField(DataStager,related_name="ser2sta")
+    meta       = models.CharField(max_length=200,blank=True,null=True)
+
+    def __unicode__(self):
+        return "Service Managed Services Report for %s reportnum=%s" % (self.base,self.reportnum);
+
 class Auth(Base):
     authname = models.CharField(max_length=50)
     description= models.CharField(max_length=200)
@@ -244,3 +262,5 @@ class HostingContainerAuth(Auth):
         if not self.id:
             self.id = random_id()
         super(HostingContainerAuth, self).save()
+
+
