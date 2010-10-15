@@ -1,6 +1,17 @@
 MServe
 ======
 
+To run the server in standalone mode
+Create the folder /etc/mserve (linux) or somewhere else (windows)
+Edit settings.py and change template directory "TEMPLATE_DIRS" to install location   
+Edit settings.py and change database location "DATABASE_NAME" to an appropriate directory
+Create the database
+./manage.py syncdb
+./manage.py runserver
+Follow the link given
+
+WARNING: Since this is singlethreaded usage reporting (long polling) will not work, for this lighttp is needed (See Below)
+
 Lighttpd Configuration
 =====================
 Edit /etc/lighttpd/lighttpd.conf
@@ -27,9 +38,12 @@ fastcgi.server = (
         )
     )
 )
-
 url.rewrite-once = (
+    "^(/dl10.*)$" => "$1",
+    "^(/dl50.*)$" => "$1",
     "^(/media.*)$" => "$1",
+    "^(/mservemedia.*)$" => "$1",
+    "^(/mservedata.*)$" => "$1",
     "^/favicon\.ico$" => "/media/favicon.ico",
     "^(/.*)$" => "/project.fcgi$1",
 )
@@ -66,4 +80,5 @@ echo "Running"
 =======================================
 =======================================
 
+Run this file to stop/start django
 
