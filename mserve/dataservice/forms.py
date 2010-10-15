@@ -32,14 +32,14 @@ class DataServiceForm(ModelForm):
 
 class DataStagerURLForm(ModelForm):
     class Meta:
-        exclude=['name','id','service','mimetype']
+        exclude=['name','id','service','mimetype', 'checksum']
         model = DataStager
 
 class DataStagerForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
-        exclude=['name','id','service','mimetype']
+        exclude=['name','id','service','mimetype', 'checksum']
         model = DataStager
 
 class UpdateDataStagerForm(ModelForm):

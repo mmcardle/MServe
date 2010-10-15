@@ -40,6 +40,7 @@ import pickle
 import base64
 import logging
 import magic
+import hashlib
 
 base            = "/home/"
 container_base  = "/container/"
@@ -103,6 +104,17 @@ class HostingContainerHandler(BaseHandler):
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
+
+def md5_for_file(filename):
+    f = open(filename)
+    md5 = hashlib.md5()
+    while True:
+        data = f.read(8192)  # multiple of 128 bytes is best
+        if not data:
+            break
+        md5.update(data)
+    f.close()
+    return md5.hexdigest()
 
 def create_container(request,name):
     hostingcontainer = HostingContainer(name=name)
@@ -169,10 +181,14 @@ def create_data_stager(request,serviceid,file):
     datastager.save()
 
     if datastager.file:
+        # MIME type
         m = magic.open(magic.MAGIC_MIME)
         m.load()
         mimetype = m.file(datastager.file.path)
         datastager.mimetype = mimetype
+        # checksum
+        datastager.checksum = md5_for_file(datastager.file)
+        # save it
         datastager.save()
 
     datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
