@@ -61,7 +61,7 @@ urlpatterns = patterns('',
     url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
 
     # Media URLs
-    (r'^files/media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+    #(r'^files/media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
 
     # HTML Views
     (r'^home/',  'dataservice.views.home'),

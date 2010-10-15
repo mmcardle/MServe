@@ -352,7 +352,7 @@ class DataStagerHandler(BaseHandler):
         form.fields['dsid'].initial = stager.id
         dict = {}
         if stager.file == '' or stager.file == None:
-            dict["altfile"] = "/files/media/empty.png"
+            dict["altfile"] = "/mservemedia/images/empty.png"
         dict["stager"] = stager
         dict["form"] = form
         dict["auths"] = auths
@@ -374,10 +374,10 @@ class DataStagerHandler(BaseHandler):
         dict = {}
         dict["stager"] = stager
         if stager.file == '' or stager.file == None:
-            dict["altfile"] = "/files/media/empty.png"
+            dict["altfile"] = "/mservemedia/images/empty.png"
         if not show:
             stager.file = None
-            dict["altfile"] = "/files/media/forbidden.png"
+            dict["altfile"] = "/mservemedia/images/forbidden.png"
     
         dict["form"] = form
         dict["auths"] = subauths
