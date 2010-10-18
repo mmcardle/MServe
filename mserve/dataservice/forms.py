@@ -15,7 +15,7 @@ class HostingContainerForm(ModelForm):
 
 class ManagementPropertyForm(ModelForm):
     class Meta:
-        exclude=['container']
+        exclude=['base']
         model = ManagementProperty
 
 class DataServiceURLForm(ModelForm):

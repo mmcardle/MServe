@@ -8,7 +8,7 @@
 
 {% block title %}MServe{% endblock %}
 
-{% block heading%}Map{% endblock %}
+{% block heading%}Vizualizations{% endblock %}
 
 {% block content %}
     <script type="text/javascript">
@@ -29,9 +29,10 @@
     google.setOnLoadCallback(drawVisualization);
     </script>
 
-    <h3>Visualization</h3>
+    <h3>Table</h3>
 
-        <div id="table" style="width: 800px; height: 600px;"></div>
+    <div id="table" style="width: 800px; height: 600px;"></div>
+
     {% block auths %}
     {% endblock auths %}
 

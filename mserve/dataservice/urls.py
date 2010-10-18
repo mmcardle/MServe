@@ -12,6 +12,7 @@ from dataservice.handlers import DataServiceURLHandler
 from dataservice.handlers import DataStagerHandler
 from dataservice.handlers import DataStagerURLHandler
 from dataservice.handlers import DataStagerAuthHandler
+from dataservice.handlers import DataStagerContentsHandler
 from dataservice.handlers import AuthHandler
 
 from dataservice.handlers import ManagedResourcesContainerHandler
@@ -27,6 +28,7 @@ dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 datastager_handler = Resource(DataStagerHandler)
 datastager_url_handler = Resource(DataStagerURLHandler)
+datastager_contents_handler = Resource(DataStagerContentsHandler)
 datastager_auth_handler = Resource(DataStagerAuthHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
@@ -50,15 +52,17 @@ urlpatterns = patterns('',
     # Container Methods
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_container_handler),
-    url(r'^containerapi/managementproperty/(?P<containerid>[^/]+)/$', managementproperty_handler),
+    url(r'^containerapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
     url(r'^containerapi/getusagesummary/(?P<containerid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/', managedresources_service_handler),
+    url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
 
     # Stager Methods
     url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
+    url(r'^stagerapi/getcontents/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
 
     # Media URLs
     #(r'^files/media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),

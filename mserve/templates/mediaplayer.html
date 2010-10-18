@@ -3,14 +3,15 @@ src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js">
 </script>
 
 
+{% if stager.file %}
+    <p id="container1">Please install the Flash Plugin</p>
 
-<p id="container1">Please install the Flash Plugin</p>
+    <script type="text/javascript" language="javascript">
 
-<script type="text/javascript" language="javascript">
+        var flashvars = { file:"/mservedata/{{stager.file}}",autostart:"false" };
+        var params = { allowfullscreen:"true", allowscriptaccess:"always" };
+        var attributes = { id:"player1", name:"player1" };
+        swfobject.embedSWF("/mservemedia/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
 
-    var flashvars = { file:"/mservedata/{{stager.file}}",autostart:"false" };
-    var params = { allowfullscreen:"true", allowscriptaccess:"always" };
-    var attributes = { id:"player1", name:"player1" };
-    swfobject.embedSWF("/mservemedia/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
-
-</script>
+    </script>
+{% endif %}

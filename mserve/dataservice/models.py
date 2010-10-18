@@ -180,9 +180,9 @@ class HostingContainer(NamedBase):
         super(HostingContainer, self).save()
 
 class ManagementProperty(models.Model):
-    container = models.ForeignKey(HostingContainer)
-    property   = models.CharField(primary_key=True, max_length=200)
-    value = models.CharField(max_length=200)
+    base        = models.ForeignKey(NamedBase)
+    property    = models.CharField(max_length=200)
+    value       = models.CharField(max_length=200)
 
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)

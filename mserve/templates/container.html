@@ -39,7 +39,7 @@
     <tr><th>Name</th><th>Value</th><th>Actions</th></tr>
     {% for property in properties%}
     <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
-            <form style="display: inline" action="/service/" method="post">
+            <form style="display: inline" action="/containerapi/managementproperty/{{container.id}}" method="post">
                 <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
             </form>
             </td>

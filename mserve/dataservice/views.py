@@ -18,20 +18,7 @@ from mserve.dataservice.forms import ManagementPropertyForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 
-from django.http import HttpResponse
-
 import usage_store as usage_store
-
-class Sleeper(object):
-
-    def main(self, request, length):
-        import time
-        sleeptime = int(length)
-        time.sleep(sleeptime)
-        return HttpResponse("Sleep for %s"%sleeptime)
-
-sleeper = Sleeper()
-sleep = sleeper.main
 
 def viz(request):
     dict={}
@@ -95,8 +82,7 @@ def usage(request):
     dict["usagerate"] = usagerate
     return render_to_response('allusage.html', dict)
 
-def home(request):
-    form = HostingContainerForm()
+def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.usagesummary()
     usagerate = UsageRate.objects.all()
@@ -109,12 +95,16 @@ def home(request):
     dict["usagerate"] = usagerate
     return render_to_response('home.html', dict)
 
-def container(request,id):
-    container = HostingContainer.objects.get(id=id)
-    auths = HostingContainerAuth.objects.filter(hostingcontainer=container)
-    services = DataService.objects.filter(container=container)
-    properties = ManagementProperty.objects.filter(container=container)
-    form = DataServiceForm()
+def render_container(request,id,form=DataServiceForm()):
+    container = HostingContainer.objects.get(pk=id)
+    auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
+    services = DataService.objects.filter(container=container.id)
+    properties = ManagementProperty.objects.filter(base=container.id)
+    form.fields['cid'].initial = id
+    usagerates = UsageRate.objects.filter(base=container)
+    usage = Usage.objects.filter(base=container)
+    usagesummary = usage_store.container_usagesummary(container)
+
     managementpropertyform = ManagementPropertyForm()
     dict = {}
     dict["container"] = container
@@ -123,29 +113,65 @@ def container(request,id):
     dict["form"] = form
     dict["managementpropertyform"] = managementpropertyform
     dict["auths"] = auths
-    dict["error"] = request.GET["error"]
+    dict["usage"] = usage
+    dict["usagerate"] = usagerates
+    dict["usagesummary"] = usagesummary
     return render_to_response('container.html', dict)
 
-def service(request,id):
-    service = DataService.objects.get(id=id)
+def render_service(request,id,form=DataStagerForm()):
+    service = DataService.objects.get(pk=id)
     stagers = DataStager.objects.filter(service=service)
-    form = DataStagerForm()
-    form2 = UploadFileForm()
+    properties = ManagementProperty.objects.filter(base=service)
+    managementpropertyform = ManagementPropertyForm()
+    form.fields['sid'].initial = service.id
     dict = {}
+    dict["properties"] = properties
+    dict["managementpropertyform"] = managementpropertyform
     dict["service"] = service
     dict["stagers"] = stagers
     dict["form"] = form
-    dict["form2"] = form2
+    dict["usage"] = Usage.objects.filter(base=service)
+    dict["usagerate"] = UsageRate.objects.filter(base=service)
+    dict["usagesummary"] = usage_store.service_usagesummary(service.id)
     return render_to_response('service.html', dict)
 
-def stager(request,id):
-    stager = DataStager.objects.get(id=id)
-    auths = DataStagerAuth.objects.filter(stager=stager)
-    form = DataStagerAuthForm()
+def render_stager(request,id, form=DataStagerAuthForm(), show=False):
+    stager = DataStager.objects.get(pk=id)
+    auths = DataStagerAuth.objects.filter(stager=id)
+    form.fields['dsid'].initial = stager.id
     dict = {}
+    if not show or stager.file == '' or stager.file == None:
+        dict["altfile"] = "/mservemedia/images/empty.png"
+        stager.file = None
     dict["stager"] = stager
     dict["form"] = form
     dict["auths"] = auths
+    dict["formtarget"] = "/stagerauth/"
+    dict["usage"] = Usage.objects.filter(base=stager)
+    dict["usagerate"] = UsageRate.objects.filter(base=stager)
+    dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
+    return render_to_response('stager.html', dict)
+
+def render_subauth(stager, auth, show=False):
+    sub_auths = JoinAuth.objects.filter(parent=auth.id)
+    subauths = []
+    for sub in sub_auths:
+        subauth = SubAuth.objects.get(id=sub.child)
+        subauths.append(subauth)
+
+    form = SubAuthForm()
+    form.fields['id_parent'].initial = auth.id
+    dict = {}
+    dict["stager"] = stager
+    if stager.file == '' or stager.file == None:
+        dict["altfile"] = "/mservemedia/images/empty.png"
+    if not show:
+        stager.file = None
+        dict["altfile"] = "/mservemedia/images/forbidden.png"
+
+    dict["form"] = form
+    dict["auths"] = subauths
+    dict["formtarget"] = "/auth/"
     return render_to_response('stager.html', dict)
 
 class Row:
@@ -256,7 +282,7 @@ def auth(request,id):
 
         return render_to_response('auth.html', dict)
     except ObjectDoesNotExist:
-        print "HostginContainer Auth doesn't exist."
+        print "HostingContainer Auth doesn't exist."
 
     try:
         dataservice_auths = DataServiceAuth.objects.get(id=id)

@@ -6,13 +6,13 @@
 
 {% block content %}
 
-<h3>Details</h3>
-<dl>
-    <dt>Name</dt>
-    <dd>{{stager.name}}</dd>
-    <dt>Checksum</dt>
-    <dd>{{stager.checksum}}</dd>
-</dl>
+    <h3>Details</h3>
+    <dl>
+        <dt>Name</dt>
+        <dd>{{stager.name}}</dd>
+        <dt>Checksum</dt>
+        <dd>{{stager.checksum}}</dd>
+    </dl>
 
 {% load mservetags %}
 
@@ -35,16 +35,26 @@
 
 {% else%}
 
-<em>Mimetype not set</em>
+    <em>Mimetype not set</em>
 
 {% endif %}
 
-<h3>Create Auth</h3>
+    <h3>Create Auth</h3>
 
-<form action="{{formtarget}}" method="post" >
-    {{ form.as_p }}
-    <input type="submit" value="Submit" />
-</form>
+    <form action="{{formtarget}}" method="post" >
+        {{ form.as_p }}
+        <input type="submit" value="Submit" />
+    </form>
+
+{% endblock %}
+
+
+{% block rightcontent %}
+
+{% if stager.file %}
+    <h3>Actions</h3>
+    <a href="/stagerapi/getcontents/{{stager.id}}/" >Download Contents</a>
+{% endif %}
 
 {% endblock %}
 

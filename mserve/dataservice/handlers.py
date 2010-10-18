@@ -1,4 +1,6 @@
+import os.path
 from piston.handler import BaseHandler
+from piston.utils import rc
 from dataservice.models import HostingContainer
 from dataservice.models import HostingContainerAuth
 from dataservice.models import DataService
@@ -25,6 +27,8 @@ from dataservice.forms import DataStagerURLForm
 from dataservice.forms import DataStagerAuthForm
 from dataservice.forms import SubAuthForm
 from dataservice.forms import ManagementPropertyForm
+from dataservice import views
+from django.conf import settings
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.http import HttpResponseForbidden
@@ -42,6 +46,7 @@ import base64
 import logging
 import magic
 import hashlib
+import os
 
 base            = "/home/"
 container_base  = "/container/"
@@ -51,61 +56,15 @@ auth_base       = "/auth/"
 
 sleeptime = 10
 
-
-class HostingContainerHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST','DELETE')
-    model = HostingContainer
-    fields = ('name', 'id' )
-    exclude = ('pk')
-
-    def delete(self, request, containerid):
-        logging.info("Deleting Container %s " % containerid)
-        delete_container(request,containerid)
-    
-    def read(self, request, containerid):
-        container = HostingContainer.objects.get(id=containerid)
-        if request.META["HTTP_ACCEPT"] == "application/json":
-            return container
-        return self.render(container)
-    
-    def render(self, container):
-        auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
-        services = DataService.objects.filter(container=container.id)
-        properties = ManagementProperty.objects.filter(container=container.id)
-
-        usagerates = UsageRate.objects.filter(base=container)
-        usage = Usage.objects.filter(base=container)
-        usagesummary = usage_store.container_usagesummary(container)
-
-        form = DataServiceForm()
-        form.fields['cid'].initial = container.id
-
-        managementpropertyform = ManagementPropertyForm()
-        dict = {}
-        dict["container"] = container
-        dict["services"] = services
-        dict["properties"] = properties
-        dict["form"] = form
-        dict["managementpropertyform"] = managementpropertyform
-        dict["auths"] = auths
-        dict["usage"] = usage
-        dict["usagerate"] = usagerates
-        dict["usagesummary"] = usagesummary
-        return render_to_response('container.html', dict)
-
-    def create(self, request):
-        form = HostingContainerForm(request.POST) 
-        if form.is_valid(): 
-            
-            name = form.cleaned_data['name']
-            hostingcontainer = create_container(request,name)
-
-            if request.META["HTTP_ACCEPT"] == "application/json":
-                return hostingcontainer
-
-            return redirect('/container/'+str(hostingcontainer.id))
-        else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+def gen_sec_link_orig(rel_path,prefix):
+      import time, hashlib
+      if not rel_path.startswith("/"):
+        rel_path = "%s%s" % ("/", rel_path)
+      secret = 'ugeaptuk6'
+      uri_prefix = '/%s/' % prefix
+      hextime = "%08x" % time.time()
+      token = hashlib.md5(secret + rel_path + hextime).hexdigest()
+      return '%s%s/%s%s' % (uri_prefix, token, hextime, rel_path)
 
 
 def md5_for_file(file):
@@ -234,6 +193,14 @@ def delete_stager(request,stagerid):
     stager.delete()
     logging.info("Stager Deleted %s " % stagerid)
 
+def is_container(base):
+    return hasattr(base,"hostingcontainer")
+
+def is_service(base):
+    return hasattr(base,"dataservice")
+
+def is_stager(base):
+    return hasattr(base,"datastager")
 
 def reportusage(base):
     logging.info("Report usage %s" % base)
@@ -270,6 +237,47 @@ def reportusage(base):
             r.save()
 
 
+class HostingContainerHandler(BaseHandler):
+    allowed_methods = ('GET', 'POST','DELETE')
+    model = HostingContainer
+    fields = ('name', 'id' )
+    exclude = ('pk')
+
+    def delete(self, request, containerid):
+        logging.info("Deleting Container %s " % containerid)
+        delete_container(request,containerid)
+
+    def read(self, request, containerid):
+        container = HostingContainer.objects.get(id=containerid)
+        if request.META["HTTP_ACCEPT"] == "application/json":
+            return container
+        return views.render_container(request,containerid)
+
+    def create(self, request):
+        reqjson = (request.META["HTTP_ACCEPT"] == "application/json")
+        form = HostingContainerForm(request.POST)
+        if form.is_valid():
+
+            name = form.cleaned_data['name']
+            hostingcontainer = create_container(request,name)
+
+            if reqjson:
+                return hostingcontainer
+
+            return redirect('/container/'+str(hostingcontainer.id))
+        else:
+            return views.home(request,form=form)
+            if reqjson:
+                r = rc.BAD_REQUEST
+                resp.write("Invalid Request!")
+                return r
+            if request.META.has_key("HTTP_REFERER"):
+                return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            else:
+                r = rc.BAD_REQUEST
+                logging.info(form)
+                return r
+
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
@@ -284,21 +292,10 @@ class DataServiceHandler(BaseHandler):
         service = DataService.objects.get(id=serviceid)
         if request.META["HTTP_ACCEPT"] == "application/json":
            return service
-        return self.render(service)
-
-    def render(self, service, form=DataStagerForm()):
-        stagers = DataStager.objects.filter(service=service)
-        form.fields['sid'].initial = service.id
-        dict = {}
-        dict["service"] = service
-        dict["stagers"] = stagers
-        dict["form"] = form
-        dict["usage"] = Usage.objects.filter(base=service)
-        dict["usagerate"] = UsageRate.objects.filter(base=service)
-        dict["usagesummary"] = usage_store.service_usagesummary(service.id)
-        return render_to_response('service.html', dict)
+        return views.render_service(request,service.id)
 
     def create(self, request):
+        reqjson = (request.META["HTTP_ACCEPT"] == "application/json")
         form = DataServiceForm(request.POST) 
         if form.is_valid(): 
             
@@ -306,19 +303,22 @@ class DataServiceHandler(BaseHandler):
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
 
-            container = HostingContainer.objects.get(pk=containerid)
-
-            if request.META["HTTP_ACCEPT"] == "application/json":
+            if reqjson:
                 return dataservice
 
             return redirect('/service/'+str(dataservice.id))
         else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            if reqjson:
+                r = rc.BAD_REQUEST
+                resp.write("Invalid Request!")
+                return r
+            containerid = form.data['cid']
+            return views.render_container(request,containerid,form=form)
 
 class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
-        logging.info("Request DataServiceURLHandler %s " % request)
+
         form = DataServiceURLForm(request.POST)
         logging.info("Request data = %s" % form)
         if form.is_valid(): 
@@ -333,7 +333,10 @@ class DataServiceURLHandler(BaseHandler):
             logging.info("Returning Redirect = %s" % dataservice)
             return redirect('/service/'+str(dataservice.id))
         else:
-            logging.info("Form Invalid = %s" % form)
+            if reqjson:
+                r = rc.BAD_REQUEST
+                resp.write("Invalid Request!")
+                return r
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 
@@ -347,14 +350,13 @@ class DataStagerHandler(BaseHandler):
         logging.info("Deleting Stager %s " % stagerid)
         delete_stager(request,stagerid)
 
-
     def read(self, request, stagerid):
         stager = DataStager.objects.get(pk=stagerid)
         base = NamedBase.objects.get(pk=stagerid)
 
         if request.META["HTTP_ACCEPT"] == "application/json":
             return stager
-        return self.render(stager)
+        return views.render_stager(request,stager.id,show=True)
 
     def update(self, request):
         form = UpdateDataStagerForm(request.POST,request.FILES) 
@@ -375,24 +377,7 @@ class DataStagerHandler(BaseHandler):
             return redirect('/stager/'+str(datastager.id)+"/")
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
-
-    def render(self, stager):
-        base = NamedBase.objects.get(pk=stager.id)
-        auths = DataStagerAuth.objects.filter(stager=stager)
-        form = DataStagerAuthForm()
-        form.fields['dsid'].initial = stager.id
-        dict = {}
-        if stager.file == '' or stager.file == None:
-            dict["altfile"] = "/mservemedia/images/empty.png"
-        dict["stager"] = stager
-        dict["form"] = form
-        dict["auths"] = auths
-        dict["formtarget"] = "/stagerauth/"
-        dict["usage"] = Usage.objects.filter(base=stager)
-        dict["usagerate"] = UsageRate.objects.filter(base=stager)
-        dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
-        return render_to_response('stager.html', dict)
-
+        
     def render_subauth(self, stager, auth, show=False):
         sub_auths = JoinAuth.objects.filter(parent=auth.id)
         subauths = []
@@ -416,6 +401,7 @@ class DataStagerHandler(BaseHandler):
         return render_to_response('stager.html', dict)
 
     def create(self, request):
+        reqjson=(request.META["HTTP_ACCEPT"] == "application/json")
         form = DataStagerForm(request.POST,request.FILES) 
         if form.is_valid(): 
             
@@ -427,12 +413,65 @@ class DataStagerHandler(BaseHandler):
             #service = DataService.objects.get(id=serviceid)
             datastager = create_data_stager(request, serviceid, file)
 
-            if request.META["HTTP_ACCEPT"] == "application/json":
+            if reqjson:
                 return datastager
 
             return redirect('/stager/'+str(datastager.id)+"/")
         else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            if reqjson:
+                r = rc.BAD_REQUEST
+                resp.write("Invalid Request!")
+                return r
+            return views.render_stager(request,stager.id)
+
+class DataStagerContentsHandler(BaseHandler):
+    allowed_methods = ('GET')
+
+    def read(self, request, stagerid):
+        datastager = DataStager.objects.get(pk=stagerid)
+        service = datastager.service
+        container = service.container
+        logging.info("Finding limit for %s " % (datastager.name))
+        downloadspeed = 50
+        try:
+            prop = ManagementProperty.objects.get(base=service,property="speed")
+            downloadspeed = prop.value
+            logging.info("Limit set from service property to %s for %s " % (downloadspeed,datastager.name))
+        except ObjectDoesNotExist:
+            try:
+                prop = ManagementProperty.objects.get(base=container,key="speed")
+                downloadspeed = prop.value
+                logging.info("Limit set from container property to %s for %s " % (downloadspeed,datastager.name))
+            except ObjectDoesNotExist:
+                pass
+
+        dlfoldername = "dl%s"%downloadspeed
+
+        p = str(datastager.file)
+
+        redirecturl = gen_sec_link_orig(p,dlfoldername)
+        redirecturl = redirecturl[1:]
+
+        SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
+
+        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
+        fullfilepathfolder = os.path.dirname(fullfilepath)
+        datastagerfilepath = datastager.file.path
+
+        logging.info("Redirect URL      = %s " % redirecturl)
+        logging.info("fullfilepath      = %s " % fullfilepath)
+        logging.info("fullfilefolder    = %s " % fullfilepathfolder)
+        logging.info("datastagerfp      = %s " % datastagerfilepath)
+        logging.info("datastagerf       = %s " % datastager.file)
+
+        if not os.path.exists(fullfilepathfolder):
+            os.makedirs(fullfilepathfolder)
+
+        if not os.path.exists(fullfilepath):
+            os.link(datastagerfilepath,fullfilepath)
+
+        return redirect("/%s"%redirecturl)
+
 
 class DataStagerURLHandler(BaseHandler):
     
@@ -562,33 +601,44 @@ class UsageSummaryHandler(BaseHandler):
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
 
-    def read(self,request, containerid):
-        container = HostingContainer.objects.get(id=containerid)
-        properties = ManagementProperty.objects.filter(container=container)
+    def read(self,request, baseid):
+        container = HostingContainer.objects.get(id=baseid)
+        properties = ManagementProperty.objects.filter(base=container)
         properties_json = []
         for prop in properties:
             properties_json.append(prop)
         return properties_json
 
-    def create(self, request, containerid):
+    def create(self, request, baseid):
         form = ManagementPropertyForm(request.POST) 
         if form.is_valid(): 
             
             property = form.cleaned_data['property']
-            container = HostingContainer.objects.get(id=containerid)
+
+            base = NamedBase.objects.get(pk=baseid)
+
             try:
-                existingmanagementproperty = ManagementProperty.objects.get(property=property,container=container)
+                existingmanagementproperty = ManagementProperty.objects.get(property=property,base=base)
                 if existingmanagementproperty is not None:
-                    return HttpResponseError("That Property allready exists")
+                    return HttpResponseBadRequest("That Property allready exists")
             except ObjectDoesNotExist:
                 pass
 
             property = form.cleaned_data['property']
             value    = form.cleaned_data['value']
-            managementproperty = ManagementProperty(property=property,value=value,container=container)
+            managementproperty = ManagementProperty(property=property,value=value,base=base)
             managementproperty.save()
-            return redirect('/container/'+containerid)
+            
+            redirecturl = ""
+            if is_container(base):
+                redirecturl = "container"
+            if is_service(base):
+                redirecturl = "service"
+            if is_stager(base):
+                redirecturl = "stager"
+            return redirect('/%s/%s' % (redirecturl,baseid) )
         else:
+            logging.info("Bad Form %s " % form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class DataStagerAuthHandler(BaseHandler):
@@ -709,13 +759,11 @@ class AuthHandler(BaseHandler):
         try:
             stagerauth = DataStagerAuth.objects.get(id=id)
             methods = stagerauth.methods()
-
-            handler = DataStagerHandler()
             
             if 'get' in methods:
-                return handler.render_subauth(stagerauth.stager, stagerauth, show=True)
+                return views.render_subauth(stagerauth.stager, stagerauth, show=True)
             else:
-                return handler.render_subauth(stagerauth.stager, stagerauth, show=False)
+                return views.render_subauth(stagerauth.stager, stagerauth, show=False)
         except ObjectDoesNotExist:
             pass
 
@@ -768,12 +816,10 @@ class AuthHandler(BaseHandler):
         auth = SubAuth.objects.get(id=id)
         methods = auth.methods()
 
-        handler = DataStagerHandler()
-
         if 'get' in methods:
-            return handler.render_subauth(dsAuth.stager, auth, show=True)
+            return views.render_subauth(dsAuth.stager, auth, show=True)
         else:
-            return handler.render_subauth(dsAuth.stager, auth, show=False)
+            return views.render_subauth(dsAuth.stager, auth, show=False)
 
         if "get" in methods_intersection:
             return HttpResponseRedirect("/files"+dsAuth.stager.file.url)
