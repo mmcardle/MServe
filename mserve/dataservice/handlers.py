@@ -4,11 +4,10 @@ from piston.utils import rc
 from dataservice.models import HostingContainer
 from dataservice.models import HostingContainerAuth
 from dataservice.models import DataService
+from dataservice.models import DataServiceAuth
 from dataservice.models import DataStager
 from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
-from dataservice.models import UsageRate
-from dataservice.models import UsageSummary
 from dataservice.models import AggregateUsageRate
 from dataservice.models import NamedBase
 from dataservice.models import SubAuth
@@ -559,6 +558,53 @@ class AggregateUsageRateHandler(BaseHandler):
     model =  AggregateUsageRate
     exclude =('pk','base','id')
 
+class RoleInfoHandler(BaseHandler):
+    allowed_methods = ('GET')
+    model =  HostingContainerAuth
+    #fields = ('methods')
+    #exclude =('methods_encoded','description')
+
+    def read(self,request, baseid):
+        base = NamedBase.objects.get(pk=baseid)
+        if is_container(base):
+            containerauths = HostingContainerAuth.objects.filter(hostingcontainer=base)
+            dict = {}
+            arr = []
+            for containerauth in containerauths:
+                ad = {}
+                ad["methods"]= containerauth.methods()
+                ad["description"] = containerauth.description
+                ad["name"] = containerauth.authname
+                arr.append(ad)
+            dict["roleinfo"] = arr
+            return dict
+        if is_service(base):
+            serviceauths = DataServiceAuth.objects.filter(dataservice=base)
+            dict = {}
+            arr = []
+            for serviceauth in serviceauths:
+                ad = {}
+                ad["methods"]= serviceauth.methods()
+                ad["description"] = serviceauth.description
+                ad["name"] = serviceauth.authname
+                arr.append(ad)
+            dict["roleinfo"] = arr
+            return dict
+        if is_stager(base):
+            stagerauths = DataStagerAuth.objects.filter(stager=base)
+            dict = {}
+            arr = []
+            for stagerauth in stagerauths:
+                ad = {}
+                ad["methods"]= stagerauth.methods()
+                ad["description"] = stagerauth.description
+                ad["name"] = stagerauth.authname
+                arr.append(ad)
+            dict["roleinfo"] = arr
+            return dict
+        r = rc.BAD_REQUEST
+        resp.write("Invalid Request!")
+        return r
 
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')

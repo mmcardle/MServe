@@ -54,6 +54,8 @@
 {% if stager.file %}
     <h3>Actions</h3>
     <a href="/stagerapi/getcontents/{{stager.id}}/" >Download Contents</a>
+    &nbsp;|&nbsp;
+    <a href="/stagerapi/getroleinfo/{{stager.id}}/" >Role Info</a>
 {% endif %}
 
 {% endblock %}
