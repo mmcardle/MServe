@@ -59,8 +59,24 @@ fastcgi.server = (
         )
     )
 )
+$HTTP["url"] =~ "^/dl50" {
+        connection.kbytes-per-second=50
+        secdownload.secret          = "ugeaptuk6"
+        secdownload.document-root   = "/etc/mserve/wwwroot/dl50"
+        secdownload.uri-prefix      = "/dl50/"
+        secdownload.timeout         = 60
+}
+$HTTP["url"] =~ "^/dl100" {
+        connection.kbytes-per-second=100
+        secdownload.secret          = "ugeaptuk6"
+        secdownload.document-root   = "/etc/mserve/wwwroot/dl100"
+        secdownload.uri-prefix      = "/dl100/"
+        secdownload.timeout         = 60
+}
+
+
 url.rewrite-once = (
-    "^(/dl10.*)$" => "$1",
+    "^(/dl100.*)$" => "$1",
     "^(/dl50.*)$" => "$1",
     "^(/media.*)$" => "$1",
     "^(/mservemedia.*)$" => "$1",
