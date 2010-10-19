@@ -438,7 +438,7 @@ class DataStagerContentsHandler(BaseHandler):
             logging.info("Limit set from service property to %s for %s " % (downloadspeed,datastager.name))
         except ObjectDoesNotExist:
             try:
-                prop = ManagementProperty.objects.get(base=container,key="speed")
+                prop = ManagementProperty.objects.get(base=container,property="speed")
                 downloadspeed = prop.value
                 logging.info("Limit set from container property to %s for %s " % (downloadspeed,datastager.name))
             except ObjectDoesNotExist:
