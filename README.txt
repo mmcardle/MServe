@@ -38,6 +38,11 @@ Lighttpd Configuration
 Edit /etc/lighttpd/lighttpd.conf
 Enable the following 
 mod_rewrite
+set the root directory to /etc/mserve/wwwroot/
+
+create the links in /etc/mserve/wwwroot/
+media -> /usr/share/pyshared/django/contrib/admin/media/
+mservemedia -> /home/mm/dev/pp-dataservice/mserve/media/
 
 run lighttpd-enable-mod
 choose fastcgi
