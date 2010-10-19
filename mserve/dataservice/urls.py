@@ -55,18 +55,20 @@ urlpatterns = patterns('',
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_container_handler),
     url(r'^containerapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
-    url(r'^containerapi/getusagesummary/(?P<containerid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^containerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^containerapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/', managedresources_service_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
+    url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^serviceapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
 
     # Stager Methods
     url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
     url(r'^stagerapi/getcontents/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
+    url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^stagerapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
 
     # Media URLs

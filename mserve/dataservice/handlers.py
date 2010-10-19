@@ -205,11 +205,11 @@ def reportusage(base):
     logging.info("Report usage %s" % base)
     toreport = []
 
-    if hasattr(base,"hostingcontainer"):
+    if is_container(base):
 
         toreport =  [base]
 
-    if hasattr(base,"dataservice"):
+    if is_service(base):
         container = HostingContainer.objects.get(dataservice=base)
         container_report,created = ContainerResourcesReport.objects.get_or_create(base=container)
         container_report.reportnum = container_report.reportnum+1
@@ -217,7 +217,7 @@ def reportusage(base):
 
         toreport =  [container,base]
 
-    if hasattr(base,"datastager"):
+    if is_stager(base):
         service   = DataService.objects.get(datastager=base)
         container = HostingContainer.objects.get(dataservice=service)
 
@@ -611,12 +611,13 @@ class UsageSummaryHandler(BaseHandler):
     model = UsageReport
     fields = ('summarys','inprogress','reportnum')
 
-    def read(self,request, containerid, last_report):
+    def read(self,request, baseid, last_report):
 
         lr = int(last_report)
-        container = HostingContainer.objects.get(pk=containerid)
 
-        usagereport, created = UsageReport.objects.get_or_create(base=container)
+        base = NamedBase.objects.get(pk=baseid)
+
+        usagereport, created = UsageReport.objects.get_or_create(base=base)
 
         logging.info("Report = %s" % usagereport)
 
@@ -626,9 +627,19 @@ class UsageSummaryHandler(BaseHandler):
                 time.sleep(sleeptime)
                 usagereport = UsageReport.objects.get(pk=usagereport.pk)
 
-        inprogress = usage_store.container_inprogresssummary(containerid)
+        inprogress= []
+        summarys= []
+        if is_container(base):
+            inprogress = usage_store.container_inprogresssummary(baseid)
+            summarys = usage_store.container_usagesummary(baseid)
 
-        summarys = usage_store.container_usagesummary(containerid)
+        if is_service(base):
+            inprogress = usage_store.service_inprogresssummary(baseid)
+            summarys = usage_store.service_usagesummary(baseid)
+
+        if is_stager(base):
+            inprogress = usage_store.stager_inprogresssummary(baseid)
+            summarys = usage_store.stager_usagesummary(baseid)
 
         usagereport.summarys = summarys
 
