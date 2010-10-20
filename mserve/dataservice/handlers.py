@@ -37,6 +37,7 @@ from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 
+import utils as utils
 import usage_store as usage_store
 
 import time
@@ -64,19 +65,6 @@ def gen_sec_link_orig(rel_path,prefix):
       hextime = "%08x" % time.time()
       token = hashlib.md5(secret + rel_path + hextime).hexdigest()
       return '%s%s/%s%s' % (uri_prefix, token, hextime, rel_path)
-
-
-def md5_for_file(file):
-    """Return hex md5 digest for a Django FieldFile"""
-    file.open()
-    md5 = hashlib.md5()
-    while True:
-        data = file.read(8192)  # multiple of 128 bytes is best
-        if not data:
-            break
-        md5.update(data)
-    file.close()
-    return md5.hexdigest()
 
 def create_container(request,name):
     hostingcontainer = HostingContainer(name=name)
@@ -149,7 +137,7 @@ def create_data_stager(request,serviceid,file):
         mimetype = m.file(datastager.file.path)
         datastager.mimetype = mimetype
         # checksum
-        datastager.checksum = md5_for_file(datastager.file)
+        datastager.checksum = utils.md5_for_file(datastager.file)
         # save it
         datastager.save()
 

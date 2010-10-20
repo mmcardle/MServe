@@ -17,70 +17,10 @@ from mserve.dataservice.forms import SubAuthForm
 from mserve.dataservice.forms import ManagementPropertyForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
-
+from django.template import RequestContext
 import usage_store as usage_store
-
-def viz(request):
-    dict={}
-
-    hostings = HostingContainer.objects.all()
-
-    rows = []
-    for hosting in hostings:
-        services = DataService.objects.filter(container=hosting)
-        totalservices = len(services)
-        totalstagers = 0
-        totaldisc = 0.0
-        for service in services:
-            stagers = DataStager.objects.filter(service=service)
-            totalstagers += len(stagers)
-            for stager in stagers:
-                totaldisc    += stager.file.size
-
-        n = {"c":[{"v": str(hosting.name)}, {"v": totalservices}, {"v": totalstagers}, {"v": totaldisc}]}
-        rows.append(n)
-
-
-    viz_data = {
-        "cols":
-                [   {"id": 'container', "label": 'Container', "type": 'string'},
-                    {"id": 'services', "label": 'Services', "type": 'number'},
-                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
-                    {"id": 'stagers', "disc": 'Disc', "type": 'number'}
-                ],
-        "rows": [
-                    {"c":[{"v": 'Work'},     {"v": 11}]},
-                    {"c":[{"v": 'Eat'},     {"v": 2 }]},
-                    {"c":[{"v": 'Commute'}, {"v": 2 }]}
-                ]
-            }
-    import logging
-    logging.info(viz_data)
-    
-    viz_data = {
-        "cols":
-                [   {"id": 'container', "label": 'Container', "type": 'string'},
-                    {"id": 'services', "label": 'Services', "type": 'number'},
-                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
-                    {"id": 'disc', "label": 'Disc', "type": 'number'}
-                ],
-        "rows": rows
-            }
-
-    
-    logging.info(viz_data)
-    dict["viz_data"] = viz_data
-    return render_to_response('viz.html', dict)
-
-def usage(request):
-    usagesummary = usage_store.usagesummary()
-    usagerate = UsageRate.objects.all()
-    usage = Usage.objects.all()
-    dict = {}
-    dict["usage"] = usage
-    dict["usagesummary"] = usagesummary
-    dict["usagerate"] = usagerate
-    return render_to_response('allusage.html', dict)
+import utils as utils
+import logging
 
 def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
@@ -93,7 +33,7 @@ def home(request,form=HostingContainerForm()):
     dict["usage"] = usage
     dict["usagesummary"] = usagesummary
     dict["usagerate"] = usagerate
-    return render_to_response('home.html', dict)
+    return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
@@ -116,7 +56,7 @@ def render_container(request,id,form=DataServiceForm()):
     dict["usage"] = usage
     dict["usagerate"] = usagerates
     dict["usagesummary"] = usagesummary
-    return render_to_response('container.html', dict)
+    return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
 def render_service(request,id,form=DataStagerForm()):
     service = DataService.objects.get(pk=id)
@@ -133,7 +73,7 @@ def render_service(request,id,form=DataStagerForm()):
     dict["usage"] = Usage.objects.filter(base=service)
     dict["usagerate"] = UsageRate.objects.filter(base=service)
     dict["usagesummary"] = usage_store.service_usagesummary(service.id)
-    return render_to_response('service.html', dict)
+    return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
 def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     stager = DataStager.objects.get(pk=id)
@@ -143,6 +83,14 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     if not show or stager.file == '' or stager.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
         stager.file = None
+
+    dict['verify'] = False
+    if request.GET.has_key('verify') and request.GET['verify'] is not None:
+        check = utils.md5_for_file(stager.file)
+        dict['verifychecksum'] = check
+        dict['verifystate'] = (check == stager.checksum)
+        dict['verify'] = True
+
     dict["stager"] = stager
     dict["form"] = form
     dict["auths"] = auths
@@ -150,7 +98,7 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     dict["usage"] = Usage.objects.filter(base=stager)
     dict["usagerate"] = UsageRate.objects.filter(base=stager)
     dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
-    return render_to_response('stager.html', dict)
+    return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
 def render_subauth(stager, auth, show=False):
     sub_auths = JoinAuth.objects.filter(parent=auth.id)
@@ -172,7 +120,72 @@ def render_subauth(stager, auth, show=False):
     dict["form"] = form
     dict["auths"] = subauths
     dict["formtarget"] = "/auth/"
-    return render_to_response('stager.html', dict)
+    return render_to_response('stager.html', dict, context_instance=RequestContext(request))
+
+def usage(request):
+    usagesummary = usage_store.usagesummary()
+    usagerate = UsageRate.objects.all()
+    usage = Usage.objects.all()
+    dict = {}
+    dict["usage"] = usage
+    dict["usagesummary"] = usagesummary
+    dict["usagerate"] = usagerate
+    return render_to_response('allusage.html', dict, context_instance=RequestContext(request))
+
+def viz(request):
+    dict={}
+
+    hostings = HostingContainer.objects.all()
+
+    rows = []
+    for hosting in hostings:
+        services = DataService.objects.filter(container=hosting)
+        totalservices = len(services)
+        totalstagers = 0
+        totaldisc = 0.0
+        for service in services:
+            stagers = DataStager.objects.filter(service=service)
+            totalstagers += len(stagers)
+            for stager in stagers:
+                logging.info("stager %s"%stager)
+                logging.info("stager.file %s"%stager.file)
+                logging.info("stager.file %s"%dir(stager.file))
+                if stager.file != None and stager.file != "":
+                    totaldisc    += stager.file.size
+
+        n = {"c":[{"v": str(hosting.name)}, {"v": totalservices}, {"v": totalstagers}, {"v": totaldisc}]}
+        rows.append(n)
+
+
+    viz_data = {
+        "cols":
+                [   {"id": 'container', "label": 'Container', "type": 'string'},
+                    {"id": 'services', "label": 'Services', "type": 'number'},
+                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
+                    {"id": 'stagers', "disc": 'Disc', "type": 'number'}
+                ],
+        "rows": [
+                    {"c":[{"v": 'Work'},     {"v": 11}]},
+                    {"c":[{"v": 'Eat'},     {"v": 2 }]},
+                    {"c":[{"v": 'Commute'}, {"v": 2 }]}
+                ]
+            }
+    logging.info(viz_data)
+
+    viz_data = {
+        "cols":
+                [   {"id": 'container', "label": 'Container', "type": 'string'},
+                    {"id": 'services', "label": 'Services', "type": 'number'},
+                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
+                    {"id": 'disc', "label": 'Disc', "type": 'number'}
+                ],
+        "rows": rows
+            }
+
+
+    logging.info(viz_data)
+    dict["viz_data"] = viz_data
+    return render_to_response('viz.html', dict, context_instance=RequestContext(request))
 
 class Row:
     value = ""
@@ -251,7 +264,7 @@ def map(request):
     ]'''
 
     dict["rows"] = rows
-    return render_to_response('map.html', dict)
+    return render_to_response('map.html', dict, context_instance=RequestContext(request))
 
 
 def auth(request,id):
@@ -271,7 +284,7 @@ def auth(request,id):
         dict["form"] = form
         dict["subauths"] = subauths
 
-        return render_to_response('auth.html', dict)
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
     except ObjectDoesNotExist:
         print "DataStagerAuth  doesn't exist."
 
@@ -280,7 +293,7 @@ def auth(request,id):
         dict = {}
         dict["auth"] = container_auth
 
-        return render_to_response('auth.html', dict)
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
     except ObjectDoesNotExist:
         print "HostingContainer Auth doesn't exist."
 
@@ -289,7 +302,7 @@ def auth(request,id):
         dict = {}
         dict["auth"] = dataservice_auths
 
-        return render_to_response('auth.html', dict)
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
     except ObjectDoesNotExist:
         print "HostingContainer Auth doesn't exist."
 
@@ -301,13 +314,13 @@ def auth(request,id):
         dict["form"] = form
         dict["subauths"] = subauths
 
-        return render_to_response('auth.html', dict)
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
     except ObjectDoesNotExist:
         print "Sub Auth doesn't exist."
         
     dict = {}
     dict["error"] = "That Authority does not exist"
-    return render_to_response('error.html', dict)
+    return render_to_response('error.html', dict, context_instance=RequestContext(request))
 
 
     

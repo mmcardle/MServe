@@ -7,11 +7,25 @@
 {% block content %}
 
     <h3>Details</h3>
+
+    {% if verify %}
+        {% if not verifystate %}
+            <div class="failed">Error: Verification has failed</div>
+        {% else%}
+            <div class="passed">Success: Verification OK</div>
+        {% endif %}
+    {% endif %}
     <dl>
         <dt>Name</dt>
         <dd>{{stager.name}}</dd>
         <dt>Checksum</dt>
         <dd>{{stager.checksum}}</dd>
+        {% if verifychecksum%}
+        <dt>Verify</dt>
+        <dd class="highlight">{{verifychecksum}}</dd>
+        {% endif %}
+        <dt>Mime</dt>
+        <dd>{{stager.mimetype}}</dd>
     </dl>
 
 {% load mservetags %}
@@ -20,17 +34,13 @@
 
     {% if stager.mimetype|startswith:"video"  %}
         {% include "mediaplayer.html" %}
-    {% endif %}
 
-
-    {% if stager.mimetype|startswith:"image"  %}
-        {% if stager.file %}
-            <p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/mservedata/{{stager.file}}" /></p>
+    {% else %}
+        {% if stager.mimetype|startswith:"image"  %}
+            {% include "image.html" %}
+        {% else %}
+            <div>No Preview</div>
         {% endif %}
-        {% if not stager.file %}
-            <p><img  title="No File" alt="No File" src="{{altfile}}" /></p>
-        {% endif %}
-
     {% endif %}
 
 {% else%}
@@ -53,9 +63,11 @@
 
 {% if stager.file %}
     <h3>Actions</h3>
+    <a href="/stagerapi/getcontents/{{stager.id}}/" >Download Contents</a>
+    &nbsp;|&nbsp;
     <a href="/stagerapi/getusagesummary/{{stager.id}}/-1/" >Usage Summary</a>
     &nbsp;|&nbsp;
-    <a href="/stagerapi/getcontents/{{stager.id}}/" >Download Contents</a>
+    <a href="/stager/{{stager.id}}/?verify" >Verify</a>
     &nbsp;|&nbsp;
     <a href="/stagerapi/getroleinfo/{{stager.id}}/" >Role Info</a>
 {% endif %}

@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}MServe Service{% endblock %}
@@ -13,9 +12,11 @@
         <li><a href="/stager/{{ stager.id }}/">{{ stager.name }}</a></li>
     {% endfor %}
 </ul>
+
 {% if not stagers %}
     <ul><li>Empty</li></ul>
 {% endif %}
+
 <h3>Create New Stager</h3>
 
 <form action="/stager/" method="post" enctype="multipart/form-data" >

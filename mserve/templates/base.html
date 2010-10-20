@@ -2,20 +2,31 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
-    {% block script %}{% endblock %}
-    <style type="text/css" media="screen">
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+{% block script %}{% endblock %}
+<style type="text/css" media="screen">
 body {
 
     background: #e7e7e7;
     font-family: Tahoma, sans-serif;
     font-size: 10pt;
-
+    text-align:center;
+}
+#wrapper {
+        margin: 0 auto;
+        width: 95%;
+        text-align:left;
 }
 
 h1,h2,h3,h4,h5,h6 {
     color:#0000AA;
     margin:2px;
+    font-variant: small-caps;
+}
+
+h2 {
+    color:#0000AA;
+    font-variant: small-caps;
 }
 
 a, a:visited {
@@ -36,6 +47,10 @@ td {
     margin-top: 20px;
     padding: 15px;
 
+}
+
+#maintable{
+    padding:4px;
 }
 
 .auth {
@@ -70,17 +85,38 @@ td {
     font-weight: bold;
     color: red;
 }
+dt {
+    font-weight: bold;
+}
+.highlight{
+    color:red;
+}
 
+.failed,.passed{
+    width: 50%;
+    border: 1px outset black;
+    padding: 10px;
+}
+.failed {   
+    background-color: #CC0000;
+    color: white;
+}
+.passed {
+    background-color: #336600;
+    color: white;
+}
 </style>
     <!--<link rel="stylesheet" href="style.css" />-->
     <title>{% block title %}MServe{% endblock %}</title>
 </head>
 
-<body>
-    <h3>{% block heading %}MServe{% endblock %}</h3>
-    <table >
+<body id="wrapper">
+    <h2>{% block heading %}MServe{% endblock %}</h2>
+    <table id="maintable">
         <tr>
+            {% if user.is_staff %}
             <th id="sidebar" width="10%" rowspan="2" >
+                
                 {% block sidebar %}
                     <div><a href="/home/">Home</a></div>
                     <div><a href="/admin/">Admin</a></div>
@@ -88,17 +124,21 @@ td {
                     <div><a href="/map/">Map</a></div>
                     <div><a href="/viz/">Vizualizations</a></div>
                 {% endblock %}
+
             </th>
+            {% endif %}
             <td >
                 {% block content %}{% endblock %}
             </td >
             <td>
-                {% block rightcontent %}{% endblock %}
+                {% block rightcontent %}
+
+                {% endblock %}
                 {% block auths %}
                 <h3>Auths</h3>
 
                 {% if auths %}
-                    
+
                     {% for auth in auths %}
                     <div class="auth">
                         <div class="authname">{{auth.authname}}</div>
@@ -108,7 +148,7 @@ td {
                         <div class="authid"><a href="/auth/{{auth.id}}" >{{auth.id}}</a></div>
                     </div>
                     {% endfor %}
-                    
+
                 {% endif %}
 
                 {% if not auths%}
