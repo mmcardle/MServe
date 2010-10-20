@@ -92,6 +92,7 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
         dict['verify'] = True
 
     dict["stager"] = stager
+    dict["fullaccess"] = True
     dict["form"] = form
     dict["auths"] = auths
     dict["formtarget"] = "/stagerauth/"
@@ -100,7 +101,7 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
-def render_subauth(stager, auth, show=False):
+def render_subauth(request, stager, auth, show=False):
     sub_auths = JoinAuth.objects.filter(parent=auth.id)
     subauths = []
     for sub in sub_auths:
@@ -119,6 +120,7 @@ def render_subauth(stager, auth, show=False):
 
     dict["form"] = form
     dict["auths"] = subauths
+    dict["fullaccess"] = False
     dict["formtarget"] = "/auth/"
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 

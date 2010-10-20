@@ -806,9 +806,9 @@ class AuthHandler(BaseHandler):
             methods = stagerauth.methods()
             
             if 'get' in methods:
-                return views.render_subauth(stagerauth.stager, stagerauth, show=True)
+                return views.render_subauth(request,stagerauth.stager, stagerauth, show=True)
             else:
-                return views.render_subauth(stagerauth.stager, stagerauth, show=False)
+                return views.render_subauth(request,stagerauth.stager, stagerauth, show=False)
         except ObjectDoesNotExist:
             pass
 

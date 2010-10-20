@@ -61,7 +61,7 @@
 
 {% block rightcontent %}
 
-{% if stager.file %}
+{% if stager.file and fullaccess %}
     <h3>Actions</h3>
     <a href="/stagerapi/getcontents/{{stager.id}}/" >Download Contents</a>
     &nbsp;|&nbsp;
