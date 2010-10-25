@@ -9,7 +9,7 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M:%S',
     #change as needed
-    filename='/etc/mserve/mserve.log',
+    filename='/var/mserve/mserve.log',
     filemode='a'
 )
 
@@ -22,7 +22,7 @@ LOG_FILE="django_log"
 MANAGERS = ADMINS
 
 DATABASE_ENGINE = 'sqlite3'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-DATABASE_NAME = '/etc/mserve/mservedb'             # Or path to database file if using sqlite3.
+DATABASE_NAME = '/var/mserve/mservedb'             # Or path to database file if using sqlite3.
 DATABASE_USER = ''             # Not used with sqlite3.
 DATABASE_PASSWORD = ''         # Not used with sqlite3.
 DATABASE_HOST = ''             # Set to empty string for localhost. Not used with sqlite3.
@@ -47,11 +47,11 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = '/etc/mserve/wwwroot/mservedata/'
+MEDIA_ROOT = '/var/mserve/www-root/mservedata/'
 
 # MServe Specific Setting
 
-SECDOWNLOAD_ROOT = '/etc/mserve/wwwroot/'
+SECDOWNLOAD_ROOT = '/var/mserve/www-root/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).

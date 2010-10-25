@@ -23,7 +23,7 @@ MServe
 ======
 
 To run the server in standalone mode
-Create the folder /etc/mserve (linux) or somewhere else (windows)
+Create the folder /var/mserve (linux) or somewhere else (windows)
 Edit settings.py and change template directory "TEMPLATE_DIRS" to install location   
 Edit settings.py and change database location "DATABASE_NAME" to an appropriate directory
 Create the database
@@ -35,12 +35,12 @@ WARNING: Since this is singlethreaded usage reporting (long polling) will not wo
 
 Lighttpd Configuration
 =====================
-Edit /etc/lighttpd/lighttpd.conf
+Edit /var/lighttpd/lighttpd.conf
 Enable the following 
 mod_rewrite
-set the root directory to /etc/mserve/wwwroot/
+set the root directory to /var/mserve/www-root/
 
-create the links in /etc/mserve/wwwroot/
+create the links in /var/mserve/www-root/
 media -> /usr/share/pyshared/django/contrib/admin/media/
 mservemedia -> /home/mm/dev/pp-dataservice/mserve/media/
 
@@ -67,14 +67,14 @@ fastcgi.server = (
 $HTTP["url"] =~ "^/dl50" {
         connection.kbytes-per-second=50
         secdownload.secret          = "ugeaptuk6"
-        secdownload.document-root   = "/etc/mserve/wwwroot/dl50"
+        secdownload.document-root   = "/var/mserve/www-root/dl50"
         secdownload.uri-prefix      = "/dl50/"
         secdownload.timeout         = 60
 }
 $HTTP["url"] =~ "^/dl100" {
         connection.kbytes-per-second=100
         secdownload.secret          = "ugeaptuk6"
-        secdownload.document-root   = "/etc/mserve/wwwroot/dl100"
+        secdownload.document-root   = "/var/mserve/www-root/dl100"
         secdownload.uri-prefix      = "/dl100/"
         secdownload.timeout         = 60
 }
