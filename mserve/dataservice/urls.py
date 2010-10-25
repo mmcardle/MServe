@@ -75,40 +75,16 @@ urlpatterns = patterns('',
     # Global Methods
     url(r'^api/getcontainers/$', global_handler),
 
-    # Media URLs
-    #(r'^files/media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
-
     # HTML Views
     (r'^home/',  'dataservice.views.home'),
     (r'^usage/',  'dataservice.views.usage'),
     (r'^map/',  'dataservice.views.map'),
     (r'^viz/',  'dataservice.views.viz'),
-    
+
+    (r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
+    (r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),
+    (r'^accounts/profile/$', 'dataservice.views.profile'),
+
     # Root
-    (r'^$',  'dataservice.views.home'),
-
-    #(r'stager/(?P<id>[^/]+)/', 'dataservice.views.stager'),
-    #(r'service/(?P<id>[^/]+)/', 'dataservice.views.service'),
-    #(r'container/(?P<id>[^/]+)/', 'dataservice.views.container'),
-    #(r'auth/(?P<id>[^/]+)/', 'dataservice.views.auth'),
-    
-    #url(r'container/(?P<containerid>[^/]+)/(?P<fmt>[^/]+)/', hosting_handler),
-    #url(r'service/(?P<serviceid>[^/]+)/(?P<fmt>[^/]+)/', dataservice_handler),
-    #url(r'stager/(?P<stagerid>[^/]+)/(?P<fmt>[^/]+)/', datastager_handler),
-    #url(r'auth/(?P<authid>[^/]+)/(?P<fmt>[^/]+)/', auth_handler),
-
-    # Access
-    #url(r'api/container/(?P<id>[^/]+)', hosting_handler),
-    #url(r'api/service/(?P<id>[^/]+)', dataservice_handler),
-    #url(r'api/stager/(?P<id>[^/]+)', datastager_handler),
-    #url(r'api/auth/(?P<id>[^/]+)/', auth_handler),
-
-    # Creation
-    #url(r'api/makehostingcontainer/(?P<fmt>[^/]+)/', hosting_handler),
-    #url(r'api/makeserviceinstance/(?P<containerid>[^/]+)/(?P<fmt>[^/]+)/', dataservice_handler),
-    #url(r'api/makestager/(?P<serviceid>[^/]+)/(?P<fmt>[^/]+)/', datastager_handler),
-    #url(r'api/makestagerauth/(?P<stagerid>[^/]+)/(?P<fmt>[^/]+)/', datastager_auth_handler),
-    #url(r'api/makeauth/(?P<authid>[^/]+)/(?P<fmt>[^/]+)/', auth_handler),
-
-
+    (r'^$',  'dataservice.views.profile'),
 )

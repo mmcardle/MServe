@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}MServe Stager{% endblock %}
+
+{% block heading%}Profile {{ user.first_name }} {% endblock %}
+
+{% block content %}
+
+
+{% if not user.is_authenticated %}
+    <p>Welcome, Please <a href="/accounts/login" >log in.</a></p>
+{% endif %}
+
+{% if user.is_authenticated %}
+    <dl>
+    <dt>Name</dt>
+    <dd>{{ user.first_name }} {{ user.last_name }}</dd>
+    <dt>Username</dt>
+    <dd>{{ user.username }}</dd>
+    <dt>Email</dt>
+    <dd>{{ user.email}}</dd>
+    <dt>Last Login</dt>
+    <dd>{{ user.last_login}}</dd>
+    <dt>Date Joined</dt>
+    <dd>{{ user.date_joined}}</dd>
+    </dl>
+{% endif %}
+
+{% endblock %}
+
+{% block rightcontent %}
+
+{% endblock %}
+
+{% block bottomcontent %}
+
+{% endblock %}
+
+{% block auths %}
+
+{% endblock %}

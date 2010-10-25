@@ -114,19 +114,32 @@ dt {
     <h2>{% block heading %}MServe{% endblock %}</h2>
     <table id="maintable">
         <tr>
-            {% if user.is_staff %}
+            
             <th id="sidebar" width="10%" rowspan="2" >
                 
                 {% block sidebar %}
+                {% if user.is_staff %}
                     <div><a href="/home/">Home</a></div>
                     <div><a href="/admin/">Admin</a></div>
                     <div><a href="/usage/">Usage</a></div>
                     <div><a href="/map/">Map</a></div>
                     <div><a href="/viz/">Vizualizations</a></div>
+                {% endif %}
+
+                {% if user.is_authenticated %}
+                <div><a href="/accounts/profile/">Profile</a></div>
+                <div><a href="/accounts/logout/">Logout</a></div>
+                {% endif %}
+
+                {% if not user.is_authenticated %}
+                <!--<div><a href="/accounts/login/">Login</a></div>-->
+                {% endif %}
+
+
                 {% endblock %}
 
             </th>
-            {% endif %}
+            
             <td >
                 {% block content %}{% endblock %}
             </td >

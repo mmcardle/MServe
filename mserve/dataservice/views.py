@@ -20,8 +20,11 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 import usage_store as usage_store
 import utils as utils
-import logging
 
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+
+@staff_member_required
 def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.usagesummary()
@@ -35,6 +38,12 @@ def home(request,form=HostingContainerForm()):
     dict["usagerate"] = usagerate
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
+@login_required
+def profile(request):
+    dict ={}
+    return render_to_response('user.html', dict, context_instance=RequestContext(request))
+
+@staff_member_required
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
     auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
@@ -58,6 +67,7 @@ def render_container(request,id,form=DataServiceForm()):
     dict["usagesummary"] = usagesummary
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
+@staff_member_required
 def render_service(request,id,form=DataStagerForm()):
     service = DataService.objects.get(pk=id)
     stagers = DataStager.objects.filter(service=service)
@@ -124,6 +134,7 @@ def render_subauth(request, stager, auth, show=False):
     dict["formtarget"] = "/auth/"
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
+@staff_member_required
 def usage(request):
     usagesummary = usage_store.usagesummary()
     usagerate = UsageRate.objects.all()
@@ -134,6 +145,7 @@ def usage(request):
     dict["usagerate"] = usagerate
     return render_to_response('allusage.html', dict, context_instance=RequestContext(request))
 
+@staff_member_required
 def viz(request):
     dict={}
 
@@ -149,9 +161,6 @@ def viz(request):
             stagers = DataStager.objects.filter(service=service)
             totalstagers += len(stagers)
             for stager in stagers:
-                logging.info("stager %s"%stager)
-                logging.info("stager.file %s"%stager.file)
-                logging.info("stager.file %s"%dir(stager.file))
                 if stager.file != None and stager.file != "":
                     totaldisc    += stager.file.size
 
@@ -172,7 +181,6 @@ def viz(request):
                     {"c":[{"v": 'Commute'}, {"v": 2 }]}
                 ]
             }
-    logging.info(viz_data)
 
     viz_data = {
         "cols":
@@ -184,8 +192,6 @@ def viz(request):
         "rows": rows
             }
 
-
-    logging.info(viz_data)
     dict["viz_data"] = viz_data
     return render_to_response('viz.html', dict, context_instance=RequestContext(request))
 
@@ -201,7 +207,7 @@ class Row:
         self.parent = parent
 
 
-
+@staff_member_required
 def map(request):
     dict = {}
     
