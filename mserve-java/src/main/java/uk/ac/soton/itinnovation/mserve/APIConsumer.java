@@ -11,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,143 +31,35 @@ import org.apache.commons.httpclient.methods.multipart.StringPart;
 
 public class APIConsumer {
 
-    private static String protocol = "http://";
-    private static String host = "localhost";
-    private static File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
-    private static File file2 = new File("/home/mm/Pictures/muppits/DSC_0669.jpg");
+    private String protocol = "http://";
+    private String host = "localhost";
 
-
-    public static void main(String[] args) {
+    public static void main(String[] args){
         try {
-            //deleteStager("7199c292-c39c-4224-8198-e0763fee0b5a");
-            deleteStager("2a20f0ec-db1d-4d42-9cfb-55965c017f80");
-            deleteStager("97bf19a6-2997-438b-bf02-58606217b32a");
-
-            /*String service = makeServiceREST("a29254f7-eb58-4bbb-8cac-cd134195f739");
-            
-            sleep();
-            
-            String stager1 = makeStagerREST(service);
-            
-            String stager2 = makeStagerURL(service);
-            
-            sleep();
-            
-            deleteStager(stager1);
-            
-            sleep();
-            
-            deleteStager(stager2);
-            
-            sleep();
-            
-            deleteService("ca9078d7-9927-4761-8b40-86eefad90b82");*/
-
-
+            APIConsumer consumer = new APIConsumer();
+            //String container = consumer.createContainer();
+            //consumer.printStagerInfo("25a6f136-d6e2-4e5b-8421-2a46a7097864");
+            //consumer.printServiceInfo("e3bda7b7-4126-43dc-ab11-5c558c55384c");
+            //consumer.makeServiceURL(container);
+            consumer.deleteStager("5ec35b32-5f09-4df4-a569-16e513d2f0aa");
+            //consumer.deleteStager("9a210a52-1d5c-44a2-975f-7da9ebbd0a63");
         } catch (Exception ex) {
             Logger.getLogger(APIConsumer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
 
-    public static void sleep(){
-            try{Thread.currentThread().sleep(5000);
-            }catch(InterruptedException ie){}
-    }
-    public static void main2(String[] args) {
-        try {
+    public APIConsumer(){}
 
-            String path = "/container/";
-
-            URL url = new URL(protocol + host + path);
-
-            String containerid = createContainer(url);
-
-            URL containerurl = new URL(protocol + host + path + containerid);
-
-            String output = getOutputFromURL(containerurl);
-
-            System.out.println("Container " + output);
-
-            JSONObject jsonObject = new JSONObject(output);
-
-            String id = jsonObject.getString("id");
-
-            String serviceid1 = makeServiceREST(id);
-
-            getServices(id);
-
-            String stagerid1 = makeStagerREST(serviceid1);
-
-            System.out.println("New Stager from REST" + stagerid1);
-
-            String emptystagerid1 = makeEmptyStagerREST(serviceid1);
-            
-            putToEmptyStagerREST(emptystagerid1);
-            putToEmptyStagerURL(emptystagerid1);
-
-            System.out.println("New Empty Stager from REST" + emptystagerid1);
-
-            getStagers(serviceid1);
-
-            String serviceid2 = makeServiceREST(id);
-
-            getServices(id);
-
-            String stagerid2 = makeStagerURL(serviceid2);
-
-            getStagers(serviceid2);
-
-            System.out.println("New Stager from URL " + stagerid2);
-
-            deleteStager(stagerid1);
-            deleteStager(emptystagerid1);
-
-            try{
-              //do what you want to do before sleeping
-              Thread.currentThread().sleep(5000);//sleep for 1000 ms
-              //do what you want to do after sleeptig
-            }
-            catch(InterruptedException ie){
-                //If this thread was intrrupted by nother thread
-            }
-
-            deleteStager(stagerid2);
-
-            deleteService(serviceid1);
-            deleteService(serviceid2);
-
-            //deleteContainer(containerid);
-
-            /*List<String> services = getServices(id);
-
-            for(String serviceid : services){
-                printServiceInfo(serviceid);
-                List<String> stagerids = getStagers(serviceid);
-                if(stagerids.size()>0){
-                    System.out.println("REST");
-                    System.out.println("====");
-                    for(String stagerid : stagerids){
-                        printStagerInfo(stagerid);
-                    }
-                    System.out.println("====");
-                }
-            }*/
-            
-
-        } catch (JSONException ex) {
-            throw new RuntimeException(ex);
-        } catch (MalformedURLException ex) {
-            throw new RuntimeException(ex);
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        }
+    public APIConsumer(String protocol,String host){
+        this.protocol = protocol;
+        this.host = host;
     }
 
-    public static String putToEmptyStagerURL(String id) throws MalformedURLException {
+    public String putToEmptyStagerURL(String id, File file) throws MalformedURLException {
         try {
             URL url = new URL(protocol + host + "/stagerapi/update/" + id  +"/");
-            String json = doFilePutToURL(url.toString(), id, file2);
+            String json = doFilePutToURL(url.toString(), id, file);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
         } catch (JSONException ex) {
@@ -176,10 +67,10 @@ public class APIConsumer {
         }
     }
 
-    public static String putToEmptyStagerREST(String id) throws MalformedURLException {
+    public String putToEmptyStagerREST(String id, File file) throws MalformedURLException {
         try {
             URL url = new URL(protocol + host + "/stager/");
-            String json = doFilePutToURL(url.toString(), id, file2);
+            String json = doFilePutToURL(url.toString(), id, file);
             System.out.println(""+json);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
@@ -188,22 +79,25 @@ public class APIConsumer {
         }
     }
 
-    public static String makeServiceURL(String id) throws MalformedURLException {
+    public String makeServiceURL(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/containerapi/makeserviceinstance/" + id  +"/");
         String content = "name=ServiceFromJava";
         return makeService(url,id,content);
     }
 
-    public static String  makeServiceREST(String id) throws MalformedURLException {
+    public String  makeServiceREST(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/service/" );
         String content = "name=ServiceFromJava&cid="+id;
         return makeService(url,id,content);
     }
 
-    public static String makeService(URL url, String id, String content) {
+    public String makeService(URL url, String id, String content) {
         try {
-            
+
             String output = doPostToURL(url,id, content);
+
+            System.out.println("output =" + output);
+
 
             JSONObject ob = new JSONObject(output);
 
@@ -216,8 +110,8 @@ public class APIConsumer {
             throw new RuntimeException(ex);
         }
     }
-    
-    public static String makeStagerURL(String id) throws MalformedURLException {
+
+    public String makeStagerURL(String id, File file) throws MalformedURLException {
         try{
             String url = protocol + host + "/serviceapi/create/" + id  +"/";
             String json = doFilePostToURL(url,id,file);
@@ -228,7 +122,7 @@ public class APIConsumer {
         }
     }
 
-    public static String  makeEmptyStagerREST(String id) throws MalformedURLException {
+    public String  makeEmptyStagerREST(String id) throws MalformedURLException {
         try {
             String url = new String(protocol + host + "/stager/");
             String json = doFilePostToREST(url, id, null);
@@ -239,19 +133,20 @@ public class APIConsumer {
         }
     }
 
-    public static String  makeStagerREST(String id) throws MalformedURLException {
+    public String  makeStagerREST(String id, File file) throws MalformedURLException {
+        String url = new String(protocol + host + "/stager/");
+        String output = doFilePostToREST(url, id, file);
         try {
-            String url = new String(protocol + host + "/stager/");
-            String json = doFilePostToREST(url, id, file);
-            System.out.println(json);
-            JSONObject ob = new JSONObject(json);
+
+            System.out.println(output);
+            JSONObject ob = new JSONObject(output);
             return ob.getString("id");
         } catch (JSONException ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    public static String doFilePutToURL(String url, String id, File f) {
+    public String doFilePutToURL(String url, String id, File f) {
         try{
             HttpClient client = new HttpClient();
             PutMethod filePost = new PutMethod(url);
@@ -283,7 +178,7 @@ public class APIConsumer {
         }
     }
 
-    public static String doFilePostToREST(String url, String id, File f) {
+    public String doFilePostToREST(String url, String id, File f) {
         try{
             HttpClient client = new HttpClient();
             PostMethod filePost = new PostMethod(url);
@@ -322,7 +217,7 @@ public class APIConsumer {
         }
     }
 
-    public static String doFilePostToURL(String url, String id, File f) {
+    public String doFilePostToURL(String url, String id, File f) {
         try{
             HttpClient client = new HttpClient();
             PostMethod filePost = new PostMethod(url);
@@ -332,7 +227,7 @@ public class APIConsumer {
             };
             filePost.setRequestEntity(
                     new MultipartRequestEntity(parts, filePost.getParams()));
-            
+
             client.executeMethod(filePost);
 
             InputStream stream = filePost.getResponseBodyAsStream();
@@ -353,7 +248,7 @@ public class APIConsumer {
         }
     }
 
-    public static String doPostToURL(String url, String name) {
+    public String doPostToURL(String url, String name) {
         try{
             HttpClient client = new HttpClient();
             PostMethod filePost = new PostMethod(url);
@@ -384,28 +279,26 @@ public class APIConsumer {
         }
     }
 
-    public static List<String> getServices(String id) {
+    public List<String> getServices(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/containerapi/getmanagedresources/" + id);
+            URL getresourcesurl = new URL(protocol + host + "/containerapi/getmanagedresources/" + id +"/-1/");
 
             String output = getOutputFromURL(getresourcesurl);
 
-            JSONArray arr = new JSONArray(output);
+            JSONObject ob = new JSONObject(output);
+
+            JSONArray arr = ob.getJSONArray("services");
 
             ArrayList<String> ids = new ArrayList<String>();
 
             if(arr.length()>0){
-                //System.out.println("Services from /containerapi/getmanagedresources/");
-                //System.out.println("==================");
                 for (int i = 0; i < arr.length(); i++) {
-                    JSONObject ob = arr.getJSONObject(i);
-                    //System.out.println("\t"+ob);
-                    String serviceid = ob.getString("pk");
+                    JSONObject jsonob = arr.getJSONObject(i);
+                    String serviceid = jsonob.getString("id");
                     ids.add(serviceid);
                 }
-                //System.out.println("==================");
             }
-            
+
             return ids;
 
         } catch (JSONException ex) {
@@ -417,7 +310,7 @@ public class APIConsumer {
         }
     }
 
-    public static void printStagerInfo(String id) {
+    public JSONObject getStagerInfo(String id) {
         try {
             URL getresourcesurl = new URL(protocol + host + "/stager/" + id +"/");
 
@@ -425,7 +318,7 @@ public class APIConsumer {
 
             JSONObject ob = new JSONObject(output);
 
-            System.out.println("Stager " + ob);
+            return ob;
 
         } catch (JSONException ex) {
             throw new RuntimeException(ex);
@@ -436,7 +329,7 @@ public class APIConsumer {
         }
     }
 
-    public static void printServiceInfo(String id) {
+    public JSONObject getServiceInfo(String id) {
         try {
             URL getresourcesurl = new URL(protocol + host + "/service/" + id +"/");
 
@@ -444,7 +337,7 @@ public class APIConsumer {
 
             JSONObject ob = new JSONObject(output);
 
-            System.out.println("Service " + ob);
+            return ob;
 
         } catch (JSONException ex) {
             throw new RuntimeException(ex);
@@ -455,24 +348,41 @@ public class APIConsumer {
         }
     }
 
-    public static List<String> getStagers(String id) {
+    public JSONObject getContainerInfo(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/serviceapi/getmanagedresources/" + id +"/");
+            URL getresourcesurl = new URL(protocol + host + "/container/"+id+"/");
 
             String output = getOutputFromURL(getresourcesurl);
 
-            JSONArray arr = new JSONArray(output);
+            JSONObject ob  = new JSONObject(output);
+
+            return ob;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public List<String> getContainers() {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/api/getcontainers/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONObject ob  = new JSONObject(output);
+
+            JSONArray arr = ob.getJSONArray("containers");
 
             ArrayList<String> ids = new ArrayList<String>();
             if(arr.length()>0){
-                //System.out.println("Stagers from /serviceapi/getmanagedresources/");
-                //System.out.println("==================");
                 for (int i = 0; i < arr.length(); i++) {
-                    JSONObject ob = arr.getJSONObject(i);
-                    //System.out.println("Stager  " + ob);
-                    ids.add(ob.getString("pk"));
+                    JSONObject jsonob = arr.getJSONObject(i);
+                    ids.add(jsonob.getString("id"));
                 }
-                //System.out.println("==================");
             }
             return ids;
 
@@ -485,8 +395,35 @@ public class APIConsumer {
         }
     }
 
+    public List<String> getStagers(String id) {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/serviceapi/getmanagedresources/" + id +"/-1/");
 
-    public static String doPostToURL(URL url, String id, String content) {
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONObject ob  = new JSONObject(output);
+
+            JSONArray arr = ob.getJSONArray("stagers");
+
+            ArrayList<String> ids = new ArrayList<String>();
+            if(arr.length()>0){
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject jsonob = arr.getJSONObject(i);
+                    ids.add(jsonob.getString("id"));
+                }
+            }
+            return ids;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public String doPostToURL(URL url, String id, String content) {
         try {
 
             URLConnection connection;
@@ -514,7 +451,6 @@ public class APIConsumer {
             String output = "";
             String str;
             while (null != ((str = input.readLine()))) {
-                System.out.println(str);
                 output += str;
             }
             input.close();
@@ -527,7 +463,7 @@ public class APIConsumer {
         }
     }
 
-    public static String getOutputFromURL(URL url) {
+    public String getOutputFromURL(URL url) {
         try {
 
             HttpClient client = new HttpClient();
@@ -536,20 +472,20 @@ public class APIConsumer {
 
             client.executeMethod(method);
 
-            if(method.getStatusCode()!=200){
-                throw new RuntimeException("Response is "+method.getStatusText()+" code="+method.getStatusCode());
-            }
-
             InputStream stream = method.getResponseBodyAsStream();
 
             BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
             String output = "";
             String str;
             while (null != ((str = buf.readLine()))) {
-                System.out.println(str);
                 output += str;
             }
             buf.close();
+
+            if(method.getStatusCode()!=200){
+                throw new RuntimeException("Response is "+method.getStatusText()+" code="+method.getStatusCode());
+            }
+
             return output;
 
         } catch (MalformedURLException ex) {
@@ -559,7 +495,7 @@ public class APIConsumer {
         }
     }
 
-    private static String deleteContainer(String containerid) {
+    public String deleteContainer(String containerid) {
         try{
 
             String url = new String(protocol + host + "/container/"+containerid+"/");
@@ -580,16 +516,13 @@ public class APIConsumer {
             }
             buf.close();
             filePost.releaseConnection();
-
-            System.out.println("Delete Container " + containerid + " result="+result);
-
             return output;
 
         }catch(IOException ex){
             throw new RuntimeException(ex);
         }
     }
-    private static String deleteService(String serviceid) {
+    public String deleteService(String serviceid) {
         try{
 
             String url = new String(protocol + host + "/service/"+serviceid+"/");
@@ -611,8 +544,6 @@ public class APIConsumer {
             buf.close();
             filePost.releaseConnection();
 
-            System.out.println("Delete Service " + serviceid + " result="+result);
-
             return output;
 
         }catch(IOException ex){
@@ -620,7 +551,7 @@ public class APIConsumer {
         }
     }
 
-    private static String deleteStager(String stagerid1) {
+    public String deleteStager(String stagerid1) {
         try{
 
             String url = new String(protocol + host + "/stager/"+stagerid1+"/");
@@ -639,10 +570,9 @@ public class APIConsumer {
             while (null != ((str = buf.readLine()))) {
                 output += str;
             }
+            System.out.println(output);
             buf.close();
             filePost.releaseConnection();
-
-            System.out.println("Delete Stager " + stagerid1 + " result="+result);
 
             return output;
 
@@ -651,20 +581,57 @@ public class APIConsumer {
         }
     }
 
-    private static String createContainer(URL url) {
+    public String createContainer() {
         try{
-            Date now = new Date();
             String name = "ContainerFromJava ";
 
-            String output = doPostToURL(url.toString(), name );
+            String url = this.protocol + this.host + "/container/";
+
+            String output = doPostToURL(url, name );
 
             JSONObject ob = new JSONObject(output);
-
-            System.out.println("Container " + ob);
 
             return  ob.getString("id");
 
         } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public void getContainerUsageReport(String id) {
+      try {
+            URL getresourcesurl = new URL(protocol + host + "/containerapi/getusagesummary/" + id +"/-1/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONObject ob  = new JSONObject(output);
+
+            System.out.println("Report Number "+ob.getString("reportnum"));
+
+            JSONArray inp_arr = ob.getJSONArray("inprogress");
+
+            ArrayList<String> ids = new ArrayList<String>();
+            if(inp_arr.length()>0){
+                for (int i = 0; i < inp_arr.length(); i++) {
+                    JSONObject jsonob = inp_arr.getJSONObject(i);
+                    System.out.println("In Progress "+jsonob);
+                }
+            }
+
+            JSONArray sum_arr = ob.getJSONArray("inprogress");
+
+            if(sum_arr.length()>0){
+                for (int i = 0; i < sum_arr.length(); i++) {
+                    JSONObject jsonob = sum_arr.getJSONObject(i);
+                    System.out.println("In Progress "+jsonob);
+                }
+            }
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
     }
