@@ -158,13 +158,12 @@ def create_data_stager(request,serviceid,file):
     reportusage(datastager)
 
     if file is not None:
-        usage_store.startrecording(datastager.id,usage_store.metric_disc,file.size)
+        usage_store.record(datastager.id,usage_store.metric_disc,file.size)
 
     return datastager
 
 def delete_stager(request,stagerid):
     usage_store.stoprecording(stagerid,usage_store.metric_stager)
-    usage_store.stoprecording(stagerid,usage_store.metric_disc)
     stager = DataStager.objects.get(id=stagerid)
     logging.info("Deleteing stager %s %s" % (stager.name,stagerid))
 
@@ -222,6 +221,16 @@ def reportusage(base):
             logging.info("\tReport %s "%r)
             r.reportnum = r.reportnum + 1
             r.save()
+
+
+class GlobalHandler(BaseHandler):
+     allowed_methods = ('GET')
+
+     def read(self, request):
+         containers = HostingContainer.objects.all()
+         dict = {}
+         dict["containers"] = containers
+         return dict
 
 
 class HostingContainerHandler(BaseHandler):

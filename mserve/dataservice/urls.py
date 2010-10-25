@@ -14,7 +14,7 @@ from dataservice.handlers import DataStagerURLHandler
 from dataservice.handlers import DataStagerAuthHandler
 from dataservice.handlers import DataStagerContentsHandler
 from dataservice.handlers import AuthHandler
-
+from dataservice.handlers import GlobalHandler
 from dataservice.handlers import ManagedResourcesContainerHandler
 from dataservice.handlers import ManagedResourcesServiceHandler
 from dataservice.handlers import ManagementPropertyHandler
@@ -34,6 +34,7 @@ datastager_auth_handler = Resource(DataStagerAuthHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
 roleinfo_handler = Resource(RoleInfoHandler)
+global_handler = Resource(GlobalHandler)
 
 urlpatterns = patterns('',
 
@@ -70,6 +71,9 @@ urlpatterns = patterns('',
     url(r'^stagerapi/getcontents/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
     url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^stagerapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
+
+    # Global Methods
+    url(r'^api/getcontainers/$', global_handler),
 
     # Media URLs
     #(r'^files/media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
