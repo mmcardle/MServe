@@ -254,7 +254,7 @@ def container_usagesummary(containerid):
         aggregate.min  = min(s.min,aggregate.min )
         aggregate.sums += s.sums
 
-    return dict.values()
+    return [] + dict.values()
 
 def __usagesummary_by_base(base):
     

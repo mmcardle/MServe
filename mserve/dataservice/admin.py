@@ -10,6 +10,7 @@ from dataservice.models import UsageReport
 from dataservice.models import UsageSummary
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
+from dataservice.models import Role
 from django.contrib import admin
 
 admin.site.register(HostingContainer)
@@ -24,3 +25,4 @@ admin.site.register(UsageReport)
 admin.site.register(UsageSummary)
 admin.site.register(SubAuth)
 admin.site.register(JoinAuth)
+admin.site.register(Role)

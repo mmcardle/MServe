@@ -7,6 +7,7 @@ from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
 from django.forms import ModelForm
+from django.forms import MultipleChoiceField
 
 class HostingContainerForm(ModelForm):
     class Meta:
@@ -57,13 +58,13 @@ class UpdateDataStagerFormURL(ModelForm):
 
 class DataStagerAuthForm(ModelForm):
     dsid = forms.CharField(max_length=50,widget=forms.HiddenInput)
-    methods_csv = forms.CharField(max_length=200)
+    roles = forms.CharField(max_length=200,label='Roles (comma separated)')
     class Meta:
         exclude=['id','methods_encoded','stager']
         model = DataStagerAuth
 
 class SubAuthForm(ModelForm):
-    methods_csv = forms.CharField(max_length=200)
+    roles_csv = forms.CharField(max_length=200,label='Roles (comma separated)')
     id_parent = forms.CharField(max_length=200,widget=forms.HiddenInput)
     class Meta:
         exclude=['id','methods_encoded']

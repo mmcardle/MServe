@@ -9,6 +9,7 @@ from mserve.dataservice.models import UsageRate
 from mserve.dataservice.models import ManagementProperty
 from mserve.dataservice.models import JoinAuth
 from mserve.dataservice.models import SubAuth
+from mserve.dataservice.models import Role
 from mserve.dataservice.forms import HostingContainerForm
 from mserve.dataservice.forms import DataServiceForm
 from mserve.dataservice.forms import DataStagerForm
@@ -47,6 +48,7 @@ def profile(request):
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
     auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
+    roles = Role.objects.filter(auth=auths)
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     form.fields['cid'].initial = id
@@ -65,6 +67,8 @@ def render_container(request,id,form=DataServiceForm()):
     dict["usage"] = usage
     dict["usagerate"] = usagerates
     dict["usagesummary"] = usagesummary
+    dict["roles"] = roles
+
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
 @staff_member_required
@@ -72,6 +76,15 @@ def render_service(request,id,form=DataStagerForm()):
     service = DataService.objects.get(pk=id)
     stagers = DataStager.objects.filter(service=service)
     properties = ManagementProperty.objects.filter(base=service)
+    auths = DataServiceAuth.objects.filter(dataservice=id)
+
+    import logging
+    for a in auths:
+        logging.info(dir(a))
+        logging.info(dir(a.role_set))
+        logging.info(dir(a.role_set.all()))
+
+    roles = Role.objects.filter(auth=auths)
     managementpropertyform = ManagementPropertyForm()
     form.fields['sid'].initial = service.id
     dict = {}
@@ -79,6 +92,8 @@ def render_service(request,id,form=DataStagerForm()):
     dict["managementpropertyform"] = managementpropertyform
     dict["service"] = service
     dict["stagers"] = stagers
+    dict["auths"] = auths
+    dict["roles"] = roles
     dict["form"] = form
     dict["usage"] = Usage.objects.filter(base=service)
     dict["usagerate"] = UsageRate.objects.filter(base=service)
@@ -88,6 +103,7 @@ def render_service(request,id,form=DataStagerForm()):
 def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     stager = DataStager.objects.get(pk=id)
     auths = DataStagerAuth.objects.filter(stager=id)
+    roles = Role.objects.filter(auth=auths)
     form.fields['dsid'].initial = stager.id
     dict = {}
     if not show or stager.file == '' or stager.file == None:
@@ -109,9 +125,10 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     dict["usage"] = Usage.objects.filter(base=stager)
     dict["usagerate"] = UsageRate.objects.filter(base=stager)
     dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
+    dict["roles"] = roles
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
-def render_subauth(request, stager, auth, show=False):
+def render_subauth(request, stager, auth, show=False, dict={}):
     sub_auths = JoinAuth.objects.filter(parent=auth.id)
     subauths = []
     for sub in sub_auths:
@@ -120,7 +137,6 @@ def render_subauth(request, stager, auth, show=False):
 
     form = SubAuthForm()
     form.fields['id_parent'].initial = auth.id
-    dict = {}
     dict["stager"] = stager
     if stager.file == '' or stager.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"

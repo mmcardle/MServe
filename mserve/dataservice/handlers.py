@@ -10,6 +10,7 @@ from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
 from dataservice.models import AggregateUsageRate
 from dataservice.models import NamedBase
+from dataservice.models import Role
 from dataservice.models import SubAuth
 from dataservice.models import JoinAuth
 from dataservice.models import ManagementProperty
@@ -56,6 +57,20 @@ auth_base       = "/auth/"
 
 sleeptime = 10
 
+all_container_methods = ["makeserviceinstance","getservicemetadata","getdependencies",
+    "getprovides","setresourcelookup","getusagesummary","getmanagedresources",
+    "getstatus","setmanagementproperty","getaccesscontrol"]
+
+service_customer_methods =  ["getroleinfo", "createstager","getmanagedresources","getusagesummary", "getaccesscontrol"]
+service_admin_methods =  service_customer_methods + ["setmanagementproperty"]
+
+all_service_methods = [] + service_admin_methods
+
+data_stager_monitor_methods = ["getusagesummary"]
+data_stager_owner_methods = ["get", "put", "post", "delete"]
+
+all_stager_methods = data_stager_owner_methods + data_stager_monitor_methods
+
 def gen_sec_link_orig(rel_path,prefix):
       import time, hashlib
       if not rel_path.startswith("/"):
@@ -69,11 +84,17 @@ def gen_sec_link_orig(rel_path,prefix):
 def create_container(request,name):
     hostingcontainer = HostingContainer(name=name)
     hostingcontainer.save()
-    hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="owner")
-    methods = ["makeServiceInstance","getServiceMetadata","getDependencies","getProvides","setResourceLookup","getUsageSummary"]
-    hostingcontainerauth.description = "Full access to the container"
-    hostingcontainerauth.setmethods(methods)
+
+    hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="full")
+
     hostingcontainerauth.save()
+
+    owner_role = Role(auth=hostingcontainerauth,rolename="admin")
+    owner_role.setmethods(all_container_methods)
+    owner_role.description = "Full access to the container"
+    owner_role.save()
+
+    logging.info(owner_role)
 
     usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
@@ -100,6 +121,23 @@ def create_data_service(request,containerid,name):
     container = HostingContainer.objects.get(id=containerid)
     dataservice = DataService(name=name,container=container)
     dataservice.save()
+
+    serviceauth = DataServiceAuth(dataservice=dataservice,authname="full")
+    
+    serviceauth.save()
+
+    service_owner_role = Role(auth=serviceauth,rolename="serviceadmin")
+    service_owner_role.setmethods(service_admin_methods)
+    service_owner_role.description = "Full control of the service"
+    service_owner_role.save()
+
+    customerauth = DataServiceAuth(dataservice=dataservice,authname="customer")
+    customerauth.save()
+
+    service_customer_role = Role(auth=customerauth,rolename="customer")
+    service_customer_role.setmethods(service_customer_methods)
+    service_customer_role.description = "Customer Access to the service"
+    service_customer_role.save()
 
     usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
 
@@ -142,16 +180,28 @@ def create_data_stager(request,serviceid,file):
         datastager.save()
 
     datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
-    methods_owner = ["get", "put", "post", "delete"]
-    datastagerauth_owner.setmethods(methods_owner)
-    datastagerauth_owner.description = "Owner of the data"
     datastagerauth_owner.save()
 
+    owner_role = Role(auth=datastagerauth_owner,rolename="owner")
+    methods = data_stager_owner_methods
+    owner_role.setmethods(methods)
+    owner_role.description = "Owner of the data"
+    owner_role.save()
+
+    user_monitor = Role(auth=datastagerauth_owner,rolename="monitor")
+    methods = data_stager_monitor_methods
+    user_monitor.setmethods(methods)
+    user_monitor.description = "Collect usage reports"
+    user_monitor.save()
+
     datastagerauth_monitor = DataStagerAuth(stager=datastager,authname="monitor")
-    methods_monitor = ["getUsageSummary"]
-    datastagerauth_monitor.setmethods(methods_monitor)
-    datastagerauth_monitor.description = "Collect usage reports"
     datastagerauth_monitor.save()
+
+    monitor_role = Role(auth=datastagerauth_monitor,rolename="monitor")
+    methods = data_stager_monitor_methods
+    monitor_role.setmethods(methods)
+    monitor_role.description = "Collect usage reports"
+    monitor_role.save()
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
     
@@ -555,50 +605,46 @@ class AggregateUsageRateHandler(BaseHandler):
     model =  AggregateUsageRate
     exclude =('pk','base','id')
 
-class RoleInfoHandler(BaseHandler):
+class RoleHandler(BaseHandler):
     allowed_methods = ('GET')
-    model =  HostingContainerAuth
-    #fields = ('methods')
-    #exclude =('methods_encoded','description')
+    model = Role
+    fields = ('rolename','description','methods')
 
     def read(self,request, baseid):
         base = NamedBase.objects.get(pk=baseid)
         if is_container(base):
             containerauths = HostingContainerAuth.objects.filter(hostingcontainer=base)
-            dict = {}
-            arr = []
+            roles = []
             for containerauth in containerauths:
-                ad = {}
-                ad["methods"]= containerauth.methods()
-                ad["description"] = containerauth.description
-                ad["name"] = containerauth.authname
-                arr.append(ad)
-            dict["roleinfo"] = arr
+                for role in containerauth.role_set.all():
+                    roles.append(role)
+
+            dict = {}
+            dict["roles"] = roles
             return dict
+
         if is_service(base):
             serviceauths = DataServiceAuth.objects.filter(dataservice=base)
-            dict = {}
-            arr = []
+            roles = []
             for serviceauth in serviceauths:
-                ad = {}
-                ad["methods"]= serviceauth.methods()
-                ad["description"] = serviceauth.description
-                ad["name"] = serviceauth.authname
-                arr.append(ad)
-            dict["roleinfo"] = arr
+                for role in serviceauth.role_set.all():
+                    roles.append(role)
+
+            dict = {}
+            dict["roles"] = roles
             return dict
+
         if is_stager(base):
             stagerauths = DataStagerAuth.objects.filter(stager=base)
-            dict = {}
-            arr = []
+            roles = []
             for stagerauth in stagerauths:
-                ad = {}
-                ad["methods"]= stagerauth.methods()
-                ad["description"] = stagerauth.description
-                ad["name"] = stagerauth.authname
-                arr.append(ad)
-            dict["roleinfo"] = arr
+                for a in stagerauth.role_set.all():
+                    roles.append(a)
+
+            dict = {}
+            dict["roles"] = roles
             return dict
+
         r = rc.BAD_REQUEST
         resp.write("Invalid Request!")
         return r
@@ -629,6 +675,7 @@ class UsageSummaryHandler(BaseHandler):
         if is_container(base):
             inprogress = usage_store.container_inprogresssummary(baseid)
             summarys = usage_store.container_usagesummary(baseid)
+            logging.info(summarys)
 
         if is_service(base):
             inprogress = usage_store.service_inprogresssummary(baseid)
@@ -638,19 +685,17 @@ class UsageSummaryHandler(BaseHandler):
             inprogress = usage_store.stager_inprogresssummary(baseid)
             summarys = usage_store.stager_usagesummary(baseid)
 
-        usagereport.summarys = summarys
-
         for summary in summarys:
             summary.save()
-
+    
         for ip in inprogress:
             ip.save()
 
+        usagereport.summarys = summarys
         usagereport.inprogress = inprogress
         usagereport.save()
 
         return usagereport
-
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
@@ -759,16 +804,17 @@ class DataStagerAuthHandler(BaseHandler):
         form = DataStagerAuthForm(request.POST) 
         if form.is_valid(): 
             authname = form.cleaned_data['authname']
-            methods_csv = form.cleaned_data['methods_csv']
-            description= form.cleaned_data['description']
+            roles_csv = form.cleaned_data['roles']
             stagerid = form.cleaned_data['dsid']
             stager = DataStager.objects.get(pk=stagerid)
-            methodslist = methods_csv.split(',')
-
-            methods_encoded = base64.b64encode(pickle.dumps(methodslist))
-
-            datastagerauth = DataStagerAuth(stager=stager,authname=authname,methods_encoded=methods_encoded,description=description)
+            
+            datastagerauth = DataStagerAuth(stager=stager,authname=authname)
             datastagerauth.save()
+
+            for role in roles_csv.split(','):
+                role = Role(auth=datastagerauth,rolename=role)
+                role.setmethods([])
+                role.save()
             
             if request.META["HTTP_ACCEPT"] == "application/json":
                 return datastagerauth
@@ -782,18 +828,22 @@ class AuthHandler(BaseHandler):
     model = SubAuth
 
     def create(self, request):
-        form = SubAuthForm(request.POST) 
+        form = SubAuthForm(request.POST)
         if form.is_valid(): 
             
             authname = form.cleaned_data['authname']
-            methods_csv = form.cleaned_data['methods_csv']
+            roles_csv = form.cleaned_data['roles_csv']
             description= form.cleaned_data['description']
             parent = form.cleaned_data['id_parent']
-            methodslist = methods_csv.split(',')
 
             subauth = SubAuth(authname=authname,description=description)
-            subauth.setmethods(methodslist)
             subauth.save()
+
+            for role in roles_csv.split(','):
+                role = Role(auth=subauth,rolename=role)
+                role.setmethods([])
+                role.save()
+
             child = str(subauth.id)
             join = JoinAuth(parent=parent,child=child)
             join.save()
@@ -809,74 +859,77 @@ class AuthHandler(BaseHandler):
         Have to add the case where this could be a hosting container or data
         service auth.
         '''
-        
+
         try:
             stagerauth = DataStagerAuth.objects.get(id=id)
-            methods = stagerauth.methods()
-            
+            methods = get_auth_methods(stagerauth)
+            dict = {}
+            dict['actions'] = methods
+            dict['actionprefix'] = "authapi"
+            dict['actionid'] = id
             if 'get' in methods:
-                return views.render_subauth(request,stagerauth.stager, stagerauth, show=True)
+                return views.render_subauth(request, stagerauth.stager, stagerauth, show=True, dict=dict)
             else:
-                return views.render_subauth(request,stagerauth.stager, stagerauth, show=False)
+                return views.render_subauth(request, stagerauth.stager, stagerauth, show=False, dict=dict)
         except ObjectDoesNotExist:
             pass
 
-        dsAuth = None
-        datastagerauth = None
-        subauth = None
-        parent = id
-        done = False
-        methods_intersection = None
-        all_methods = set()
+        logging.info("Trying %s" % (id))
 
-        logging.info("Trying %s" % (parent))
-
-        while not done:
-            try:
-                joins = JoinAuth.objects.get(child=parent)
-                parent = joins.parent
-
-                try:
-                    subauth = SubAuth.objects.get(id=parent)
-                    logging.info("%s a SubAuth" % (parent))
-                    logging.info("%s has Methods %s" % (parent,subauth.methods()))
-                    if methods_intersection is None:
-                        methods_intersection = set(subauth.methods())
-                    methods_intersection = methods_intersection & set(subauth.methods())
-                    all_methods = all_methods | set(subauth.methods())
-                except ObjectDoesNotExist:
-                    pass
-                try:
-                    datastagerauth = DataStagerAuth.objects.get(id=parent)
-                    logging.info("%s a DataStagerAuth" % (parent))
-                    logging.info("%s has Methods %s" % (parent,datastagerauth.methods()))
-                    dsAuth = datastagerauth
-                    if methods_intersection is None:
-                        methods_intersection = set(datastagerauth.methods())
-                    methods_intersection = methods_intersection & set(datastagerauth.methods())
-                    all_methods = all_methods | set(datastagerauth.methods())
-                    done = True
-                    pass
-                except ObjectDoesNotExist:
-                    pass
-
-            except ObjectDoesNotExist:
-                parent = None
-                done = True
+        dsAuth, methods_intersection = find_datastager_auth(id)
                 
         if dsAuth is None:
-            return HttpResponseBadRequest("Bad Request %s " % (id))
+            return HttpResponseBadRequest("No Interface for %s " % (id))
 
         auth = SubAuth.objects.get(id=id)
-        methods = auth.methods()
+        methods = get_auth_methods(auth)
 
+        dict = {}
+        dict['actions'] = methods
+        dict['actionprefix'] = "stagerapi"
+        dict['authapi'] = id
         if 'get' in methods:
-            return views.render_subauth(dsAuth.stager, auth, show=True)
+            return views.render_subauth(request, dsAuth.stager, auth, show=True, dict=dict)
         else:
-            return views.render_subauth(dsAuth.stager, auth, show=False)
+            return views.render_subauth(request, dsAuth.stager, auth, show=False, dict=dict)
 
-        if "get" in methods_intersection:
-            return HttpResponseRedirect("/files"+dsAuth.stager.file.url)
-        else:
-            return HttpResponseForbidden("<html>Forbidden</html>")
+def get_auth_methods(auth):
+    methods = []
+    for role in auth.role_set.all():
+        methods = methods + role.methods()
+    return methods
 
+def find_datastager_auth(parent):
+    dsAuth = None
+    methods_intersection = None
+    all_methods = set()
+    done = False
+    while not done:
+        try:
+            joins = JoinAuth.objects.get(child=parent)
+            parent = joins.parent
+
+            try:
+                subauth = SubAuth.objects.get(id=parent)
+                if methods_intersection is None:
+                    methods_intersection = set(get_auth_methods(subauth))
+                methods_intersection = methods_intersection & set(get_auth_methods(subauth))
+                all_methods = all_methods | set(get_auth_methods(subauth))
+            except ObjectDoesNotExist:
+                pass
+            try:
+                datastagerauth = DataStagerAuth.objects.get(id=parent)
+                dsAuth = datastagerauth
+                if methods_intersection is None:
+                    methods_intersection = set(get_auth_methods(datastagerauth))
+                methods_intersection = methods_intersection & set(get_auth_methods(datastagerauth))
+                all_methods = all_methods | set(get_auth_methods(datastagerauth))
+                done = True
+                pass
+            except ObjectDoesNotExist:
+                pass
+
+        except ObjectDoesNotExist:
+            parent = None
+            done = True
+    return dsAuth, methods_intersection

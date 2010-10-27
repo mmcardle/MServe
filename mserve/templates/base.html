@@ -4,6 +4,24 @@
 <head>
 <script type="text/javascript" src="http://www.google.com/jsapi"></script>
 {% block script %}{% endblock %}
+<script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
+<script type="text/javascript">
+
+     function deletestager(){
+         $.ajax({
+           type: "DELETE",
+           url: '',
+           success: function(msg){
+             alert( "Deleted " + window.location );
+             window.location.replace("/");
+           },
+           error: function(msg){
+             alert( "Failure On Delete " + msg );
+           }
+         });
+     }
+
+</script>
 <style type="text/css" media="screen">
 body {
 
@@ -55,6 +73,12 @@ td {
 
 .auth {
     margin: 2px;
+    padding: 3px;
+    border:2px outset silver;
+}
+
+dt{
+    color:#660000;
 }
 
 .authname {
@@ -111,11 +135,16 @@ dt {
 </head>
 
 <body id="wrapper">
+    
+    <div><a href="#" id="clicker" >Special</a></div>
+    <div id="loader"></div>
+
+
     <h2>{% block heading %}MServe{% endblock %}</h2>
     <table id="maintable">
         <tr>
             
-            <th id="sidebar" width="10%" rowspan="2" >
+            <th id="sidebar" width="10%" rowspan="3" >
                 
                 {% block sidebar %}
                 {% if user.is_staff %}
@@ -135,7 +164,6 @@ dt {
                 <!--<div><a href="/accounts/login/">Login</a></div>-->
                 {% endif %}
 
-
                 {% endblock %}
 
             </th>
@@ -143,25 +171,49 @@ dt {
             <td >
                 {% block content %}{% endblock %}
             </td >
-            <td>
+            <td style="max-width: 20em">
                 {% block rightcontent %}
 
                 {% endblock %}
+
+                {% block actions %}
+
+                    {% if actions %}
+
+                        <h3>Actions</h3>
+
+                        {% for action in actions %}
+
+                        <a href="/{{actionprefix}}/{{action}}/{{actionid}}/" >{{action}}</a>
+                        &nbsp;|&nbsp;
+
+                        {% endfor %}
+
+                    {% endif %}
+
+                {% endblock %}
+
                 {% block auths %}
                 <h3>Auths</h3>
-
                 {% if auths %}
-
                     {% for auth in auths %}
-                    <div class="auth">
-                        <div class="authname">{{auth.authname}}</div>
-                        {% for auth in auth.methods %}
-                            <span class="method">{{auth}}</span>
-                        {% endfor %}
-                        <div class="authid"><a href="/auth/{{auth.id}}" >{{auth.id}}</a></div>
-                    </div>
-                    {% endfor %}
+                    <dl class="auth">
+                        <dt >Authority Name</dt>
+                        <dd >{{auth.authname}}</dd>
+                        <dt >Auth ID</dt>
+                        <dd ><a href="/auth/{{auth.id}}/">{{auth.id}}</a></dd>
 
+                        {%  for role in auth.role_set.all %}
+                        <dt >Role: {{role.rolename}}</dt>
+                        <dd ><em>{{role.description}}</em></dd>
+                        <dd>
+                        {% for method in role.methods %}
+                            <a href="#">{{method}}&nbsp;</a>
+                        {% endfor %}
+                        </dd>
+                        {% endfor %}
+                    </dl>
+                    {% endfor %}
                 {% endif %}
 
                 {% if not auths%}

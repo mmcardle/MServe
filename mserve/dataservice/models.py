@@ -16,7 +16,6 @@ def random_id():
 def create_filename(instance, filename):
     timeformat = time.strftime("%Y/%m/%d/")
     return os.path.join(timeformat ,instance.id ,filename)
-    #return os.path.join('files', timeformat ,instance.id ,filename)
 
 class UsageReport(models.Model):
     base = models.ForeignKey('NamedBase')
@@ -224,7 +223,26 @@ class ServiceResourcesReport(models.Model):
 
 class Auth(Base):
     authname = models.CharField(max_length=50)
+
+    #methods_encoded = models.TextField()
+
+    #def methods(self):
+    #    return pickle.loads(base64.b64decode(self.methods_encoded))
+
+    #def setmethods(self,methods):
+    #    self.methods_encoded = base64.b64encode(pickle.dumps(methods))
+
+    #def __unicode__(self):
+    #    return self.authname + " -> " + str(self.methods())
+
+    #class Meta:
+    #    abstract = True
+
+
+class Role(models.Model):
+    auth = models.ForeignKey(Auth)
     description= models.CharField(max_length=200)
+    rolename = models.CharField(max_length=50)
     methods_encoded = models.TextField()
 
     def methods(self):
@@ -232,12 +250,6 @@ class Auth(Base):
 
     def setmethods(self,methods):
         self.methods_encoded = base64.b64encode(pickle.dumps(methods))
-
-    def __unicode__(self):
-        return self.authname + " -> " + str(self.methods())
-
-    class Meta:
-        abstract = True
 
 class SubAuth(Auth):
     def save(self):

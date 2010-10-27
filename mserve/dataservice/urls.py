@@ -19,7 +19,7 @@ from dataservice.handlers import ManagedResourcesContainerHandler
 from dataservice.handlers import ManagedResourcesServiceHandler
 from dataservice.handlers import ManagementPropertyHandler
 from dataservice.handlers import UsageSummaryHandler
-from dataservice.handlers import RoleInfoHandler
+from dataservice.handlers import RoleHandler
 
 hosting_handler = Resource(HostingContainerHandler)
 managedresources_container_handler = Resource(ManagedResourcesContainerHandler)
@@ -33,7 +33,7 @@ datastager_contents_handler = Resource(DataStagerContentsHandler)
 datastager_auth_handler = Resource(DataStagerAuthHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
-roleinfo_handler = Resource(RoleInfoHandler)
+role_handler = Resource(RoleHandler)
 global_handler = Resource(GlobalHandler)
 
 urlpatterns = patterns('',
@@ -57,20 +57,20 @@ urlpatterns = patterns('',
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_container_handler),
     url(r'^containerapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
     url(r'^containerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^containerapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
+    url(r'^containerapi/getroleinfo/(?P<baseid>[^/]+)/$', role_handler),
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/', managedresources_service_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
     url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^serviceapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
+    url(r'^serviceapi/getroleinfo/(?P<baseid>[^/]+)/$', role_handler),
 
     # Stager Methods
     url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
     url(r'^stagerapi/getcontents/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
     url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^stagerapi/getroleinfo/(?P<baseid>[^/]+)/$', roleinfo_handler),
+    url(r'^stagerapi/getroleinfo/(?P<baseid>[^/]+)/$', role_handler),
 
     # Global Methods
     url(r'^api/getcontainers/$', global_handler),
