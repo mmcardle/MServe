@@ -606,9 +606,35 @@ class AggregateUsageRateHandler(BaseHandler):
     exclude =('pk','base','id')
 
 class RoleHandler(BaseHandler):
-    allowed_methods = ('GET')
+    allowed_methods = ('GET','PUT')
     model = Role
     fields = ('rolename','description','methods')
+
+    def update(self,request,roleid):
+        role = Role.objects.get(id=roleid)
+        newmethods = request.POST["methods"].split(',')
+
+        allowed_methods = []
+        if hasattr(role.auth,"hostingcontainerauth"):
+            allowed_methods = all_container_methods
+
+        if hasattr(role.auth,"dataserviceauth"):
+            allowed_methods = all_service_methods
+
+        if hasattr(role.auth,"datastagerauth"):
+            allowed_methods = all_stager_methods
+
+        if not set(newmethods).issubset(set(allowed_methods)):
+            return HttpResponseBadRequest("The methods '%s' are not allowed. Allowed Methods '%s' " % (newmethods, allowed_methods))
+
+        existingmethods = role.methods()
+        
+        if set(newmethods).issubset(set(existingmethods)):
+            return HttpResponseBadRequest("The methods '%s' are already contained in this role . Existing Methods '%s' " % (newmethods, existingmethods))
+
+        role.addmethods(newmethods)
+        role.save()
+        return role
 
     def read(self,request, baseid):
         base = NamedBase.objects.get(pk=baseid)

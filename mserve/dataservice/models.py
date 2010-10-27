@@ -246,10 +246,18 @@ class Role(models.Model):
     methods_encoded = models.TextField()
 
     def methods(self):
-        return pickle.loads(base64.b64decode(self.methods_encoded))
+        currentmethods = pickle.loads(base64.b64decode(self.methods_encoded))
+        if currentmethods == None:
+            return []
+        else:
+            return currentmethods
 
     def setmethods(self,methods):
         self.methods_encoded = base64.b64encode(pickle.dumps(methods))
+
+    def addmethods(self,methods):
+        newmethods = list(set(methods + self.methods()))
+        self.methods_encoded = base64.b64encode(pickle.dumps(newmethods))
 
 class SubAuth(Auth):
     def save(self):

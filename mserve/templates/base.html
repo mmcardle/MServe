@@ -21,10 +21,41 @@
          });
      }
 
+     function poplulate_methods(roleid, methods){
+           $('#methods'+roleid).empty()
+           $.each(methods, function(i,item){
+                id = $("<a href='#'>"+item+"&nbsp;</a>&nbsp;")
+                $(id).appendTo('#methods'+roleid);
+           });
+     }
+
+     function addAuthMethod(roleid){
+        var methods = prompt("What methods do you wish to add\nComma separated", "");
+        if (methods == null)
+            return;
+        if (methods == "")
+            return;
+        $.ajax({
+           type: "PUT",
+           url: '/roles/'+roleid+"/",
+           data: "methods="+methods,
+           success: function(msg){
+               poplulate_methods(roleid,msg["methods"])
+               /*$('#methods'+roleid).empty()
+               $.each(msg["methods"], function(i,item){
+                    id = $("<a href='#'>"+item+"&nbsp;</a>&nbsp;")
+                    $(id).appendTo('#methods'+roleid);
+               });*/
+           },
+           error: function(msg){
+             alert( "Failure to add methods '" + methods + "'\nStatus: '" + msg.status+ "'\nResponse Text:\n" + msg.responseText);
+           }
+         });
+     }
+
 </script>
 <style type="text/css" media="screen">
 body {
-
     background: #e7e7e7;
     font-family: Tahoma, sans-serif;
     font-size: 10pt;
@@ -56,8 +87,15 @@ a img {
     border:none;
 }
 
+.ascript {
+    text-decoration: none;
+    border:none;
+    color:#00AA00;
+    cursor: pointer;
+}
+
 td {
-        vertical-align: top;
+    vertical-align: top;
 }
 
 #sidebar {
@@ -206,10 +244,11 @@ dt {
                         {%  for role in auth.role_set.all %}
                         <dt >Role: {{role.rolename}}</dt>
                         <dd ><em>{{role.description}}</em></dd>
-                        <dd>
-                        {% for method in role.methods %}
-                            <a href="#">{{method}}&nbsp;</a>
+                        <dd id="methods{{role.id}}">
+                        {% for method in role.methods %}<a>{{method}}</a>
                         {% endfor %}
+                        </dd>
+                        <dd><a class="ascript" onclick='javascript:addAuthMethod({{role.id}});'>Add Method</a>
                         </dd>
                         {% endfor %}
                     </dl>

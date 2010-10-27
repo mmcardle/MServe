@@ -52,6 +52,9 @@ urlpatterns = patterns('',
     url(r'^stagerauth/(?P<stagerauthid>[^/]+)/', datastager_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
 
+    # METHODS
+    url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
+
     # Container Methods
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_container_handler),
