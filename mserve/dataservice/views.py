@@ -25,7 +25,7 @@ import utils as utils
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 
-@staff_member_required
+#@staff_member_required
 def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.usagesummary()
@@ -44,11 +44,14 @@ def profile(request):
     dict ={}
     return render_to_response('user.html', dict, context_instance=RequestContext(request))
 
-@staff_member_required
+#@staff_member_required
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
     auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
     roles = Role.objects.filter(auth=auths)
+    methods = []
+    for role in roles:
+        methods  = methods + role.methods()
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     form.fields['cid'].initial = id
@@ -68,22 +71,88 @@ def render_container(request,id,form=DataServiceForm()):
     dict["usagerate"] = usagerates
     dict["usagesummary"] = usagesummary
     dict["roles"] = roles
+    dict["methods"] = methods
 
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
-@staff_member_required
+def render_containerauth(request,authid,form=DataServiceForm()):
+    #container = HostingContainer.objects.get(pk=id)
+    hca = HostingContainerAuth.objects.get(pk=authid)
+    container=hca.hostingcontainer
+    sub_auths = JoinAuth.objects.filter(parent=authid)
+    auths = []
+    for sub in sub_auths:
+        subauth = SubAuth.objects.get(id=sub.child)
+        auths.append(subauth)
+    roles = Role.objects.filter(auth=auths)
+    #roles = hca.roles.all()
+    methods = []
+    for role in  hca.roles.all():
+        methods  = methods + role.methods()
+    services = DataService.objects.filter(container=container.id)
+    properties = ManagementProperty.objects.filter(base=container.id)
+    form.fields['cid'].initial = container.id
+    usagerates = UsageRate.objects.filter(base=container)
+    usage = Usage.objects.filter(base=container)
+    usagesummary = usage_store.container_usagesummary(container)
+
+    managementpropertyform = ManagementPropertyForm()
+    dict = {}
+    dict["container"] = container
+    dict["auth"] = hca
+    dict["services"] = services
+    dict["properties"] = properties
+    dict["form"] = form
+    dict["managementpropertyform"] = managementpropertyform
+    dict["auths"] = auths
+    dict["usage"] = usage
+    dict["usagerate"] = usagerates
+    dict["usagesummary"] = usagesummary
+    dict["roles"] = roles
+    dict["methods"] = methods
+    
+    return render_to_response('container.html', dict, context_instance=RequestContext(request))
+
+#@staff_member_required
 def render_service(request,id,form=DataStagerForm()):
     service = DataService.objects.get(pk=id)
     stagers = DataStager.objects.filter(service=service)
     properties = ManagementProperty.objects.filter(base=service)
     auths = DataServiceAuth.objects.filter(dataservice=id)
+    roles = Role.objects.filter(auth=auths)
+    methods = []
+    for role in roles:
+        methods  = methods + role.methods()
+    managementpropertyform = ManagementPropertyForm()
+    form.fields['sid'].initial = service.id
+    dict = {}
+    dict["properties"] = properties
+    dict["managementpropertyform"] = managementpropertyform
+    dict["service"] = service
+    dict["stagers"] = stagers
+    dict["auths"] = auths
+    dict["roles"] = roles
+    dict["form"] = form
+    dict["usage"] = Usage.objects.filter(base=service)
+    dict["usagerate"] = UsageRate.objects.filter(base=service)
+    dict["usagesummary"] = usage_store.service_usagesummary(service.id)
+    dict["methods"] = methods
+    return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
-    import logging
-    for a in auths:
-        logging.info(dir(a))
-        logging.info(dir(a.role_set))
-        logging.info(dir(a.role_set.all()))
-
+def render_serviceauth(request,authid,form=DataStagerForm()):
+    dsa = DataServiceAuth.objects.get(pk=authid)
+    service = dsa.dataservice
+    stagers = DataStager.objects.filter(service=service)
+    properties = ManagementProperty.objects.filter(base=service)
+    #auths = DataServiceAuth.objects.filter(dataservice=id)
+    sub_auths = JoinAuth.objects.filter(parent=authid)
+    auths = []
+    for sub in sub_auths:
+        subauth = SubAuth.objects.get(id=sub.child)
+        auths.append(subauth)
+    methods = []
+    for role in  dsa.roles.all():
+        methods  = methods + role.methods()
     roles = Role.objects.filter(auth=auths)
     managementpropertyform = ManagementPropertyForm()
     form.fields['sid'].initial = service.id
@@ -98,12 +167,16 @@ def render_service(request,id,form=DataStagerForm()):
     dict["usage"] = Usage.objects.filter(base=service)
     dict["usagerate"] = UsageRate.objects.filter(base=service)
     dict["usagesummary"] = usage_store.service_usagesummary(service.id)
+    dict["methods"] = methods
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
 def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     stager = DataStager.objects.get(pk=id)
     auths = DataStagerAuth.objects.filter(stager=id)
     roles = Role.objects.filter(auth=auths)
+    methods = []
+    for role in roles:
+        methods  = methods + role.methods()
     form.fields['dsid'].initial = stager.id
     dict = {}
     if not show or stager.file == '' or stager.file == None:
@@ -126,15 +199,18 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     dict["usagerate"] = UsageRate.objects.filter(base=stager)
     dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
     dict["roles"] = roles
+    dict["methods"] = methods
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
-def render_subauth(request, stager, auth, show=False, dict={}):
+def render_stagerauth(request, stager, auth, show=False, dict={}):
     sub_auths = JoinAuth.objects.filter(parent=auth.id)
     subauths = []
     for sub in sub_auths:
         subauth = SubAuth.objects.get(id=sub.child)
         subauths.append(subauth)
-
+    methods = []
+    for role in  auth.roles.all():
+        methods  = methods + role.methods()
     form = SubAuthForm()
     form.fields['id_parent'].initial = auth.id
     dict["stager"] = stager
@@ -147,10 +223,11 @@ def render_subauth(request, stager, auth, show=False, dict={}):
     dict["form"] = form
     dict["auths"] = subauths
     dict["fullaccess"] = False
+    dict["methods"] = methods
     dict["formtarget"] = "/auth/"
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
-@staff_member_required
+#@staff_member_required
 def usage(request):
     usagesummary = usage_store.usagesummary()
     usagerate = UsageRate.objects.all()
@@ -161,7 +238,7 @@ def usage(request):
     dict["usagerate"] = usagerate
     return render_to_response('allusage.html', dict, context_instance=RequestContext(request))
 
-@staff_member_required
+#@staff_member_required
 def viz(request):
     dict={}
 
@@ -223,7 +300,7 @@ class Row:
         self.parent = parent
 
 
-@staff_member_required
+#@staff_member_required
 def map(request):
     dict = {}
     
@@ -316,6 +393,7 @@ def auth(request,id):
         container_auth = HostingContainerAuth.objects.get(id=id)
         dict = {}
         dict["auth"] = container_auth
+        dict["subauths"] = subauths
 
         return render_to_response('auth.html', dict, context_instance=RequestContext(request))
     except ObjectDoesNotExist:

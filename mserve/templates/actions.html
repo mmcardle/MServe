@@ -1,0 +1,16 @@
+{% block actions %}
+
+    {% if actions %}
+
+        <h3>Actions</h3>
+
+        {% for action in actions %}
+
+        <a href="/{{actionprefix}}/{{action}}/{{actionid}}/" >{{action}}</a>
+        &nbsp;|&nbsp;
+
+        {% endfor %}
+
+    {% endif %}
+
+{% endblock %}

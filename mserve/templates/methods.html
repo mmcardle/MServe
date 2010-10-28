@@ -1,0 +1,20 @@
+{% block methods%}
+
+<h3>Methods</h3>
+
+{% if container %}
+    {% for method in methods %}<a href="/containerapi/{{method}}/{{container.id}}/" >{{method}}</a>
+    {% endfor %}
+{% endif %}
+
+{% if service  %}
+    {% for method in methods %}<a href="/serviceapi/{{method}}/{{service.id}}/" >{{method}}</a>
+    {% endfor %}
+{% endif %}
+
+{% if stager %}
+    {% for method in methods %}<a href="/stagerapi/{{method}}/{{stager.id}}/" >{{method}}</a>
+    {% endfor %}
+{% endif %}
+
+{% endblock%}

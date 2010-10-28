@@ -28,13 +28,7 @@
 
 {% block rightcontent %}
 
-<h3>Actions</h3>
-
-<a href="/serviceapi/getusagesummary/{{service.id}}/-1/" >Usage Summary</a>
-&nbsp;|&nbsp;
-<a href="/serviceapi/getmanagedresources/{{service.id}}/-1/" >Managed Resources</a>
-&nbsp;|&nbsp;
-<a href="/serviceapi/getroleinfo/{{service.id}}/" >Role Info</a>
+{% include "methods.html" %}
 
 <h3>Management Properties</h3>
 

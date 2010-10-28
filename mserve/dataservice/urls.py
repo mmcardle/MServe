@@ -1,5 +1,4 @@
 from django.conf.urls.defaults import *
-from django.conf import settings
 
 # Uncomment the next two lines to enable the admin:
 from django.contrib import admin
@@ -13,28 +12,42 @@ from dataservice.handlers import DataStagerHandler
 from dataservice.handlers import DataStagerURLHandler
 from dataservice.handlers import DataStagerAuthHandler
 from dataservice.handlers import DataStagerContentsHandler
+from dataservice.handlers import DataStagerVerifyHandler
 from dataservice.handlers import AuthHandler
 from dataservice.handlers import GlobalHandler
 from dataservice.handlers import ManagedResourcesContainerHandler
 from dataservice.handlers import ManagedResourcesServiceHandler
+from dataservice.handlers import ManagedResourcesStagerHandler
 from dataservice.handlers import ManagementPropertyHandler
 from dataservice.handlers import UsageSummaryHandler
 from dataservice.handlers import RoleHandler
+from dataservice.handlers import RoleInfoHandler
+from dataservice.handlers import AccessControlHandler
+from dataservice.handlers import ContainerAccessControlHandler
+from dataservice.handlers import ServiceAccessControlHandler
+from dataservice.handlers import StagerAccessControlHandler
 
 hosting_handler = Resource(HostingContainerHandler)
 managedresources_container_handler = Resource(ManagedResourcesContainerHandler)
 managedresources_service_handler = Resource(ManagedResourcesServiceHandler)
+managedresources_stager_handler = Resource(ManagedResourcesStagerHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 datastager_handler = Resource(DataStagerHandler)
 datastager_url_handler = Resource(DataStagerURLHandler)
 datastager_contents_handler = Resource(DataStagerContentsHandler)
+datastager_verify_handler = Resource(DataStagerVerifyHandler)
 datastager_auth_handler = Resource(DataStagerAuthHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
 role_handler = Resource(RoleHandler)
+role_info_handler = Resource(RoleInfoHandler)
 global_handler = Resource(GlobalHandler)
+access_control_handler = Resource(AccessControlHandler)
+container_access_control_handler = Resource(ContainerAccessControlHandler)
+service_access_control_handler = Resource(ServiceAccessControlHandler)
+stager_access_control_handler = Resource(StagerAccessControlHandler)
 
 urlpatterns = patterns('',
 
@@ -51,29 +64,39 @@ urlpatterns = patterns('',
     url(r'^stager/(?P<stagerid>[^/]+)/', datastager_handler),
     url(r'^stagerauth/(?P<stagerauthid>[^/]+)/', datastager_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
-
-    # METHODS
     url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
+    url(r'^accesscontrol/(?P<pk>[^/]+)/$', access_control_handler),
 
     # Container Methods
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
+    url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/$', managedresources_container_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_container_handler),
     url(r'^containerapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
+    url(r'^containerapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
     url(r'^containerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^containerapi/getroleinfo/(?P<baseid>[^/]+)/$', role_handler),
+    url(r'^containerapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
+    url(r'^containerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', container_access_control_handler),
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
+    url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/', managedresources_service_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/', managedresources_service_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
+    url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
     url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^serviceapi/getroleinfo/(?P<baseid>[^/]+)/$', role_handler),
+    url(r'^serviceapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
+    url(r'^serviceapi/getaccesscontrol/(?P<baseid>[^/]+)/$', service_access_control_handler),
 
     # Stager Methods
     url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
-    url(r'^stagerapi/getcontents/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
+    url(r'^stagerapi/getmanagedresources/(?P<stagerid>[^/]+)/$', managedresources_stager_handler),
+    url(r'^stagerapi/getmanagedresources/(?P<stagerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_stager_handler),
+    url(r'^stagerapi/get/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
+    url(r'^stagerapi/verify/(?P<stagerid>[^/]+)/$', datastager_verify_handler),
+    url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
     url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^stagerapi/getroleinfo/(?P<baseid>[^/]+)/$', role_handler),
+    url(r'^stagerapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
+    url(r'^stagerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', stager_access_control_handler),
 
     # Global Methods
     url(r'^api/getcontainers/$', global_handler),

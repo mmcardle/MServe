@@ -224,26 +224,16 @@ class ServiceResourcesReport(models.Model):
 class Auth(Base):
     authname = models.CharField(max_length=50)
 
-    #methods_encoded = models.TextField()
-
-    #def methods(self):
-    #    return pickle.loads(base64.b64decode(self.methods_encoded))
-
-    #def setmethods(self,methods):
-    #    self.methods_encoded = base64.b64encode(pickle.dumps(methods))
-
-    #def __unicode__(self):
-    #    return self.authname + " -> " + str(self.methods())
-
-    #class Meta:
-    #    abstract = True
-
-
-class Role(models.Model):
-    auth = models.ForeignKey(Auth)
-    description= models.CharField(max_length=200)
+class Role(Base):
+    auth = models.ManyToManyField(Auth, related_name='roles')
     rolename = models.CharField(max_length=50)
+    description= models.CharField(max_length=200)
     methods_encoded = models.TextField()
+
+    def save(self):
+        if not self.id:
+            self.id = random_id()
+        super(Role, self).save()
 
     def methods(self):
         currentmethods = pickle.loads(base64.b64decode(self.methods_encoded))

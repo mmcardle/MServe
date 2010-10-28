@@ -58,20 +58,15 @@
 
 {% endblock %}
 
-
 {% block rightcontent %}
+
+{% include "methods.html" %}
+
+{% include "actions.html" %}
 
 {% if stager.file and fullaccess %}
     <h3>Actions</h3>
-    <a href="/stagerapi/getcontents/{{stager.id}}/" >Download Contents</a>
-    &nbsp;|&nbsp;
-    <a  onclick="javascript:deletestager();" >Delete</a>
-    &nbsp;|&nbsp;
-    <a href="/stagerapi/getusagesummary/{{stager.id}}/-1/" >Usage Summary</a>
-    &nbsp;|&nbsp;
-    <a href="/stager/{{stager.id}}/?verify" >Verify</a>
-    &nbsp;|&nbsp;
-    <a href="/stagerapi/getroleinfo/{{stager.id}}/" >Role Info</a>
+    <a class="ascript" onclick="javascript:deletestager('{{stager.id}}');" >Delete</a>
 {% endif %}
 
 {% endblock %}
