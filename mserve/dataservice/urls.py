@@ -65,7 +65,18 @@ urlpatterns = patterns('',
     url(r'^stagerauth/(?P<stagerauthid>[^/]+)/', datastager_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
     url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
-    url(r'^accesscontrol/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^accesscontrol/(?P<pk>[^/]+)/$', access_control_handler),
+
+
+    url(r'^authority/(?P<method>[^/]+)/(?P<pk>[^/]+)/$', access_control_handler),
+
+    #url(r'^auth/getorcreateauth/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/addauth/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/getauths/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/getroles/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/setroles/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/revokeauth/(?P<pk>[^/]+)/$', access_control_handler),
+
 
     # Container Methods
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),

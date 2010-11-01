@@ -58,7 +58,15 @@ auth_base       = "/auth/"
 
 sleeptime = 10
 
-generic_methods = ["getaccesscontrol","getusagesummary","getroleinfo","getmanagedresources"]
+generic_get_methods = ["getauths","getroles"]
+
+generic_post_methods = ["getorcreateauth","addauth"]
+
+generic_put_methods = ["setroles"]
+
+generic_delete_methods = ["revokeauth"]
+
+generic_methods = ["getusagesummary","getroleinfo","getmanagedresources"] + generic_get_methods + generic_post_methods + generic_put_methods + generic_delete_methods
 
 all_container_methods = ["makeserviceinstance","getservicemetadata","getdependencies",
     "getprovides","setresourcelookup", "getstatus","setmanagementproperty"] + generic_methods
@@ -695,10 +703,156 @@ class RoleHandler(BaseHandler):
         return role
 
 class AccessControlHandler(BaseHandler):
-    allowed_methods = ('GET',)
+    allowed_methods = ('GET','PUT','POST')
     #fields = ('id','authname',('roles', ('description') ), )
     #fields = ('id','authname' )
-    model = Auth
+    #model = Auth
+
+    def create(self, request, method, pk):
+
+        if not method in generic_post_methods:
+            return HttpResponseBadRequest("Cannot do 'PUT' %s on %s" % (method,pk))
+
+        if method == "getorcreateauth" or method == "addauth":
+            name = request.POST["name"]
+            roles_string = request.POST["roles"]
+            roleids = roles_string.split(",")
+            base = NamedBase.objects.get(pk=pk)
+
+            if is_container(base):
+                hc = HostingContainer.objects.get(pk=pk)
+                hca,created = HostingContainerAuth.objects.get_or_create(hostingcontainer=hc,authname=name)
+                if not created and method == "addauth":
+                    return rc.DUPLICATE_ENTRY
+                if not created:
+                    return hca
+                roles = []
+                for roleid in roleids:
+                    role = Role.objects.get(pk=roleid)
+                    roles.append(role)
+
+                hca.save()
+                hca.roles = roles
+                return hca
+
+            if is_service(base):
+                ser = DataService.objects.get(pk=pk)
+                dsa,created  = DataServiceAuth.objects.get_or_create(dataservice=ser,authname=name)
+                if not created and method == "addauth":
+                    return rc.DUPLICATE_ENTRY
+                if not created:
+                    return dsa
+                roles = []
+                roles = []
+                for roleid in roleids:
+                    role = Role.objects.get(pk=roleid)
+                    roles.append(role)
+
+                dsa.save()
+                dsa.roles = roles
+                return dsa
+
+            if is_stager(base):
+                stager = DataStager.objects.get(pk=pk)
+                dsa,created  = DataStagerAuth.objects.get_or_create(stager=stager,authname=name)
+                logging.info("%s %s " % (created,method))
+                if not created and method == "addauth":
+                    return rc.DUPLICATE_ENTRY
+                if not created:
+                    return dsa
+                roles = []
+                roles = []
+                for roleid in roleids:
+                    role = Role.objects.get(pk=roleid)
+                    roles.append(role)
+
+                dsa.save()
+                dsa.roles = roles
+                return dsa
+
+        return HttpResponse("called %s on %s" % (method,pk))
+
+    def update(self, request, method, pk):
+
+        logging.info("update %s %s" % (method,pk))
+
+        if not method in generic_put_methods:
+            return HttpResponseBadRequest("Cannot do 'PUT' %s on %s" % (method,pk))
+
+        if method == "setroles":
+            roles_string = request.POST["roles"]
+            roleids = roles_string.split(",")
+
+            logging.info("auth pk = %s " % (pk))
+            auth = Auth.objects.get(pk=pk)
+
+            for roleid in roleids:
+                role = Role.objects.get(id=roleid)
+                auth.roles.add(role)
+
+            auth.save()
+
+            return HttpResponse("called %s on %s roles=%s" % (method,pk,",".join(roleids)))
+
+            if is_containerauth(auth):
+                if roles in all_container_methods:
+                    role.setmethods(roles)
+                    role.save()
+            if is_stagerauth(auth):
+                if roles in all_service_methods:
+                    role.setmethods(roles)
+                    role.save()
+            if is_stagerauth(auth):
+                if roles in all_stager_methods:
+                    role.setmethods(roles)
+                    role.save()
+
+            return HttpResponse("called %s on %s name=%s roles=%s" % (method,pk,name,",".join(roles)))
+
+        return HttpResponse("called %s on %s" % (method,pk))
+
+    def read(self,request, method, pk):
+
+        if not method in generic_get_methods:
+            return HttpResponseBadRequest("Cannot do 'GET' %s on %s" % (method,pk))
+        
+        if method == "getauths":
+            try:
+                base = NamedBase.objects.get(pk=pk)
+
+                if is_container(base):
+                    return HostingContainerAuth.objects.filter(hostingcontainer=base)
+
+                if is_service(base):
+                    return DataServiceAuth.objects.filter(dataservice=base)
+
+                if is_stager(base):
+                    return DataStagerAuth.objects.filter(stager=base)
+            except ObjectDoesNotExist:
+                pass
+
+            auth = Auth.objects.get(pk=pk)
+            if is_containerauth(auth) \
+                or is_serviceauth(auth) \
+                    or is_stagerauth(auth):
+                        joins = JoinAuth.objects.filter(parent=auth.id)
+                        return SubAuth.objects.filter(pk=joins)
+
+            return HttpResponseBadRequest("Called %s on %s" % (method,pk))
+
+        if method == "getroles":
+            try:
+                auth = Auth.objects.get(pk=pk)
+                dict = {}
+                roles = Role.objects.filter(auth=auth)
+                for role in roles:
+                    dict[role.rolename] = True
+
+                return dict
+            except ObjectDoesNotExist:
+                return HttpResponseBadRequest("No Such Auth %s" % (pk))
+
+        return HttpResponse("called %s on %s" % (method,pk))
 
 class ContainerAccessControlHandler(BaseHandler):
     allowed_methods = ('GET',)
@@ -745,7 +899,7 @@ class StagerAccessControlHandler(BaseHandler):
                 roles.append(role)
 
         dict = {}
-        dict["roles"] = roles
+        dict["roles"] = set(roles)
         return dict
 
 
@@ -763,7 +917,7 @@ class RoleInfoHandler(BaseHandler):
                 roledict.append(roles)
 
             dict = {}
-            dict["roles"] = roles
+            dict["roles"] = set(roles)
             return dict
 
         if is_service(base):
@@ -774,7 +928,7 @@ class RoleInfoHandler(BaseHandler):
                     roles.append(role)
 
             dict = {}
-            dict["roles"] = roles
+            dict["roles"] = set(roles)
             return dict
 
         if is_stager(base):
@@ -785,7 +939,7 @@ class RoleInfoHandler(BaseHandler):
                     roles.append(a)
 
             dict = {}
-            dict["roles"] = roles
+            dict["roles"] = set(roles)
             return dict
 
         r = rc.BAD_REQUEST
