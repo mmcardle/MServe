@@ -27,13 +27,16 @@ metric_service = "http://prestoprime/service"
 
 # Metrics for Stagers
 metric_disc = "http://prestoprime/disc"
+metric_ingest = "http://prestoprime/ingest"
+metric_access = "http://prestoprime/access"
+metric_archived = "http://prestoprime/archived"
 
-metrics = [metric_stager,metric_service,metric_container,metric_disc]
+metrics = [metric_stager,metric_service,metric_container,metric_disc,metric_ingest,metric_access,metric_archived]
 
 # What metric are reported fro each type
 container_metrics = metrics
 service_metrics = [metric_stager,metric_service,metric_disc]
-stager_metrics = [metric_stager,metric_disc]
+stager_metrics = [metric_stager,metric_disc,metric_ingest,metric_access,metric_archived]
 
 # Other Metric groups
 byte_metrics = [metric_disc]

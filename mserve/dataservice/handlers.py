@@ -221,16 +221,19 @@ def create_data_stager(request,serviceid,file):
     datastagerauth_monitor.roles.add(monitor_role)
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
+    usage_store.startrecording(datastager.id,usage_store.metric_archived,1)
     
     reportusage(datastager)
 
     if file is not None:
         usage_store.record(datastager.id,usage_store.metric_disc,file.size)
+        usage_store.record(datastager.id,usage_store.metric_ingest,file.size)
 
     return datastager
 
 def delete_stager(request,stagerid):
     usage_store.stoprecording(stagerid,usage_store.metric_stager)
+    usage_store.stoprecording(stagerid,usage_store.metric_archived)
     stager = DataStager.objects.get(id=stagerid)
     logging.info("Deleteing stager %s %s" % (stager.name,stagerid))
 
@@ -440,6 +443,7 @@ class DataStagerHandler(BaseHandler):
             datastager = DataStager.objects.get(pk=stagerid)
             datastager.file = file
             usage_store.startrecording(stagerid,usage_store.metric_disc,file.size)
+            usage_store.startrecording(stagerid,usage_store.metric_archived,file.size)
 
             datastager.save()
 
@@ -554,6 +558,8 @@ class DataStagerContentsHandler(BaseHandler):
 
         if not os.path.exists(fullfilepath):
             os.link(datastagerfilepath,fullfilepath)
+
+        usage_store.record(datastager.id,usage_store.metric_access,datastager.file.size)
 
         return redirect("/%s"%redirecturl)
 
