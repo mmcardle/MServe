@@ -35,7 +35,7 @@ metrics = [metric_stager,metric_service,metric_container,metric_disc,metric_inge
 
 # What metric are reported fro each type
 container_metrics = metrics
-service_metrics = [metric_stager,metric_service,metric_disc]
+service_metrics = [metric_stager,metric_service,metric_disc,metric_archived]
 stager_metrics = [metric_stager,metric_disc,metric_ingest,metric_access,metric_archived]
 
 # Other Metric groups
