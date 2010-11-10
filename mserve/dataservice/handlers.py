@@ -57,6 +57,7 @@ stager_base     = "/stager/"
 auth_base       = "/auth/"
 
 sleeptime = 10
+DEFAULT_SPEED = "10"
 
 generic_get_methods = ["getauths","getroles"]
 
@@ -108,6 +109,9 @@ def create_container(request,name):
 
     logging.info(owner_role)
 
+    managementproperty = ManagementProperty(property="speed",base=hostingcontainer,value=DEFAULT_SPEED)
+    managementproperty.save()
+
     usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
     reportusage(hostingcontainer)
@@ -155,6 +159,9 @@ def create_data_service(request,containerid,name):
     customerauth.save()
 
     customerauth.roles.add(customer_role)
+
+    managementproperty = ManagementProperty(property="speed",base=dataservice,value=DEFAULT_SPEED)
+    managementproperty.save()
 
     usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
 
@@ -1001,44 +1008,41 @@ class UsageSummaryHandler(BaseHandler):
         return usagereport
 
 class ManagementPropertyHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST')
+    allowed_methods = ('GET', 'PUT', 'POST')
 
     def read(self,request, baseid):
-        container = HostingContainer.objects.get(id=baseid)
-        properties = ManagementProperty.objects.filter(base=container)
+        base = NamedBase.objects.get(id=baseid)
+        properties = ManagementProperty.objects.filter(base=base)
         properties_json = []
         for prop in properties:
             properties_json.append(prop)
         return properties_json
 
     def create(self, request, baseid):
+        resp = rc.BAD_REQUEST
+        #resp.write("Not Allowed")
+        return resp
+
+    def update(self, request, baseid):
         form = ManagementPropertyForm(request.POST) 
         if form.is_valid(): 
-            
+
+            logging.info(baseid)
             property = form.cleaned_data['property']
 
-            base = NamedBase.objects.get(pk=baseid)
+            base = NamedBase.objects.get(id=baseid)
 
             try:
                 existingmanagementproperty = ManagementProperty.objects.get(property=property,base=base)
-                if existingmanagementproperty is not None:
-                    return HttpResponseBadRequest("That Property allready exists")
+                value    = form.cleaned_data['value']
+                existingmanagementproperty.value = value
+                existingmanagementproperty.save()
+                return existingmanagementproperty
             except ObjectDoesNotExist:
-                pass
+                resp = rc.BAD_REQUEST
+                resp.write("Object doesnt exist")
+                return resp
 
-            property = form.cleaned_data['property']
-            value    = form.cleaned_data['value']
-            managementproperty = ManagementProperty(property=property,value=value,base=base)
-            managementproperty.save()
-            
-            redirecturl = ""
-            if is_container(base):
-                redirecturl = "container"
-            if is_service(base):
-                redirecturl = "service"
-            if is_stager(base):
-                redirecturl = "stager"
-            return redirect('/%s/%s' % (redirecturl,baseid) )
         else:
             logging.info("Bad Form %s " % form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
