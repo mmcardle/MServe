@@ -6,6 +6,7 @@ from dataservice.models import HostingContainerAuth
 from dataservice.models import DataService
 from dataservice.models import DataServiceAuth
 from dataservice.models import DataStager
+from dataservice.models import BackupFile
 from dataservice.models import DataStagerAuth
 from dataservice.models import Usage
 from dataservice.models import AggregateUsageRate
@@ -49,6 +50,7 @@ import logging
 import magic
 import hashlib
 import os
+import shutil
 
 base            = "/home/"
 container_base  = "/container/"
@@ -57,7 +59,7 @@ stager_base     = "/stager/"
 auth_base       = "/auth/"
 
 sleeptime = 10
-DEFAULT_SPEED = "10"
+DEFAULT_SPEED = "50"
 
 generic_get_methods = ["getauths","getroles"]
 
@@ -226,6 +228,17 @@ def create_data_stager(request,serviceid,file):
     datastagerauth_monitor.save()
 
     datastagerauth_monitor.roles.add(monitor_role)
+
+    backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
+    backup.save()
+
+    #logging.info("backup %s " % dir(backup))
+    logging.info("datastager.file %s " % datastager.file)
+    logging.info("datastager.file.path %s " % datastager.file.path)
+    logging.info("backup.file %s " % backup.file)
+    logging.info("backup.file.path %s " % backup.file.path)
+    #logging.info("backup.file %s " % dir(backup.file))
+    #logging.info("models.fs " % mserve.dataservice.models.fs)
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
     usage_store.startrecording(datastager.id,usage_store.metric_archived,1)
@@ -543,7 +556,28 @@ class DataStagerContentsHandler(BaseHandler):
 
         dlfoldername = "dl%s"%downloadspeed
 
-        p = str(datastager.file)
+        check1 = datastager.checksum
+        check2 = utils.md5_for_file(datastager.file)
+
+        file=datastager.file
+
+        if(check1==check2):
+            logging.info("Verification of %s on read ok" % datastager)
+        else:
+            logging.info("Verification of %s on read FAILED" % datastager)
+            usage_store.record(datastager.id,usage_store.metric_corruption,1)
+            backup = BackupFile.objects.get(stager=datastager)
+            check3 = datastager.checksum
+            check4 = utils.md5_for_file(backup.file)
+            if(check3==check4):
+                shutil.copy(backup.file.path, datastager.file.path)
+                file = backup.file
+            else:
+                logging.info("The file %s has been lost" % datastager)
+                usage_store.record(datastager.id,usage_store.metric_dataloss,file.size)
+                return rc.NOT_HERE
+
+        p = str(file)
 
         redirecturl = gen_sec_link_orig(p,dlfoldername)
         redirecturl = redirecturl[1:]
@@ -552,13 +586,13 @@ class DataStagerContentsHandler(BaseHandler):
 
         fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
         fullfilepathfolder = os.path.dirname(fullfilepath)
-        datastagerfilepath = datastager.file.path
+        datastagerfilepath = file.path
 
         logging.info("Redirect URL      = %s " % redirecturl)
         logging.info("fullfilepath      = %s " % fullfilepath)
         logging.info("fullfilefolder    = %s " % fullfilepathfolder)
         logging.info("datastagerfp      = %s " % datastagerfilepath)
-        logging.info("datastagerf       = %s " % datastager.file)
+        logging.info("datastagerf       = %s " % file)
 
         if not os.path.exists(fullfilepathfolder):
             os.makedirs(fullfilepathfolder)
@@ -566,7 +600,7 @@ class DataStagerContentsHandler(BaseHandler):
         if not os.path.exists(fullfilepath):
             os.link(datastagerfilepath,fullfilepath)
 
-        usage_store.record(datastager.id,usage_store.metric_access,datastager.file.size)
+        usage_store.record(datastager.id,usage_store.metric_access,file.size)
 
         return redirect("/%s"%redirecturl)
 

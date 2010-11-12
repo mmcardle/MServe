@@ -5,9 +5,9 @@ import base64
 import os
 import time
 import logging
+import storage
 
 ID_FIELD_LENGTH = 200
-
 fmt = "%3.2f"
 
 def random_id():
@@ -202,6 +202,18 @@ class DataStager(NamedBase):
         if not self.id:
             self.id = random_id()
         super(DataStager, self).save()
+
+
+class BackupFile(NamedBase):
+    stager = models.ForeignKey(DataStager)
+    file = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.gettapestorage())
+    mimetype = models.CharField(max_length=200,blank=True,null=True)
+    checksum = models.CharField(max_length=32, blank=True, null=True)
+
+    def save(self):
+        if not self.id:
+            self.id = random_id()
+        super(BackupFile, self).save()
 
 class ContainerResourcesReport(models.Model):
     base = models.ForeignKey('NamedBase')
