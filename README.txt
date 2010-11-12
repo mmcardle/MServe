@@ -35,7 +35,7 @@ WARNING: Since this is singlethreaded usage reporting (long polling) will not wo
 
 Lighttpd Configuration
 =====================
-Edit /var/lighttpd/lighttpd.conf
+Edit /etc/lighttpd/lighttpd.conf
 Enable the following 
 mod_rewrite
 set the root directory to /var/mserve/www-root/
