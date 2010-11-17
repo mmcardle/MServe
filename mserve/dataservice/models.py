@@ -194,15 +194,24 @@ class DataService(NamedBase):
 class DataStager(NamedBase):
     # TODO : Add bitmask to Datastager for deleted,remote,input,output, etc
     service = models.ForeignKey(DataService)
-    file = models.FileField(upload_to=create_filename,blank=True,null=True)
+    file = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
+    size     = models.IntegerField(default=0)
 
     def save(self):
         if not self.id:
             self.id = random_id()
         super(DataStager, self).save()
 
+class Thumb(Base):
+    stager = models.OneToOneField(DataStager)
+    file = models.ImageField(upload_to=create_filename,null=True,storage=storage.getthumbstorage())
+
+    def save(self):
+        if not self.id:
+            self.id = random_id()
+        super(Thumb, self).save()
 
 class BackupFile(NamedBase):
     stager = models.ForeignKey(DataStager)

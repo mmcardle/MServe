@@ -7,6 +7,79 @@
 <script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
 <script type="text/javascript">
 
+    function getThumb(stagerid){
+        url = '/stager/'+stagerid+'/'
+        $.getJSON(url, function(data) {
+            if(data.thumb.file!=""){
+                $("#stagerthumb").attr("src", "/mservethumbs/"+data.thumb.file)
+                //id = $("<div >Thumb exists "+data.thumb+" "+data.thumb.file+" "+data.thumb.file.path+"</div>&nbsp;")
+                //$(id).appendTo("#debug");
+            }else{
+                window.setTimeout("getThumb(\'"+stagerid+"\')",1000)
+                //id = $("<div >Thumb doesnt exist "+data.thumb.file+" "+data.thumb.file+"</div>&nbsp;")
+                //$(id).appendTo("#debug");
+            }
+        });
+     }
+
+
+     function setManagementPropertySpeed(service){
+        var speed = prompt("What speed do you wish to set", "");
+         $.ajax({
+           type: "PUT",
+           data: "property=speed&value="+speed,
+           url: '/serviceapi/managementproperty/'+service+'/',
+           success: function(msg){
+             alert( "POST " +msg + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText   );
+           },
+           error: function(msg){
+             alert( "Failure On 'POST " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
+           }
+         });
+     }
+
+     function addauth(){
+         $.ajax({
+           type: "POST",
+           data: "name=newmonitorauth&roles=8b57f3b2-a8ec-4f08-a920-6cd016b22b90",
+           url: '/authority/addauth/820e9b0e-fd19-4fa7-b63e-f6d6c716d472/',
+           success: function(msg){
+             alert( "POST " +msg + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText   );
+           },
+           error: function(msg){
+             alert( "Failure On POST " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
+           }
+         });
+     }
+
+    function getorcreateauth(){
+         $.ajax({
+           type: "POST",
+           data: "name=newmonitorauth&roles=8b57f3b2-a8ec-4f08-a920-6cd016b22b90",
+           url: '/authority/getorcreateauth/820e9b0e-fd19-4fa7-b63e-f6d6c716d472/',
+           success: function(msg){
+             alert( "POST " +msg  );
+           },
+           error: function(msg){
+             alert( "Failure On POST " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
+           }
+         });
+     }
+
+     function putroles(){
+         $.ajax({
+           type: "PUT",
+           data: "roles=8b57f3b2-a8ec-4f08-a920-6cd016b22b90,2ebecd1d-a0c6-4374-ab2c-435902dc4bd9",
+           url: '/authority/setroles/f3b4adc3-f198-4c3b-aa97-12519446852b/',
+           success: function(msg){
+             alert( "PUT " +msg  );
+           },
+           error: function(msg){
+             alert( "Failure On PUT " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
+           }
+         });
+     }
+
      function deletestager(stagerid){
          $.ajax({
            type: "DELETE",
@@ -163,12 +236,12 @@ dt {
     color: white;
 }
 </style>
-    <!--<link rel="stylesheet" href="style.css" />-->
-    <title>{% block title %}MServe{% endblock %}</title>
+<!--<link rel="stylesheet" href="style.css" />-->
+<title>{% block title %}MServe{% endblock %}</title>
 </head>
 
 <body id="wrapper">
-
+                   <div id="debug"></div>
     <h2>{% block heading %}MServe{% endblock %}</h2>
     <table id="maintable">
         <tr>
@@ -182,6 +255,7 @@ dt {
                     <div><a href="/usage/">Usage</a></div>
                     <div><a href="/map/">Map</a></div>
                     <div><a href="/viz/">Vizualizations</a></div>
+
                 {% endif %}
 
                 {% if user.is_authenticated %}
@@ -190,10 +264,24 @@ dt {
                 {% endif %}
 
                 {% if not user.is_authenticated %}
-                <!--<div><a href="/accounts/login/">Login</a></div>-->
+                    <div><a href="/accounts/login/">Login</a></div>
                 {% endif %}
 
+                    <div><a href="#"></a></div>
+                    <div><a href="/submit/">Submit</a></div>
+                    <div><a href="/tasks/">Tasks</a></div>
+
+                    <h4>Debug</h4>
+ 
+                    <div><a onclick="javascript:putroles();" class="ascript" >Test Put roles</a></div>
+                    <div><a onclick="javascript:getorcreateauth();" class="ascript" >Test getorcreateauth</a></div>
+                    <div><a onclick="javascript:addauth();" class="ascript" >Test addauth</a></div>
+                    <div><a onclick="javascript:setManagementPropertySpeed('{{service.id}}');" class="ascript" >setManagementProperty</a></div>
+
+
                 {% endblock %}
+
+
 
             </th>
             
@@ -218,6 +306,7 @@ dt {
                         {%  for role in auth.roles.all %}
                         <dt >Role: {{role.rolename}}</dt>
                         <dd ><em>{{role.description}}</em></dd>
+                        <dd ><em>{{role.id}}</em></dd>
                         <dd class="methods{{role.id}}">
                             {% if container %}
                                 {% for method in role.methods %}<a href="/containerapi/{{method}}/{{container.id}}/" >{{method}}</a>

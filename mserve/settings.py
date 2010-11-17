@@ -48,6 +48,7 @@ USE_I18N = True
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
 MEDIA_ROOT = '/var/mserve/www-root/mservedata/'
+THUMB_ROOT = '/var/mserve/www-root/mservethumbs/'
 
 # MServe Specific Setting
 
@@ -77,6 +78,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'dataservice.middleware.AuthMiddleware'
 )
 
 ROOT_URLCONF = 'mserve.urls'
@@ -93,13 +95,25 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
+BROKER_HOST = "localhost"
+BROKER_PORT = 5672
+BROKER_USER = "mm"
+BROKER_PASSWORD = "pass"
+BROKER_VHOST = "mmhost"
+
+CELERY_IMPORTS = ("dataservice.tasks", )
+
+import djcelery
+djcelery.setup_loader()
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.admin',
-    'mserve.dataservice'
+    'mserve.dataservice',
+    'djcelery'
 )
 
 # For FGCI

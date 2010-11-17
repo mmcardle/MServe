@@ -7,12 +7,12 @@ SOCKET="/tmp/pp-dataservice-fcgi.sock"
 
 cd $PROJDIR
 if [ -f $PIDFILE ]; then
-    sudo kill `cat -- $PIDFILE`
-    sudo rm -f -- $PIDFILE
+    sudo -u www-data kill `cat -- $PIDFILE`
+    sudo -u www-data rm -f -- $PIDFILE
 fi
 echo "Killed Previous Process"
-sudo ./manage.py runfcgi --pythonpath="/home/mm/dev/pp-dataservice/mserve" socket=$SOCKET pidfile=$PIDFILE && sudo chmod 777 $SOCKET
-sudo chmod 777 $SOCKET
+sudo -u www-data ./manage.py runfcgi --pythonpath="/home/mm/dev/pp-dataservice/mserve" socket=$SOCKET pidfile=$PIDFILE && sudo chmod 777 $SOCKET
+sudo -u www-data chmod 777 $SOCKET
 cat $PIDFILE
 echo "Perms"
 echo "Running"

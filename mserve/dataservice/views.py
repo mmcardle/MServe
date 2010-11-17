@@ -21,9 +21,31 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 import usage_store as usage_store
 import utils as utils
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+
+#from dataservice.tasks import ProcessVideoTask
+from dataservice.tasks import thumbvideo
+from django.http import HttpResponse
+from celery.result import AsyncResult
+
+
+def submit(self):
+    t = thumbvideo.delay("/home/mm/Videos/Sintel.2010.2K.x264-VODO.mp4")
+    r = HttpResponse("<html><body?<a href='../status/%s/'>task</a></body></html>" % t)
+    return r
+
+def status(self, taskid):
+    result = AsyncResult(taskid)
+    if result.ready():
+        r = HttpResponse("<html><body>Task %s result=%s</body></html>" % (taskid,result.result) )
+        return r
+    else:
+        r = HttpResponse("<html><body>Task %s not ready</body></html>" % (taskid) )
+        return r
+
 
 #@staff_member_required
 def home(request,form=HostingContainerForm()):
@@ -179,8 +201,17 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
         methods  = methods + role.methods()
     form.fields['dsid'].initial = stager.id
     dict = {}
+
+    dict["thumburl"] = "/mservemedia/images/empty.png"
+
+    if stager.thumb.file == "":
+        dict["thumburl"] = "/mservemedia/images/busy.gif"
+    else:
+        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb.file)
+
     if not show or stager.file == '' or stager.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
+        dict["thumburl"] = "/mservemedia/images/empty.png"
         stager.file = None
 
     dict['verify'] = False
@@ -200,6 +231,7 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
     dict["roles"] = roles
     dict["methods"] = methods
+    
     return render_to_response('stager.html', dict, context_instance=RequestContext(request))
 
 def render_stagerauth(request, stager, auth, show=False, dict={}):
@@ -214,11 +246,22 @@ def render_stagerauth(request, stager, auth, show=False, dict={}):
     form = SubAuthForm()
     form.fields['id_parent'].initial = auth.id
     dict["stager"] = stager
+    dict["thumburl"] = "%s%s%s" % ("/mservethumbs/",stager.file,".thumb.jpg")
+
+    dict["thumburl"] = "/mservemedia/images/empty.png"
+
+    if stager.thumb.file == "":
+        dict["thumburl"] = "/mservemedia/images/busy.gif"
+    else:
+        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb.file)
+
     if stager.file == '' or stager.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
+        dict["thumburl"] = "/mservemedia/images/empty.png"
     if not show:
         stager.file = None
         dict["altfile"] = "/mservemedia/images/forbidden.png"
+        dict["thumburl"] = "/mservemedia/images/forbidden.png"
 
     dict["form"] = form
     dict["auths"] = subauths

@@ -48,6 +48,7 @@ run lighttpd-enable-mod
 choose fastcgi
 edit /etc/lighttpd/conf-enabled/10-fastcgi.conf
 
+
 =======================================
 10-fastcgi.conf
 =======================================
@@ -124,3 +125,7 @@ echo "Running"
 
 Run this file to stop/start django
 
+
+Celery Startup
+=============
+sudo -u www-data ./manage.py celeryd --verbosity=2 --loglevel=DEBUG

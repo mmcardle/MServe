@@ -26,7 +26,13 @@
         {% endif %}
         <dt>Mime</dt>
         <dd>{{stager.mimetype}}</dd>
+
     </dl>
+{% if stager.thumb.file == "" %}
+<script type="text/javascript">
+    getThumb('{{stager.id}}')
+</script>
+{% endif %}
 
 {% load mservetags %}
 

@@ -3,17 +3,26 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 import time
 
-class SimulateFileSystemStorage(FileSystemStorage):
+class SimulateTapeFileSystemStorage(FileSystemStorage):
 
     def __init__(self,location):
-        super(SimulateFileSystemStorage, self).__init__(location=location);
+        super(SimulateTapeFileSystemStorage, self).__init__(location=location);
 
     def _open(self,name,mode='rb'):
         time.sleep(10)
-        return super(SimulateFileSystemStorage, self)._open(name,mode);
+        return super(SimulateTapeFileSystemStorage, self)._open(name,mode);
 
 def gettapestorage():
-    return SimulateFileSystemStorage(location='%s/backup/'%settings.MEDIA_ROOT)
+    return SimulateTapeFileSystemStorage(location='%s/backup/'%settings.MEDIA_ROOT)
+
+
+class DiskSystemStorage(FileSystemStorage):
+
+    def __init__(self,location):
+        super(DiskSystemStorage, self).__init__(location=location);
 
 def getdiscstorage():
-    return default_storage
+    return DiskSystemStorage(location=settings.MEDIA_ROOT)
+
+def getthumbstorage():
+    return DiskSystemStorage(location=settings.THUMB_ROOT)

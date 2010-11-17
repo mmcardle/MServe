@@ -1,44 +1,22 @@
 import os.path
 from piston.handler import BaseHandler
 from piston.utils import rc
-from dataservice.models import HostingContainer
-from dataservice.models import HostingContainerAuth
-from dataservice.models import DataService
-from dataservice.models import DataServiceAuth
-from dataservice.models import DataStager
-from dataservice.models import BackupFile
-from dataservice.models import DataStagerAuth
-from dataservice.models import Usage
-from dataservice.models import AggregateUsageRate
-from dataservice.models import NamedBase
-from dataservice.models import Role
-from dataservice.models import Auth
-from dataservice.models import SubAuth
-from dataservice.models import JoinAuth
-from dataservice.models import ManagementProperty
-from dataservice.models import UsageReport
-from dataservice.models import ContainerResourcesReport
-from dataservice.models import ServiceResourcesReport
-from dataservice.forms import HostingContainerForm
-from dataservice.forms import DataServiceForm
-from dataservice.forms import DataServiceURLForm
-from dataservice.forms import DataStagerForm
-from dataservice.forms import UpdateDataStagerForm
-from dataservice.forms import UpdateDataStagerFormURL
-from dataservice.forms import DataStagerURLForm
-from dataservice.forms import DataStagerAuthForm
-from dataservice.forms import SubAuthForm
-from dataservice.forms import ManagementPropertyForm
+from dataservice.models import *
+from dataservice.forms import *
 from dataservice import views
 from django.conf import settings
-from django.http import HttpResponse
-from django.http import HttpResponseRedirect
-from django.http import HttpResponseForbidden
-from django.http import HttpResponseBadRequest
+from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
+from django.conf import settings
+
+from dataservice.tasks import thumbvideo
+from dataservice.tasks import thumbimage
+from dataservice.tasks import add
+from django.http import HttpResponse
+from celery.result import AsyncResult
 
 import utils as utils
 import usage_store as usage_store
@@ -51,6 +29,8 @@ import magic
 import hashlib
 import os
 import shutil
+import Image
+import tempfile
 
 base            = "/home/"
 container_base  = "/container/"
@@ -194,6 +174,9 @@ def create_data_stager(request,serviceid,file):
         datastager = DataStager(name=file.name,service=service,file=file)
     datastager.save()
 
+    thumb = Thumb(stager=datastager)
+    thumb.save()
+
     if datastager.file:
         # MIME type
         m = magic.open(magic.MAGIC_MIME)
@@ -202,8 +185,32 @@ def create_data_stager(request,serviceid,file):
         datastager.mimetype = mimetype
         # checksum
         datastager.checksum = utils.md5_for_file(datastager.file)
+        # record size
+        datastager.size = file.size
         # save it
         datastager.save()
+
+        thumbpath = os.path.join( str(datastager.file).replace(datastager.id,thumb.id) + ".thumb.jpg")
+        fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
+        (head,tail) = os.path.split(fullthumbpath)
+
+        if not os.path.isdir(head):
+            os.makedirs(head)
+
+        if mimetype.startswith('video'):
+            logging.info("Creating thumb in process for Video '%s' %s " % (datastager,mimetype))
+            # Do this in Process
+            task = thumbvideo(datastager.file.path,fullthumbpath)
+            thumb.file = thumbpath
+            thumb.save()
+            logging.info("Tasks %s " % (task))
+        elif mimetype.startswith('image'):
+            logging.info("Creating thumb asynchronously for Image '%s' %s " % (datastager,mimetype))
+            # Do this asynchronously
+            thumbtaskPIL = thumbimage.delay("http://ogio/stagerapi/get/%s/"%(datastager.id),datastager.id,"http://ogio/thumbapi/",(210,128))
+            logging.info("Tasks PIL %s " % (thumbtaskPIL))
+        else:
+            logging.info("Not creating thumb for '%s' %s " % (datastager,mimetype))
 
     datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
     datastagerauth_owner.save()
@@ -229,14 +236,15 @@ def create_data_stager(request,serviceid,file):
 
     datastagerauth_monitor.roles.add(monitor_role)
 
-    backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
-    backup.save()
+    if file is not None:
+        backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
+        backup.save()
 
     #logging.info("backup %s " % dir(backup))
-    logging.info("datastager.file %s " % datastager.file)
-    logging.info("datastager.file.path %s " % datastager.file.path)
-    logging.info("backup.file %s " % backup.file)
-    logging.info("backup.file.path %s " % backup.file.path)
+    #logging.info("datastager.file %s " % datastager.file)
+    #logging.info("datastager.file.path %s " % datastager.file.path)
+    #logging.info("backup.file %s " % backup.file)
+    #logging.info("backup.file.path %s " % backup.file.path)
     #logging.info("backup.file %s " % dir(backup.file))
     #logging.info("models.fs " % mserve.dataservice.models.fs)
 
@@ -246,8 +254,8 @@ def create_data_stager(request,serviceid,file):
     reportusage(datastager)
 
     if file is not None:
-        usage_store.record(datastager.id,usage_store.metric_disc,file.size)
-        usage_store.record(datastager.id,usage_store.metric_ingest,file.size)
+        usage_store.record(datastager.id,usage_store.metric_disc,datastager.size)
+        usage_store.record(datastager.id,usage_store.metric_ingest,datastager.size)
 
     return datastager
 
@@ -434,12 +442,60 @@ class DataServiceURLHandler(BaseHandler):
                 return r
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
+class ThumbHandler(BaseHandler):
+    model = Thumb
+    allowed_methods = ('GET','POST')
+
+    def create(self, request):
+        logging.info("Thumb Update")
+        if request.FILES.has_key('file'):
+            file = request.FILES['file']
+            logging.info("file %s"%file)
+            if request.POST.has_key('stagerid'):
+                stagerid = request.POST['stagerid']
+                logging.info("stagerid %s"%stagerid)
+                stager = DataStager.objects.get(id=stagerid)
+                if stager == None:
+                    logging.info("No such stager %s"%stagerid)
+                    r = rc.BAD_REQUEST
+                    r.write("Invalid Request!")
+                    return r
+
+                try:
+                    thumb = stager.thumb
+                    logging.info("Deleting existing thumb for stager %s"%stager)
+                    stager.thumb.delete()
+                except ObjectDoesNotExist:
+                    pass
+
+                logging.info("Updating thumb for stager %s"%stager)
+
+                thumb = Thumb(stager=stager,file=file)
+                thumb.file = file
+                thumb.save()
+                logging.info("Updated %s"%thumb)
+
+                return thumb
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request!")
+                return r
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
+
+class DataStagerJSONHandler(BaseHandler):
+    allowed_methods = ('GET','POST','PUT','DELETE')
+    model = DataStager
+    fields = ('name', 'id', 'file','checksum', ('thumb', ('id','name','file') ) )
+    exclude = ('pk')
 
 class DataStagerHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
-    model = DataStager
-    fields = ('name', 'id', 'file','checksum')
-    exclude = ('pk')
+    #model = DataStager
+    #fields = ('name', 'id', 'file','checksum', ('thumb', ('id','name','file') ) )
+    #exclude = ('pk')
 
     def delete(self, request, stagerid):
         logging.info("Deleting Stager %s " % stagerid)
@@ -449,12 +505,14 @@ class DataStagerHandler(BaseHandler):
         stager = DataStager.objects.get(pk=stagerid)
         base = NamedBase.objects.get(pk=stagerid)
 
-        if request.META["HTTP_ACCEPT"] == "application/json":
+        if re.match("application/json", request.META["HTTP_ACCEPT"]):
+        #if request.META["HTTP_ACCEPT"].contains("application/json"):
             return stager
         return views.render_stager(request,stager.id,show=True)
 
     def update(self, request):
-        form = UpdateDataStagerForm(request.POST,request.FILES) 
+        form = UpdateDataStagerForm(request.POST,request.FILES)
+        logging.info(form)
         if form.is_valid(): 
             
             file = request.FILES['file']
@@ -462,8 +520,13 @@ class DataStagerHandler(BaseHandler):
             #service = DataService.objects.get(id=serviceid)
             datastager = DataStager.objects.get(pk=stagerid)
             datastager.file = file
-            usage_store.startrecording(stagerid,usage_store.metric_disc,file.size)
-            usage_store.startrecording(stagerid,usage_store.metric_archived,file.size)
+            datastager.size = file.size
+
+            backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
+            backup.save()
+
+            usage_store.startrecording(stagerid,usage_store.metric_disc,datastager.size)
+            usage_store.startrecording(stagerid,usage_store.metric_archived,datastager.size)
 
             datastager.save()
 
@@ -472,7 +535,10 @@ class DataStagerHandler(BaseHandler):
 
             return redirect('/stager/'+str(datastager.id)+"/")
         else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            logging.info(form)
+            return r
         
     def render_subauth(self, stager, auth, show=False):
         sub_auths = JoinAuth.objects.filter(parent=auth.id)
@@ -574,7 +640,7 @@ class DataStagerContentsHandler(BaseHandler):
                 file = backup.file
             else:
                 logging.info("The file %s has been lost" % datastager)
-                usage_store.record(datastager.id,usage_store.metric_dataloss,file.size)
+                usage_store.record(datastager.id,usage_store.metric_dataloss,datastager.size)
                 return rc.NOT_HERE
 
         p = str(file)
@@ -600,7 +666,7 @@ class DataStagerContentsHandler(BaseHandler):
         if not os.path.exists(fullfilepath):
             os.link(datastagerfilepath,fullfilepath)
 
-        usage_store.record(datastager.id,usage_store.metric_access,file.size)
+        usage_store.record(datastager.id,usage_store.metric_access,datastager.size)
 
         return redirect("/%s"%redirecturl)
 
@@ -615,6 +681,7 @@ class DataStagerURLHandler(BaseHandler):
             datastager = DataStager.objects.get(pk=stagerid)
             datastager.file = file
             datastager.name = file.name
+            datastager.size = file.size
             datastager.save()
 
             if request.META["HTTP_ACCEPT"] == "application/json":
@@ -622,7 +689,10 @@ class DataStagerURLHandler(BaseHandler):
 
             return redirect('/stager/'+str(datastager.id)+"/")
         else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            logging.info("DataStagerURLHandler %s "%form)
+            return r
 
     def create(self, request, serviceid):
         form = DataStagerURLForm(request.POST,request.FILES) 

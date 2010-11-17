@@ -1,5 +1,5 @@
 {% if stager.file %}
-    <p><img height="100px" title="{{stager.name}}" alt="{{stager.name}}" src="/mservedata/{{stager.file}}" /></p>
+    <p><img id="stagerthumb" title="{{stager.name}}" alt="{{stager.name}}" src="{{thumburl}}" /></p>
 {% endif %}
 {% if not stager.file %}
     <p><img  title="No File" alt="No File" src="{{altfile}}" /></p>

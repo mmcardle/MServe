@@ -5,27 +5,7 @@ from django.contrib import admin
 admin.autodiscover()
 
 from piston.resource import Resource
-from dataservice.handlers import HostingContainerHandler
-from dataservice.handlers import DataServiceHandler
-from dataservice.handlers import DataServiceURLHandler
-from dataservice.handlers import DataStagerHandler
-from dataservice.handlers import DataStagerURLHandler
-from dataservice.handlers import DataStagerAuthHandler
-from dataservice.handlers import DataStagerContentsHandler
-from dataservice.handlers import DataStagerVerifyHandler
-from dataservice.handlers import AuthHandler
-from dataservice.handlers import GlobalHandler
-from dataservice.handlers import ManagedResourcesContainerHandler
-from dataservice.handlers import ManagedResourcesServiceHandler
-from dataservice.handlers import ManagedResourcesStagerHandler
-from dataservice.handlers import ManagementPropertyHandler
-from dataservice.handlers import UsageSummaryHandler
-from dataservice.handlers import RoleHandler
-from dataservice.handlers import RoleInfoHandler
-from dataservice.handlers import AccessControlHandler
-from dataservice.handlers import ContainerAccessControlHandler
-from dataservice.handlers import ServiceAccessControlHandler
-from dataservice.handlers import StagerAccessControlHandler
+from dataservice.handlers import *
 
 hosting_handler = Resource(HostingContainerHandler)
 managedresources_container_handler = Resource(ManagedResourcesContainerHandler)
@@ -35,6 +15,7 @@ managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 datastager_handler = Resource(DataStagerHandler)
+datastager_json_handler = Resource(DataStagerJSONHandler)
 datastager_url_handler = Resource(DataStagerURLHandler)
 datastager_contents_handler = Resource(DataStagerContentsHandler)
 datastager_verify_handler = Resource(DataStagerVerifyHandler)
@@ -48,8 +29,13 @@ access_control_handler = Resource(AccessControlHandler)
 container_access_control_handler = Resource(ContainerAccessControlHandler)
 service_access_control_handler = Resource(ServiceAccessControlHandler)
 stager_access_control_handler = Resource(StagerAccessControlHandler)
+thumb_handler = Resource(ThumbHandler)
 
 urlpatterns = patterns('',
+
+    url(r'^submit', 'dataservice.views.submit'),
+    url(r'^status/(?P<taskid>.*)/', 'dataservice.views.status'),
+    url(r'^tasks/', 'djcelery.views.registered_tasks'),
 
     # REST Methods for POST
     url(r'^container/$', hosting_handler),
@@ -108,6 +94,12 @@ urlpatterns = patterns('',
     url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^stagerapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
     url(r'^stagerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', stager_access_control_handler),
+    url(r'^stagerapi/(?P<id>[^/]+)/$', datastager_json_handler),
+
+
+    # Thumb methods
+    url(r'^thumbapi/$', thumb_handler),
+    url(r'^thumbapi/(?P<pk>[^/]+)/$', thumb_handler),
 
     # Global Methods
     url(r'^api/getcontainers/$', global_handler),
