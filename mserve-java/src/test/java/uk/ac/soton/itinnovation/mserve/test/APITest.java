@@ -35,12 +35,12 @@ package uk.ac.soton.itinnovation.mserve.test;
 
 import java.io.File;
 import java.util.ArrayList;
-import junit.framework.Test;
+import org.junit.Test;
 import uk.ac.soton.itinnovation.mserve.APIConsumer;
-import uk.ac.soton.itinnovation.mserve.Util;
 
-public class APITest {
+public class APITest  {
 
+    @Test
     public void testAPI() {
         try {
 
@@ -70,7 +70,7 @@ public class APITest {
             throw new RuntimeException(ex);
         }
     }
-
+    @Test
     public void testHostingContainer() {
         try {
 
@@ -82,7 +82,7 @@ public class APITest {
             throw new RuntimeException(ex);
         }
     }
-
+    @Test
     public void testServices() {
         try {
 
@@ -97,7 +97,7 @@ public class APITest {
             throw new RuntimeException(ex);
         }
     }
-
+    @Test
     public void testStagersRest() {
         try {
 
@@ -123,7 +123,7 @@ public class APITest {
             throw new RuntimeException(ex);
         }
     }
-
+   // @Test
     public void testStagersStress() {
         try {
 
@@ -134,7 +134,7 @@ public class APITest {
 
             ArrayList<String> stagers = new ArrayList<String>();
 
-            for(int i=0; i< 100; i++){
+            for(int i=0; i< 15; i++){
                 stagers.add(consumer.makeStagerREST(serviceid1, file));
             }
 
