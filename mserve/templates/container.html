@@ -31,24 +31,27 @@
 
 <h3>Management Properties</h3>
 
-<table>
-    <tr><th>Name</th><th>Value</th><th>Actions</th></tr>
+<table style="table-layout: fixed;width:300px;">
+    <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
     {% for property in properties%}
     <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
-            <form style="display: inline" action="/containerapi/managementproperty/{{container.id}}" method="post">
+            <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
                 <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
-            </form>
+            </form>-->
             </td>
         </tr>
     {% endfor %}
 </table>
 
+<!--
 <h5>Set Management Property</h5>
 
-<form action="/containerapi/managementproperty/{{container.id}}/" method="POST">
+<form action="/serviceapi/managementproperty/{{service.id}}/" method="POST">
     {{ managementpropertyform.as_p }}
     <input type="submit" value="Submit" />
 </form>
+
+-->
 
 {% endblock rightcontent %}
 

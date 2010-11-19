@@ -1,4 +1,5 @@
-<h3>Current Usage</h3>
+<h3 class="ilink" onclick="$('#usagecontent').toggle('slow');">Current Usage <em style="color:gray">click to show/hide</em></h3>
+<div id="usagecontent" style="display:none;">
 {% if usagerate %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
         <tr><th align="left">Metric</th><th>Name</th><th>Last Report</th><th>Rate</th><th>Usage</th><th>Time</th></tr>
@@ -60,5 +61,5 @@
     <div>None</div>
 {% endif %}
 
-
+</div>
 {%endblock usage %}

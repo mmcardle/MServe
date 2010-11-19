@@ -5,8 +5,9 @@
 {% block heading%}{{stager.name}}{% endblock %}
 
 {% block content %}
-
-    <h3>Details</h3>
+    <h3 class="ilink" onclick="$('#content').toggle('slow');">Details <em style="color:gray">click to show/hide</em></h3>
+    <div id="content">
+    <div id="message"></div>
 
     {% if verify %}
         {% if not verifystate %}
@@ -28,14 +29,18 @@
         <dd>{{stager.mimetype}}</dd>
 
     </dl>
-{% if stager.thumb.file == "" %}
+    </div>
+{% if stager.poster == "" %}
 <script type="text/javascript">
-    getThumb('{{stager.id}}')
+    getPoster('{{stager.id}}')
 </script>
 {% endif %}
 
 {% load mservetags %}
 
+<h3 class="ilink" onclick="$('#previewcontent').toggle('slow');">Preview <em style="color:gray">click to show/hide</em></h3>
+
+<div id="previewcontent">
 {% if stager.mimetype %}
 
     {% if stager.mimetype|startswith:"video"  %}
@@ -51,16 +56,12 @@
 
 {% else%}
 
-    <em>Mimetype not set</em>
+    <em>No Preview</em>
 
 {% endif %}
+</div>
 
-    <h3>Create Auth</h3>
 
-    <form action="{{formtarget}}" method="post" >
-        {{ form.as_p }}
-        <input type="submit" value="Submit" />
-    </form>
 
 {% endblock %}
 
@@ -68,12 +69,20 @@
 
 {% include "methods.html" %}
 
-{% include "actions.html" %}
 
-{% if stager.file and fullaccess %}
-    <h3>Actions</h3>
-    <a class="ascript" onclick="javascript:deletestager('{{stager.id}}');" >Delete</a>
-{% endif %}
+<h3></h3><h3 class="ilink" onclick="$('#authcontent').toggle('slow');">Create Auth <em style="color:gray">click to show/hide</em></h3>
+
+<div id="authcontent" style="display:none;">
+
+    <form action="{{formtarget}}" method="post" >
+        {{ form.as_p }}
+        <input type="submit" value="Submit" />
+    </form>
+
+</div>
+
+
+{% include "actions.html" %}
 
 {% endblock %}
 

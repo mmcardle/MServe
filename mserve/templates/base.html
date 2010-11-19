@@ -3,25 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+<link type="text/css" href="/mservemedia/css/smoothness/jquery-ui-1.8.6.custom.css" rel="stylesheet" />
 {% block script %}{% endblock %}
 <script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/jquery-ui-1.8.6.custom.min.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/dataservice.js" ></script>
 <script type="text/javascript">
-
-    function getThumb(stagerid){
-        url = '/stager/'+stagerid+'/'
-        $.getJSON(url, function(data) {
-            if(data.thumb.file!=""){
-                $("#stagerthumb").attr("src", "/mservethumbs/"+data.thumb.file)
-                //id = $("<div >Thumb exists "+data.thumb+" "+data.thumb.file+" "+data.thumb.file.path+"</div>&nbsp;")
-                //$(id).appendTo("#debug");
-            }else{
-                window.setTimeout("getThumb(\'"+stagerid+"\')",1000)
-                //id = $("<div >Thumb doesnt exist "+data.thumb.file+" "+data.thumb.file+"</div>&nbsp;")
-                //$(id).appendTo("#debug");
-            }
-        });
-     }
-
 
      function setManagementPropertySpeed(service){
         var speed = prompt("What speed do you wish to set", "");
@@ -80,20 +67,6 @@
          });
      }
 
-     function deletestager(stagerid){
-         $.ajax({
-           type: "DELETE",
-           url: '/stager/'+stagerid+"/",
-           success: function(msg){
-             alert( "Deleted " + window.location );
-             window.location.replace("/");
-           },
-           error: function(msg){
-             alert( "Failure On Delete " + msg );
-           }
-         });
-     }
-
      function poplulate_methods(roleid, methods){
            $('.methods'+roleid).empty()
            $.each(methods, function(i,item){
@@ -124,7 +97,7 @@
 </script>
 <style type="text/css" media="screen">
 body {
-    background: #e7e7e7;
+    background: white;
     font-family: Tahoma, sans-serif;
     font-size: 10pt;
     text-align:center;
@@ -146,6 +119,12 @@ h2 {
     font-variant: small-caps;
 }
 
+h3 em {
+    color:darkgrey;
+    font-variant: normal;
+    font-size: .6em;
+}
+
 a, a:visited {
     text-decoration: none;
     border:none;
@@ -159,6 +138,10 @@ a img {
     text-decoration: none;
     border:none;
     color:#00AA00;
+    cursor: pointer;
+}
+
+.ilink {
     cursor: pointer;
 }
 
@@ -241,7 +224,14 @@ dt {
 </head>
 
 <body id="wrapper">
-                   <div id="debug"></div>
+       <div id="debug"></div>
+       <div style="display:none">
+           <div id="dialog-stager-dialog" title="Empty the recycle bin?">
+            <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>
+
+
+    </div>
+   </div>
     <h2>{% block heading %}MServe{% endblock %}</h2>
     <table id="maintable">
         <tr>
@@ -288,13 +278,17 @@ dt {
             <td >
                 {% block content %}{% endblock %}
             </td >
+
+            </tr><tr>
+
             <td style="max-width: 20em">
                 {% block rightcontent %}
 
                 {% endblock %}
 
                 {% block auths %}
-                <h3>Auths</h3>
+                <h3  class="ilink" onclick="$('#authscontent').toggle('slow');">Auths <em style="color:gray">click to show/hide</em></h3>
+                <div id="authscontent" style="display:none;">
                 {% if auths %}
                     {% for auth in auths %}
                     <dl class="auth">
@@ -327,6 +321,7 @@ dt {
                     </dl>
                     {% endfor %}
                 {% endif %}
+                </div>
 
                 {% if not auths%}
                     <div>None</div>
