@@ -27,16 +27,42 @@ def add(x, y):
     return x + y
 
 @task
-def thumbvideo(videopath,thumbpath):
-    logging.info("Processing video %s to %s" % (videopath,thumbpath))
+def thumbvideo(videopath,thumbpath,width,height):
+    logging.info("Processing video thumb %sx%s for %s to %s" % (width,height,videopath,thumbpath))
     if not os.path.exists(videopath):
         logging.info("Video %s does not exist" % (videopath))
         return False
-    ret = subprocess.call(["ffmpegthumbnailer","-t","20","-s","320","-i",videopath,"-o",thumbpath])
+    args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",thumbpath]
+    
+    logging.info(args)
+    ret = subprocess.call(args)
     return ret
 
+def thumbimage(stagerpath,thumbpath,width,height):
+    logging.info("Creating %s%s image for %s to %s" % (width,height,stagerpath,thumbpath))
+    if not os.path.exists(stagerpath):
+        logging.info("Image %s does not exist" % (stagerpath))
+        return False
+
+    im = Image.open(stagerpath)
+
+    w, h = im.size
+    if float(w)/h < float(width)/height:
+            im = im.resize((width, h*width/w), Image.ANTIALIAS)
+    else:
+            im = im.resize((w*height/h, height), Image.ANTIALIAS)
+    w, h = im.size
+    im = im.crop( ((w-width)/2, (h-height)/4, (w-width)/2+width, (h-height)/4+height))
+
+    im.thumbnail((width,height))
+    im.save(thumbpath, "JPEG")
+    logging.info("Thumnail created %s" % (stagerpath))
+
+    return True
+
+
 @task
-def thumbimage(dataurl,stagerid,thumburl,size):
+def thumbimage_async_remote(dataurl,stagerid,thumburl,size):
 
     tmpfile = tempfile.NamedTemporaryFile()
     try:
@@ -64,6 +90,6 @@ def thumbimage(dataurl,stagerid,thumburl,size):
         return True
     
     except IOError:
-        print "cannot create thumbnail for", im
+        print "cannot create thumbnail for", stagerid
         return False
     return False

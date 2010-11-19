@@ -30,6 +30,7 @@ container_access_control_handler = Resource(ContainerAccessControlHandler)
 service_access_control_handler = Resource(ServiceAccessControlHandler)
 stager_access_control_handler = Resource(StagerAccessControlHandler)
 thumb_handler = Resource(ThumbHandler)
+stager_corruption_handler = Resource(CorruptionHandler)
 
 urlpatterns = patterns('',
 
@@ -47,7 +48,7 @@ urlpatterns = patterns('',
     # REST Methods for GET
     url(r'^container/(?P<containerid>[^/]+)/', hosting_handler),
     url(r'^service/(?P<serviceid>[^/]+)/', dataservice_handler),
-    url(r'^stager/(?P<stagerid>[^/]+)/', datastager_handler),
+    url(r'^stager/(?P<stagerid>[^/]+)/$', datastager_handler),
     url(r'^stagerauth/(?P<stagerauthid>[^/]+)/', datastager_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
     url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
@@ -94,6 +95,8 @@ urlpatterns = patterns('',
     url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^stagerapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
     url(r'^stagerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', stager_access_control_handler),
+    url(r'^stagerapi/corrupt/(?P<stagerid>[^/]+)/$', stager_corruption_handler),
+    url(r'^stagerapi/corruptbackup/(?P<stagerid>[^/]+)/$', stager_corruption_handler, {'backup':True}),
     url(r'^stagerapi/(?P<id>[^/]+)/$', datastager_json_handler),
 
 

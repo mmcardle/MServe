@@ -38,6 +38,8 @@ service_base    = "/service/"
 stager_base     = "/stager/"
 auth_base       = "/auth/"
 
+thumbsize = (210,128)
+postersize = (420,256)
 sleeptime = 10
 DEFAULT_SPEED = "50"
 
@@ -174,9 +176,6 @@ def create_data_stager(request,serviceid,file):
         datastager = DataStager(name=file.name,service=service,file=file)
     datastager.save()
 
-    thumb = Thumb(stager=datastager)
-    thumb.save()
-
     if datastager.file:
         # MIME type
         m = magic.open(magic.MAGIC_MIME)
@@ -190,27 +189,41 @@ def create_data_stager(request,serviceid,file):
         # save it
         datastager.save()
 
-        thumbpath = os.path.join( str(datastager.file).replace(datastager.id,thumb.id) + ".thumb.jpg")
+        thumbpath = os.path.join( str(datastager.file) + ".thumb.jpg")
+        posterpath = os.path.join( str(datastager.file) + ".poster.jpg")
         fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
-        (head,tail) = os.path.split(fullthumbpath)
+        fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
+        (thumbhead,tail) = os.path.split(fullthumbpath)
+        (posterhead,tail) = os.path.split(fullposterpath)
 
-        if not os.path.isdir(head):
-            os.makedirs(head)
+        if not os.path.isdir(thumbhead):
+            os.makedirs(thumbhead)
+
+        if not os.path.isdir(posterhead):
+            os.makedirs(posterhead)
 
         if mimetype.startswith('video'):
             logging.info("Creating thumb in process for Video '%s' %s " % (datastager,mimetype))
             # Do this in Process
-            task = thumbvideo(datastager.file.path,fullthumbpath)
-            thumb.file = thumbpath
-            thumb.save()
-            logging.info("Tasks %s " % (task))
+            thumbtask = thumbvideo(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+            datastager.thumb = thumbpath
+            postertask = thumbvideo(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+            datastager.poster = posterpath
+            logging.info("Tasks thumb:%s poster:%s " % (thumbtask,postertask))
         elif mimetype.startswith('image'):
-            logging.info("Creating thumb asynchronously for Image '%s' %s " % (datastager,mimetype))
+            logging.info("Creating thumb inprocess for Image '%s' %s " % (datastager,mimetype))
+            thumbtask = thumbimage(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+            datastager.thumb = thumbpath
+            postertask = thumbimage(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+            datastager.poster = posterpath
             # Do this asynchronously
-            thumbtaskPIL = thumbimage.delay("http://ogio/stagerapi/get/%s/"%(datastager.id),datastager.id,"http://ogio/thumbapi/",(210,128))
-            logging.info("Tasks PIL %s " % (thumbtaskPIL))
+            #logging.info("Creating thumb asynchronously for Image '%s' %s " % (datastager,mimetype))
+            #thumbtaskPIL = thumbimage.delay("http://ogio/stagerapi/get/%s/"%(datastager.id),datastager.id,"http://ogio/thumbapi/",(210,128))
+            logging.info("Tasks thumb:%s poster:%s " % (thumbtask,postertask))
         else:
             logging.info("Not creating thumb for '%s' %s " % (datastager,mimetype))
+
+        datastager.save()
 
     datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
     datastagerauth_owner.save()
@@ -443,7 +456,6 @@ class DataServiceURLHandler(BaseHandler):
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class ThumbHandler(BaseHandler):
-    model = Thumb
     allowed_methods = ('GET','POST')
 
     def create(self, request):
@@ -485,10 +497,28 @@ class ThumbHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
+class CorruptionHandler(BaseHandler):
+    allowed_methods = ('PUT')
+
+    def update(self, request, stagerid, backup=False):
+        stager = DataStager.objects.get(pk=stagerid)
+        if not backup:
+            stager = DataStager.objects.get(pk=stagerid)
+            logging.info("Attempting to corrupt file '%s' " % (stager))
+            f = open(stager.file.path,'wb')
+            f.writelines(["corruption"])
+        else:
+            logging.info("Attempting to corrupt backup file for file'%s'" % (stager))
+            backup = BackupFile.objects.get(stager=stager)
+            f = open(backup.file.path,'wb')
+            f.writelines(["corruption"])
+        
+        return stager
+
 class DataStagerJSONHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataStager
-    fields = ('name', 'id', 'file','checksum', ('thumb', ('id','name','file') ) )
+    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster' )
     exclude = ('pk')
 
 class DataStagerHandler(BaseHandler):
@@ -502,13 +532,21 @@ class DataStagerHandler(BaseHandler):
         delete_stager(request,stagerid)
 
     def read(self, request, stagerid):
-        stager = DataStager.objects.get(pk=stagerid)
-        base = NamedBase.objects.get(pk=stagerid)
+        try:
+            stager = DataStager.objects.get(pk=stagerid)
+            base = NamedBase.objects.get(pk=stagerid)
 
-        if re.match("application/json", request.META["HTTP_ACCEPT"]):
-        #if request.META["HTTP_ACCEPT"].contains("application/json"):
-            return stager
-        return views.render_stager(request,stager.id,show=True)
+            if re.match("application/json", request.META["HTTP_ACCEPT"]):
+            #if request.META["HTTP_ACCEPT"].contains("application/json"):
+                return stager
+            return views.render_stager(request,stager.id,show=True)
+        except ObjectDoesNotExist:
+            error = "The file with the id %s does not exist "%stagerid
+            if re.match("application/json", request.META["HTTP_ACCEPT"]):
+                r = rc.NOT_FOUND
+                r.write(error)
+                return r
+            return views.render_error(request,error)
 
     def update(self, request):
         form = UpdateDataStagerForm(request.POST,request.FILES)
@@ -667,6 +705,9 @@ class DataStagerContentsHandler(BaseHandler):
             os.link(datastagerfilepath,fullfilepath)
 
         usage_store.record(datastager.id,usage_store.metric_access,datastager.size)
+
+        reportusage(datastager)
+        reportusage(service)
 
         return redirect("/%s"%redirecturl)
 
@@ -1080,7 +1121,7 @@ class UsageSummaryHandler(BaseHandler):
 
         if lr != -1:
             while lr == usagereport.reportnum:
-                logging.info("Waiting for report=%s lastreport=%s" % (usagereport.reportnum,lr))
+                #logging.info("Waiting for report=%s lastreport=%s" % (usagereport.reportnum,lr))
                 time.sleep(sleeptime)
                 usagereport = UsageReport.objects.get(pk=usagereport.pk)
 
@@ -1141,6 +1182,7 @@ class ManagementPropertyHandler(BaseHandler):
                 value    = form.cleaned_data['value']
                 existingmanagementproperty.value = value
                 existingmanagementproperty.save()
+                logging.warn("### Management Property '%s' on '%s' set to '%s' ###"%(property,base,value))
                 return existingmanagementproperty
             except ObjectDoesNotExist:
                 resp = rc.BAD_REQUEST

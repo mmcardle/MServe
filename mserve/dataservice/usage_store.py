@@ -32,13 +32,14 @@ metric_access = "http://prestoprime/access"
 metric_archived = "http://prestoprime/archived"
 metric_dataloss = "http://prestoprime/dataloss"
 metric_corruption = "http://prestoprime/corruption"
+metric_responsetime = "http://prestoprime/responsetime"
 
-metrics = [metric_stager,metric_service,metric_container,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption]
+metrics = [metric_stager,metric_service,metric_container,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
 
 # What metric are reported fro each type
 container_metrics = metrics
-service_metrics = [metric_stager,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption]
-stager_metrics = [metric_stager,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption]
+service_metrics = [metric_stager,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
+stager_metrics = [metric_stager,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
 
 # Other Metric groups
 byte_metrics = [metric_disc]

@@ -204,10 +204,10 @@ def render_stager(request,id, form=DataStagerAuthForm(), show=False):
 
     dict["thumburl"] = "/mservemedia/images/empty.png"
 
-    if stager.thumb.file == "":
+    if stager.thumb == "":
         dict["thumburl"] = "/mservemedia/images/busy.gif"
     else:
-        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb.file)
+        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb)
 
     if not show or stager.file == '' or stager.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
@@ -250,10 +250,10 @@ def render_stagerauth(request, stager, auth, show=False, dict={}):
 
     dict["thumburl"] = "/mservemedia/images/empty.png"
 
-    if stager.thumb.file == "":
+    if stager.thumb == "":
         dict["thumburl"] = "/mservemedia/images/busy.gif"
     else:
-        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb.file)
+        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb)
 
     if stager.file == '' or stager.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
@@ -410,6 +410,10 @@ def map(request):
     dict["rows"] = rows
     return render_to_response('map.html', dict, context_instance=RequestContext(request))
 
+def render_error(request,error):
+    dict = {}
+    dict["error"] = error
+    return render_to_response('error.html', dict, context_instance=RequestContext(request))
 
 def auth(request,id):
 
