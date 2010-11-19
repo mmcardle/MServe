@@ -41,7 +41,7 @@ auth_base       = "/auth/"
 thumbsize = (210,128)
 postersize = (420,256)
 sleeptime = 10
-DEFAULT_SPEED = "50"
+DEFAULT_ACCESS_SPEED = "50"
 
 generic_get_methods = ["getauths","getroles"]
 
@@ -93,7 +93,7 @@ def create_container(request,name):
 
     logging.info(owner_role)
 
-    managementproperty = ManagementProperty(property="speed",base=hostingcontainer,value=DEFAULT_SPEED)
+    managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=DEFAULT_ACCESS_SPEED)
     managementproperty.save()
 
     usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
@@ -144,7 +144,7 @@ def create_data_service(request,containerid,name):
 
     customerauth.roles.add(customer_role)
 
-    managementproperty = ManagementProperty(property="speed",base=dataservice,value=DEFAULT_SPEED)
+    managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=DEFAULT_ACCESS_SPEED)
     managementproperty.save()
 
     usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
@@ -645,20 +645,20 @@ class DataStagerContentsHandler(BaseHandler):
         service = datastager.service
         container = service.container
         logging.info("Finding limit for %s " % (datastager.name))
-        downloadspeed = 50
+        accessspeed = DEFAULT_ACCESS_SPEED
         try:
-            prop = ManagementProperty.objects.get(base=service,property="speed")
-            downloadspeed = prop.value
-            logging.info("Limit set from service property to %s for %s " % (downloadspeed,datastager.name))
+            prop = ManagementProperty.objects.get(base=service,property="accessspeed")
+            accessspeed = prop.value
+            logging.info("Limit set from service property to %s for %s " % (accessspeed,datastager.name))
         except ObjectDoesNotExist:
             try:
-                prop = ManagementProperty.objects.get(base=container,property="speed")
-                downloadspeed = prop.value
-                logging.info("Limit set from container property to %s for %s " % (downloadspeed,datastager.name))
+                prop = ManagementProperty.objects.get(base=container,property="accessspeed")
+                accessspeed = prop.value
+                logging.info("Limit set from container property to %s for %s " % (accessspeed,datastager.name))
             except ObjectDoesNotExist:
                 pass
 
-        dlfoldername = "dl%s"%downloadspeed
+        dlfoldername = "dl%s"%accessspeed
 
         check1 = datastager.checksum
         check2 = utils.md5_for_file(datastager.file)

@@ -43,7 +43,7 @@
 <table style="table-layout: fixed;width:300px;">
     <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
     {% for property in properties%}
-    <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
+    <tr><td>{{ property.property }}</td><td class="accesspeed">{{property.value }}</td><td>
             <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
                 <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
             </form>-->

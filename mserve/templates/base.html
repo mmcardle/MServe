@@ -10,17 +10,18 @@
 <script type="text/javascript" src="/mservemedia/js/dataservice.js" ></script>
 <script type="text/javascript">
 
-     function setManagementPropertySpeed(service){
-        var speed = prompt("What speed do you wish to set", "");
+     function setManagementPropertyAccessSpeed(service){
+        var speed = prompt("What speed do you wish to set access", "");
          $.ajax({
            type: "PUT",
-           data: "property=speed&value="+speed,
+           data: "property=accessspeed&value="+speed,
            url: '/serviceapi/managementproperty/'+service+'/',
            success: function(msg){
-             alert( "POST " +msg + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText   );
+             showMessage("Property Set", "Property 'accessspeed' set to "+speed);
+             $(".accesspeed").html(speed)
            },
            error: function(msg){
-             alert( "Failure On 'POST " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
+             showError("Error", ""+msg.responseText );
            }
          });
      }
@@ -266,7 +267,7 @@ dt {
                     <div><a onclick="javascript:putroles();" class="ascript" >Test Put roles</a></div>
                     <div><a onclick="javascript:getorcreateauth();" class="ascript" >Test getorcreateauth</a></div>
                     <div><a onclick="javascript:addauth();" class="ascript" >Test addauth</a></div>
-                    <div><a onclick="javascript:setManagementPropertySpeed('{{service.id}}');" class="ascript" >setManagementProperty</a></div>
+                    <div><a onclick="javascript:setManagementPropertyAccessSpeed('{{service.id}}');" class="ascript" >setManagementProperty</a></div>
 
 
                 {% endblock %}
