@@ -125,6 +125,16 @@ echo "Running"
 
 Run this file to stop/start django
 
+Rabbit MQ Setup
+===============
+
+Follow this guide
+http://celeryq.org/docs/getting-started/broker-installation.html
+
+Or Quick start, paste:
+rabbitmqctl add_user myuser mypassword
+rabbitmqctl add_vhost myvhost
+rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
 
 Celery Startup
 =============
