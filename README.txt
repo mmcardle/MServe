@@ -6,6 +6,7 @@ sudo apt-get install python-django
 sudo-apt-get install python-setuptools
 sudo apt-get install python-flup
 sudo apt-get install mercurial
+sudo apt-get install ffmpegthumbnailer
 
 hg clone http://bitbucket.org/david/django-oauth
 cd django-oauth
