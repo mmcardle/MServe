@@ -1,20 +1,7 @@
-from dataservice.models import HostingContainer
-from dataservice.models import HostingContainerAuth
-from dataservice.models import DataService
-from dataservice.models import DataStager
-from dataservice.models import DataStagerAuth
-from dataservice.models import Usage
-from dataservice.models import UsageRate
-from dataservice.models import UsageSummary
-from dataservice.models import UsageReport
-from dataservice.models import AggregateUsageRate
-from dataservice.models import NamedBase
-from dataservice.models import SubAuth
-from dataservice.models import JoinAuth
-from dataservice.models import ManagementProperty
+from dataservice.models import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
-
+import utils as utils
 import datetime
 import time
 import sys
@@ -44,17 +31,21 @@ stager_metrics = [metric_stager,metric_disc,metric_ingest,metric_access,metric_a
 # Other Metric groups
 byte_metrics = [metric_disc]
 
-def record(id,metric,value):
+def record(id,metric,value,report=True):
     base = NamedBase.objects.get(pk=id)
     usage = Usage(base=base,metric=metric,value=value)
     usage.save()
+    if report:
+        reportusage(base)
 
-def startrecording(id,metric,rate):
+def startrecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)
     usagerate = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
     usagerate.save()
+    if report:
+        reportusage(base)
 
-def stoprecording(id,metric):
+def stoprecording(id,metric,report=True):
     base = NamedBase.objects.get(pk=id)
     usagerate = UsageRate.objects.get(base=base,metric=metric)
     lastRateTime, lastRate, lastUsage = usagerate.current,usagerate.rate,usagerate.usageSoFar
@@ -68,7 +59,43 @@ def stoprecording(id,metric):
     print "Stop Recording Usage = %s" % usage
     record(id, metric, usage)
     usagerate.delete()
+    if report:
+        reportusage(base)
     
+def reportusage(base):
+    logging.info("Report usage %s" % base)
+    toreport = []
+
+    if utils.is_container(base):
+
+        toreport =  [base]
+
+    if utils.is_service(base):
+        container = HostingContainer.objects.get(dataservice=base)
+        container_report,created = ContainerResourcesReport.objects.get_or_create(base=container)
+        container_report.reportnum = container_report.reportnum+1
+        container_report.save()
+
+        toreport =  [container,base]
+
+    if utils.is_stager(base):
+        service   = DataService.objects.get(datastager=base)
+        container = HostingContainer.objects.get(dataservice=service)
+
+        service_report,created = ServiceResourcesReport.objects.get_or_create(base=service)
+        service_report.reportnum = service_report.reportnum+1
+        service_report.save()
+
+        toreport =  [container,service,base]
+
+    for ob in toreport:
+        logging.info("Reporting usage for %s "%ob)
+        reports = UsageReport.objects.filter(base=ob)
+        for r in reports:
+            logging.info("\tReport %s "%r)
+            r.reportnum = r.reportnum + 1
+            r.save()
+
 def stager_usagesummary(stagerid):
     summary = []
     stager = DataStager.objects.get(pk=stagerid)

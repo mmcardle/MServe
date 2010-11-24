@@ -14,3 +14,8 @@ def basename(value):
 @register.filter(name='startswith')
 def startswith(value,arg):
     return value.startswith(arg)
+
+@register.filter(name='trunc')
+@stringfilter
+def trunc(value,length):
+    return (value[:length] + '..') if len(value) > length else value

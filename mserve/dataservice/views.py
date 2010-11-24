@@ -136,7 +136,7 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
 #@staff_member_required
-def render_service(request,id,form=DataStagerForm()):
+def render_service(request,id,form=DataStagerForm(),newstager=None):
     service = DataService.objects.get(pk=id)
     stagers = DataStager.objects.filter(service=service)
     properties = ManagementProperty.objects.filter(base=service)
@@ -159,6 +159,8 @@ def render_service(request,id,form=DataStagerForm()):
     dict["usagerate"] = UsageRate.objects.filter(base=service)
     dict["usagesummary"] = usage_store.service_usagesummary(service.id)
     dict["methods"] = methods
+    if newstager is not None:
+        dict["newstager"] = newstager
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
 def render_serviceauth(request,authid,form=DataStagerForm()):

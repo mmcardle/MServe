@@ -5,7 +5,7 @@
 {% block heading%}{{stager.name}}{% endblock %}
 
 {% block content %}
-    <h3 class="ilink" onclick="$('#content').toggle('slow');">Details <em style="color:gray">click to show/hide</em></h3>
+    <h3 class="ilink" onclick="$('#content').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
     <div id="content">
     <div id="message"></div>
 
@@ -16,19 +16,32 @@
             <div class="passed">Success: Verification OK</div>
         {% endif %}
     {% endif %}
-    <dl>
-        <dt>Name</dt>
-        <dd>{{stager.name}}</dd>
-        <dt>Checksum</dt>
-        <dd>{{stager.checksum}}</dd>
-        {% if verifychecksum%}
-        <dt>Verify</dt>
-        <dd class="highlight">{{verifychecksum}}</dd>
-        {% endif %}
-        <dt>Mime</dt>
-        <dd>{{stager.mimetype}}</dd>
+    <table><tr><td>
+        <dl>
+            <dt>Name</dt>
+            <dd>{{stager.name}}</dd>
+            <dt>Checksum</dt>
+            <dd>{{stager.checksum}}</dd>
+            {% if verifychecksum%}
+            <dt>Verify</dt>
+            <dd class="highlight">{{verifychecksum}}</dd>
+            {% endif %}
+            <dt>Mime</dt>
+            <dd>{{stager.mimetype}}</dd>
 
-    </dl>
+        </dl>
+     </td><td>
+        <dl>
+            <dt>Created</dt>
+            <dd>{{stager.created|date}},&nbsp;{{stager.created|time}}</dd>
+            <dt>Updated</dt>
+            <dd>{{stager.updated|date}},&nbsp;{{stager.updated|time}}</dd>
+            <dt>Size</dt>
+            <dd>{{stager.size|filesizeformat}}</dd>
+        </dl>
+     </td></tr>
+
+    </table>
     </div>
 {% if stager.poster == "" %}
 <script type="text/javascript">
@@ -38,9 +51,11 @@
 
 {% load mservetags %}
 
-<h3 class="ilink" onclick="$('#previewcontent').toggle('slow');">Preview <em style="color:gray">click to show/hide</em></h3>
+<h3 class="ilink" onclick="$('#previewcontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Preview</h3>
 
 <div id="previewcontent">
+
+
 {% if stager.mimetype %}
 
     {% if stager.mimetype|startswith:"video"  %}
@@ -69,8 +84,7 @@
 
 {% include "methods.html" %}
 
-
-<h3></h3><h3 class="ilink" onclick="$('#authcontent').toggle('slow');">Create Auth <em style="color:gray">click to show/hide</em></h3>
+<h3 class="ilink" onclick="$('#authcontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Create Auth</h3>
 
 <div id="authcontent" style="display:none;">
 

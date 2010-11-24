@@ -4,11 +4,39 @@
 <head>
 <script type="text/javascript" src="http://www.google.com/jsapi"></script>
 <link type="text/css" href="/mservemedia/css/smoothness/jquery-ui-1.8.6.custom.css" rel="stylesheet" />
+<link type="text/css" href="/mservemedia/css/mserve.css" rel="stylesheet" />
 {% block script %}{% endblock %}
 <script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/jquery.filedrop.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/jquery.html5-fileupload.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery-ui-1.8.6.custom.min.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/dataservice.js" ></script>
+
 <script type="text/javascript">
+
+    function runEffect(selectedEffect,id) {
+
+            // most effect types need no options passed by default
+            var options = {};
+            // some effects have required parameters
+            if ( selectedEffect === "scale" ) {
+                    options = { percent: 0 };
+            } else if ( selectedEffect === "size" ) {
+                    options = { to: { width: 200, height: 60 } };
+            }
+
+            // run the effect
+            $("#id-9b9c21ca-91a7-4983-a66e-e71e236fd251").show( selectedEffect, options, 1000, callback );
+    };
+
+        // callback function to bring a hidden box back
+        function callback() {
+                setTimeout(function() {
+                        $( "#effect" ).removeAttr( "style" ).hide().fadeIn();
+                }, 1000 );
+        };
+
+
 
      function setManagementPropertyAccessSpeed(service){
         var speed = prompt("What speed do you wish to set access", "");
@@ -96,130 +124,7 @@
      }
 
 </script>
-<style type="text/css" media="screen">
-body {
-    background: white;
-    font-family: Tahoma, sans-serif;
-    font-size: 10pt;
-    text-align:center;
-}
-#wrapper {
-        margin: 0 auto;
-        width: 95%;
-        text-align:left;
-}
 
-h1,h2,h3,h4,h5,h6 {
-    color:#0000AA;
-    margin:2px;
-    font-variant: small-caps;
-}
-
-h2 {
-    color:#0000AA;
-    font-variant: small-caps;
-}
-
-h3 em {
-    color:darkgrey;
-    font-variant: normal;
-    font-size: .6em;
-}
-
-a, a:visited {
-    text-decoration: none;
-    border:none;
-    color:#AA0000;
-}
-a img {
-    border:none;
-}
-
-.ascript {
-    text-decoration: none;
-    border:none;
-    color:#00AA00;
-    cursor: pointer;
-}
-
-.ilink {
-    cursor: pointer;
-}
-
-td {
-    vertical-align: top;
-}
-
-#sidebar {
-    vertical-align: top;
-    margin-top: 20px;
-    padding: 15px;
-
-}
-
-#maintable{
-    padding:4px;
-}
-
-.auth {
-    margin: 2px;
-    padding: 3px;
-    border:2px outset silver;
-}
-
-dt{
-    color:#660000;
-}
-
-.authname {
-    padding:2px;
-    margin-top: 5px;
-    font-weight: bold;
-    font-size: 16px;
-}
-.method, .authid {
-    padding:6px;
-}
-.table_usage th,.table_usage td {
-    padding:1px;
-    text-align: left;
-}
-.table_usage th {
-    text-align: right;
-    border:1px outset gray;
-    background-color: #EEEEEE;
-    padding-left: 3px;
-    min-width: 50px;
-}
-.table_usage td {
-    text-align: right;
-}
-
-.errorlist li {
-    font-weight: bold;
-    color: red;
-}
-dt {
-    font-weight: bold;
-}
-.highlight{
-    color:red;
-}
-
-.failed,.passed{
-    width: 50%;
-    border: 1px outset black;
-    padding: 10px;
-}
-.failed {   
-    background-color: #CC0000;
-    color: white;
-}
-.passed {
-    background-color: #336600;
-    color: white;
-}
-</style>
 <!--<link rel="stylesheet" href="style.css" />-->
 <title>{% block title %}MServe{% endblock %}</title>
 </head>
@@ -258,17 +163,19 @@ dt {
                     <div><a href="/accounts/login/">Login</a></div>
                 {% endif %}
 
+                {% if user.is_staff %}
                     <div><a href="#"></a></div>
                     <div><a href="/submit/">Submit</a></div>
                     <div><a href="/tasks/">Tasks</a></div>
 
-                    <h4>Debug</h4>
- 
+                    <h4 class="ilink" onclick="$('#debugcontent').toggle('slow');">Debug</h4>
+                    <div id="debugcontent">
                     <div><a onclick="javascript:putroles();" class="ascript" >Test Put roles</a></div>
                     <div><a onclick="javascript:getorcreateauth();" class="ascript" >Test getorcreateauth</a></div>
                     <div><a onclick="javascript:addauth();" class="ascript" >Test addauth</a></div>
                     <div><a onclick="javascript:setManagementPropertyAccessSpeed('{{service.id}}');" class="ascript" >setManagementProperty</a></div>
-
+                    </div>
+                {% endif %}
 
                 {% endblock %}
 
@@ -288,7 +195,7 @@ dt {
                 {% endblock %}
 
                 {% block auths %}
-                <h3  class="ilink" onclick="$('#authscontent').toggle('slow');">Auths <em style="color:gray">click to show/hide</em></h3>
+                <h3  class="ilink" onclick="$('#authscontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Auths</h3>
                 <div id="authscontent" style="display:none;">
                 {% if auths %}
                     {% for auth in auths %}

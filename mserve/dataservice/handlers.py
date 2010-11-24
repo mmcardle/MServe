@@ -98,8 +98,6 @@ def create_container(request,name):
 
     usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
-    reportusage(hostingcontainer)
-
     return hostingcontainer
 
 def delete_container(request,containerid):
@@ -111,8 +109,6 @@ def delete_container(request,containerid):
     for usage in usages:
         usage.base = None
         usage.save()
-
-    reportusage(container)
 
     container.delete()
     logging.info("Container Deleted %s " % containerid)
@@ -148,8 +144,6 @@ def create_data_service(request,containerid,name):
     managementproperty.save()
 
     usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
-
-    reportusage(dataservice)
     
     return dataservice
 
@@ -162,8 +156,6 @@ def delete_service(request,serviceid):
     for usage in usages:
         usage.base = service.container
         usage.save()
-
-    reportusage(service)
 
     service.delete()
     logging.info("Service Deleted %s " % serviceid)
@@ -263,8 +255,6 @@ def create_data_stager(request,serviceid,file):
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
     usage_store.startrecording(datastager.id,usage_store.metric_archived,1)
-    
-    reportusage(datastager)
 
     if file is not None:
         usage_store.record(datastager.id,usage_store.metric_disc,datastager.size)
@@ -285,63 +275,8 @@ def delete_stager(request,stagerid):
         usage.base = stager.service
         usage.save()
 
-    reportusage(stager)
-
     stager.delete()
     logging.info("Stager Deleted %s " % stagerid)
-
-def is_container(base):
-    return hasattr(base,"hostingcontainer")
-
-def is_service(base):
-    return hasattr(base,"dataservice")
-
-def is_stager(base):
-    return hasattr(base,"datastager")
-
-def is_containerauth(base):
-    return hasattr(base,"hostingcontainerauth")
-
-def is_serviceauth(base):
-    return hasattr(base,"dataserviceauth")
-
-def is_stagerauth(base):
-    return hasattr(base,"datastagerauth")
-
-def reportusage(base):
-    logging.info("Report usage %s" % base)
-    toreport = []
-
-    if is_container(base):
-
-        toreport =  [base]
-
-    if is_service(base):
-        container = HostingContainer.objects.get(dataservice=base)
-        container_report,created = ContainerResourcesReport.objects.get_or_create(base=container)
-        container_report.reportnum = container_report.reportnum+1
-        container_report.save()
-
-        toreport =  [container,base]
-
-    if is_stager(base):
-        service   = DataService.objects.get(datastager=base)
-        container = HostingContainer.objects.get(dataservice=service)
-
-        service_report,created = ServiceResourcesReport.objects.get_or_create(base=service)
-        service_report.reportnum = service_report.reportnum+1
-        service_report.save()
-
-        toreport =  [container,service,base]
-
-    for ob in toreport:
-        logging.info("Reporting usage for %s "%ob)
-        reports = UsageReport.objects.filter(base=ob)
-        for r in reports:
-            logging.info("\tReport %s "%r)
-            r.reportnum = r.reportnum + 1
-            r.save()
-
 
 class GlobalHandler(BaseHandler):
      allowed_methods = ('GET')
@@ -601,6 +536,8 @@ class DataStagerHandler(BaseHandler):
         return render_to_response('stager.html', dict)
 
     def create(self, request):
+        logging.info(request)
+        logging.info(request.FILES)
         reqjson=(request.META["HTTP_ACCEPT"] == "application/json")
         form = DataStagerForm(request.POST,request.FILES) 
         if form.is_valid(): 
@@ -617,12 +554,16 @@ class DataStagerHandler(BaseHandler):
                 return datastager
 
             return redirect('/stager/'+str(datastager.id)+"/")
+            #return views.render_service(request,serviceid,newstager=datastager.id)
         else:
             if reqjson:
                 r = rc.BAD_REQUEST
-                resp.write("Invalid Request!")
+                r.write("Invalid Request!")
                 return r
-            return views.render_stager(request,stager.id)
+                #return views.render_stager(request,stager.id)
+            r = rc.BAD_REQUEST
+            r.write("%s"%form)
+            return r
 
 class DataStagerVerifyHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -706,9 +647,6 @@ class DataStagerContentsHandler(BaseHandler):
 
         usage_store.record(datastager.id,usage_store.metric_access,datastager.size)
 
-        reportusage(datastager)
-        reportusage(service)
-
         return redirect("/%s"%redirecturl)
 
 
@@ -736,6 +674,8 @@ class DataStagerURLHandler(BaseHandler):
             return r
 
     def create(self, request, serviceid):
+        logging.info(request)
+        logging.info(request.FILES)
         form = DataStagerURLForm(request.POST,request.FILES) 
         if form.is_valid(): 
             
@@ -877,7 +817,7 @@ class AccessControlHandler(BaseHandler):
             roleids = roles_string.split(",")
             base = NamedBase.objects.get(pk=pk)
 
-            if is_container(base):
+            if utils.is_container(base):
                 hc = HostingContainer.objects.get(pk=pk)
                 hca,created = HostingContainerAuth.objects.get_or_create(hostingcontainer=hc,authname=name)
                 if not created and method == "addauth":
@@ -893,7 +833,7 @@ class AccessControlHandler(BaseHandler):
                 hca.roles = roles
                 return hca
 
-            if is_service(base):
+            if utils.is_service(base):
                 ser = DataService.objects.get(pk=pk)
                 dsa,created  = DataServiceAuth.objects.get_or_create(dataservice=ser,authname=name)
                 if not created and method == "addauth":
@@ -910,7 +850,7 @@ class AccessControlHandler(BaseHandler):
                 dsa.roles = roles
                 return dsa
 
-            if is_stager(base):
+            if utils.is_stager(base):
                 stager = DataStager.objects.get(pk=pk)
                 dsa,created  = DataStagerAuth.objects.get_or_create(stager=stager,authname=name)
                 logging.info("%s %s " % (created,method))
@@ -952,15 +892,15 @@ class AccessControlHandler(BaseHandler):
 
             return HttpResponse("called %s on %s roles=%s" % (method,pk,",".join(roleids)))
 
-            if is_containerauth(auth):
+            if utils.is_containerauth(auth):
                 if roles in all_container_methods:
                     role.setmethods(roles)
                     role.save()
-            if is_stagerauth(auth):
+            if utils.is_stagerauth(auth):
                 if roles in all_service_methods:
                     role.setmethods(roles)
                     role.save()
-            if is_stagerauth(auth):
+            if utils.is_stagerauth(auth):
                 if roles in all_stager_methods:
                     role.setmethods(roles)
                     role.save()
@@ -978,21 +918,21 @@ class AccessControlHandler(BaseHandler):
             try:
                 base = NamedBase.objects.get(pk=pk)
 
-                if is_container(base):
+                if utils.is_container(base):
                     return HostingContainerAuth.objects.filter(hostingcontainer=base)
 
-                if is_service(base):
+                if utils.is_service(base):
                     return DataServiceAuth.objects.filter(dataservice=base)
 
-                if is_stager(base):
+                if utils.is_stager(base):
                     return DataStagerAuth.objects.filter(stager=base)
             except ObjectDoesNotExist:
                 pass
 
             auth = Auth.objects.get(pk=pk)
-            if is_containerauth(auth) \
-                or is_serviceauth(auth) \
-                    or is_stagerauth(auth):
+            if utils.is_containerauth(auth) \
+                or utils.is_serviceauth(auth) \
+                    or utils.is_stagerauth(auth):
                         joins = JoinAuth.objects.filter(parent=auth.id)
                         return SubAuth.objects.filter(pk=joins)
 
@@ -1065,7 +1005,7 @@ class StagerAccessControlHandler(BaseHandler):
 class RoleInfoHandler(BaseHandler):
     def read(self,request, pk):
         base = NamedBase.objects.get(pk=pk)
-        if is_container(base):
+        if utils.is_container(base):
             containerauths = HostingContainerAuth.objects.filter(hostingcontainer=base)
             roles = []
             for containerauth in containerauths:
@@ -1078,7 +1018,7 @@ class RoleInfoHandler(BaseHandler):
             dict["roles"] = set(roles)
             return dict
 
-        if is_service(base):
+        if utils.is_service(base):
             serviceauths = DataServiceAuth.objects.filter(dataservice=base)
             roles = []
             for serviceauth in serviceauths:
@@ -1089,7 +1029,7 @@ class RoleInfoHandler(BaseHandler):
             dict["roles"] = set(roles)
             return dict
 
-        if is_stager(base):
+        if utils.is_stager(base):
             stagerauths = DataStagerAuth.objects.filter(stager=base)
             roles = []
             for stagerauth in stagerauths:
@@ -1127,16 +1067,16 @@ class UsageSummaryHandler(BaseHandler):
 
         inprogress= []
         summarys= []
-        if is_container(base):
+        if utils.is_container(base):
             inprogress = usage_store.container_inprogresssummary(baseid)
             summarys = usage_store.container_usagesummary(baseid)
             logging.info(summarys)
 
-        if is_service(base):
+        if utils.is_service(base):
             inprogress = usage_store.service_inprogresssummary(baseid)
             summarys = usage_store.service_usagesummary(baseid)
 
-        if is_stager(base):
+        if utils.is_stager(base):
             inprogress = usage_store.stager_inprogresssummary(baseid)
             summarys = usage_store.stager_usagesummary(baseid)
 
@@ -1332,11 +1272,11 @@ class AuthHandler(BaseHandler):
                 return views.render_stagerauth(request, stagerauth.stager, stagerauth, show=False)
 
 
-        if is_serviceauth(auth):
+        if utils.is_serviceauth(auth):
             dsa = DataServiceAuth.objects.get(pk=auth.id)
             return views.render_serviceauth(request,dsa.id)
 
-        if is_containerauth(auth):
+        if utils.is_containerauth(auth):
             hca = HostingContainerAuth.objects.get(pk=auth.id)
             return views.render_containerauth(request,hca.id)
 

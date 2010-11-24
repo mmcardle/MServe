@@ -1,6 +1,6 @@
 {% block methods%}
 
-<h3 class="ilink" onclick="$('#methodscontent').toggle('slow');">Methods <em style="color:gray">click to show/hide</em></h3>
+<h3 class="ilink" onclick="$('#methodscontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Methods</h3>
 <div id="methodscontent">
 {% if container %}
     {% for method in methods %}<a href="/containerapi/{{method}}/{{container.id}}/" >{{method}}</a>

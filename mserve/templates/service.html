@@ -6,26 +6,110 @@
 
 {% block content %}
 
+{% load mservetags %}
+
 <h3>Data Stagers</h3>
 <ul>
     {% for stager in stagers %}
         <li><a href="/stager/{{ stager.id }}/">{{ stager.name }}</a></li>
+
     {% endfor %}
 </ul>
+<h3>Preview</h3>
+<div>
+    {% for stager in stagers %}
 
+<div id="image-{{stager.id}}" class="fluid" onmouseover="$('#id-{{stager.id}}').show();"
+           onmouseout="$('#id-{{stager.id}}').hide();" >
+    <table cellpadding="0" cellspacing="0" style="background-image:url('/mservethumbs/{{stager.thumb}}/');" class="thumb">
+        <colgroup><col>
+        </colgroup>
+
+        <tbody>
+          <tr><td><div class="title"><a href="/stager/{{ stager.id }}/">{{stager.name|trunc:20}}</a></div></td></tr>
+          <tr><td>
+                  <div class="info" style="background-image: url(/mservemedia/images/transparent-white.png); position: relative " id="id-{{stager.id}}">
+                      <div>Size: {{stager.size|filesizeformat}}</div>
+                      <div style="font-size: x-small;">Type</div>
+                      <div style="font-size: xx-small;text-align: center">{{stager.mimetype}}</div>
+                      <div style="font-size: x-small;">Created: {{stager.created|date}},{{stager.created|time}}</div>
+                      <div style="font-size: x-small;">Updated: {{stager.updated|date}},{{stager.updated|time}}</div>
+                      <div style="font-size: xx-small;">Checksum:</div>
+                      <div style="font-size: xx-small;text-align: center;">{{stager.checksum}}</div>
+                      
+                  </div>
+            </td></tr>
+        </tbody>
+    </table>
+</div>
+    <script type="text/javascript">
+
+    //$('#image-{{stager.id}}').show(  );
+
+    function callback() {
+        //Do nothing for now
+    };
+</script>
+
+    {% endfor %}
+</div>
 {% if not stagers %}
     <ul><li>Empty</li></ul>
 {% endif %}
 
-<h3>Preview</h3>
 
+<!--
     {% for stager in stagers %}
-    <div style="float:left;border:1px outset silver;margin:2px;"><a href="/stager/{{ stager.id }}/"><img src="/mservethumbs/{{stager.thumb}}/" /></a></div>
+    <div id="stager-{{stager.id}}" style="float:left;border:1px outset silver;margin:2px;"><a href="/stager/{{ stager.id }}/"><img src="/mservethumbs/{{stager.thumb}}/" /></a></div>
     {% endfor %}
+-->
+<div>
+</div>
 
-<div></div>
+{% if newstager %}
+<script type="text/javascript">
+    bounce("{{newstager}}");
+</script>
+{% endif %}
 
 <h3 style="clear:both">Create New Stager</h3>
+
+<div id="dropbox" style="display:none; height: 100px; width:100px; text-align: center; border: 1px outset black; background-color: #EEEEEE">
+    Drop Files Here
+</div>
+
+<script type="text/javascript">
+// Enable plug-in
+$('.file-upload, #dropbox').fileUpload(
+        {
+                url: "/serviceapi/create/{{service.id}}/",
+                type: 'POST',
+                dataType: 'json',
+                beforeSend: function () {
+                        $(document.body).addClass('uploading');
+                },
+                complete: function () {
+                        $(document.body).removeClass('uploading');
+                },
+                success: function (result, status, xhr) {
+                        if (!result) {
+                                window.alert('Server error.');
+                                return;
+                        }
+                        if (result.error !== 0) {
+                                var output = '';
+                                for (property in result) {
+                                  output += property + ': ' + result[property]+'; ';
+                                }
+                                alert(output);
+                                //window.alert(result);
+                                return;
+                        }
+                        window.alert('Success! You have sent a file named \'' + result.name + '\' with MIME type \'' + result.type + '\'.');
+                }
+        }
+);
+</script>
 
 <form action="/stager/" method="post" enctype="multipart/form-data" >
     {{ form.as_p }}

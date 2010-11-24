@@ -6,6 +6,7 @@ import os
 import time
 import logging
 import storage
+import datetime
 
 ID_FIELD_LENGTH = 200
 fmt = "%3.2f"
@@ -200,10 +201,13 @@ class DataStager(NamedBase):
     size     = models.IntegerField(default=0)
     thumb    = models.ImageField(upload_to=create_filename,null=True,storage=storage.getthumbstorage())
     poster   = models.ImageField(upload_to=create_filename,null=True,storage=storage.getthumbstorage())
+    created  = models.DateTimeField(auto_now_add=True)
+    updated  = models.DateTimeField(auto_now=True)
 
     def save(self):
         if not self.id:
             self.id = random_id()
+        self.updated = datetime.datetime.now()
         super(DataStager, self).save()
 
 class BackupFile(NamedBase):

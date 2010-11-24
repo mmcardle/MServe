@@ -1,0 +1,189 @@
+body {
+    background: white;
+    font-family: Tahoma, sans-serif;
+    font-size: 10pt;
+    text-align:center;
+}
+#wrapper {
+        margin: 0 auto;
+        width: 95%;
+        text-align:left;
+}
+
+h1,h2,h3,h4,h5,h6 {
+    color:#0000AA;
+    margin:2px;
+    font-variant: small-caps;
+}
+
+
+h2 {
+    color:#0000AA;
+    font-variant: small-caps;
+}
+
+h3 em {
+    color:darkgrey;
+    font-variant: normal;
+    font-size: .6em;
+}
+
+h5 {
+    color: #EE0000;
+}
+
+a, a:visited {
+    text-decoration: none;
+    border:none;
+    color:#AA0000;
+}
+a img {
+    border:none;
+}
+
+.ascript {
+    text-decoration: none;
+    border:none;
+    color:#00AA00;
+    cursor: pointer;
+}
+
+.ilink {
+    cursor: pointer;
+}
+
+td {
+    vertical-align: top;
+}
+
+#sidebar {
+    vertical-align: top;
+    margin-top: 20px;
+    padding: 15px;
+
+}
+
+#maintable{
+    padding:0px;
+}
+
+.auth {
+    margin: 2px;
+    padding: 3px;
+    border:2px outset silver;
+}
+
+dt{
+    color:#660000;
+}
+
+.authname {
+    padding:2px;
+    margin-top: 5px;
+    font-weight: bold;
+    font-size: 16px;
+}
+.method, .authid {
+    padding:6px;
+}
+.table_usage th,.table_usage td {
+    padding:1px;
+    text-align: left;
+}
+.table_usage th {
+    text-align: right;
+    border:1px outset gray;
+    background-color: #EEEEEE;
+    padding-left: 3px;
+    min-width: 50px;
+}
+.table_usage td {
+    text-align: right;
+}
+
+.errorlist li {
+    font-weight: bold;
+    color: red;
+}
+dt {
+    font-weight: bold;
+}
+.highlight{
+    color:red;
+}
+
+.failed,.passed{
+    width: 50%;
+    border: 1px outset black;
+    padding: 10px;
+}
+.failed {
+    background-color: #CC0000;
+    color: white;
+}
+.passed {
+    background-color: #336600;
+    color: white;
+}
+
+
+
+.fluid{
+    float:left;
+}
+
+li.fluid {
+    cursor:pointer;
+    cursor:hand;
+}
+
+li.fluid a {
+    text-decoration: none;
+}
+.itemlist li.fluid:hover .thumb .info {
+    visibility:visible;
+    font-weight:bold;
+}
+
+.thumb {
+    border:1px outset silver;
+    margin:1px;
+    width:208px;
+    height:120px;
+    min-width:208px;
+    min-height:120px;
+    background-position:center;
+    background-repeat:no-repeat;
+    white-space: nowrap
+}
+.thumb .info {
+    font-size:12px;
+    display: none;
+    color:black;
+    text-align:left;
+    margin: 1px;
+}
+.thumb .info > a{
+    text-decoration: none;
+    color:black;
+}
+.thumb .info > a:visited{
+    color:black;
+}
+
+.title, .subtitle{
+    background-image:url('/mservemedia/images/transparent-white.png')
+}
+.thumb .subtitle, .thumb .title {
+    padding-left:4px;
+    text-align:left;
+}
+.thumb .subtitle {
+    font-size:10px;
+    padding-bottom:2px;
+}
+.thumb .title {
+    font-size:12px;
+    font-weight:bold;
+    padding:1px 0 1px 4px;
+}
