@@ -28,6 +28,7 @@ function make_drop_upload(item,serviceid){
 }
 
 function load_stager(stagerid){
+         $("#emptystagerlist").remove();
          $.ajax({
            type: "GET",
            url: "/stagerapi/thumb/"+stagerid+"/",

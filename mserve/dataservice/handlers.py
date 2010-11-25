@@ -326,7 +326,6 @@ class HostingContainerHandler(BaseHandler):
                 return HttpResponseRedirect(request.META["HTTP_REFERER"])
             else:
                 r = rc.BAD_REQUEST
-                logging.info(form)
                 return r
 
 class DataServiceHandler(BaseHandler):
@@ -485,7 +484,6 @@ class DataStagerHandler(BaseHandler):
 
     def update(self, request):
         form = UpdateDataStagerForm(request.POST,request.FILES)
-        logging.info(form)
         if form.is_valid(): 
             
             file = request.FILES['file']
@@ -510,7 +508,6 @@ class DataStagerHandler(BaseHandler):
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
-            logging.info(form)
             return r
         
     def render_subauth(self, stager, auth, show=False):
