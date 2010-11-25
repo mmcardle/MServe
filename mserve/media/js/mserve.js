@@ -1,5 +1,60 @@
 
 
+function make_drop_upload(item,serviceid){
+    $(item).fileUpload(
+            {
+
+                    url: "/serviceapi/create/"+serviceid+"/",
+                    type: 'POST',
+                    dataType: 'json',
+                    beforeSend: function () {
+                            var p = $("<div class='spinner' id='spinner-"+this.r+"' >"+this.file.name+", "+this.file.size+" bytes</div>")
+                            $("#progressbox").append(p);
+                            p.show('slide');
+                    },
+                    complete: function () {
+                            $("#spinner-"+this.r).hide('slide');
+                    },
+                    success: function (result, status, xhr) {
+                            if (!result) {
+                                    showError('Server error.');
+                                    return;
+                            }
+                            load_stager(result.id);
+                            
+                    }
+            }
+    );
+}
+
+function load_stager(stagerid){
+         $.ajax({
+           type: "GET",
+           url: "/stagerapi/thumb/"+stagerid+"/",
+           success: function(msg){
+                $("#stagerlist").prepend(msg);
+                $("#image-"+stagerid).show('bounce')
+           },
+           error: function(msg){
+                showError( "Failure to get stager thumb " );
+           }
+         });
+}
+
+function objectToString(ob){
+    var output = '';
+    for (property in ob) {
+        //alert(typeof ob[property])
+      if (typeof ob[property] == 'object'){
+            //output += property + ': ' + objectToString(ob[property]) +'';
+      }else{
+            
+      }
+      output += "<b>"+property + '</b>: ' + ob[property]+'<br /><br /><br />';
+    }
+    return output;
+}
+
 function stager_delete(stagerid){
     $( '#dialog-stager-dialog' ).dialog({
             resizable: false,

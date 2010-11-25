@@ -145,7 +145,7 @@ li.fluid a {
     font-weight:bold;
 }
 
-.thumb {
+.thumb, #dropbox, #progressbox{
     border:1px outset silver;
     margin:1px;
     width:208px;
@@ -186,4 +186,31 @@ li.fluid a {
     font-size:12px;
     font-weight:bold;
     padding:1px 0 1px 4px;
+}
+
+.dropbox {
+    background-repeat: no-repeat;
+    background-position: center;
+    text-align: center;
+}
+
+.readytoupload {
+    background-image: url('/mservemedia/images/go-up.png');
+}
+
+.uploading {
+    text-align: center;
+    background-image: url('/mservemedia/images/busy.gif');
+}
+
+.spinner{
+    text-align: right;
+    width: 90%;
+    background-image: url('/mservemedia/images/busy.gif');
+    background-position: left;
+    background-repeat: no-repeat;
+}
+
+#progressbox {
+    background-image: url('/mservemedia/images/list-add.png');
 }

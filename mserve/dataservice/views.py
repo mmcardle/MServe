@@ -61,6 +61,14 @@ def home(request,form=HostingContainerForm()):
     dict["usagerate"] = usagerate
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
+def thumb(request,stagerid):
+    stager = DataStager.objects.get(pk=stagerid)
+    dict = {}
+    dict["stager"] = stager
+    r = render_to_response('stagerthumb.html', dict, context_instance=RequestContext(request))
+    logging.info(r);
+    return r
+
 @login_required
 def profile(request):
     dict ={}

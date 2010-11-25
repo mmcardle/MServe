@@ -97,6 +97,7 @@ urlpatterns = patterns('',
     url(r'^stagerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', stager_access_control_handler),
     url(r'^stagerapi/corrupt/(?P<stagerid>[^/]+)/$', stager_corruption_handler),
     url(r'^stagerapi/corruptbackup/(?P<stagerid>[^/]+)/$', stager_corruption_handler, {'backup':True}),
+    url(r'^stagerapi/thumb/(?P<stagerid>[^/]+)/$', 'dataservice.views.thumb'),
     url(r'^stagerapi/(?P<id>[^/]+)/$', datastager_json_handler),
 
 

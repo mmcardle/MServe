@@ -10,7 +10,7 @@
 <script type="text/javascript" src="/mservemedia/js/jquery.filedrop.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.html5-fileupload.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery-ui-1.8.6.custom.min.js" ></script>
-<script type="text/javascript" src="/mservemedia/js/dataservice.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/mserve.js" ></script>
 
 <script type="text/javascript">
 
@@ -130,12 +130,10 @@
 </head>
 
 <body id="wrapper">
-       <div id="debug"></div>
-       <div style="display:none">
-           <div id="dialog-stager-dialog" title="Empty the recycle bin?">
-            <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>
-
-
+   <div id="debug"></div>
+   <div style="display:none">
+       <div id="dialog-stager-dialog" title="Empty the recycle bin?">
+        <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>
     </div>
    </div>
     <h2>{% block heading %}MServe{% endblock %}</h2>

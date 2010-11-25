@@ -453,7 +453,7 @@ class CorruptionHandler(BaseHandler):
 class DataStagerJSONHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataStager
-    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster' )
+    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated' )
     exclude = ('pk')
 
 class DataStagerHandler(BaseHandler):
@@ -1263,7 +1263,7 @@ class AuthHandler(BaseHandler):
         service auth.
         '''
         auth = Auth.objects.get(id=id)
-        if is_stagerauth(auth):
+        if utils.is_stagerauth(auth):
             stagerauth = DataStagerAuth.objects.get(id=id)
             methods = get_auth_methods(stagerauth)
             if 'get' in methods:
