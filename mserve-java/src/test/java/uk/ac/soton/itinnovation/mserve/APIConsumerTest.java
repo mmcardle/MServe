@@ -7,11 +7,9 @@ package uk.ac.soton.itinnovation.mserve;
 
 import java.util.ArrayList;
 import java.io.File;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.UUID;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -31,19 +29,17 @@ public class APIConsumerTest {
 
     private static String[] files;
     private static File file;
+    private static File file2;
     private static APIConsumer consumer;
     private static ArrayList<String> containersToDelete;
 
     @BeforeClass
     public static void setUpClass() throws Exception {
         consumer = new APIConsumer("http://", "localhost");
-        try {
-            file = new File(APIConsumer.class.getClassLoader().getResource("test_bird.jpg").toURI());
-        } catch (URISyntaxException ex) {
-            Logger.getLogger(APIConsumerTest.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        file = new File(APIConsumer.class.getClassLoader().getResource("test_bird.jpg").toURI());
+        file2 = new File(APIConsumer.class.getClassLoader().getResource("test_bird_large.jpg").toURI());
         containersToDelete = new ArrayList<String>();
-        files = new String[]{"test_bird.jpg","test_bird.png","test.mp4"};
+        files = new String[]{"test_bird.jpg","test_bird_large.jpg","test_bird_large.png","test.mp4"};
     }
 
     @AfterClass
@@ -57,35 +53,159 @@ public class APIConsumerTest {
 
     @After  public void tearDown() {    }
 
+
+    @Test
+    public void testAPI() {
+        try {
+            System.out.println("testAPI");
+
+            String containerid = consumer.createContainer();
+            String serviceid1 = consumer.makeServiceREST(containerid);
+            consumer.getServices(containerid);
+            String stagerid1 = consumer.makeMFileREST(serviceid1, file);
+            String emptystagerid1 = consumer.makeEmptyMFileREST(serviceid1);
+            consumer.putToEmptyMFileREST(emptystagerid1,file);
+            consumer.putToEmptyMFileURL(emptystagerid1, file2);
+            consumer.getMFiles(serviceid1);
+            String serviceid2 = consumer.makeServiceREST(containerid);
+            consumer.getServices(containerid);
+            String stagerid2 = consumer.makeMFileURL(serviceid2,file);
+            consumer.getMFiles(serviceid2);
+            consumer.deleteMFile(stagerid1);
+            consumer.deleteMFile(emptystagerid1);
+            consumer.deleteMFile(stagerid2);
+            consumer.deleteService(serviceid1);
+            consumer.deleteService(serviceid2);
+            consumer.deleteContainer(containerid);
+
+        } catch (Exception ex) {
+            ex.printStackTrace(System.out);
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Test
+    public void testFormats() {
+        try {
+
+            String containerid = consumer.createContainer();
+            String serviceid1 = consumer.makeServiceREST(containerid);
+
+            for (String f : files) {
+                System.out.println(""+f);
+                URL url = getClass().getClassLoader().getResource(f);
+                File filef = new File(url.toURI());
+                String stagerid1 = consumer.makeMFileREST(serviceid1, filef);
+                consumer.deleteMFile(stagerid1);
+            }
+
+            consumer.deleteService(serviceid1);
+            consumer.deleteContainer(containerid);
+
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Test
+    public void testHostingContainer() {
+
+    }
+    @Test
+    public void testServices() {
+        try {
+
+            String containerid = consumer.createContainer();
+            String serviceid1 = consumer.makeServiceREST(containerid);
+            consumer.getServices(containerid);
+            consumer.deleteService(serviceid1);
+            consumer.deleteContainer(containerid);
+
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+    @Test
+    public void testMFilesRest() {
+        try {
+
+            File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
+            String containerid = consumer.createContainer();
+            String serviceid1 = consumer.makeServiceREST(containerid);
+            consumer.getServices(containerid);
+            String stagerid1 = consumer.makeMFileREST(serviceid1, file);
+            String emptystagerid1 = consumer.makeEmptyMFileREST(serviceid1);
+            consumer.putToEmptyMFileREST(emptystagerid1,file);
+            consumer.getMFiles(serviceid1);
+            String serviceid2 = consumer.makeServiceREST(containerid);
+            consumer.getServices(containerid);
+            consumer.getMFiles(serviceid2);
+            consumer.deleteMFile(stagerid1);
+            consumer.deleteMFile(emptystagerid1);
+            consumer.deleteService(serviceid1);
+            consumer.deleteService(serviceid2);
+            consumer.deleteContainer(containerid);
+
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+   // @Test
+    public void testMFilesStress() {
+        try {
+
+            File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
+            String containerid = consumer.createContainer();
+            String serviceid1 = consumer.makeServiceREST(containerid);
+
+            ArrayList<String> stagers = new ArrayList<String>();
+
+            for(int i=0; i< 10; i++){
+                stagers.add(consumer.makeMFileREST(serviceid1, file));
+            }
+
+            for(String stager : stagers){
+                consumer.deleteMFile(stager);
+            }
+
+            consumer.getMFiles(serviceid1);
+            consumer.deleteService(serviceid1);
+            consumer.deleteContainer(containerid);
+
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
     /**
-     * Test of putToEmptyStagerURL method, of class APIConsumer.
+     * Test of putToEmptyMFileURL method, of class APIConsumer.
      */
     @Test
-    public void testPutToEmptyStagerURL() throws Exception {
-        System.out.println("putToEmptyStagerURL");
+    public void testPutToEmptyMFileURL() throws Exception {
+        System.out.println("putToEmptyMFileURL");
         String containerid = consumer.createContainer();
         String serviceid1 = consumer.makeServiceREST(containerid);
-        String stagerid1 = consumer.makeStagerREST(serviceid1, file);
-        consumer.putToEmptyStagerURL(stagerid1, file);
-        List<String> stagers = consumer.getStagers(serviceid1);
-        consumer.deleteStager(stagerid1);
+        String stagerid1 = consumer.makeMFileREST(serviceid1, file);
+        consumer.putToEmptyMFileURL(stagerid1, file);
+        List<String> stagers = consumer.getMFiles(serviceid1);
+        consumer.deleteMFile(stagerid1);
         consumer.deleteService(serviceid1);
         containersToDelete.add(containerid);
         assertEquals(stagers.size(), 1);
     }
 
     /**
-     * Test of putToEmptyStagerREST method, of class APIConsumer.
+     * Test of putToEmptyMFileREST method, of class APIConsumer.
      */
     @Test
-    public void testPutToEmptyStagerREST() throws Exception {
-        System.out.println("putToEmptyStagerREST");
+    public void testPutToEmptyMFileREST() throws Exception {
+        System.out.println("putToEmptyMFileREST");
         String containerid = consumer.createContainer();
         String serviceid1 = consumer.makeServiceREST(containerid);
-        String stagerid1 = consumer.makeStagerREST(serviceid1, file);
-        consumer.putToEmptyStagerREST(stagerid1, file);
-        List<String> stagers = consumer.getStagers(serviceid1);
-        consumer.deleteStager(stagerid1);
+        String stagerid1 = consumer.makeMFileREST(serviceid1, file);
+        consumer.putToEmptyMFileREST(stagerid1, file);
+        List<String> stagers = consumer.getMFiles(serviceid1);
+        consumer.deleteMFile(stagerid1);
         consumer.deleteService(serviceid1);
         containersToDelete.add(containerid);
         assertEquals(stagers.size(), 1);
@@ -97,13 +217,9 @@ public class APIConsumerTest {
     @Test
     public void testMakeServiceURL() throws Exception {
         System.out.println("makeServiceURL");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.makeServiceURL(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String id = instance.createContainer();
+        instance.makeServiceURL(id);
     }
 
     /**
@@ -112,74 +228,66 @@ public class APIConsumerTest {
     @Test
     public void testMakeServiceREST() throws Exception {
         System.out.println("makeServiceREST");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
+        String id = instance.createContainer();
         String result = instance.makeServiceREST(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
     }
 
     /**
      * Test of makeService method, of class APIConsumer.
      */
     @Test
-    public void testMakeService() {
+    public void testMakeService() throws Exception {
         System.out.println("makeService");
-        URL url = null;
-        String id = "";
-        String content = "";
+        URL url = new URL("http://" + "localhost" + "/service/" );
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.makeService(url, id, content);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String id = instance.createContainer();
+        String content = "name=ServiceFromJava&cid="+id;
+        instance.makeService(url, id, content);
     }
 
     /**
-     * Test of makeStagerURL method, of class APIConsumer.
+     * Test of makeMFileURL method, of class APIConsumer.
      */
     @Test
-    public void testMakeStagerURL() throws Exception {
-        System.out.println("makeStagerURL");
+    public void testMakeMFileURL() throws Exception {
+        System.out.println("makeMFileURL");
         String id = "";
         File file = null;
         APIConsumer instance = new APIConsumer();
         String expResult = "";
-        String result = instance.makeStagerURL(id, file);
+        String result = instance.makeMFileURL(id, file);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
 
     /**
-     * Test of makeEmptyStagerREST method, of class APIConsumer.
+     * Test of makeEmptyMFileREST method, of class APIConsumer.
      */
     @Test
-    public void testMakeEmptyStagerREST() throws Exception {
-        System.out.println("makeEmptyStagerREST");
+    public void testMakeEmptyMFileREST() throws Exception {
+        System.out.println("makeEmptyMFileREST");
         String id = "";
         APIConsumer instance = new APIConsumer();
         String expResult = "";
-        String result = instance.makeEmptyStagerREST(id);
+        String result = instance.makeEmptyMFileREST(id);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
 
     /**
-     * Test of makeStagerREST method, of class APIConsumer.
+     * Test of makeMFileREST method, of class APIConsumer.
      */
     @Test
-    public void testMakeStagerREST() throws Exception {
-        System.out.println("makeStagerREST");
+    public void testMakeMFileREST() throws Exception {
+        System.out.println("makeMFileREST");
         String id = "";
         File file = null;
         APIConsumer instance = new APIConsumer();
         String expResult = "";
-        String result = instance.makeStagerREST(id, file);
+        String result = instance.makeMFileREST(id, file);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -268,15 +376,15 @@ public class APIConsumerTest {
     }
 
     /**
-     * Test of getStagerInfo method, of class APIConsumer.
+     * Test of getMFileInfo method, of class APIConsumer.
      */
     @Test
-    public void testGetStagerInfo() {
-        System.out.println("getStagerInfo");
+    public void testGetMFileInfo() {
+        System.out.println("getMFileInfo");
         String id = "";
         APIConsumer instance = new APIConsumer();
         JSONObject expResult = null;
-        JSONObject result = instance.getStagerInfo(id);
+        JSONObject result = instance.getMFileInfo(id);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -327,15 +435,15 @@ public class APIConsumerTest {
     }
 
     /**
-     * Test of getStagers method, of class APIConsumer.
+     * Test of getMFiles method, of class APIConsumer.
      */
     @Test
-    public void testGetStagers() {
-        System.out.println("getStagers");
+    public void testGetMFiles() {
+        System.out.println("getMFiles");
         String id = "";
         APIConsumer instance = new APIConsumer();
         List expResult = null;
-        List result = instance.getStagers(id);
+        List result = instance.getMFiles(id);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -379,13 +487,10 @@ public class APIConsumerTest {
     @Test
     public void testDeleteContainer() {
         System.out.println("deleteContainer");
-        String containerid = "";
-        APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.deleteContainer(containerid);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String containerid = consumer.createContainer();
+        boolean result = consumer.deleteContainer(containerid);
+        assertTrue(result);
+
     }
 
     /**
@@ -397,23 +502,23 @@ public class APIConsumerTest {
         String serviceid = "";
         APIConsumer instance = new APIConsumer();
         String expResult = "";
-        String result = instance.deleteService(serviceid);
-        assertEquals(expResult, result);
+        boolean result = instance.deleteService(serviceid);
+        assertEquals(true, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
 
     /**
-     * Test of deleteStager method, of class APIConsumer.
+     * Test of deleteMFile method, of class APIConsumer.
      */
     @Test
-    public void testDeleteStager() {
-        System.out.println("deleteStager");
+    public void testDeleteMFile() {
+        System.out.println("deleteMFile");
         String stagerid1 = "";
         APIConsumer instance = new APIConsumer();
         String expResult = "";
-        String result = instance.deleteStager(stagerid1);
-        assertEquals(expResult, result);
+        boolean result = instance.deleteMFile(stagerid1);
+        assertEquals(expResult, true);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }

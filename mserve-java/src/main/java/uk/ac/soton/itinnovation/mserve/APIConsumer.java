@@ -12,8 +12,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,11 +39,11 @@ public class APIConsumer {
         this.host = host;
     }
 
-    public String putToEmptyStagerURL(String id, File file) throws MalformedURLException {
+    public String putToEmptyMFileURL(String id, File file) throws MalformedURLException {
         try {
-            URL url = new URL(protocol + host + "/stagerapi/update/" + id  +"/");
+            URL url = new URL(protocol + host + "/mfileapi/update/" + id  +"/");
             String json = doFilePutToURL(url.toString(), id, file);
-            System.out.println("putToEmptyStagerURL " + json);
+            System.out.println("putToEmptyMFileURL " + json);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
         } catch (JSONException ex) {
@@ -53,9 +51,9 @@ public class APIConsumer {
         }
     }
 
-    public String putToEmptyStagerREST(String id, File file) throws MalformedURLException {
+    public String putToEmptyMFileREST(String id, File file) throws MalformedURLException {
         try {
-            URL url = new URL(protocol + host + "/stager/");
+            URL url = new URL(protocol + host + "/mfile/");
             String json = doFilePutToURL(url.toString(), id, file);
             System.out.println(""+json);
             JSONObject ob = new JSONObject(json);
@@ -97,7 +95,7 @@ public class APIConsumer {
         }
     }
 
-    public String makeStagerURL(String id, File file) throws MalformedURLException {
+    public String makeMFileURL(String id, File file) throws MalformedURLException {
         try{
             String url = protocol + host + "/serviceapi/create/" + id  +"/";
             String json = doFilePostToURL(url,id,file);
@@ -108,11 +106,11 @@ public class APIConsumer {
         }
     }
 
-    public String  makeEmptyStagerREST(String id) throws MalformedURLException {
+    public String  makeEmptyMFileREST(String id) throws MalformedURLException {
         try {
-            String url = new String(protocol + host + "/stager/");
+            String url = new String(protocol + host + "/mfile/");
             String json = doFilePostToREST(url, id, null);
-            System.out.println("makeEmptyStagerREST output "+json);
+            System.out.println("makeEmptyMFileREST output "+json);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
         } catch (JSONException ex) {
@@ -120,12 +118,12 @@ public class APIConsumer {
         }
     }
 
-    public String  makeStagerREST(String id, File file) throws MalformedURLException {
-        String url = new String(protocol + host + "/stager/");
+    public String  makeMFileREST(String id, File file) throws MalformedURLException {
+        String url = new String(protocol + host + "/mfile/");
         String output = doFilePostToREST(url, id, file);
         try {
 
-            System.out.println("makeStagerREST output "+output);
+            System.out.println("makeMFileREST output "+output);
             //JSONArray arr = new JSONArray(output);
             JSONObject ob = new JSONObject(output);
             return ob.getString("id");
@@ -298,9 +296,9 @@ public class APIConsumer {
         }
     }
 
-    public JSONObject getStagerInfo(String id) {
+    public JSONObject getMFileInfo(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/stager/" + id +"/");
+            URL getresourcesurl = new URL(protocol + host + "/mfile/" + id +"/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -383,7 +381,7 @@ public class APIConsumer {
         }
     }
 
-    public List<String> getStagers(String id) {
+    public List<String> getMFiles(String id) {
         try {
             URL getresourcesurl = new URL(protocol + host + "/serviceapi/getmanagedresources/" + id +"/-1/");
 
@@ -391,7 +389,7 @@ public class APIConsumer {
 
             JSONObject ob  = new JSONObject(output);
 
-            JSONArray arr = ob.getJSONArray("stagers");
+            JSONArray arr = ob.getJSONArray("mfiles");
 
             ArrayList<String> ids = new ArrayList<String>();
             if(arr.length()>0){
@@ -483,7 +481,7 @@ public class APIConsumer {
         }
     }
 
-    public String deleteContainer(String containerid) {
+    public boolean deleteContainer(String containerid) {
         try{
 
             String url = new String(protocol + host + "/container/"+containerid+"/");
@@ -494,23 +492,19 @@ public class APIConsumer {
 
             int result = client.executeMethod(filePost);
 
-            InputStream stream = filePost.getResponseBodyAsStream();
-
-            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
-            String output = "";
-            String str;
-            while (null != ((str = buf.readLine()))) {
-                output += str;
-            }
-            buf.close();
             filePost.releaseConnection();
-            return output;
+
+            if(result != 204){
+                throw new RuntimeException("Response from DELETE request for container was not 204, but was '"+result+"'");
+            }else{
+                return true;
+            }
 
         }catch(IOException ex){
             throw new RuntimeException(ex);
         }
     }
-    public String deleteService(String serviceid) {
+    public boolean deleteService(String serviceid) {
         try{
 
             String url = new String(protocol + host + "/service/"+serviceid+"/");
@@ -521,28 +515,23 @@ public class APIConsumer {
 
             int result = client.executeMethod(filePost);
 
-            InputStream stream = filePost.getResponseBodyAsStream();
-
-            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
-            String output = "";
-            String str;
-            while (null != ((str = buf.readLine()))) {
-                output += str;
-            }
-            buf.close();
             filePost.releaseConnection();
 
-            return output;
+            if(result != 204){
+                throw new RuntimeException("Response from DELETE for service request was not 204, but was '"+result+"'");
+            }else{
+                return true;
+            }
 
         }catch(IOException ex){
             throw new RuntimeException(ex);
         }
     }
 
-    public String deleteStager(String stagerid1) {
+    public boolean deleteMFile(String mfileid) {
         try{
 
-            String url = new String(protocol + host + "/stager/"+stagerid1+"/");
+            String url = new String(protocol + host + "/mfile/"+mfileid+"/");
 
             HttpClient client = new HttpClient();
             DeleteMethod filePost = new DeleteMethod(url);
@@ -550,19 +539,15 @@ public class APIConsumer {
 
             int result = client.executeMethod(filePost);
 
-            InputStream stream = filePost.getResponseBodyAsStream();
-
-            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
-            String output = "";
-            String str;
-            while (null != ((str = buf.readLine()))) {
-                output += str;
-            }
-            System.out.println(output);
-            buf.close();
             filePost.releaseConnection();
 
-            return output;
+            System.out.println("delete Mfile "+result);
+
+            if(result != 204){
+                throw new RuntimeException("Response from DELETE request fro mfile was not 204, but was '"+result+"'");
+            }else{
+                return true;
+            }
 
         }catch(IOException ex){
             throw new RuntimeException(ex);

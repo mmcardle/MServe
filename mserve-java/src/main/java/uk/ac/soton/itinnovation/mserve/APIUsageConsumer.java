@@ -125,7 +125,7 @@ public class APIUsageConsumer {
 
     public static String putToEmptyStagerURL(String id) throws MalformedURLException {
         try {
-            URL url = new URL(protocol + host + "/stagerapi/update/" + id  +"/");
+            URL url = new URL(protocol + host + "/mfileapi/update/" + id  +"/");
             String json = doFilePutToURL(url.toString(), id, file2);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
@@ -136,7 +136,7 @@ public class APIUsageConsumer {
 
     public static String putToEmptyStagerREST(String id) throws MalformedURLException {
         try {
-            URL url = new URL(protocol + host + "/stager/");
+            URL url = new URL(protocol + host + "/mfile/");
             String json = doFilePutToURL(url.toString(), id, file2);
             System.out.println(""+json);
             JSONObject ob = new JSONObject(json);
@@ -188,7 +188,7 @@ public class APIUsageConsumer {
 
     public static String  makeEmptyStagerREST(String id) throws MalformedURLException {
         try {
-            String url = new String(protocol + host + "/stager/");
+            String url = new String(protocol + host + "/mfile/");
             String json = doFilePostToREST(url, id, null);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
@@ -199,7 +199,7 @@ public class APIUsageConsumer {
 
     public static String  makeStagerREST(String id) throws MalformedURLException {
         try {
-            String url = new String(protocol + host + "/stager/");
+            String url = new String(protocol + host + "/mfile/");
             String json = doFilePostToREST(url, id, file);
             JSONObject ob = new JSONObject(json);
             return ob.getString("id");
@@ -376,7 +376,7 @@ public class APIUsageConsumer {
 
     public static void printStagerInfo(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/stager/" + id +"/");
+            URL getresourcesurl = new URL(protocol + host + "/mfile/" + id +"/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -579,7 +579,7 @@ public class APIUsageConsumer {
     private static String deleteStager(String stagerid1) {
         try{
 
-            String url = new String(protocol + host + "/stager/"+stagerid1+"/");
+            String url = new String(protocol + host + "/mfile/"+stagerid1+"/");
 
             HttpClient client = new HttpClient();
             DeleteMethod filePost = new DeleteMethod(url);
