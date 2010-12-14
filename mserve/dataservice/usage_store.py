@@ -63,7 +63,7 @@ def stoprecording(id,metric,report=True):
         reportusage(base)
     
 def reportusage(base):
-    logging.info("Report usage %s" % base)
+    #logging.info("Report usage %s" % base)
     toreport = []
 
     if utils.is_container(base):
@@ -89,10 +89,10 @@ def reportusage(base):
         toreport =  [container,service,base]
 
     for ob in toreport:
-        logging.info("Reporting usage for %s "%ob)
+        #logging.info("Reporting usage for %s "%ob)
         reports = UsageReport.objects.filter(base=ob)
         for r in reports:
-            logging.info("\tReport %s "%r)
+            #logging.info("\tReport %s "%r)
             r.reportnum = r.reportnum + 1
             r.save()
 

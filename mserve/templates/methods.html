@@ -1,5 +1,7 @@
 {% block methods%}
 
+{% load mservetags %}
+
 <h3 class="ilink" onclick="$('#methodscontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Methods</h3>
 <div id="methodscontent">
 {% if container %}
@@ -30,6 +32,7 @@
     <button id="button2" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:stager_backup_corrupt('{{stager.id}}');">
         <span class="ui-button-text">Corrupt Backup</span>
     </button>
+
 {% endif %}
 </div>
 {% endblock%}

@@ -25,6 +25,11 @@ usagesummary_handler = Resource(UsageSummaryHandler)
 role_handler = Resource(RoleHandler)
 role_info_handler = Resource(RoleInfoHandler)
 global_handler = Resource(GlobalHandler)
+render_handler = Resource(RenderHandler)
+job_handler = Resource(JobHandler)
+jobstager_handler = Resource(JobStagerHandler)
+jobservice_handler = Resource(JobServiceHandler)
+render_results_handler = Resource(RenderResultsHandler)
 access_control_handler = Resource(AccessControlHandler)
 container_access_control_handler = Resource(ContainerAccessControlHandler)
 service_access_control_handler = Resource(ServiceAccessControlHandler)
@@ -34,8 +39,6 @@ stager_corruption_handler = Resource(CorruptionHandler)
 
 urlpatterns = patterns('',
 
-    url(r'^submit', 'dataservice.views.submit'),
-    url(r'^status/(?P<taskid>.*)/', 'dataservice.views.status'),
     url(r'^tasks/', 'djcelery.views.registered_tasks'),
 
     # REST Methods for POST
@@ -84,6 +87,7 @@ urlpatterns = patterns('',
     url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^serviceapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
     url(r'^serviceapi/getaccesscontrol/(?P<baseid>[^/]+)/$', service_access_control_handler),
+    url(r'^serviceapi/getjobs/(?P<serviceid>[^/]+)/$', jobservice_handler),
 
     # Stager Methods
     url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
@@ -99,7 +103,12 @@ urlpatterns = patterns('',
     url(r'^stagerapi/corruptbackup/(?P<stagerid>[^/]+)/$', stager_corruption_handler, {'backup':True}),
     url(r'^stagerapi/thumb/(?P<stagerid>[^/]+)/$', 'dataservice.views.thumb'),
     url(r'^stagerapi/(?P<id>[^/]+)/$', datastager_json_handler),
+    url(r'^stagerapi/getpreview/(?P<stagerid>[^/]+)/$', render_results_handler),
+    url(r'^stagerapi/getjobs/(?P<stagerid>[^/]+)/$', jobstager_handler),
 
+    # Job Methods
+    url(r'^jobapi/render/(?P<stagerid>[^/]+)/$', render_handler),
+    url(r'^jobapi/(?P<id>[^/]+)/$', job_handler),
 
     # Thumb methods
     url(r'^thumbapi/$', thumb_handler),

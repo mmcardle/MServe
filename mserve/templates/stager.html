@@ -50,27 +50,47 @@
 
 <div id="previewcontent">
 
-
 {% if stager.mimetype %}
 
     {% if stager.mimetype|startswith:"video"  %}
         {% include "mediaplayer.html" %}
-
     {% else %}
         {% if stager.mimetype|startswith:"image"  %}
             {% include "image.html" %}
         {% else %}
-            <div>No Preview</div>
+            {% if stager.name|endswith:".blend"  %}
+                {% include "render.html" %}
+            {% else %}
+                <p>No Preview</p>
+            {% endif %}
         {% endif %}
     {% endif %}
 
 {% else%}
 
-    <em>No Preview</em>
+<p>No Preview</p>
 
 {% endif %}
+
 </div>
 
+{% if stager.name|endswith:".blend"  %}
+
+<h3 class="ilink" onclick="$('#jobcontent').toggle('slow');"><span  style="float:left" class="ui-icon ui-icon-circle-plus"></span>Jobs</h3>
+<div id="jobcontent">
+<button id="button2" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:stager_render('{{stager.id}}');">
+    <span class="ui-button-text">New Render</span>
+</button>
+<div id="jobs">
+
+</div>
+
+<script type="text/javascript">
+    load_jobs_stager('{{stager.id}}')
+</script>
+
+</div>
+{% endif %}
 
 
 {% endblock %}

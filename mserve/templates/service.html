@@ -7,9 +7,9 @@
 {% block content %}
 
 {% load mservetags %}
-
+</head>
+<body>
 <h3 style="clear:both">Create New Stager</h3>
-
 <table>
 <tr>
         <td>
@@ -17,7 +17,11 @@
                 <h4>Drop Files Here</h4>
             </div>
             <script type="text/javascript">
-                 make_drop_upload("#dropbox",'{{service.id}}');
+                if ($.browser.webkit) {
+                    make_drop_upload_webkit("#dropbox",'{{service.id}}');
+                }else{
+                    make_drop_upload("#dropbox",'{{service.id}}');
+                }
             </script>
         </td>
         <td>
@@ -27,7 +31,7 @@
         </td>
         <td>
             <h4>..Or Upload with Form</h4>
-            <form action="/stager/" method="post" enctype="multipart/form-data" >
+            <form name="uploadform" action="/stager/" method="post" enctype="multipart/form-data" >
                 {{ form.as_p }}
                 <input type="submit" value="Submit" />
             </form>
@@ -50,8 +54,17 @@
 </div>
 {% endif %}
 
-<div>
+<div style="clear:both"></div>
+
+<h3>Jobs</h3>
+
+<div id="jobs">
+
 </div>
+
+<script type="text/javascript">
+    load_jobs_service('{{service.id}}')
+</script>
 
 {% endblock %}
 

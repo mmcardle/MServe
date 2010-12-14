@@ -14,6 +14,7 @@ import os.path
 # .... or use the @task decorator
 
 from celery.decorators import task
+from celery.task.sets import subtask
 import logging
 import subprocess
 import urllib
@@ -21,10 +22,34 @@ import Image
 import pycurl
 import time
 import tempfile
+import string
 
 @task
 def add(x, y):
     return x + y
+
+@task
+def render_blender(scenepath,s,e,outputdir,callback=None):
+    logging.info("Processing render job %s start %s to end %s" % (scenepath,s,e))
+    if not os.path.exists(scenepath):
+        logging.info("Scene %s does not exist" % (scenepath))
+        return False
+    outputformat = "%s/file_####" % (outputdir)
+    ss= string.zfill(str(s), 4)
+    ee= string.zfill(str(e), 4)
+    format = "png"
+    args = ["blender","-b",scenepath,"-x","1","-o",outputformat,"-F","PNG","-s",ss,"-e",ee,"-a"]
+    logging.info(args)
+    ret = subprocess.call(args)
+    if callback:
+        # The callback may have been serialized with JSON,
+        # so best practice is to convert the subtask dict back
+        # into a subtask object.
+        n = str(s).zfill(4)
+        ifile = os.path.join(outputdir,"file_%s.%s"%(n,format))
+        ofile = os.path.join(outputdir,"file_%s.thumb.png"%n)
+        subtask(callback).delay( ifile ,ofile  ,40,40 )
+    return ret
 
 @task
 def thumbvideo(videopath,thumbpath,width,height):
@@ -38,8 +63,9 @@ def thumbvideo(videopath,thumbpath,width,height):
     ret = subprocess.call(args)
     return ret
 
+@task
 def thumbimage(stagerpath,thumbpath,width,height):
-    logging.info("Creating %s%s image for %s to %s" % (width,height,stagerpath,thumbpath))
+    logging.info("Creating %sx%s image for %s to %s" % (width,height,stagerpath,thumbpath))
     if not os.path.exists(stagerpath):
         logging.info("Image %s does not exist" % (stagerpath))
         return False

@@ -11,16 +11,21 @@ from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from dataservice.tasks import thumbvideo
 from dataservice.tasks import thumbimage
-from dataservice.tasks import add
+from dataservice.tasks import render_blender
 from django.http import HttpResponse
 from celery.result import AsyncResult
+from celery.result import TaskSetResult
+from celery.task.sets import TaskSet
 
+from anyjson import serialize as JSON_dump
 import utils as utils
 import usage_store as usage_store
-
+import djcelery
 import time
 import pickle
 import base64
@@ -168,6 +173,33 @@ def create_data_stager(request,serviceid,file):
         datastager = DataStager(name=file.name,service=service,file=file)
     datastager.save()
 
+    logging.debug("Stager creation started '%s' "%datastager)
+    logging.debug("Creating roles for '%s' "%datastager)
+    
+    datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
+    datastagerauth_owner.save()
+
+    owner_role = Role(rolename="owner")
+    methods = data_stager_owner_methods
+    owner_role.setmethods(methods)
+    owner_role.description = "Owner of the data"
+    owner_role.save()
+
+    datastagerauth_owner.roles.add(owner_role)
+
+    monitor_role = Role(rolename="monitor")
+    methods = data_stager_monitor_methods
+    monitor_role.setmethods(methods)
+    monitor_role.description = "Collect usage reports"
+    monitor_role.save()
+
+    datastagerauth_owner.roles.add(monitor_role)
+
+    datastagerauth_monitor = DataStagerAuth(stager=datastager,authname="monitor")
+    datastagerauth_monitor.save()
+
+    datastagerauth_monitor.roles.add(monitor_role)
+
     if datastager.file:
         # MIME type
         m = magic.open(magic.MAGIC_MIME)
@@ -193,65 +225,51 @@ def create_data_stager(request,serviceid,file):
 
         if not os.path.isdir(posterhead):
             os.makedirs(posterhead)
+            
+        use_celery = settings.USE_CELERY
+
+        if use_celery:
+            logging.info("Using CELERY for processing ")
+        else:
+            logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
 
         if mimetype.startswith('video'):
-            logging.info("Creating thumb in process for Video '%s' %s " % (datastager,mimetype))
-            # Do this in Process
-            thumbtask = thumbvideo(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+
+            if use_celery:
+                thumbtask = thumbvideo.delay(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+            else:
+                thumbtask = thumbvideo(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
             datastager.thumb = thumbpath
-            postertask = thumbvideo(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+            if use_celery:
+                postertask = thumbvideo.delay(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+            else:
+                postertask = thumbvideo(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+
             datastager.poster = posterpath
-            logging.info("Tasks thumb:%s poster:%s " % (thumbtask,postertask))
+
         elif mimetype.startswith('image'):
             logging.info("Creating thumb inprocess for Image '%s' %s " % (datastager,mimetype))
-            thumbtask = thumbimage(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+            if use_celery:
+                thumbtask = thumbimage.delay(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+            else:
+                thumbtask = thumbimage(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+
             datastager.thumb = thumbpath
-            postertask = thumbimage(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+            if use_celery:
+                postertask = thumbimage.delay(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+            else:
+                postertask = thumbimage(datastager.file.path,fullposterpath,postersize[0],postersize[1])
             datastager.poster = posterpath
-            # Do this asynchronously
-            #logging.info("Creating thumb asynchronously for Image '%s' %s " % (datastager,mimetype))
-            #thumbtaskPIL = thumbimage.delay("http://ogio/stagerapi/get/%s/"%(datastager.id),datastager.id,"http://ogio/thumbapi/",(210,128))
-            logging.info("Tasks thumb:%s poster:%s " % (thumbtask,postertask))
         else:
             logging.info("Not creating thumb for '%s' %s " % (datastager,mimetype))
 
         datastager.save()
 
-    datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
-    datastagerauth_owner.save()
-
-    owner_role = Role(rolename="owner")
-    methods = data_stager_owner_methods
-    owner_role.setmethods(methods)
-    owner_role.description = "Owner of the data"
-    owner_role.save()
-
-    datastagerauth_owner.roles.add(owner_role)
-
-    monitor_role = Role(rolename="monitor")
-    methods = data_stager_monitor_methods
-    monitor_role.setmethods(methods)
-    monitor_role.description = "Collect usage reports"
-    monitor_role.save()
-
-    datastagerauth_owner.roles.add(monitor_role)
-
-    datastagerauth_monitor = DataStagerAuth(stager=datastager,authname="monitor")
-    datastagerauth_monitor.save()
-
-    datastagerauth_monitor.roles.add(monitor_role)
+    logging.debug("Backing up '%s' "%datastager)
 
     if file is not None:
         backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
         backup.save()
-
-    #logging.info("backup %s " % dir(backup))
-    #logging.info("datastager.file %s " % datastager.file)
-    #logging.info("datastager.file.path %s " % datastager.file.path)
-    #logging.info("backup.file %s " % backup.file)
-    #logging.info("backup.file.path %s " % backup.file.path)
-    #logging.info("backup.file %s " % dir(backup.file))
-    #logging.info("models.fs " % mserve.dataservice.models.fs)
 
     usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
     usage_store.startrecording(datastager.id,usage_store.metric_archived,1)
@@ -371,6 +389,7 @@ class DataServiceURLHandler(BaseHandler):
 
         form = DataServiceURLForm(request.POST)
         logging.info("Request data = %s" % form)
+
         if form.is_valid(): 
             logging.info("Form valid = %s" % form)
             name = form.cleaned_data['name']
@@ -452,7 +471,7 @@ class CorruptionHandler(BaseHandler):
 class DataStagerJSONHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataStager
-    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated' )
+    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated', 'jobstager_set' )
     exclude = ('pk')
 
 class DataStagerHandler(BaseHandler):
@@ -561,6 +580,193 @@ class DataStagerHandler(BaseHandler):
             r = rc.BAD_REQUEST
             r.write("%s"%form)
             return r
+
+class JobServiceHandler(BaseHandler):
+    allowed_methods = ('GET',)
+
+    def read(self, request, serviceid):
+        service = DataService.objects.get(pk=serviceid)
+
+        arr = []
+        for job in service.job_set.all():
+            tsr = TaskSetResult.restore(job.taskset_id)
+            dict = {}
+            dict["taskset_id"] = tsr.taskset_id
+            # Dont return results until job in complete
+            if tsr.successful():
+                dict["result"] = tsr.join()
+            else:
+                dict["result"] = []
+            dict["completed_count"] = tsr.completed_count()
+            dict["failed"] = tsr.failed()
+            dict["ready"] = tsr.ready()
+            dict["successful"] = tsr.successful()
+            dict["total"] = tsr.total
+            dict["waiting"] = tsr.waiting()
+            dict["job"] = job
+
+            arr.append(dict)
+
+        return HttpResponse(arr,mimetype="application/json")
+
+class JobStagerHandler(BaseHandler):
+    model = JobStager
+    allowed_methods = ('GET','POST','DELETE')
+    fields = ('id','name','created','taskset_id')
+
+    def read(self, request, stagerid):
+        stager = DataStager.objects.get(pk=stagerid)
+        jobstagers = JobStager.objects.filter(stager=stager)
+
+        arr = []
+        for jobstager in jobstagers:
+            tsr = TaskSetResult.restore(jobstager.job.taskset_id)
+            dict = {}
+            dict["taskset_id"] = tsr.taskset_id
+            # Dont return results until job in complete
+            if tsr.successful():
+                dict["result"] = tsr.join()
+            else:
+                dict["result"] = []
+            dict["completed_count"] = tsr.completed_count()
+            dict["failed"] = tsr.failed()
+            dict["ready"] = tsr.ready()
+            dict["successful"] = tsr.successful()
+            dict["total"] = tsr.total
+            dict["waiting"] = tsr.waiting()
+            dict["job"] = jobstager.job
+
+            arr.append(dict)
+
+        return HttpResponse(arr,mimetype="application/json")
+
+class JobHandler(BaseHandler):
+    model = Job
+    allowed_methods = ('GET','POST','DELETE')
+    fields = ('id','name','created','taskset_id')
+
+    def delete(self, request, id):
+        job = Job.objects.get(id=id)
+        job.delete()
+    
+    def read(self, request, id):
+        job = Job.objects.get(id=id)
+        tsr = TaskSetResult.restore(job.taskset_id)
+        print dir(tsr)
+        dict = {}
+        dict["taskset_id"] = tsr.taskset_id
+        # Dont return results until job in complete
+        if tsr.successful():
+            dict["result"] = tsr.join()
+        else:
+            dict["result"] = []
+        dict["completed_count"] = tsr.completed_count()
+        dict["failed"] = tsr.failed()
+        dict["ready"] = tsr.ready()
+        dict["successful"] = tsr.successful()
+        dict["total"] = tsr.total
+        dict["waiting"] = tsr.waiting()
+        return HttpResponse(dict,mimetype="application/json")
+
+class RenderResultsHandler(BaseHandler):
+    allowed_methods = ('GET','POST')
+
+    def read(self, request, stagerid):
+        stager = DataStager.objects.get(pk=stagerid)
+        folder = os.path.join(os.path.dirname(stager.file.path),"render")
+        urlfolder = os.path.join(os.path.dirname(str(stager.file)),"render")
+        files = []
+        if os.path.exists(folder):
+            for f in os.listdir(folder):
+                if f.find("thumb") > 0:
+                    url = os.path.join(urlfolder,f)
+                    files.append(url)
+        files.sort()
+        dict = {}
+        dict["results"] = files
+        return dict
+
+class RenderHandler(BaseHandler):
+    allowed_methods = ('GET','POST')
+
+    def read(self, request, jobid):
+
+        tsr = TaskSetResult.restore(taskset_id)
+        print dir(tsr)
+        dict = {}
+        dict["taskset_id"] = tsr.taskset_id
+        # Dont return results until job in complete
+        if tsr.successful():
+            dict["result"] = tsr.join()
+        else:
+            dict["result"] = []
+        dict["completed_count"] = tsr.completed_count()
+        dict["failed"] = tsr.failed()
+        dict["ready"] = tsr.ready()
+        dict["successful"] = tsr.successful()
+        dict["total"] = tsr.total
+        dict["waiting"] = tsr.waiting()
+        return HttpResponse(JSON_dump(dict),mimetype="application/json")
+        #return djcelery.views.task_status(request, taskid)
+
+    def create(self,request,stagerid):
+        stager = DataStager.objects.get(pk=stagerid)
+        tasks = []
+        folder = os.path.join(os.path.dirname(stager.file.path),"render")
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        for i in range(1,100):
+            t = render_blender.subtask([stager.file.path,i,i,folder],callback=thumbimage)
+            tasks.append(t)
+        
+        ts = TaskSet(tasks=tasks)
+        tsr = ts.apply_async()
+        tsr.save()
+
+        job = Job(name="Render",service=stager.service,taskset_id=tsr.taskset_id)
+        job.save()
+
+        jobstager = JobStager(stager=stager,job=job,index=0)
+        jobstager.save()
+        dict = {}
+        dict["taskset_id"] = tsr.taskset_id
+        dict["job"] = job
+        # Dont return results until job in complete
+        if tsr.successful():
+            dict["result"] = tsr.join()
+        else:
+            dict["result"] = []
+        dict["completed_count"] = tsr.completed_count()
+        dict["failed"] = tsr.failed()
+        dict["ready"] = tsr.ready()
+        dict["successful"] = tsr.successful()
+        dict["total"] = tsr.total
+        dict["waiting"] = tsr.waiting()
+        return HttpResponse(dict,mimetype="application/json")
+
+
+        
+        service = stager.service
+        job = Job(name="Render",service=service)
+        job.save()
+        js = JobStager(job=job,stager=stager,index=0)
+        js.save()
+
+        folder = os.path.join(os.path.dirname(stager.file.path),"render")
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        dict = {}
+        tasks = []
+
+        for x in range(1,100):
+            t = render_blender.delay(stager.file.path,x,x,folder,callback=thumbimage)
+            jobtask = JobTask(job=job,task=t.task_id)
+            jobtask.save()
+            logging.info(dir(t))
+            tasks.append(t)
+        dict["job"] = job
+        dict["n"] = len(tasks)
+        return dict
 
 class DataStagerVerifyHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -671,20 +877,35 @@ class DataStagerURLHandler(BaseHandler):
             return r
 
     def create(self, request, serviceid):
-        logging.info(request)
-        logging.info(request.FILES)
+        logging.info("Loading content of size %s"%len(request.raw_post_data))
+
+        if len(request.raw_post_data)!=0 :
+            filename = request.META['HTTP_X_FILE_NAME']
+            logging.info(filename)
+
+            upload = SimpleUploadedFile( filename, request.raw_post_data )
+
+            datastager = create_data_stager(request, serviceid, upload)
+
+            logging.info(datastager)
+
+            return datastager
+
+        #logging.info(dir(request))
         form = DataStagerURLForm(request.POST,request.FILES) 
         if form.is_valid(): 
-            
+
+            logging.debug("Handler Files %s" %request.FILES)
+
             file = request.FILES['file']
-            #service = DataService.objects.get(id=serviceid)
             datastager = create_data_stager(request, serviceid, file)
 
-            if request.META["HTTP_ACCEPT"] == "application/json":
-                return datastager
+            logging.info(request.FILES)
 
-            return redirect('/stager/'+str(datastager.id))
+            return datastager
+
         else:
+            logging.info(form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class ManagedResourcesContainerHandler(BaseHandler):

@@ -1,3 +1,4 @@
+import os.path
 from mserve.dataservice.models import HostingContainer
 from mserve.dataservice.models import HostingContainerAuth
 from mserve.dataservice.models import DataService
@@ -19,6 +20,7 @@ from mserve.dataservice.forms import ManagementPropertyForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from piston.utils import rc
 import usage_store as usage_store
 import utils as utils
 import logging
@@ -28,24 +30,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 #from dataservice.tasks import ProcessVideoTask
 from dataservice.tasks import thumbvideo
+from dataservice.tasks import render_blender
 from django.http import HttpResponse
-from celery.result import AsyncResult
-
-
-def submit(self):
-    t = thumbvideo.delay("/home/mm/Videos/Sintel.2010.2K.x264-VODO.mp4")
-    r = HttpResponse("<html><body?<a href='../status/%s/'>task</a></body></html>" % t)
-    return r
-
-def status(self, taskid):
-    result = AsyncResult(taskid)
-    if result.ready():
-        r = HttpResponse("<html><body>Task %s result=%s</body></html>" % (taskid,result.result) )
-        return r
-    else:
-        r = HttpResponse("<html><body>Task %s not ready</body></html>" % (taskid) )
-        return r
-
 
 #@staff_member_required
 def home(request,form=HostingContainerForm()):
@@ -66,7 +52,6 @@ def thumb(request,stagerid):
     dict = {}
     dict["stager"] = stager
     r = render_to_response('stagerthumb.html', dict, context_instance=RequestContext(request))
-    logging.info(r);
     return r
 
 @login_required
@@ -146,7 +131,7 @@ def render_containerauth(request,authid,form=DataServiceForm()):
 #@staff_member_required
 def render_service(request,id,form=DataStagerForm(),newstager=None):
     service = DataService.objects.get(pk=id)
-    stagers = DataStager.objects.filter(service=service)
+    stagers = DataStager.objects.filter(service=service).order_by('created').reverse()
     properties = ManagementProperty.objects.filter(base=service)
     auths = DataServiceAuth.objects.filter(dataservice=id)
     roles = Role.objects.filter(auth=auths)
@@ -195,6 +180,7 @@ def render_serviceauth(request,authid,form=DataStagerForm()):
     dict["stagers"] = stagers
     dict["auths"] = auths
     dict["roles"] = roles
+    dict["jobs"] = service.job_set
     dict["form"] = form
     dict["usage"] = Usage.objects.filter(base=service)
     dict["usagerate"] = UsageRate.objects.filter(base=service)
@@ -204,6 +190,7 @@ def render_serviceauth(request,authid,form=DataStagerForm()):
 
 def render_stager(request,id, form=DataStagerAuthForm(), show=False):
     stager = DataStager.objects.get(pk=id)
+    logging.info(dir(stager))
     auths = DataStagerAuth.objects.filter(stager=id)
     roles = Role.objects.filter(auth=auths)
     methods = []

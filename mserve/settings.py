@@ -6,7 +6,7 @@ TEMPLATE_DEBUG = DEBUG
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s %(levelname)-8s %(message)s',
+    format='%(filename)s %(lineno)d %(asctime)s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M:%S',
     #change as needed
     filename='/var/mserve/mserve.log',
@@ -115,6 +115,9 @@ INSTALLED_APPS = (
     'mserve.dataservice',
     'djcelery'
 )
+
+# JOB CONFIG
+USE_CELERY=False
 
 # For FGCI
 FORCE_SCRIPT_NAME = ''

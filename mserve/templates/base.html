@@ -131,9 +131,15 @@
 <body id="wrapper">
    <div id="debug"></div>
    <div style="display:none">
-       <div id="dialog-stager-dialog" title="Empty the recycle bin?">
-        <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>
-    </div>
+       
+       <div id="dialog-stager-dialog" title="Delete The Stager?">
+            <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This item will be permanently deleted and cannot be recovered. Are you sure?</p>
+        </div>
+
+        <div id="dialog-job-dialog" title="Delete The Job?">
+            <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This item will be permanently deleted and cannot be recovered. Are you sure?</p>
+        </div>
+       
    </div>
     <h2>{% block heading %}MServe{% endblock %}</h2>
     <table id="maintable">

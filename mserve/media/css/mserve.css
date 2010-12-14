@@ -14,6 +14,7 @@ h1,h2,h3,h4,h5,h6 {
     color:#0000AA;
     margin:2px;
     font-variant: small-caps;
+    clear:both;
 }
 
 
@@ -145,7 +146,7 @@ li.fluid a {
     font-weight:bold;
 }
 
-.thumb, #dropbox, #progressbox{
+.thumb, #dropbox, #progressbox, .renderpreview{
     border:1px outset silver;
     margin:1px;
     width:208px;
@@ -156,6 +157,14 @@ li.fluid a {
     background-repeat:no-repeat;
     white-space: nowrap
 }
+
+.renderpreview{
+    width:40px;
+    height:40px;
+    min-width:40px;
+    min-height:40px;
+}
+
 .thumb .info {
     font-size:12px;
     display: none;
@@ -203,14 +212,34 @@ li.fluid a {
     background-image: url('/mservemedia/images/busy.gif');
 }
 
-.spinner{
-    text-align: right;
-    width: 90%;
+.spinner,.taskrunning{
     background-image: url('/mservemedia/images/busy.gif');
     background-position: left;
     background-repeat: no-repeat;
 }
+.taskerror{
+    color:red;
+}
+
+.spinner{
+    text-align: left;
+    width: 90%;
+}
 
 #progressbox {
     background-image: url('/mservemedia/images/list-add.png');
+}
+.upload{
+    background-color: #EEEEEE;
+    border: 1px inset silver;
+}
+.job {
+    margin:.2em;
+    padding:.1em;
+    padding-left: 0.5em;
+}
+
+.tasks {
+    margin:.3em;
+    border:1px solid #EEAAAA;
 }

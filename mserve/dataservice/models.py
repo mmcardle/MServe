@@ -1,4 +1,5 @@
 from django.db import models
+from celery.result import AsyncResult
 import uuid
 import pickle
 import base64
@@ -195,6 +196,7 @@ class DataService(NamedBase):
 class DataStager(NamedBase):
     # TODO : Add bitmask to Datastager for deleted,remote,input,output, etc
     service  = models.ForeignKey(DataService)
+    #file     = models.FileField(upload_to=create_filename,storage=storage.getdiscstorage())
     file     = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
@@ -220,6 +222,32 @@ class BackupFile(NamedBase):
         if not self.id:
             self.id = random_id()
         super(BackupFile, self).save()
+
+class Job(NamedBase):
+    service  = models.ForeignKey(DataService)
+    created  = models.DateTimeField(auto_now_add=True)
+    taskset_id = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ('created', 'name')
+
+    def save(self):
+        if not self.id:
+            self.id = random_id()
+        super(Job, self).save()
+
+    def __unicode__(self):
+        return "%s" % (self.name);
+
+class JobStager(Base):
+    job  = models.ForeignKey(Job)
+    stager = models.ForeignKey(DataStager)
+    index = models.IntegerField(default=0)
+
+    def save(self):
+        if not self.id:
+            self.id = random_id()
+        super(JobStager, self).save()
 
 class ContainerResourcesReport(models.Model):
     base = models.ForeignKey('NamedBase')
