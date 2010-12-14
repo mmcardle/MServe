@@ -34,25 +34,6 @@ public class APIConsumer {
     private String protocol = "http://";
     private String host = "localhost";
 
-    public static void main(String[] args){
-        try {
-            APIConsumer consumer = new APIConsumer();
-
-            String out= consumer.doFilePutToURL("http://ogio/thumbapi/update/2f442094-9505-4b88-bf6c-f0b2e496c7d4/", "2f442094-9505-4b88-bf6c-f0b2e496c7d4", new File("/home/mm/images/lock.png") );
-            System.out.println(""+out);
-
-            //String container = consumer.createContainer();
-            //consumer.printStagerInfo("25a6f136-d6e2-4e5b-8421-2a46a7097864");
-            //consumer.printServiceInfo("e3bda7b7-4126-43dc-ab11-5c558c55384c");
-            //consumer.makeServiceURL(container);
-            //consumer.deleteStager("5ec35b32-5f09-4df4-a569-16e513d2f0aa");
-            //consumer.deleteStager("9a210a52-1d5c-44a2-975f-7da9ebbd0a63");
-        } catch (Exception ex) {
-            Logger.getLogger(APIConsumer.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-    }
-
     public APIConsumer(){}
 
     public APIConsumer(String protocol,String host){
