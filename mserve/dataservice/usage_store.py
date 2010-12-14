@@ -8,11 +8,11 @@ import sys
 import logging
 
 # Metrics for objects
-metric_stager = "http://prestoprime/file"
+metric_mfile = "http://prestoprime/file"
 metric_container = "http://prestoprime/container"
 metric_service = "http://prestoprime/service"
 
-# Metrics for Stagers
+# Metrics for mfiles
 metric_disc = "http://prestoprime/disc"
 metric_ingest = "http://prestoprime/ingest"
 metric_access = "http://prestoprime/access"
@@ -21,12 +21,12 @@ metric_dataloss = "http://prestoprime/dataloss"
 metric_corruption = "http://prestoprime/corruption"
 metric_responsetime = "http://prestoprime/responsetime"
 
-metrics = [metric_stager,metric_service,metric_container,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
+metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
 
 # What metric are reported fro each type
 container_metrics = metrics
-service_metrics = [metric_stager,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
-stager_metrics = [metric_stager,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
+service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
+mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
 
 # Other Metric groups
 byte_metrics = [metric_disc]
@@ -46,7 +46,13 @@ def startrecording(id,metric,rate,report=True):
         reportusage(base)
 
 def stoprecording(id,metric,report=True):
+    logging.debug("Stop Recording "+id)
     base = NamedBase.objects.get(pk=id)
+    usagerates = UsageRate.objects.filter(base=base,metric=metric)
+
+    if len(usagerates)>1:
+        for ur in usagerates:
+            logging.debug("XXX Found duplicate usage - %s" % ur)
     usagerate = UsageRate.objects.get(base=base,metric=metric)
     lastRateTime, lastRate, lastUsage = usagerate.current,usagerate.rate,usagerate.usageSoFar
 
@@ -78,8 +84,8 @@ def reportusage(base):
 
         toreport =  [container,base]
 
-    if utils.is_stager(base):
-        service   = DataService.objects.get(datastager=base)
+    if utils.is_mfile(base):
+        service   = DataService.objects.get(mfile=base)
         container = HostingContainer.objects.get(dataservice=service)
 
         service_report,created = ServiceResourcesReport.objects.get_or_create(base=service)
@@ -96,10 +102,10 @@ def reportusage(base):
             r.reportnum = r.reportnum + 1
             r.save()
 
-def stager_usagesummary(stagerid):
+def mfile_usagesummary(mfileid):
     summary = []
-    stager = DataStager.objects.get(pk=stagerid)
-    ss = __usagesummary_by_base(stager)
+    mfile = MFile.objects.get(pk=mfileid)
+    ss = __usagesummary_by_base(mfile)
     for s in ss:
         summary.append(s)
     dict = {}
@@ -127,9 +133,9 @@ def service_usagesummary(serviceid):
     summary = []
     service  = DataService.objects.get(pk=serviceid)
 
-    stagers = DataStager.objects.filter(service=service)
-    for stager in stagers:
-        ss = stager_usagesummary(stager.id)
+    mfiles = MFile.objects.filter(service=service)
+    for mfile in mfiles:
+        ss = mfile_usagesummary(mfile.id)
         for s in ss:
             summary.append(s)
     ss = __usagesummary_by_base(service)
@@ -157,40 +163,46 @@ def service_usagesummary(serviceid):
     return dict.values()
 
 
-def stager_inprogresssummary(stager):
-    s = DataStager.objects.get(pk=stager)
+def mfile_inprogresssummary(mfile):
+    s = MFile.objects.get(pk=mfile)
     inprogress = []
-    for p in UsageRate.objects.filter(base=stager):
-        logging.info("stager_inprogresssummary %s " % p)
+    for p in UsageRate.objects.filter(base=mfile):
+        logging.info("mfile_inprogresssummary %s " % p)
         inprogress.append(p)
 
-    return inprogress_to_aggregates(s, inprogress, stager_metrics)
+    if len(inprogress)==0:
+        return []
 
-def __stager_inprogresssummary__(stager):
+    return inprogress_to_aggregates(s, inprogress, mfile_metrics)
+
+def __mfile_inprogresssummary__(mfile):
     inprogress = []
-    for p in UsageRate.objects.filter(base=stager):
+    for p in UsageRate.objects.filter(base=mfile):
         inprogress.append(p)
     return inprogress
 
 
 def service_inprogresssummary(service):
     ser = DataService.objects.get(pk=service)
-    stagers = DataStager.objects.filter(service=service)
+    mfiles = MFile.objects.filter(service=service)
     inprogress = []
-    for stager in stagers:
-        for s in __stager_inprogresssummary__(stager):
+    for mfile in mfiles:
+        for s in __mfile_inprogresssummary__(mfile):
             inprogress.append(s)
 
     for p in UsageRate.objects.filter(base=service):
         inprogress.append(p)
 
+    if len(inprogress)==0:
+        return []
+
     return inprogress_to_aggregates(ser, inprogress, service_metrics)
 
 def __service_inprogresssummary__(service):
     inprogress = []
-    stagers = DataStager.objects.filter(service=service)
-    for stager in stagers:
-        for s in __stager_inprogresssummary__(stager):
+    mfiles = MFile.objects.filter(service=service)
+    for mfile in mfiles:
+        for s in __mfile_inprogresssummary__(mfile):
             inprogress.append(s)
 
     for p in UsageRate.objects.filter(base=service):
@@ -208,6 +220,9 @@ def container_inprogresssummary(container):
 
     for p in UsageRate.objects.filter(base=container):
         inprogress.append(p)
+
+    if len(inprogress)==0:
+        return []
 
     return inprogress_to_aggregates(c, inprogress, container_metrics)
 
@@ -229,6 +244,7 @@ def inprogress_to_aggregates(base,inprogress,base_metrics):
         aggregates[metric] = agg = AggregateUsageRate(base=base,current=maxdate)
         agg.usageSoFar = 0.0
         agg.rate = 0.0
+        agg.current = 0.0
         agg.metric=metric
 
     for usage in inprogress:

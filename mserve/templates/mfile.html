@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}MServe Stager{% endblock %}
+{% block title %}MServe File{% endblock %}
 
-{% block heading%}{{stager.name}}{% endblock %}
+{% block heading%}{{mfile.name}}{% endblock %}
 
 {% block content %}
     <h3 class="ilink" onclick="$('#content').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
@@ -19,25 +19,25 @@
     <table><tr><td>
         <dl>
             <dt>Name</dt>
-            <dd>{{stager.name}}</dd>
+            <dd>{{mfile.name}}</dd>
             <dt>Checksum</dt>
-            <dd>{{stager.checksum}}</dd>
+            <dd>{{mfile.checksum}}</dd>
             {% if verifychecksum%}
             <dt>Verify</dt>
             <dd class="highlight">{{verifychecksum}}</dd>
             {% endif %}
             <dt>Mime</dt>
-            <dd>{{stager.mimetype}}</dd>
+            <dd>{{mfile.mimetype}}</dd>
 
         </dl>
      </td><td>
         <dl>
             <dt>Created</dt>
-            <dd>{{stager.created|date}},&nbsp;{{stager.created|time}}</dd>
+            <dd>{{mfile.created|date}},&nbsp;{{mfile.created|time}}</dd>
             <dt>Updated</dt>
-            <dd>{{stager.updated|date}},&nbsp;{{stager.updated|time}}</dd>
+            <dd>{{mfile.updated|date}},&nbsp;{{mfile.updated|time}}</dd>
             <dt>Size</dt>
-            <dd>{{stager.size|filesizeformat}}</dd>
+            <dd>{{mfile.size|filesizeformat}}</dd>
         </dl>
      </td></tr>
 
@@ -50,15 +50,15 @@
 
 <div id="previewcontent">
 
-{% if stager.mimetype %}
+{% if mfile.mimetype %}
 
-    {% if stager.mimetype|startswith:"video"  %}
+    {% if mfile.mimetype|startswith:"video"  %}
         {% include "mediaplayer.html" %}
     {% else %}
-        {% if stager.mimetype|startswith:"image"  %}
+        {% if mfile.mimetype|startswith:"image"  %}
             {% include "image.html" %}
         {% else %}
-            {% if stager.name|endswith:".blend"  %}
+            {% if mfile.name|endswith:".blend"  %}
                 {% include "render.html" %}
             {% else %}
                 <p>No Preview</p>
@@ -74,11 +74,11 @@
 
 </div>
 
-{% if stager.name|endswith:".blend"  %}
+{% if mfile.name|endswith:".blend"  %}
 
 <h3 class="ilink" onclick="$('#jobcontent').toggle('slow');"><span  style="float:left" class="ui-icon ui-icon-circle-plus"></span>Jobs</h3>
 <div id="jobcontent">
-<button id="button2" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:stager_render('{{stager.id}}');">
+<button id="button2" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_render('{{mfile.id}}');">
     <span class="ui-button-text">New Render</span>
 </button>
 <div id="jobs">
@@ -86,7 +86,7 @@
 </div>
 
 <script type="text/javascript">
-    load_jobs_stager('{{stager.id}}')
+    load_jobs_mfile('{{mfile.id}}')
 </script>
 
 </div>

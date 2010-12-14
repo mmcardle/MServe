@@ -168,8 +168,8 @@ Uploader.prototype = {
 
               if (status == '200' && evt.target.responseText && xhr.readyState == 4) {// Loaded State
                 $("#upload-"+xhr.r).hide('slide');
-                var stager = jQuery.parseJSON(evt.target.responseText);
-                load_stager(stager.id)
+                var mfile = jQuery.parseJSON(evt.target.responseText);
+                load_mfile(mfile.id)
               }
           }
     }
@@ -290,8 +290,8 @@ function doUpload__old(file,serviceid) {
 
       if (status == '200' && evt.target.responseText && xhr.readyState == 4) {// Loaded State
         $("#upload-"+xhr.r).hide('slide');
-        var stager = jQuery.parseJSON(evt.target.responseText);
-        load_stager(stager.id)
+        var mfile = jQuery.parseJSON(evt.target.responseText);
+        load_mfile(mfile.id)
       }
   }
 }
@@ -327,42 +327,42 @@ function make_drop_upload_webkit(item,serviceid){
                                     showError('Server error.');
                                     return;
                             }
-                            load_stager(result.id);
+                            load_mfile(result.id);
                             
                     }
             }
     );
 }
 
-function load_render_preview(stagerid){
+function load_render_preview(mfileid){
          $.ajax({
            type: "GET",
-           url: "/stagerapi/getpreview/"+stagerid+"/",
+           url: "/mfileapi/getpreview/"+mfileid+"/",
            success: function(msg){
                 for ( i in msg.results){
                     var im = $("<div class='renderpreview fluid'><img style='height:40px;width:40px;' src='/mservedata/"+msg.results[i]+"' /></div>")
                     $("#renderpreview").prepend(im);
                 }
-                //$("#image-"+stagerid).show('bounce')
+                //$("#image-"+mfileid).show('bounce')
            },
            error: function(msg){
                 $("#renderpreview").prepend(objectToString(msg));
-                //showError( "Failure to get stager preview ",obmsg );
+                //showError( "Failure to get mfile preview ",obmsg );
            }
          });
 }
 
-function load_stager(stagerid){
-         $("#emptystagerlist").remove();
+function load_mfile(mfileid){
+         $("#emptymfilelist").remove();
          $.ajax({
            type: "GET",
-           url: "/stagerapi/thumb/"+stagerid+"/",
+           url: "/mfileapi/thumb/"+mfileid+"/",
            success: function(msg){
-                $("#stagerlist").prepend(msg);
-                $("#image-"+stagerid).show('bounce')
+                $("#mfilelist").prepend(msg);
+                $("#image-"+mfileid).show('bounce')
            },
            error: function(msg){
-                showError( "Failure to get stager thumb " );
+                showError( "Failure to get mfile thumb " );
            }
          });
 }
@@ -406,14 +406,14 @@ function load_jobs_service(serviceid){
      });
 }
 
-function load_jobs_stager(stagerid){
+function load_jobs_mfile(mfileid){
      $.ajax({
        type: "GET",
-       url: '/stagerapi/getjobs/'+stagerid+"/",
+       url: '/mfileapi/getjobs/'+mfileid+"/",
        success: function(msg){
             for (i in msg){
                 create_job_holder(msg[i].job)
-                check_job(msg[i].job,stagerid)
+                check_job(msg[i].job,mfileid)
             }
        },
        error: function(msg){
@@ -439,12 +439,12 @@ function create_job_holder(job){
     }
 }
 
-function stager_render(stagerid){
+function mfile_render(mfileid){
      $.ajax({
        type: "POST",
-       url: '/jobapi/render/'+stagerid+"/",
+       url: '/jobapi/render/'+mfileid+"/",
        success: function(msg){
-            check_job(msg.job,stagerid)
+            check_job(msg.job,mfileid)
        },
        error: function(msg){
             showError("Render",objectToString(msg))
@@ -477,7 +477,7 @@ function delete_job(jobid){
     });
 }
 
-function check_job(job,stagerid){
+function check_job(job,mfileid){
      $.ajax({
        type: "GET",
        url: '/jobapi/'+job.id+"/",
@@ -504,7 +504,7 @@ function check_job(job,stagerid){
         });
 
         if(msg.waiting){
-            window.setTimeout(function(){ check_job(job,stagerid) },3000)
+            window.setTimeout(function(){ check_job(job,mfileid) },3000)
         }
 
        },
@@ -514,17 +514,17 @@ function check_job(job,stagerid){
      });
  }
 
-function stager_delete(stagerid){
-    $( '#dialog-stager-dialog' ).dialog({
+function mfile_delete(mfileid){
+    $( '#dialog-mfile-dialog' ).dialog({
             resizable: false,
             modal: true,
             buttons: {
-                    "Delete stager?": function() {
+                    "Delete mfile?": function() {
                          $.ajax({
                            type: "DELETE",
-                           url: '/stager/'+stagerid+"/",
+                           url: '/mfile/'+mfileid+"/",
                            success: function(msg){
-                                showMessage("File Deleted","The Stager has been deleted.")
+                                showMessage("File Deleted","The mfile has been deleted.")
                            },
                            error: function(msg){
                              alert( "Failure On Delete " + msg );
@@ -546,15 +546,15 @@ $(document).ready(function(){
 	}).next().hide();
 });
 
-function stager_get(stagerid){
-        window.open("/stagerapi/get/"+stagerid+"/")
+function mfile_get(mfileid){
+        window.open("/mfileapi/get/"+mfileid+"/")
 }
 
 
-function stager_file_corrupt(stagerid){
+function mfile_file_corrupt(mfileid){
      $.ajax({
        type: "PUT",
-       url: '/stagerapi/corrupt/'+stagerid+"/",
+       url: '/mfileapi/corrupt/'+mfileid+"/",
        success: function(msg){
             showMessage("File Corrupted","The file has been corrupted.")
        },
@@ -564,10 +564,10 @@ function stager_file_corrupt(stagerid){
      });
  }
 
-function stager_backup_corrupt(stagerid){
+function mfile_backup_corrupt(mfileid){
      $.ajax({
        type: "PUT",
-       url: '/stagerapi/corruptbackup/'+stagerid+"/",
+       url: '/mfileapi/corruptbackup/'+mfileid+"/",
        success: function(msg){
             showMessage("File Corrupted","The file has been corrupted.")
        },
@@ -578,7 +578,7 @@ function stager_backup_corrupt(stagerid){
  }
 
 function showMessage(title,message){
-     var html = "<div id='dialog-message-stager-delete' title='"+title+"'><p><span class='ui-icon ui-icon-circle-check' style='float:left; margin:0 7px 50px 0;'></span>"+message+"</p></div>"
+     var html = "<div id='dialog-message-mfile-delete' title='"+title+"'><p><span class='ui-icon ui-icon-circle-check' style='float:left; margin:0 7px 50px 0;'></span>"+message+"</p></div>"
      $( html ).dialog({
             modal: true,
             buttons: {
@@ -592,7 +592,7 @@ function showMessage(title,message){
 
 
 function showError(title,message){
-    var html =  "<div id='dialog-message-stager-delete' title='"+title+"'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span> <strong>Alert:</strong>"+message+"</p><div></div>"
+    var html =  "<div id='dialog-message-mfile-delete' title='"+title+"'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span> <strong>Alert:</strong>"+message+"</p><div></div>"
      $( html ).dialog({
             modal: true,
             buttons: {
@@ -604,28 +604,28 @@ function showError(title,message){
 }
 
 
-function getPoster(stagerid){
-    url = '/stager/'+stagerid+'/'
+function getPoster(mfileid){
+    url = '/mfile/'+mfileid+'/'
     $.getJSON(url, function(data) {
         if(data.poster!=""){
-            $("#stagerposter").attr("src", "/mservethumbs/"+data.poster)
+            $("#mfileposter").attr("src", "/mservethumbs/"+data.poster)
         }else{
-            window.setTimeout("getPoster(\'"+stagerid+"\')",1000)
+            window.setTimeout("getPoster(\'"+mfileid+"\')",1000)
             //id = $("<div >Thumb doesnt exist "+data.thumb.file+" "+data.thumb.file+"</div>&nbsp;")
             //$(id).appendTo("#debug");
         }
     });
  }
 
- function stager_verify(stagerid){
-     url = '/stagerapi/verify/'+stagerid+'/'
+ function mfile_verify(mfileid){
+     url = '/mfileapi/verify/'+mfileid+'/'
      $.getJSON(url, function(data) {
-        if(data.md5==data.stager.checksum){
-            showMessage("Success: Verification OK","MD5: "+data.md5+"<br>Checksum: "+data.stager.checksum)
+        if(data.md5==data.mfile.checksum){
+            showMessage("Success: Verification OK","MD5: "+data.md5+"<br>Checksum: "+data.mfile.checksum)
             //id = $("<div class='passed'><div>Success: Verification OK</div>"+ data.md5 + "</div>")
             //$(id).appendTo("#message");
         }else{
-            showError("Error: Verification has failed","MD5: "+data.md5+"<br>Checksum: "+data.stager.checksum)
+            showError("Error: Verification has failed","MD5: "+data.md5+"<br>Checksum: "+data.mfile.checksum)
         }
     });
  }

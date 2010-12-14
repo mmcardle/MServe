@@ -1,14 +1,14 @@
-{% if stager.file %}
-    <div id="image-{{stager.id}}" style=" height: 256px; padding: 0.4em; position: relative;" >
-        <img id="stagerposter" title="{{stager.name}}" alt="{{stager.name}}" src="/mservethumbs/{{stager.poster}}" />
+{% if mfile.file %}
+    <div id="image-{{mfile.id}}" style=" height: 256px; padding: 0.4em; position: relative;" >
+        <img id="mfileposter" title="{{mfile.name}}" alt="{{mfile.name}}" src="/mservethumbs/{{mfile.poster}}" />
     </div>
 {% endif %}
-{% if not stager.file %}
+{% if not mfile.file %}
 <div ><img  title="No File" alt="No File" src="{{altfile}}" /></div>
 {% endif %}
 <script type="text/javascript">
 
-    $('#image-{{stager.id}}').show( 'slide', {}, 1000, callback );
+    $('#image-{{mfile.id}}').show( 'slide', {}, 1000, callback );
 
     function callback() {
         //Do nothing for now

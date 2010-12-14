@@ -132,7 +132,7 @@
    <div id="debug"></div>
    <div style="display:none">
        
-       <div id="dialog-stager-dialog" title="Delete The Stager?">
+       <div id="dialog-mfile-dialog" title="Delete the file?">
             <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This item will be permanently deleted and cannot be recovered. Are you sure?</p>
         </div>
 
@@ -221,8 +221,8 @@
                                 {% for method in role.methods %}<a href="/serviceapi/{{method}}/{{service.id}}/" >{{method}}</a>
                             {% endfor %}
                             {% endif %}
-                            {% if stager %}
-                                {% for method in role.methods %}<a href="/stagerapi/{{method}}/{{stager.id}}/" >{{method}}</a>
+                            {% if mfile %}
+                                {% for method in role.methods %}<a href="/mfileapi/{{method}}/{{mfile.id}}/" >{{method}}</a>
                             {% endfor %}
                             {% endif %}
                         </dd>

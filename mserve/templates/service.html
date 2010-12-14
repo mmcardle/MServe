@@ -9,7 +9,7 @@
 {% load mservetags %}
 </head>
 <body>
-<h3 style="clear:both">Create New Stager</h3>
+<h3 style="clear:both">Create New File</h3>
 <table>
 <tr>
         <td>
@@ -31,7 +31,7 @@
         </td>
         <td>
             <h4>..Or Upload with Form</h4>
-            <form name="uploadform" action="/stager/" method="post" enctype="multipart/form-data" >
+            <form name="uploadform" action="/mfile/" method="post" enctype="multipart/form-data" >
                 {{ form.as_p }}
                 <input type="submit" value="Submit" />
             </form>
@@ -39,17 +39,17 @@
 </tr>
 </table>
 
-<h3>Data Stagers</h3>
-<div  id="stagerlist">
-    {% for stager in stagers %}
+<h3>Files</h3>
+<div  id="mfilelist">
+    {% for mfile in mfiless %}
 
-    {% include "stagerthumb.html" %}
+    {% include "mfilethumb.html" %}
 
     {% endfor %}
 </div>
 
-{% if not stagers %}
-<div  id="emptystagerlist">
+{% if not mfiles %}
+<div  id="emptymfilelist">
     <ul><li>Empty</li></ul>
 </div>
 {% endif %}

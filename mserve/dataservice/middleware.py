@@ -6,27 +6,26 @@ class AuthMiddleware(object):
 
     def process_response(self, request, response):
         uri = request.META['REQUEST_URI']
-        if uri.startswith("/stagerapi/get/"):
+        if uri.startswith("/mfileapi/get/"):
             match = re.search("[\w]{8}(-[\w]{4}){3}-[\w]{12}", uri)
             # No match
             if match is not None:
-                stagerid = match.group(0)
-                logging.info("Match %s" % stagerid)
-                logging.info("Match %s" % stagerid)
-                usage_store.stoprecording(stagerid,usage_store.metric_responsetime)
+                mfileid = match.group(0)
+                logging.info("Match %s" % mfileid)
+                usage_store.stoprecording(mfileid,usage_store.metric_responsetime)
 
         return response
 
     def process_request(self, request):
 
         uri = request.META['REQUEST_URI']
-        if uri.startswith("/stagerapi/get/"):
+        if uri.startswith("/mfileapi/get/"):
             match = re.search("[\w]{8}(-[\w]{4}){3}-[\w]{12}", uri)
             # No match
             if match is not None:
-                stagerid = match.group(0)
-                logging.info("Match %s" % stagerid)
-                usage_store.startrecording(stagerid,usage_store.metric_responsetime,1)
+                mfileid = match.group(0)
+                logging.info("Match %s" % mfileid)
+                usage_store.startrecording(mfileid,usage_store.metric_responsetime,1)
 
         return
 

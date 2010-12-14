@@ -55,7 +55,7 @@ class UsageRate(models.Model):
     usageSoFar = models.FloatField() # Cumulative unreported usage before that point
 
     def __unicode__(self):
-        return "%s %s reported=%s rate=%f usageSoFar=%f" % (self.base,self.metric,self.current,self.rate,self.usageSoFar)
+        return "Usage: %s %s %s reported=%s rate=%f usageSoFar=%f" % (self.base,self.base.id,self.metric,self.current,self.rate,self.usageSoFar)
 
 
     def ctime(self):
@@ -78,8 +78,8 @@ class UsageRate(models.Model):
             return "/container/"
         if self.metric == usage_store.metric_service:
             return "/service/"
-        if self.metric == usage_store.metric_stager or usage_store.metric_stager:
-            return "/stager/"
+        if self.metric == usage_store.metric_mfile or usage_store.metric_mfile:
+            return "/mfile/"
         return "/error/"
 
     def calc_rate(self):
@@ -193,8 +193,8 @@ class DataService(NamedBase):
             self.id = random_id()
         super(DataService, self).save()
 
-class DataStager(NamedBase):
-    # TODO : Add bitmask to Datastager for deleted,remote,input,output, etc
+class MFile(NamedBase):
+    # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     service  = models.ForeignKey(DataService)
     #file     = models.FileField(upload_to=create_filename,storage=storage.getdiscstorage())
     file     = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.getdiscstorage())
@@ -210,10 +210,10 @@ class DataStager(NamedBase):
         if not self.id:
             self.id = random_id()
         self.updated = datetime.datetime.now()
-        super(DataStager, self).save()
+        super(MFile, self).save()
 
 class BackupFile(NamedBase):
-    stager = models.ForeignKey(DataStager)
+    mfile = models.ForeignKey(MFile)
     file = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.gettapestorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
@@ -239,15 +239,15 @@ class Job(NamedBase):
     def __unicode__(self):
         return "%s" % (self.name);
 
-class JobStager(Base):
+class JobMFile(Base):
     job  = models.ForeignKey(Job)
-    stager = models.ForeignKey(DataStager)
+    mfile = models.ForeignKey(MFile)
     index = models.IntegerField(default=0)
 
     def save(self):
         if not self.id:
             self.id = random_id()
-        super(JobStager, self).save()
+        super(JobMFile, self).save()
 
 class ContainerResourcesReport(models.Model):
     base = models.ForeignKey('NamedBase')
@@ -261,7 +261,7 @@ class ContainerResourcesReport(models.Model):
 class ServiceResourcesReport(models.Model):
     base = models.ForeignKey('NamedBase')
     reportnum = models.IntegerField(default=0)
-    stagers   = models.ManyToManyField(DataStager,related_name="ser2sta")
+    mfiles   = models.ManyToManyField(MFile,related_name="ser2sta")
     meta       = models.CharField(max_length=200,blank=True,null=True)
 
     def __unicode__(self):
@@ -308,12 +308,12 @@ class JoinAuth(models.Model):
     def __unicode__(self):
         return str(self.parent) + " - " + str(self.child)
 
-class DataStagerAuth(Auth):
-    stager = models.ForeignKey(DataStager)
+class MFileAuth(Auth):
+    mfile = models.ForeignKey(MFile)
     def save(self):
         if not self.id:
             self.id = random_id()
-        super(DataStagerAuth, self).save()
+        super(MFileAuth, self).save()
 
 class DataServiceAuth(Auth):
     dataservice = models.ForeignKey(DataService)

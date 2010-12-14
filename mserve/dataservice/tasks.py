@@ -64,13 +64,13 @@ def thumbvideo(videopath,thumbpath,width,height):
     return ret
 
 @task
-def thumbimage(stagerpath,thumbpath,width,height):
-    logging.info("Creating %sx%s image for %s to %s" % (width,height,stagerpath,thumbpath))
-    if not os.path.exists(stagerpath):
-        logging.info("Image %s does not exist" % (stagerpath))
+def thumbimage(mfilepath,thumbpath,width,height):
+    logging.info("Creating %sx%s image for %s to %s" % (width,height,mfilepath,thumbpath))
+    if not os.path.exists(mfilepath):
+        logging.info("Image %s does not exist" % (mfilepath))
         return False
 
-    im = Image.open(stagerpath)
+    im = Image.open(mfilepath)
 
     w, h = im.size
     if float(w)/h < float(width)/height:
@@ -82,13 +82,13 @@ def thumbimage(stagerpath,thumbpath,width,height):
 
     im.thumbnail((width,height))
     im.save(thumbpath, "JPEG")
-    logging.info("Thumnail created %s" % (stagerpath))
+    logging.info("Thumnail created %s" % (mfilepath))
 
     return True
 
 
 @task
-def thumbimage_async_remote(dataurl,stagerid,thumburl,size):
+def thumbimage_async_remote(dataurl,mfileid,thumburl,size):
 
     tmpfile = tempfile.NamedTemporaryFile()
     try:
@@ -100,7 +100,7 @@ def thumbimage_async_remote(dataurl,stagerid,thumburl,size):
 
         logging.info("Thumnail created uploading to %s" % (thumburl))
 
-        pf = [  ('stagerid', stagerid),
+        pf = [  ('mfileid', mfileid),
                 ('file', (pycurl.FORM_FILE, tmpfile.name)), ]
 
         c = pycurl.Curl()
@@ -116,6 +116,6 @@ def thumbimage_async_remote(dataurl,stagerid,thumburl,size):
         return True
     
     except IOError:
-        print "cannot create thumbnail for", stagerid
+        print "cannot create thumbnail for", mfileid
         return False
     return False

@@ -10,16 +10,16 @@ from dataservice.handlers import *
 hosting_handler = Resource(HostingContainerHandler)
 managedresources_container_handler = Resource(ManagedResourcesContainerHandler)
 managedresources_service_handler = Resource(ManagedResourcesServiceHandler)
-managedresources_stager_handler = Resource(ManagedResourcesStagerHandler)
+managedresources_mfile_handler = Resource(ManagedResourcesmfileHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
-datastager_handler = Resource(DataStagerHandler)
-datastager_json_handler = Resource(DataStagerJSONHandler)
-datastager_url_handler = Resource(DataStagerURLHandler)
-datastager_contents_handler = Resource(DataStagerContentsHandler)
-datastager_verify_handler = Resource(DataStagerVerifyHandler)
-datastager_auth_handler = Resource(DataStagerAuthHandler)
+mfile_handler = Resource(MFileHandler)
+mfile_json_handler = Resource(MFileJSONHandler)
+mfile_url_handler = Resource(MFileURLHandler)
+mfile_contents_handler = Resource(MFileContentsHandler)
+mfile_verify_handler = Resource(MFileVerifyHandler)
+mfile_auth_handler = Resource(MFileAuthHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
 role_handler = Resource(RoleHandler)
@@ -27,15 +27,15 @@ role_info_handler = Resource(RoleInfoHandler)
 global_handler = Resource(GlobalHandler)
 render_handler = Resource(RenderHandler)
 job_handler = Resource(JobHandler)
-jobstager_handler = Resource(JobStagerHandler)
+jobmfile_handler = Resource(JobMFileHandler)
 jobservice_handler = Resource(JobServiceHandler)
 render_results_handler = Resource(RenderResultsHandler)
 access_control_handler = Resource(AccessControlHandler)
 container_access_control_handler = Resource(ContainerAccessControlHandler)
 service_access_control_handler = Resource(ServiceAccessControlHandler)
-stager_access_control_handler = Resource(StagerAccessControlHandler)
+mfile_access_control_handler = Resource(MFileAccessControlHandler)
 thumb_handler = Resource(ThumbHandler)
-stager_corruption_handler = Resource(CorruptionHandler)
+mfile_corruption_handler = Resource(CorruptionHandler)
 
 urlpatterns = patterns('',
 
@@ -44,15 +44,15 @@ urlpatterns = patterns('',
     # REST Methods for POST
     url(r'^container/$', hosting_handler),
     url(r'^service/$', dataservice_handler),
-    url(r'^stager/$', datastager_handler),
-    url(r'^stagerauth/$', datastager_auth_handler),
+    url(r'^mfile/$', mfile_handler),
+    url(r'^mfileauth/$', mfile_auth_handler),
     url(r'^auth/$', auth_handler),
 
     # REST Methods for GET
     url(r'^container/(?P<containerid>[^/]+)/', hosting_handler),
     url(r'^service/(?P<serviceid>[^/]+)/', dataservice_handler),
-    url(r'^stager/(?P<stagerid>[^/]+)/$', datastager_handler),
-    url(r'^stagerauth/(?P<stagerauthid>[^/]+)/', datastager_auth_handler),
+    url(r'^mfile/(?P<mfileid>[^/]+)/$', mfile_handler),
+    url(r'^mfileauth/(?P<mfileauthid>[^/]+)/', mfile_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
     url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
     #url(r'^accesscontrol/(?P<pk>[^/]+)/$', access_control_handler),
@@ -79,7 +79,7 @@ urlpatterns = patterns('',
     url(r'^containerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', container_access_control_handler),
 
     # Service Methods
-    url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', datastager_url_handler),
+    url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_url_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/', managedresources_service_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/', managedresources_service_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
@@ -89,25 +89,25 @@ urlpatterns = patterns('',
     url(r'^serviceapi/getaccesscontrol/(?P<baseid>[^/]+)/$', service_access_control_handler),
     url(r'^serviceapi/getjobs/(?P<serviceid>[^/]+)/$', jobservice_handler),
 
-    # Stager Methods
-    url(r'^stagerapi/update/(?P<stagerid>[^/]+)/$', datastager_url_handler),
-    url(r'^stagerapi/getmanagedresources/(?P<stagerid>[^/]+)/$', managedresources_stager_handler),
-    url(r'^stagerapi/getmanagedresources/(?P<stagerid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_stager_handler),
-    url(r'^stagerapi/get/(?P<stagerid>[^/]+)/$', datastager_contents_handler),
-    url(r'^stagerapi/verify/(?P<stagerid>[^/]+)/$', datastager_verify_handler),
-    url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
-    url(r'^stagerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^stagerapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
-    url(r'^stagerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', stager_access_control_handler),
-    url(r'^stagerapi/corrupt/(?P<stagerid>[^/]+)/$', stager_corruption_handler),
-    url(r'^stagerapi/corruptbackup/(?P<stagerid>[^/]+)/$', stager_corruption_handler, {'backup':True}),
-    url(r'^stagerapi/thumb/(?P<stagerid>[^/]+)/$', 'dataservice.views.thumb'),
-    url(r'^stagerapi/(?P<id>[^/]+)/$', datastager_json_handler),
-    url(r'^stagerapi/getpreview/(?P<stagerid>[^/]+)/$', render_results_handler),
-    url(r'^stagerapi/getjobs/(?P<stagerid>[^/]+)/$', jobstager_handler),
+    # MFile Methods
+    url(r'^mfileapi/update/(?P<mfileid>[^/]+)/$', mfile_url_handler),
+    url(r'^mfileapi/getmanagedresources/(?P<mfileid>[^/]+)/$', managedresources_mfile_handler),
+    url(r'^mfileapi/getmanagedresources/(?P<mfileid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_mfile_handler),
+    url(r'^mfileapi/get/(?P<mfileid>[^/]+)/$', mfile_contents_handler),
+    url(r'^mfileapi/verify/(?P<mfileid>[^/]+)/$', mfile_verify_handler),
+    url(r'^mfileapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
+    url(r'^mfileapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^mfileapi/getroleinfo/(?P<pk>[^/]+)/$', role_info_handler),
+    url(r'^mfileapi/getaccesscontrol/(?P<baseid>[^/]+)/$', mfile_access_control_handler),
+    url(r'^mfileapi/corrupt/(?P<mfileid>[^/]+)/$', mfile_corruption_handler),
+    url(r'^mfileapi/corruptbackup/(?P<mfileid>[^/]+)/$', mfile_corruption_handler, {'backup':True}),
+    url(r'^mfileapi/thumb/(?P<mfileid>[^/]+)/$', 'dataservice.views.thumb'),
+    url(r'^mfileapi/(?P<id>[^/]+)/$', mfile_json_handler),
+    url(r'^mfileapi/getpreview/(?P<mfileid>[^/]+)/$', render_results_handler),
+    url(r'^mfileapi/getjobs/(?P<mfileid>[^/]+)/$', jobmfile_handler),
 
     # Job Methods
-    url(r'^jobapi/render/(?P<stagerid>[^/]+)/$', render_handler),
+    url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),
     url(r'^jobapi/(?P<id>[^/]+)/$', job_handler),
 
     # Thumb methods

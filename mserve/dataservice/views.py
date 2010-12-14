@@ -1,22 +1,6 @@
 import os.path
-from mserve.dataservice.models import HostingContainer
-from mserve.dataservice.models import HostingContainerAuth
-from mserve.dataservice.models import DataService
-from mserve.dataservice.models import DataServiceAuth
-from mserve.dataservice.models import DataStager
-from mserve.dataservice.models import DataStagerAuth
-from mserve.dataservice.models import Usage
-from mserve.dataservice.models import UsageRate
-from mserve.dataservice.models import ManagementProperty
-from mserve.dataservice.models import JoinAuth
-from mserve.dataservice.models import SubAuth
-from mserve.dataservice.models import Role
-from mserve.dataservice.forms import HostingContainerForm
-from mserve.dataservice.forms import DataServiceForm
-from mserve.dataservice.forms import DataStagerForm
-from mserve.dataservice.forms import DataStagerAuthForm
-from mserve.dataservice.forms import SubAuthForm
-from mserve.dataservice.forms import ManagementPropertyForm
+from mserve.dataservice.models import *
+from mserve.dataservice.forms import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -47,11 +31,11 @@ def home(request,form=HostingContainerForm()):
     dict["usagerate"] = usagerate
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
-def thumb(request,stagerid):
-    stager = DataStager.objects.get(pk=stagerid)
+def thumb(request,mfileid):
+    mfile = MFile.objects.get(pk=mfileid)
     dict = {}
-    dict["stager"] = stager
-    r = render_to_response('stagerthumb.html', dict, context_instance=RequestContext(request))
+    dict["mfile"] = mfile
+    r = render_to_response('mfilethumb.html', dict, context_instance=RequestContext(request))
     return r
 
 @login_required
@@ -129,9 +113,9 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
 #@staff_member_required
-def render_service(request,id,form=DataStagerForm(),newstager=None):
+def render_service(request,id,form=MFileForm(),newmfile=None):
     service = DataService.objects.get(pk=id)
-    stagers = DataStager.objects.filter(service=service).order_by('created').reverse()
+    mfiles = MFile.objects.filter(service=service).order_by('created').reverse()
     properties = ManagementProperty.objects.filter(base=service)
     auths = DataServiceAuth.objects.filter(dataservice=id)
     roles = Role.objects.filter(auth=auths)
@@ -144,7 +128,7 @@ def render_service(request,id,form=DataStagerForm(),newstager=None):
     dict["properties"] = properties
     dict["managementpropertyform"] = managementpropertyform
     dict["service"] = service
-    dict["stagers"] = stagers
+    dict["mfiles"] = mfiles
     dict["auths"] = auths
     dict["roles"] = roles
     dict["form"] = form
@@ -152,14 +136,14 @@ def render_service(request,id,form=DataStagerForm(),newstager=None):
     dict["usagerate"] = UsageRate.objects.filter(base=service)
     dict["usagesummary"] = usage_store.service_usagesummary(service.id)
     dict["methods"] = methods
-    if newstager is not None:
-        dict["newstager"] = newstager
+    if newmfile is not None:
+        dict["newmfile"] = newmfile
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
-def render_serviceauth(request,authid,form=DataStagerForm()):
+def render_serviceauth(request,authid,form=MFileForm()):
     dsa = DataServiceAuth.objects.get(pk=authid)
     service = dsa.dataservice
-    stagers = DataStager.objects.filter(service=service)
+    mfiles = MFile.objects.filter(service=service)
     properties = ManagementProperty.objects.filter(base=service)
     #auths = DataServiceAuth.objects.filter(dataservice=id)
     sub_auths = JoinAuth.objects.filter(parent=authid)
@@ -177,7 +161,7 @@ def render_serviceauth(request,authid,form=DataStagerForm()):
     dict["properties"] = properties
     dict["managementpropertyform"] = managementpropertyform
     dict["service"] = service
-    dict["stagers"] = stagers
+    dict["mfiles"] = mfiles
     dict["auths"] = auths
     dict["roles"] = roles
     dict["jobs"] = service.job_set
@@ -188,50 +172,50 @@ def render_serviceauth(request,authid,form=DataStagerForm()):
     dict["methods"] = methods
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
-def render_stager(request,id, form=DataStagerAuthForm(), show=False):
-    stager = DataStager.objects.get(pk=id)
-    logging.info(dir(stager))
-    auths = DataStagerAuth.objects.filter(stager=id)
+def render_mfile(request,id, form=MFileAuthForm(), show=False):
+    mfile = MFile.objects.get(pk=id)
+
+    auths = MFileAuth.objects.filter(mfile=id)
     roles = Role.objects.filter(auth=auths)
     methods = []
     for role in roles:
         methods  = methods + role.methods()
-    form.fields['dsid'].initial = stager.id
+    form.fields['dsid'].initial = mfile.id
     dict = {}
 
     dict["thumburl"] = "/mservemedia/images/empty.png"
 
-    if stager.thumb == "":
+    if mfile.thumb == "":
         dict["thumburl"] = "/mservemedia/images/busy.gif"
     else:
-        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb)
+        dict["thumburl"] = "%s%s" % ("/mservethumbs/",mfile.thumb)
 
-    if not show or stager.file == '' or stager.file == None:
+    if not show or mfile.file == '' or mfile.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
         dict["thumburl"] = "/mservemedia/images/empty.png"
-        stager.file = None
+        mfile.file = None
 
     dict['verify'] = False
     if request.GET.has_key('verify') and request.GET['verify'] is not None:
-        check = utils.md5_for_file(stager.file)
+        check = utils.md5_for_file(mfile.file)
         dict['verifychecksum'] = check
-        dict['verifystate'] = (check == stager.checksum)
+        dict['verifystate'] = (check == mfile.checksum)
         dict['verify'] = True
 
-    dict["stager"] = stager
+    dict["mfile"] = mfile
     dict["fullaccess"] = True
     dict["form"] = form
     dict["auths"] = auths
-    dict["formtarget"] = "/stagerauth/"
-    dict["usage"] = Usage.objects.filter(base=stager)
-    dict["usagerate"] = UsageRate.objects.filter(base=stager)
-    dict["usagesummary"] = usage_store.stager_usagesummary(stager.id)
+    dict["formtarget"] = "/mfileauth/"
+    dict["usage"] = Usage.objects.filter(base=mfile)
+    dict["usagerate"] = UsageRate.objects.filter(base=mfile)
+    dict["usagesummary"] = usage_store.mfile_usagesummary(mfile.id)
     dict["roles"] = roles
     dict["methods"] = methods
     
-    return render_to_response('stager.html', dict, context_instance=RequestContext(request))
+    return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
 
-def render_stagerauth(request, stager, auth, show=False, dict={}):
+def render_mfileauth(request, mfile, auth, show=False, dict={}):
     sub_auths = JoinAuth.objects.filter(parent=auth.id)
     subauths = []
     for sub in sub_auths:
@@ -242,21 +226,21 @@ def render_stagerauth(request, stager, auth, show=False, dict={}):
         methods  = methods + role.methods()
     form = SubAuthForm()
     form.fields['id_parent'].initial = auth.id
-    dict["stager"] = stager
-    dict["thumburl"] = "%s%s%s" % ("/mservethumbs/",stager.file,".thumb.jpg")
+    dict["mfile"] = mfile
+    dict["thumburl"] = "%s%s%s" % ("/mservethumbs/",mfile.file,".thumb.jpg")
 
     dict["thumburl"] = "/mservemedia/images/empty.png"
 
-    if stager.thumb == "":
+    if mfile.thumb == "":
         dict["thumburl"] = "/mservemedia/images/busy.gif"
     else:
-        dict["thumburl"] = "%s%s" % ("/mservethumbs/",stager.thumb)
+        dict["thumburl"] = "%s%s" % ("/mservethumbs/",mfile.thumb)
 
-    if stager.file == '' or stager.file == None:
+    if mfile.file == '' or mfile.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
         dict["thumburl"] = "/mservemedia/images/empty.png"
     if not show:
-        stager.file = None
+        mfile.file = None
         dict["altfile"] = "/mservemedia/images/forbidden.png"
         dict["thumburl"] = "/mservemedia/images/forbidden.png"
 
@@ -265,7 +249,7 @@ def render_stagerauth(request, stager, auth, show=False, dict={}):
     dict["fullaccess"] = False
     dict["methods"] = methods
     dict["formtarget"] = "/auth/"
-    return render_to_response('stager.html', dict, context_instance=RequestContext(request))
+    return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
 
 #@staff_member_required
 def usage(request):
@@ -288,16 +272,16 @@ def viz(request):
     for hosting in hostings:
         services = DataService.objects.filter(container=hosting)
         totalservices = len(services)
-        totalstagers = 0
+        totalmfiles = 0
         totaldisc = 0.0
         for service in services:
-            stagers = DataStager.objects.filter(service=service)
-            totalstagers += len(stagers)
-            for stager in stagers:
-                if stager.file != None and stager.file != "":
-                    totaldisc    += stager.file.size
+            mfiles = MFile.objects.filter(service=service)
+            totalmfiles += len(mfiles)
+            for mfile in mfiles:
+                if mfile.file != None and mfile.file != "":
+                    totaldisc    += mfile.file.size
 
-        n = {"c":[{"v": str(hosting.name)}, {"v": totalservices}, {"v": totalstagers}, {"v": totaldisc}]}
+        n = {"c":[{"v": str(hosting.name)}, {"v": totalservices}, {"v": totalmfiles}, {"v": totaldisc}]}
         rows.append(n)
 
 
@@ -305,8 +289,8 @@ def viz(request):
         "cols":
                 [   {"id": 'container', "label": 'Container', "type": 'string'},
                     {"id": 'services', "label": 'Services', "type": 'number'},
-                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
-                    {"id": 'stagers', "disc": 'Disc', "type": 'number'}
+                    {"id": 'mfiles', "label": 'Files', "type": 'number'},
+                    {"id": 'mfiles', "disc": 'Disc', "type": 'number'}
                 ],
         "rows": [
                     {"c":[{"v": 'Work'},     {"v": 11}]},
@@ -319,7 +303,7 @@ def viz(request):
         "cols":
                 [   {"id": 'container', "label": 'Container', "type": 'string'},
                     {"id": 'services', "label": 'Services', "type": 'number'},
-                    {"id": 'stagers', "label": 'Stagers', "type": 'number'},
+                    {"id": 'mfiles', "label": 'Files', "type": 'number'},
                     {"id": 'disc', "label": 'Disc', "type": 'number'}
                 ],
         "rows": rows
@@ -359,15 +343,15 @@ def map(request):
             name  = str(service.name)
             row = Row(value=id, name=name, parent=container.id, tip=service.name)
             rows.append(row)
-            stagers = DataStager.objects.filter(service=service)
-            for stager in stagers:
-                id  = str(stager.id)
-                name  = str(stager.name)
-                row = Row( value=id, name=name, parent=service.id, tip=stager.name)
+            mfiles = MFile.objects.filter(service=service)
+            for mfile in mfiles:
+                id  = str(mfile.id)
+                name  = str(mfile.name)
+                row = Row( value=id, name=name, parent=service.id, tip=mfile.name)
                 rows.append(row)
-                stagerauths = DataStagerAuth.objects.filter(stager=stager)
-                for stagerauth in stagerauths:
-                    row = Row(name=stagerauth.authname, value=stagerauth.id, parent=stager.id, tip=stagerauth.authname)
+                mfileauths = MFileAuth.objects.filter(mfile=mfile)
+                for mfileauth in mfileauths:
+                    row = Row(name=mfileauth.authname, value=mfileauth.id, parent=mfile.id, tip=mfileauth.authname)
                     rows.append(row)
 
 
@@ -378,7 +362,7 @@ def map(request):
 
         subs = SubAuth.objects.get(id=c)
         try:
-            dsauth = DataStagerAuth.objects.get(id=p)
+            dsauth = MFileAuth.objects.get(id=p)
             id = p
             name  = str(subs.authname)
             value = str(subs.id)
@@ -421,17 +405,17 @@ def auth(request,id):
         subauths.append(subauth)
         
     try:
-        datastager_auth = DataStagerAuth.objects.get(id=id)
+        MFile_auth = MFileAuth.objects.get(id=id)
 
         form = SubAuthForm()
         dict = {}
-        dict["auth"] = datastager_auth
+        dict["auth"] = MFile_auth
         dict["form"] = form
         dict["subauths"] = subauths
 
         return render_to_response('auth.html', dict, context_instance=RequestContext(request))
     except ObjectDoesNotExist:
-        print "DataStagerAuth  doesn't exist."
+        print "MFileAuth  doesn't exist."
 
     try:
         container_auth = HostingContainerAuth.objects.get(id=id)

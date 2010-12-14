@@ -1,11 +1,5 @@
 from django import forms
-from dataservice.models import HostingContainer
-from dataservice.models import DataService
-from dataservice.models import DataStager
-from dataservice.models import DataStagerAuth
-from dataservice.models import SubAuth
-from dataservice.models import JoinAuth
-from dataservice.models import ManagementProperty
+from dataservice.models import *
 from django.forms import ModelForm
 from django.forms import MultipleChoiceField
 
@@ -31,37 +25,37 @@ class DataServiceForm(ModelForm):
         exclude=['id','status','container']
         model = DataService
 
-class DataStagerURLForm(ModelForm):
+class MFileURLForm(ModelForm):
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
-        model = DataStager
+        model = MFile
 
-class DataStagerForm(ModelForm):
+class MFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
-        model = DataStager
+        model = MFile
 
-class UpdateDataStagerForm(ModelForm):
+class UpdateMFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
-        model = DataStager
+        model = MFile
 
-class UpdateDataStagerFormURL(ModelForm):
+class UpdateMFileFormURL(ModelForm):
 
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
-        model = DataStager
+        model = MFile
 
-class DataStagerAuthForm(ModelForm):
+class MFileAuthForm(ModelForm):
     dsid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     roles = forms.CharField(max_length=200,label='Roles (comma separated)')
     class Meta:
-        exclude=['id','methods_encoded','stager']
-        model = DataStagerAuth
+        exclude=['id','methods_encoded','mfile']
+        model = MFileAuth
 
 class SubAuthForm(ModelForm):
     roles_csv = forms.CharField(max_length=200,label='Roles (comma separated)')

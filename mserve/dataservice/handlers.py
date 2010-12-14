@@ -40,7 +40,7 @@ import tempfile
 base            = "/home/"
 container_base  = "/container/"
 service_base    = "/service/"
-stager_base     = "/stager/"
+mfile_base      = "/mfile/"
 auth_base       = "/auth/"
 
 thumbsize = (210,128)
@@ -61,15 +61,15 @@ generic_methods = ["getusagesummary","getroleinfo","getmanagedresources"] + gene
 all_container_methods = ["makeserviceinstance","getservicemetadata","getdependencies",
     "getprovides","setresourcelookup", "getstatus","setmanagementproperty"] + generic_methods
 
-service_customer_methods =  ["createstager"] + generic_methods
+service_customer_methods =  ["createmfile"] + generic_methods
 service_admin_methods =  service_customer_methods + ["setmanagementproperty"]
 
 all_service_methods = [] + service_admin_methods
 
-data_stager_monitor_methods = ["getusagesummary"]
-data_stager_owner_methods = ["get", "put", "post", "delete", "verify"] + generic_methods
+mfile_monitor_methods = ["getusagesummary"]
+mfile_owner_methods = ["get", "put", "post", "delete", "verify"] + generic_methods
 
-all_stager_methods = data_stager_owner_methods + data_stager_monitor_methods
+all_mfile_methods = mfile_owner_methods + mfile_monitor_methods
 
 def gen_sec_link_orig(rel_path,prefix):
       import time, hashlib
@@ -165,56 +165,56 @@ def delete_service(request,serviceid):
     service.delete()
     logging.info("Service Deleted %s " % serviceid)
 
-def create_data_stager(request,serviceid,file):
+def create_mfile(request,serviceid,file):
     service = DataService.objects.get(id=serviceid)
     if file==None:
-        datastager = DataStager(name="Empty File",service=service)
+        mfile = MFile(name="Empty File",service=service)
     else:
-        datastager = DataStager(name=file.name,service=service,file=file)
-    datastager.save()
+        mfile = MFile(name=file.name,service=service,file=file)
+    mfile.save()
 
-    logging.debug("Stager creation started '%s' "%datastager)
-    logging.debug("Creating roles for '%s' "%datastager)
+    logging.debug("MFile creation started '%s' "%mfile)
+    logging.debug("Creating roles for '%s' "%mfile)
     
-    datastagerauth_owner = DataStagerAuth(stager=datastager,authname="owner")
-    datastagerauth_owner.save()
+    mfileauth_owner = MFileAuth(mfile=mfile,authname="owner")
+    mfileauth_owner.save()
 
     owner_role = Role(rolename="owner")
-    methods = data_stager_owner_methods
+    methods = mfile_owner_methods
     owner_role.setmethods(methods)
     owner_role.description = "Owner of the data"
     owner_role.save()
 
-    datastagerauth_owner.roles.add(owner_role)
+    mfileauth_owner.roles.add(owner_role)
 
     monitor_role = Role(rolename="monitor")
-    methods = data_stager_monitor_methods
+    methods = mfile_monitor_methods
     monitor_role.setmethods(methods)
     monitor_role.description = "Collect usage reports"
     monitor_role.save()
 
-    datastagerauth_owner.roles.add(monitor_role)
+    mfileauth_owner.roles.add(monitor_role)
 
-    datastagerauth_monitor = DataStagerAuth(stager=datastager,authname="monitor")
-    datastagerauth_monitor.save()
+    mfileauth_monitor = MFileAuth(mfile=mfile,authname="monitor")
+    mfileauth_monitor.save()
 
-    datastagerauth_monitor.roles.add(monitor_role)
+    mfileauth_monitor.roles.add(monitor_role)
 
-    if datastager.file:
+    if mfile.file:
         # MIME type
         m = magic.open(magic.MAGIC_MIME)
         m.load()
-        mimetype = m.file(datastager.file.path)
-        datastager.mimetype = mimetype
+        mimetype = m.file(mfile.file.path)
+        mfile.mimetype = mimetype
         # checksum
-        datastager.checksum = utils.md5_for_file(datastager.file)
+        mfile.checksum = utils.md5_for_file(mfile.file)
         # record size
-        datastager.size = file.size
+        mfile.size = file.size
         # save it
-        datastager.save()
+        mfile.save()
 
-        thumbpath = os.path.join( str(datastager.file) + ".thumb.jpg")
-        posterpath = os.path.join( str(datastager.file) + ".poster.jpg")
+        thumbpath = os.path.join( str(mfile.file) + ".thumb.jpg")
+        posterpath = os.path.join( str(mfile.file) + ".poster.jpg")
         fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
         fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
         (thumbhead,tail) = os.path.split(fullthumbpath)
@@ -236,65 +236,64 @@ def create_data_stager(request,serviceid,file):
         if mimetype.startswith('video'):
 
             if use_celery:
-                thumbtask = thumbvideo.delay(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+                thumbtask = thumbvideo.delay(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
             else:
-                thumbtask = thumbvideo(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
-            datastager.thumb = thumbpath
+                thumbtask = thumbvideo(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+            mfile.thumb = thumbpath
             if use_celery:
-                postertask = thumbvideo.delay(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+                postertask = thumbvideo.delay(mfile.file.path,fullposterpath,postersize[0],postersize[1])
             else:
-                postertask = thumbvideo(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+                postertask = thumbvideo(mfile.file.path,fullposterpath,postersize[0],postersize[1])
 
-            datastager.poster = posterpath
+            mfile.poster = posterpath
 
         elif mimetype.startswith('image'):
-            logging.info("Creating thumb inprocess for Image '%s' %s " % (datastager,mimetype))
+            logging.info("Creating thumb inprocess for Image '%s' %s " % (mfile,mimetype))
             if use_celery:
-                thumbtask = thumbimage.delay(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+                thumbtask = thumbimage.delay(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
             else:
-                thumbtask = thumbimage(datastager.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
+                thumbtask = thumbimage(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
 
-            datastager.thumb = thumbpath
+            mfile.thumb = thumbpath
             if use_celery:
-                postertask = thumbimage.delay(datastager.file.path,fullposterpath,postersize[0],postersize[1])
+                postertask = thumbimage.delay(mfile.file.path,fullposterpath,postersize[0],postersize[1])
             else:
-                postertask = thumbimage(datastager.file.path,fullposterpath,postersize[0],postersize[1])
-            datastager.poster = posterpath
+                postertask = thumbimage(mfile.file.path,fullposterpath,postersize[0],postersize[1])
+            mfile.poster = posterpath
         else:
-            logging.info("Not creating thumb for '%s' %s " % (datastager,mimetype))
+            logging.info("Not creating thumb for '%s' %s " % (mfile,mimetype))
 
-        datastager.save()
+        mfile.save()
+        usage_store.startrecording(mfile.id,usage_store.metric_mfile,1)
+        usage_store.startrecording(mfile.id,usage_store.metric_archived,1)
+        usage_store.record(mfile.id,usage_store.metric_disc,mfile.size)
+        usage_store.record(mfile.id,usage_store.metric_ingest,mfile.size)
 
-    logging.debug("Backing up '%s' "%datastager)
+
+    logging.debug("Backing up '%s' "%mfile)
 
     if file is not None:
-        backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
+        backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
         backup.save()
 
-    usage_store.startrecording(datastager.id,usage_store.metric_stager,1)
-    usage_store.startrecording(datastager.id,usage_store.metric_archived,1)
+    return mfile
 
-    if file is not None:
-        usage_store.record(datastager.id,usage_store.metric_disc,datastager.size)
-        usage_store.record(datastager.id,usage_store.metric_ingest,datastager.size)
+def delete_mfile(request,mfileid):
+    mfile = MFile.objects.get(id=mfileid)
+    if mfile.file == None:
+        usage_store.stoprecording(mfileid,usage_store.metric_mfile)
+        usage_store.stoprecording(mfileid,usage_store.metric_archived)
+    logging.info("Deleteing mfile %s %s" % (mfile.name,mfileid))
 
-    return datastager
-
-def delete_stager(request,stagerid):
-    usage_store.stoprecording(stagerid,usage_store.metric_stager)
-    usage_store.stoprecording(stagerid,usage_store.metric_archived)
-    stager = DataStager.objects.get(id=stagerid)
-    logging.info("Deleteing stager %s %s" % (stager.name,stagerid))
-
-    usages = Usage.objects.filter(base=stager)
-    logging.info("Deleteing stager usage")
+    usages = Usage.objects.filter(base=mfile)
+    logging.info("Deleteing mfile usage")
     for usage in usages:
         logging.info("Saving Usage %s " % usage)
-        usage.base = stager.service
+        usage.base = mfile.service
         usage.save()
 
-    stager.delete()
-    logging.info("Stager Deleted %s " % stagerid)
+    mfile.delete()
+    logging.info("MFile Deleted %s " % mfileid)
 
 class GlobalHandler(BaseHandler):
      allowed_methods = ('GET')
@@ -315,7 +314,9 @@ class HostingContainerHandler(BaseHandler):
     def delete(self, request, containerid):
         logging.info("Deleting Container %s " % containerid)
         delete_container(request,containerid)
-
+        r = rc.DELETED
+        return r
+    
     def read(self, request, containerid):
         container = HostingContainer.objects.get(id=containerid)
         if request.META["HTTP_ACCEPT"] == "application/json":
@@ -338,7 +339,7 @@ class HostingContainerHandler(BaseHandler):
             return views.home(request,form=form)
             if reqjson:
                 r = rc.BAD_REQUEST
-                resp.write("Invalid Request!")
+                r.write("Invalid Request!")
                 return r
             if request.META.has_key("HTTP_REFERER"):
                 return HttpResponseRedirect(request.META["HTTP_REFERER"])
@@ -355,6 +356,8 @@ class DataServiceHandler(BaseHandler):
     def delete(self, request, serviceid):
         logging.info("Deleting Service %s " % serviceid)
         delete_service(request,serviceid)
+        r = rc.DELETED
+        return r
     
     def read(self, request, serviceid):
         service = DataService.objects.get(id=serviceid)
@@ -416,26 +419,26 @@ class ThumbHandler(BaseHandler):
         if request.FILES.has_key('file'):
             file = request.FILES['file']
             logging.info("file %s"%file)
-            if request.POST.has_key('stagerid'):
-                stagerid = request.POST['stagerid']
-                logging.info("stagerid %s"%stagerid)
-                stager = DataStager.objects.get(id=stagerid)
-                if stager == None:
-                    logging.info("No such stager %s"%stagerid)
+            if request.POST.has_key('mfileid'):
+                mfileid = request.POST['mfileid']
+                logging.info("mfileid %s"%mfileid)
+                mfile = MFile.objects.get(id=mfileid)
+                if mfile == None:
+                    logging.info("No such mfile %s"%mfileid)
                     r = rc.BAD_REQUEST
                     r.write("Invalid Request!")
                     return r
 
                 try:
-                    thumb = stager.thumb
-                    logging.info("Deleting existing thumb for stager %s"%stager)
-                    stager.thumb.delete()
+                    thumb = mfile.thumb
+                    logging.info("Deleting existing thumb for mfile %s"%mfile)
+                    mfile.thumb.delete()
                 except ObjectDoesNotExist:
                     pass
 
-                logging.info("Updating thumb for stager %s"%stager)
+                logging.info("Updating thumb for mfile %s"%mfile)
 
-                thumb = Thumb(stager=stager,file=file)
+                thumb = Thumb(mfile=mfile,file=file)
                 thumb.file = file
                 thumb.save()
                 logging.info("Updated %s"%thumb)
@@ -453,48 +456,50 @@ class ThumbHandler(BaseHandler):
 class CorruptionHandler(BaseHandler):
     allowed_methods = ('PUT')
 
-    def update(self, request, stagerid, backup=False):
-        stager = DataStager.objects.get(pk=stagerid)
+    def update(self, request, mfileid, backup=False):
+        mfile = MFile.objects.get(pk=mfileid)
         if not backup:
-            stager = DataStager.objects.get(pk=stagerid)
-            logging.info("Attempting to corrupt file '%s' " % (stager))
-            f = open(stager.file.path,'wb')
+            mfile = MFile.objects.get(pk=mfileid)
+            logging.info("Attempting to corrupt file '%s' " % (mfile))
+            f = open(mfile.file.path,'wb')
             f.writelines(["corruption"])
         else:
-            logging.info("Attempting to corrupt backup file for file'%s'" % (stager))
-            backup = BackupFile.objects.get(stager=stager)
+            logging.info("Attempting to corrupt backup file for file'%s'" % (mfile))
+            backup = BackupFile.objects.get(mfile=mfile)
             f = open(backup.file.path,'wb')
             f.writelines(["corruption"])
         
-        return stager
+        return mfile
 
-class DataStagerJSONHandler(BaseHandler):
+class MFileJSONHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
-    model = DataStager
-    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated', 'jobstager_set' )
+    model = MFile
+    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated', 'jobmfile_set' )
     exclude = ('pk')
 
-class DataStagerHandler(BaseHandler):
+class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
-    #model = DataStager
+    #model = MFile
     #fields = ('name', 'id', 'file','checksum', ('thumb', ('id','name','file') ) )
     #exclude = ('pk')
 
-    def delete(self, request, stagerid):
-        logging.info("Deleting Stager %s " % stagerid)
-        delete_stager(request,stagerid)
+    def delete(self, request, mfileid):
+        logging.info("Deleting mfile %s " % mfileid)
+        delete_mfile(request,mfileid)
+        r = rc.DELETED
+        return r
 
-    def read(self, request, stagerid):
+    def read(self, request, mfileid):
         try:
-            stager = DataStager.objects.get(pk=stagerid)
-            base = NamedBase.objects.get(pk=stagerid)
+            mfile = MFile.objects.get(pk=mfileid)
+            base = NamedBase.objects.get(pk=mfileid)
 
             if re.match("application/json", request.META["HTTP_ACCEPT"]):
             #if request.META["HTTP_ACCEPT"].contains("application/json"):
-                return stager
-            return views.render_stager(request,stager.id,show=True)
+                return mfile
+            return views.render_mfile(request,mfile.id,show=True)
         except ObjectDoesNotExist:
-            error = "The file with the id %s does not exist "%stagerid
+            error = "The file with the id %s does not exist "%mfileid
             if re.match("application/json", request.META["HTTP_ACCEPT"]):
                 r = rc.NOT_FOUND
                 r.write(error)
@@ -502,34 +507,34 @@ class DataStagerHandler(BaseHandler):
             return views.render_error(request,error)
 
     def update(self, request):
-        form = UpdateDataStagerForm(request.POST,request.FILES)
+        form = UpdateMFileForm(request.POST,request.FILES)
         if form.is_valid(): 
             
             file = request.FILES['file']
-            stagerid = form.cleaned_data['sid']
+            mfileid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
-            datastager = DataStager.objects.get(pk=stagerid)
-            datastager.file = file
-            datastager.size = file.size
+            mfile = MFile.objects.get(pk=mfileid)
+            mfile.file = file
+            mfile.size = file.size
 
-            backup = BackupFile(name="backup_%s"%file.name,stager=datastager,mimetype=datastager.mimetype,checksum=datastager.checksum,file=file)
+            backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
             backup.save()
 
-            usage_store.startrecording(stagerid,usage_store.metric_disc,datastager.size)
-            usage_store.startrecording(stagerid,usage_store.metric_archived,datastager.size)
+            usage_store.startrecording(mfileid,usage_store.metric_disc,mfile.size)
+            usage_store.startrecording(mfileid,usage_store.metric_archived,mfile.size)
 
-            datastager.save()
+            mfile.save()
 
             if request.META["HTTP_ACCEPT"] == "application/json":
-                return datastager
+                return mfile
 
-            return redirect('/stager/'+str(datastager.id)+"/")
+            return redirect('/mfile/'+str(mfile.id)+"/")
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
             return r
         
-    def render_subauth(self, stager, auth, show=False):
+    def render_subauth(self, mfile, auth, show=False):
         sub_auths = JoinAuth.objects.filter(parent=auth.id)
         subauths = []
         for sub in sub_auths:
@@ -539,23 +544,21 @@ class DataStagerHandler(BaseHandler):
         form = SubAuthForm()
         form.fields['id_parent'].initial = auth.id
         dict = {}
-        dict["stager"] = stager
-        if stager.file == '' or stager.file == None:
+        dict["mfile"] = mfile
+        if mfile.file == '' or mfile.file == None:
             dict["altfile"] = "/mservemedia/images/empty.png"
         if not show:
-            stager.file = None
+            mfile.file = None
             dict["altfile"] = "/mservemedia/images/forbidden.png"
     
         dict["form"] = form
         dict["auths"] = subauths
         dict["formtarget"] = "/auth/"
-        return render_to_response('stager.html', dict)
+        return render_to_response('mfile.html', dict)
 
     def create(self, request):
-        logging.info(request)
-        logging.info(request.FILES)
         reqjson=(request.META["HTTP_ACCEPT"] == "application/json")
-        form = DataStagerForm(request.POST,request.FILES) 
+        form = MFileForm(request.POST,request.FILES)
         if form.is_valid(): 
             
             if request.FILES.has_key('file'):
@@ -564,19 +567,19 @@ class DataStagerHandler(BaseHandler):
                 file = None
             serviceid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
-            datastager = create_data_stager(request, serviceid, file)
+            mfile = create_mfile(request, serviceid, file)
 
             if reqjson:
-                return datastager
+                return mfile
 
-            return redirect('/stager/'+str(datastager.id)+"/")
-            #return views.render_service(request,serviceid,newstager=datastager.id)
+            return redirect('/mfile/'+str(mfile.id)+"/")
+            #return views.render_service(request,serviceid,newmfile=MFile.id)
         else:
             if reqjson:
                 r = rc.BAD_REQUEST
                 r.write("Invalid Request!")
                 return r
-                #return views.render_stager(request,stager.id)
+                #return views.render_mfile(request,mfile.id)
             r = rc.BAD_REQUEST
             r.write("%s"%form)
             return r
@@ -609,18 +612,18 @@ class JobServiceHandler(BaseHandler):
 
         return HttpResponse(arr,mimetype="application/json")
 
-class JobStagerHandler(BaseHandler):
-    model = JobStager
+class JobMFileHandler(BaseHandler):
+    model = JobMFile
     allowed_methods = ('GET','POST','DELETE')
     fields = ('id','name','created','taskset_id')
 
-    def read(self, request, stagerid):
-        stager = DataStager.objects.get(pk=stagerid)
-        jobstagers = JobStager.objects.filter(stager=stager)
+    def read(self, request, mfileid):
+        mfile = MFile.objects.get(pk=mfileid)
+        jobmfiles = Jobmfile.objects.filter(mfile=mfile)
 
         arr = []
-        for jobstager in jobstagers:
-            tsr = TaskSetResult.restore(jobstager.job.taskset_id)
+        for jobmfile in jobmfiles:
+            tsr = TaskSetResult.restore(jobmfile.job.taskset_id)
             dict = {}
             dict["taskset_id"] = tsr.taskset_id
             # Dont return results until job in complete
@@ -634,7 +637,7 @@ class JobStagerHandler(BaseHandler):
             dict["successful"] = tsr.successful()
             dict["total"] = tsr.total
             dict["waiting"] = tsr.waiting()
-            dict["job"] = jobstager.job
+            dict["job"] = jobmfile.job
 
             arr.append(dict)
 
@@ -648,6 +651,8 @@ class JobHandler(BaseHandler):
     def delete(self, request, id):
         job = Job.objects.get(id=id)
         job.delete()
+        r = rc.DELETED
+        return r
     
     def read(self, request, id):
         job = Job.objects.get(id=id)
@@ -671,10 +676,10 @@ class JobHandler(BaseHandler):
 class RenderResultsHandler(BaseHandler):
     allowed_methods = ('GET','POST')
 
-    def read(self, request, stagerid):
-        stager = DataStager.objects.get(pk=stagerid)
-        folder = os.path.join(os.path.dirname(stager.file.path),"render")
-        urlfolder = os.path.join(os.path.dirname(str(stager.file)),"render")
+    def read(self, request, mfileid):
+        mfile = MFile.objects.get(pk=mfileid)
+        folder = os.path.join(os.path.dirname(mfile.file.path),"render")
+        urlfolder = os.path.join(os.path.dirname(str(mfile.file)),"render")
         files = []
         if os.path.exists(folder):
             for f in os.listdir(folder):
@@ -709,25 +714,25 @@ class RenderHandler(BaseHandler):
         return HttpResponse(JSON_dump(dict),mimetype="application/json")
         #return djcelery.views.task_status(request, taskid)
 
-    def create(self,request,stagerid):
-        stager = DataStager.objects.get(pk=stagerid)
+    def create(self,request,mfileid):
+        mfile = MFile.objects.get(pk=mfileid)
         tasks = []
-        folder = os.path.join(os.path.dirname(stager.file.path),"render")
+        folder = os.path.join(os.path.dirname(mfile.file.path),"render")
         if not os.path.exists(folder):
             os.makedirs(folder)
         for i in range(1,100):
-            t = render_blender.subtask([stager.file.path,i,i,folder],callback=thumbimage)
+            t = render_blender.subtask([mfile.file.path,i,i,folder],callback=thumbimage)
             tasks.append(t)
         
         ts = TaskSet(tasks=tasks)
         tsr = ts.apply_async()
         tsr.save()
 
-        job = Job(name="Render",service=stager.service,taskset_id=tsr.taskset_id)
+        job = Job(name="Render",service=mfile.service,taskset_id=tsr.taskset_id)
         job.save()
 
-        jobstager = JobStager(stager=stager,job=job,index=0)
-        jobstager.save()
+        jobmfile = Jobmfile(mfile=mfile,job=job,index=0)
+        jobmfile.save()
         dict = {}
         dict["taskset_id"] = tsr.taskset_id
         dict["job"] = job
@@ -746,20 +751,20 @@ class RenderHandler(BaseHandler):
 
 
         
-        service = stager.service
+        service = mfile.service
         job = Job(name="Render",service=service)
         job.save()
-        js = JobStager(job=job,stager=stager,index=0)
+        js = Jobmfile(job=job,mfile=mfile,index=0)
         js.save()
 
-        folder = os.path.join(os.path.dirname(stager.file.path),"render")
+        folder = os.path.join(os.path.dirname(mfile.file.path),"render")
         if not os.path.exists(folder):
             os.makedirs(folder)
         dict = {}
         tasks = []
 
         for x in range(1,100):
-            t = render_blender.delay(stager.file.path,x,x,folder,callback=thumbimage)
+            t = render_blender.delay(mfile.file.path,x,x,folder,callback=thumbimage)
             jobtask = JobTask(job=job,task=t.task_id)
             jobtask.save()
             logging.info(dir(t))
@@ -768,61 +773,61 @@ class RenderHandler(BaseHandler):
         dict["n"] = len(tasks)
         return dict
 
-class DataStagerVerifyHandler(BaseHandler):
+class MFileVerifyHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self, request, stagerid):
-        datastager = DataStager.objects.get(pk=stagerid)
-        md5 = utils.md5_for_file(datastager.file)
+    def read(self, request, mfileid):
+        mfile = MFile.objects.get(pk=mfileid)
+        md5 = utils.md5_for_file(mfile.file)
 
         dict= {}
-        dict["stager"] = datastager
+        dict["mfile"] = mfile
         dict["md5"] = md5
         
         return dict
 
-class DataStagerContentsHandler(BaseHandler):
+class MFileContentsHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self, request, stagerid):
-        datastager = DataStager.objects.get(pk=stagerid)
-        service = datastager.service
+    def read(self, request, mfileid):
+        mfile = MFile.objects.get(pk=mfileid)
+        service = mfile.service
         container = service.container
-        logging.info("Finding limit for %s " % (datastager.name))
+        logging.info("Finding limit for %s " % (mfile.name))
         accessspeed = DEFAULT_ACCESS_SPEED
         try:
             prop = ManagementProperty.objects.get(base=service,property="accessspeed")
             accessspeed = prop.value
-            logging.info("Limit set from service property to %s for %s " % (accessspeed,datastager.name))
+            logging.info("Limit set from service property to %s for %s " % (accessspeed,mfile.name))
         except ObjectDoesNotExist:
             try:
                 prop = ManagementProperty.objects.get(base=container,property="accessspeed")
                 accessspeed = prop.value
-                logging.info("Limit set from container property to %s for %s " % (accessspeed,datastager.name))
+                logging.info("Limit set from container property to %s for %s " % (accessspeed,mfile.name))
             except ObjectDoesNotExist:
                 pass
 
         dlfoldername = "dl%s"%accessspeed
 
-        check1 = datastager.checksum
-        check2 = utils.md5_for_file(datastager.file)
+        check1 = mfile.checksum
+        check2 = utils.md5_for_file(mfile.file)
 
-        file=datastager.file
+        file=mfile.file
 
         if(check1==check2):
-            logging.info("Verification of %s on read ok" % datastager)
+            logging.info("Verification of %s on read ok" % mfile)
         else:
-            logging.info("Verification of %s on read FAILED" % datastager)
-            usage_store.record(datastager.id,usage_store.metric_corruption,1)
-            backup = BackupFile.objects.get(stager=datastager)
-            check3 = datastager.checksum
+            logging.info("Verification of %s on read FAILED" % mfile)
+            usage_store.record(mfile.id,usage_store.metric_corruption,1)
+            backup = BackupFile.objects.get(mfile=mfile)
+            check3 = mfile.checksum
             check4 = utils.md5_for_file(backup.file)
             if(check3==check4):
-                shutil.copy(backup.file.path, datastager.file.path)
+                shutil.copy(backup.file.path, mfile.file.path)
                 file = backup.file
             else:
-                logging.info("The file %s has been lost" % datastager)
-                usage_store.record(datastager.id,usage_store.metric_dataloss,datastager.size)
+                logging.info("The file %s has been lost" % mfile)
+                usage_store.record(mfile.id,usage_store.metric_dataloss,mfile.size)
                 return rc.NOT_HERE
 
         p = str(file)
@@ -834,46 +839,46 @@ class DataStagerContentsHandler(BaseHandler):
 
         fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
         fullfilepathfolder = os.path.dirname(fullfilepath)
-        datastagerfilepath = file.path
+        mfilefilepath = file.path
 
         logging.info("Redirect URL      = %s " % redirecturl)
         logging.info("fullfilepath      = %s " % fullfilepath)
         logging.info("fullfilefolder    = %s " % fullfilepathfolder)
-        logging.info("datastagerfp      = %s " % datastagerfilepath)
-        logging.info("datastagerf       = %s " % file)
+        logging.info("mfilefp      = %s " % mfilefilepath)
+        logging.info("mfilef       = %s " % file)
 
         if not os.path.exists(fullfilepathfolder):
             os.makedirs(fullfilepathfolder)
 
         if not os.path.exists(fullfilepath):
-            os.link(datastagerfilepath,fullfilepath)
+            os.link(mfilefilepath,fullfilepath)
 
-        usage_store.record(datastager.id,usage_store.metric_access,datastager.size)
+        usage_store.record(mfile.id,usage_store.metric_access,mfile.size)
 
         return redirect("/%s"%redirecturl)
 
 
-class DataStagerURLHandler(BaseHandler):
+class MFileURLHandler(BaseHandler):
     
-    def update(self, request, stagerid):
-        form = UpdateDataStagerFormURL(request.POST,request.FILES) 
+    def update(self, request, mfileid):
+        form = UpdateMFileFormURL(request.POST,request.FILES)
         if form.is_valid(): 
             
             file = request.FILES['file']
-            datastager = DataStager.objects.get(pk=stagerid)
-            datastager.file = file
-            datastager.name = file.name
-            datastager.size = file.size
-            datastager.save()
+            mfile = MFile.objects.get(pk=mfileid)
+            mfile.file = file
+            mfile.name = file.name
+            mfile.size = file.size
+            mfile.save()
 
             if request.META["HTTP_ACCEPT"] == "application/json":
-                return datastager
+                return mfile
 
-            return redirect('/stager/'+str(datastager.id)+"/")
+            return redirect('/mfile/'+str(mfile.id)+"/")
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
-            logging.info("DataStagerURLHandler %s "%form)
+            logging.info("MFileURLHandler %s "%form)
             return r
 
     def create(self, request, serviceid):
@@ -885,24 +890,24 @@ class DataStagerURLHandler(BaseHandler):
 
             upload = SimpleUploadedFile( filename, request.raw_post_data )
 
-            datastager = create_data_stager(request, serviceid, upload)
+            mfile = create_mfile(request, serviceid, upload)
 
-            logging.info(datastager)
+            logging.info(mfile)
 
-            return datastager
+            return mfile
 
         #logging.info(dir(request))
-        form = DataStagerURLForm(request.POST,request.FILES) 
+        form = MFileURLForm(request.POST,request.FILES)
         if form.is_valid(): 
 
             logging.debug("Handler Files %s" %request.FILES)
 
             file = request.FILES['file']
-            datastager = create_data_stager(request, serviceid, file)
+            mfile = create_mfile(request, serviceid, file)
 
             logging.info(request.FILES)
 
-            return datastager
+            return mfile
 
         else:
             logging.info(form)
@@ -943,7 +948,7 @@ class ManagedResourcesContainerHandler(BaseHandler):
 class ManagedResourcesServiceHandler(BaseHandler):
     allowed_methods = ('GET')
     model = ServiceResourcesReport
-    fields = ('stagers','meta','base','reportnum')
+    fields = ('mfiles','meta','base','reportnum')
 
 
     def read(self, request, serviceid, last_known=-1):
@@ -955,19 +960,19 @@ class ManagedResourcesServiceHandler(BaseHandler):
 
         if last is not -1:
             while last == report.reportnum:
-                logging.info("Waiting for new stagers lastreport=%s" % (last))
+                logging.info("Waiting for new mfiles lastreport=%s" % (last))
                 time.sleep(sleeptime)
                 report = ServiceResourcesReport.objects.get(base=service)
         
-        stagers = DataStager.objects.filter(service=service)
-        report.stagers = stagers
+        mfiles = MFile.objects.filter(service=service)
+        report.mfiles = mfiles
         report.save()
         return report
 
-class ManagedResourcesStagerHandler(BaseHandler):
+class ManagedResourcesmfileHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self, request, stagerid, last_known=-1):
+    def read(self, request, mfileid, last_known=-1):
         return {}
 
 class AggregateUsageRateHandler(BaseHandler):
@@ -994,7 +999,7 @@ class RoleHandler(BaseHandler):
             logging.info(a)
             logging.info(dir(a))
 
-        allowed_methods = all_container_methods + all_service_methods + all_stager_methods
+        allowed_methods = all_container_methods + all_service_methods + all_mfile_methods
 
         # TODO: Should we check each type of authority this role could be under?
         #if hasattr(role.auth,"hostingcontainerauth"):
@@ -1003,8 +1008,8 @@ class RoleHandler(BaseHandler):
         #if hasattr(role.auth,"dataserviceauth"):
         #    allowed_methods = all_service_methods
 
-        #if hasattr(role.auth,"datastagerauth"):
-        #    allowed_methods = all_stager_methods
+        #if hasattr(role.auth,"MFileauth"):
+        #    allowed_methods = all_mfile_methods
 
         if not set(newmethods).issubset(set(allowed_methods)):
             return HttpResponseBadRequest("The methods '%s' are not allowed. Allowed Methods '%s' " % (newmethods, allowed_methods))
@@ -1068,9 +1073,9 @@ class AccessControlHandler(BaseHandler):
                 dsa.roles = roles
                 return dsa
 
-            if utils.is_stager(base):
-                stager = DataStager.objects.get(pk=pk)
-                dsa,created  = DataStagerAuth.objects.get_or_create(stager=stager,authname=name)
+            if utils.is_mfile(base):
+                mfile = MFile.objects.get(pk=pk)
+                dsa,created  = MFileAuth.objects.get_or_create(mfile=mfile,authname=name)
                 logging.info("%s %s " % (created,method))
                 if not created and method == "addauth":
                     return rc.DUPLICATE_ENTRY
@@ -1114,12 +1119,12 @@ class AccessControlHandler(BaseHandler):
                 if roles in all_container_methods:
                     role.setmethods(roles)
                     role.save()
-            if utils.is_stagerauth(auth):
+            if utils.is_mfileauth(auth):
                 if roles in all_service_methods:
                     role.setmethods(roles)
                     role.save()
-            if utils.is_stagerauth(auth):
-                if roles in all_stager_methods:
+            if utils.is_mfileauth(auth):
+                if roles in all_mfile_methods:
                     role.setmethods(roles)
                     role.save()
 
@@ -1142,15 +1147,15 @@ class AccessControlHandler(BaseHandler):
                 if utils.is_service(base):
                     return DataServiceAuth.objects.filter(dataservice=base)
 
-                if utils.is_stager(base):
-                    return DataStagerAuth.objects.filter(stager=base)
+                if utils.is_mfile(base):
+                    return MFileAuth.objects.filter(mfile=base)
             except ObjectDoesNotExist:
                 pass
 
             auth = Auth.objects.get(pk=pk)
             if utils.is_containerauth(auth) \
                 or utils.is_serviceauth(auth) \
-                    or utils.is_stagerauth(auth):
+                    or utils.is_mfileauth(auth):
                         joins = JoinAuth.objects.filter(parent=auth.id)
                         return SubAuth.objects.filter(pk=joins)
 
@@ -1203,15 +1208,15 @@ class ServiceAccessControlHandler(BaseHandler):
         dict["roles"] = roles
         return dict
 
-class StagerAccessControlHandler(BaseHandler):
+class MFileAccessControlHandler(BaseHandler):
     allowed_methods = ('GET',)
 
     def read(self,request, baseid):
-        stager = DataStager.objects.get(pk=baseid)
-        stagerauths = DataStagerAuth.objects.filter(stager=stager)
+        mfile = MFile.objects.get(pk=baseid)
+        mfileauths = MFileAuth.objects.filter(mfile=mfile)
         roles = []
-        for stagerauth in stagerauths:
-            for role in stagerauth.roles.all():
+        for mfileauth in mfileauths:
+            for role in mfileauth.roles.all():
                 roles.append(role)
 
         dict = {}
@@ -1247,11 +1252,11 @@ class RoleInfoHandler(BaseHandler):
             dict["roles"] = set(roles)
             return dict
 
-        if utils.is_stager(base):
-            stagerauths = DataStagerAuth.objects.filter(stager=base)
+        if utils.is_mfile(base):
+            mfileauths = MFileAuth.objects.filter(mfile=base)
             roles = []
-            for stagerauth in stagerauths:
-                for a in stagerauth.roles.all():
+            for mfileauth in mfileauths:
+                for a in mfileauth.roles.all():
                     roles.append(a)
 
             dict = {}
@@ -1294,9 +1299,9 @@ class UsageSummaryHandler(BaseHandler):
             inprogress = usage_store.service_inprogresssummary(baseid)
             summarys = usage_store.service_usagesummary(baseid)
 
-        if utils.is_stager(base):
-            inprogress = usage_store.stager_inprogresssummary(baseid)
-            summarys = usage_store.stager_usagesummary(baseid)
+        if utils.is_mfile(base):
+            inprogress = usage_store.mfile_inprogresssummary(baseid)
+            summarys = usage_store.mfile_usagesummary(baseid)
 
         for summary in summarys:
             summary.save()
@@ -1351,31 +1356,31 @@ class ManagementPropertyHandler(BaseHandler):
             logging.info("Bad Form %s " % form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
-class DataStagerAuthHandler(BaseHandler):
+class MFileAuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
-    model = DataStagerAuth
+    model = MFileAuth
 
-    def read(self, request, stagerauthid):
+    def read(self, request, mfileauthid):
 
-        sub_auths = JoinAuth.objects.filter(parent=stagerauthid)
+        sub_auths = JoinAuth.objects.filter(parent=mfileauthid)
         subauths = []
         for sub in sub_auths:
             subauth = SubAuth.objects.get(id=sub.child)
             subauths.append(subauth)
 
         try:
-            datastager_auth = DataStagerAuth.objects.get(id=stagerauthid)
+            MFile_auth = MFileAuth.objects.get(id=mfileauthid)
 
             form = SubAuthForm()
-            form.fields['parent'].initial = stagerauthid
+            form.fields['parent'].initial = mfileauthid
             dict = {}
-            dict["auth"] = datastager_auth
+            dict["auth"] = MFile_auth
             dict["form"] = form
             dict["subauths"] = subauths
 
             return render_to_response('auth.html', dict)
         except ObjectDoesNotExist:
-            logging.info("DataStagerAuth  doesn't exist.")
+            logging.info("MFileAuth  doesn't exist.")
 
         try:
             container_auth = HostingContainerAuth.objects.get(id=id)
@@ -1412,17 +1417,17 @@ class DataStagerAuthHandler(BaseHandler):
         return render_to_response('error.html', dict)
     
     def create(self, request):
-        form = DataStagerAuthForm(request.POST) 
+        form = MFileAuthForm(request.POST)
         if form.is_valid(): 
             authname = form.cleaned_data['authname']
             roles_csv = form.cleaned_data['roles']
-            stagerid = form.cleaned_data['dsid']
-            stager = DataStager.objects.get(pk=stagerid)
+            mfileid = form.cleaned_data['dsid']
+            mfile = MFile.objects.get(pk=mfileid)
 
-            datastagerauth = DataStagerAuth(stager=stager,authname=authname)
-            datastagerauth.save()
+            MFileauth = MFileAuth(mfile=mfile,authname=authname)
+            MFileauth.save()
 
-            auths = DataStagerAuth.objects.filter(stager=stager)
+            auths = MFileAuth.objects.filter(mfile=mfile)
 
             rolenames = roles_csv.split(',')
             existingroles = rolenames
@@ -1432,16 +1437,16 @@ class DataStagerAuthHandler(BaseHandler):
                 for role in roles:
                     if role.rolename in rolenames:
                         existingroles.remove(role.rolename)
-                        datastagerauth.roles.add(role)
+                        MFileauth.roles.add(role)
 
             if len(existingroles) != 0:
-                datastagerauth.delete()
+                MFileauth.delete()
                 return HttpResponseBadRequest("Could not add %s " % ','.join(existingroles))
 
             if request.META["HTTP_ACCEPT"] == "application/json":
-                return datastagerauth
+                return MFileauth
 
-            return redirect('/stager/%s/' % str(stager.id))
+            return redirect('/mfile/%s/' % str(mfile.id))
         else:
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
@@ -1481,13 +1486,13 @@ class AuthHandler(BaseHandler):
         service auth.
         '''
         auth = Auth.objects.get(id=id)
-        if utils.is_stagerauth(auth):
-            stagerauth = DataStagerAuth.objects.get(id=id)
-            methods = get_auth_methods(stagerauth)
+        if utils.is_mfileauth(auth):
+            mfileauth = MFileAuth.objects.get(id=id)
+            methods = get_auth_methods(mfileauth)
             if 'get' in methods:
-                return views.render_stagerauth(request, stagerauth.stager, stagerauth, show=True)
+                return views.render_mfileauth(request, mfileauth.mfile, mfileauth, show=True)
             else:
-                return views.render_stagerauth(request, stagerauth.stager, stagerauth, show=False)
+                return views.render_mfileauth(request, mfileauth.mfile, mfileauth, show=False)
 
 
         if utils.is_serviceauth(auth):
@@ -1498,7 +1503,7 @@ class AuthHandler(BaseHandler):
             hca = HostingContainerAuth.objects.get(pk=auth.id)
             return views.render_containerauth(request,hca.id)
 
-        dsAuth, methods_intersection = find_datastager_auth(id)
+        dsAuth, methods_intersection = find_MFile_auth(id)
                 
         if dsAuth is None:
             return HttpResponseBadRequest("No Interface for %s " % (id))
@@ -1508,12 +1513,12 @@ class AuthHandler(BaseHandler):
 
         dict = {}
         dict['actions'] = methods
-        dict['actionprefix'] = "stagerapi"
+        dict['actionprefix'] = "mfileapi"
         dict['authapi'] = id
         if 'get' in methods:
-            return views.render_stagerauth(request, dsAuth.stager, auth, show=True, dict=dict)
+            return views.render_mfileauth(request, dsAuth.mfile, auth, show=True, dict=dict)
         else:
-            return views.render_stagerauth(request, dsAuth.stager, auth, show=False, dict=dict)
+            return views.render_mfileauth(request, dsAuth.mfile, auth, show=False, dict=dict)
 
 def get_auth_methods(auth):
     methods = []
@@ -1521,7 +1526,7 @@ def get_auth_methods(auth):
         methods = methods + role.methods()
     return list(set(methods))
 
-def find_datastager_auth(parent):
+def find_MFile_auth(parent):
     dsAuth = None
     methods_intersection = None
     all_methods = set()
@@ -1540,12 +1545,12 @@ def find_datastager_auth(parent):
             except ObjectDoesNotExist:
                 pass
             try:
-                datastagerauth = DataStagerAuth.objects.get(id=parent)
-                dsAuth = datastagerauth
+                MFileauth = MFileAuth.objects.get(id=parent)
+                dsAuth = MFileauth
                 if methods_intersection is None:
-                    methods_intersection = set(get_auth_methods(datastagerauth))
-                methods_intersection = methods_intersection & set(get_auth_methods(datastagerauth))
-                all_methods = all_methods | set(get_auth_methods(datastagerauth))
+                    methods_intersection = set(get_auth_methods(MFileauth))
+                methods_intersection = methods_intersection & set(get_auth_methods(MFileauth))
+                all_methods = all_methods | set(get_auth_methods(MFileauth))
                 done = True
                 pass
             except ObjectDoesNotExist:

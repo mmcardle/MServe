@@ -18,8 +18,8 @@ def is_container(base):
 def is_service(base):
     return hasattr(base,"dataservice")
 
-def is_stager(base):
-    return hasattr(base,"datastager")
+def is_mfile(base):
+    return hasattr(base,"mfile")
 
 def is_containerauth(base):
     return hasattr(base,"hostingcontainerauth")
@@ -27,5 +27,5 @@ def is_containerauth(base):
 def is_serviceauth(base):
     return hasattr(base,"dataserviceauth")
 
-def is_stagerauth(base):
-    return hasattr(base,"datastagerauth")
+def is_mfileauth(base):
+    return hasattr(base,"mfileauth")
