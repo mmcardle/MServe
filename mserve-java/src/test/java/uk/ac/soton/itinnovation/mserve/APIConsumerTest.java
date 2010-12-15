@@ -108,10 +108,6 @@ public class APIConsumerTest {
     }
 
     @Test
-    public void testHostingContainer() {
-
-    }
-    @Test
     public void testServices() {
         try {
 
@@ -129,7 +125,6 @@ public class APIConsumerTest {
     public void testMFilesRest() {
         try {
 
-            File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
             String containerid = consumer.createContainer();
             String serviceid1 = consumer.makeServiceREST(containerid);
             consumer.getServices(containerid);
@@ -154,7 +149,6 @@ public class APIConsumerTest {
     public void testMFilesStress() {
         try {
 
-            File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
             String containerid = consumer.createContainer();
             String serviceid1 = consumer.makeServiceREST(containerid);
 
@@ -220,6 +214,7 @@ public class APIConsumerTest {
         APIConsumer instance = new APIConsumer();
         String id = instance.createContainer();
         instance.makeServiceURL(id);
+        containersToDelete.add(id);
     }
 
     /**
@@ -231,6 +226,7 @@ public class APIConsumerTest {
         APIConsumer instance = new APIConsumer();
         String id = instance.createContainer();
         String result = instance.makeServiceREST(id);
+        containersToDelete.add(id);
     }
 
     /**
@@ -243,7 +239,8 @@ public class APIConsumerTest {
         APIConsumer instance = new APIConsumer();
         String id = instance.createContainer();
         String content = "name=ServiceFromJava&cid="+id;
-        instance.makeService(url, id, content);
+        instance.makeService(url, content);
+        containersToDelete.add(id);
     }
 
     /**
@@ -252,14 +249,11 @@ public class APIConsumerTest {
     @Test
     public void testMakeMFileURL() throws Exception {
         System.out.println("makeMFileURL");
-        String id = "";
-        File file = null;
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.makeMFileURL(id, file);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        instance.makeMFileURL(sid, file);
+        containersToDelete.add(cid);
     }
 
     /**
@@ -268,13 +262,11 @@ public class APIConsumerTest {
     @Test
     public void testMakeEmptyMFileREST() throws Exception {
         System.out.println("makeEmptyMFileREST");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.makeEmptyMFileREST(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        instance.makeEmptyMFileREST(sid);
+        containersToDelete.add(cid);
     }
 
     /**
@@ -283,141 +275,127 @@ public class APIConsumerTest {
     @Test
     public void testMakeMFileREST() throws Exception {
         System.out.println("makeMFileREST");
-        String id = "";
-        File file = null;
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.makeMFileREST(id, file);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        instance.makeMFileREST(sid, file);
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of doFilePutToURL method, of class APIConsumer.
      */
     @Test
-    public void testDoFilePutToURL() {
+    public void testDoFilePutToURL() throws Exception {
         System.out.println("doFilePutToURL");
-        String url = "";
-        String id = "";
-        File f = null;
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.doFilePutToURL(url, id, f);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        String url = "http://" + "localhost" + "/mfile/";
+        instance.doFilePutToURL(url, sid, file);
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of doFilePostToREST method, of class APIConsumer.
      */
     @Test
-    public void testDoFilePostToREST() {
+    public void testDoFilePostToREST() throws Exception {
         System.out.println("doFilePostToREST");
-        String url = "";
-        String id = "";
-        File f = null;
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.doFilePostToREST(url, id, f);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        String url = "http://" + "localhost" + "/mfile/";
+        instance.doFilePostToREST(url, sid, file);
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of doFilePostToURL method, of class APIConsumer.
      */
     @Test
-    public void testDoFilePostToURL() {
+    public void testDoFilePostToURL() throws Exception {
         System.out.println("doFilePostToURL");
-        String url = "";
-        String id = "";
-        File f = null;
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.doFilePostToURL(url, id, f);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        String url = "http://" + "localhost" + "/mfile/";
+        instance.doFilePostToURL(url,sid, file);
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of doPostToURL method, of class APIConsumer.
      */
     @Test
-    public void testDoPostToURL_String_String() {
+    public void testDoPostToURL_String_String() throws Exception {
         System.out.println("doPostToURL");
-        String url = "";
-        String name = "";
+        String name = "ContainerFromJava ";
+        String url = "http://" + "localhost" + "/container/";
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.doPostToURL(url, name);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String output = instance.doPostToURL(url, name);
+        JSONObject ob = new JSONObject(output);
+        containersToDelete.add(ob.getString("id"));
     }
 
     /**
      * Test of getServices method, of class APIConsumer.
      */
     @Test
-    public void testGetServices() {
+    public void testGetServices() throws Exception {
         System.out.println("getServices");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        List expResult = null;
-        List result = instance.getServices(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        instance.makeServiceREST(cid);
+        instance.makeServiceREST(cid);
+        List result = instance.getServices(cid);
+        assertEquals(result.size(), 2);
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of getMFileInfo method, of class APIConsumer.
      */
     @Test
-    public void testGetMFileInfo() {
+    public void testGetMFileInfo() throws Exception {
         System.out.println("getMFileInfo");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        JSONObject expResult = null;
-        JSONObject result = instance.getMFileInfo(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        String mid = instance.makeMFileURL(sid, file);
+        JSONObject result = instance.getMFileInfo(mid);
+        assertEquals(result.getString("name"), file.getName());
+        assertEquals(result.getLong("size"), file.length());
+        assertEquals(result.getString("id"), mid);
+        assertTrue(result.getString("mimetype").startsWith("image"));
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of getServiceInfo method, of class APIConsumer.
      */
     @Test
-    public void testGetServiceInfo() {
+    public void testGetServiceInfo() throws Exception {
         System.out.println("getServiceInfo");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        JSONObject expResult = null;
-        JSONObject result = instance.getServiceInfo(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        JSONObject result = instance.getServiceInfo(sid);
+        assertEquals(result.getString("id"), sid);
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of getContainerInfo method, of class APIConsumer.
      */
     @Test
-    public void testGetContainerInfo() {
+    public void testGetContainerInfo()  throws Exception{
         System.out.println("getContainerInfo");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        JSONObject expResult = null;
-        JSONObject result = instance.getContainerInfo(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        JSONObject result = instance.getContainerInfo(cid);
+        assertEquals(result.getString("id"), cid);
+        containersToDelete.add(cid);
     }
 
     /**
@@ -427,58 +405,50 @@ public class APIConsumerTest {
     public void testGetContainers() {
         System.out.println("getContainers");
         APIConsumer instance = new APIConsumer();
-        List expResult = null;
+        String cid1 = instance.createContainer();
+        String cid2 = instance.createContainer();
         List result = instance.getContainers();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        assert(result.contains(cid1));
+        assert(result.contains(cid2));
+        containersToDelete.add(cid1);
+        containersToDelete.add(cid2);
     }
 
     /**
      * Test of getMFiles method, of class APIConsumer.
      */
     @Test
-    public void testGetMFiles() {
+    public void testGetMFiles() throws Exception {
         System.out.println("getMFiles");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        List expResult = null;
-        List result = instance.getMFiles(id);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        String sid = instance.makeServiceREST(cid);
+        String mid1 = instance.makeMFileURL(sid, file);
+        String mid2 = instance.makeMFileURL(sid, file);
+        String mid3 = instance.makeMFileURL(sid, file);
+
+        List result = instance.getMFiles(sid);
+
+        assertEquals(3,result.size());
+        assert(result.contains(mid1));
+        assert(result.contains(mid2));
+        assert(result.contains(mid3));
+
+        containersToDelete.add(cid);
     }
 
     /**
      * Test of doPostToURL method, of class APIConsumer.
      */
     @Test
-    public void testDoPostToURL_3args() {
+    public void testDoPostToURL_3args() throws Exception {
         System.out.println("doPostToURL");
-        URL url = null;
-        String id = "";
-        String content = "";
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.doPostToURL(url, id, content);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of getOutputFromURL method, of class APIConsumer.
-     */
-    @Test
-    public void testGetOutputFromURL() {
-        System.out.println("getOutputFromURL");
-        URL url = null;
-        APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.getOutputFromURL(url);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        URL url = new URL("http://" + "localhost" + "/container/");
+        String content = "name=ContainerFromJavaTest";
+        String output = instance.doPostToURL(url, content);
+        JSONObject ob = new JSONObject(output);
+        containersToDelete.add(ob.getString("id"));
     }
 
     /**
@@ -490,37 +460,34 @@ public class APIConsumerTest {
         String containerid = consumer.createContainer();
         boolean result = consumer.deleteContainer(containerid);
         assertTrue(result);
-
     }
 
     /**
      * Test of deleteService method, of class APIConsumer.
      */
     @Test
-    public void testDeleteService() {
+    public void testDeleteService() throws Exception{
         System.out.println("deleteService");
-        String serviceid = "";
+        String containerid = consumer.createContainer();
+        String serviceid = consumer.makeServiceREST(containerid);
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
         boolean result = instance.deleteService(serviceid);
-        assertEquals(true, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        containersToDelete.add(containerid);
+        assert(result);
     }
 
     /**
      * Test of deleteMFile method, of class APIConsumer.
      */
     @Test
-    public void testDeleteMFile() {
+    public void testDeleteMFile() throws Exception {
         System.out.println("deleteMFile");
-        String stagerid1 = "";
-        APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        boolean result = instance.deleteMFile(stagerid1);
-        assertEquals(expResult, true);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String containerid = consumer.createContainer();
+        String serviceid = consumer.makeServiceREST(containerid);
+        String stagerid1 = consumer.makeMFileREST(serviceid, file);
+        boolean result = consumer.deleteMFile(stagerid1);
+        containersToDelete.add(containerid);
+        assert(result);
     }
 
     /**
@@ -530,11 +497,8 @@ public class APIConsumerTest {
     public void testCreateContainer() {
         System.out.println("createContainer");
         APIConsumer instance = new APIConsumer();
-        String expResult = "";
-        String result = instance.createContainer();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = instance.createContainer();
+        containersToDelete.add(cid);
     }
 
     /**
@@ -543,11 +507,10 @@ public class APIConsumerTest {
     @Test
     public void testGetContainerUsageReport() {
         System.out.println("getContainerUsageReport");
-        String id = "";
         APIConsumer instance = new APIConsumer();
-        instance.getContainerUsageReport(id);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        String cid = consumer.createContainer();
+        instance.getContainerUsageReport(cid);
+        containersToDelete.add(cid);
     }
 
 }

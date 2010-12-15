@@ -66,19 +66,19 @@ public class APIConsumer {
     public String makeServiceURL(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/containerapi/makeserviceinstance/" + id  +"/");
         String content = "name=ServiceFromJava";
-        return makeService(url,id,content);
+        return makeService(url,content);
     }
 
     public String  makeServiceREST(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/service/" );
         String content = "name=ServiceFromJava&cid="+id;
-        return makeService(url,id,content);
+        return makeService(url,content);
     }
 
-    public String makeService(URL url, String id, String content) {
+    public String makeService(URL url, String content) {
         try {
 
-            String output = doPostToURL(url,id, content);
+            String output = doPostToURL(url,content);
 
             System.out.println("output =" + output);
 
@@ -409,7 +409,7 @@ public class APIConsumer {
         }
     }
 
-    public String doPostToURL(URL url, String id, String content) {
+    public String doPostToURL(URL url, String content) {
         try {
 
             URLConnection connection;
@@ -449,7 +449,7 @@ public class APIConsumer {
         }
     }
 
-    public String getOutputFromURL(URL url) {
+    private String getOutputFromURL(URL url) {
         try {
 
             HttpClient client = new HttpClient();
