@@ -1,3 +1,5 @@
+from mserve.dataservice.models import MFileAuth
+from mserve.dataservice.models import Auth
 import os.path
 from mserve.dataservice.models import *
 from mserve.dataservice.forms import *
@@ -7,6 +9,7 @@ from django.template import RequestContext
 from piston.utils import rc
 import usage_store as usage_store
 import utils as utils
+import handlers as handlers
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -16,6 +19,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from dataservice.tasks import thumbvideo
 from dataservice.tasks import render_blender
 from django.http import HttpResponse
+from django.shortcuts import redirect
 
 #@staff_member_required
 def home(request,form=HostingContainerForm()):
@@ -42,6 +46,17 @@ def thumb(request,mfileid):
 def profile(request):
     dict ={}
     return render_to_response('user.html', dict, context_instance=RequestContext(request))
+
+def create_container(request):
+    form = HostingContainerForm(request.POST)
+    if form.is_valid():
+
+        name = form.cleaned_data['name']
+        hostingcontainer = handlers.create_container(request,name)
+
+        return redirect('/browse/container/'+str(hostingcontainer.id))
+    else:
+        return home(request,form=form)
 
 #@staff_member_required
 def render_container(request,id,form=DataServiceForm()):
@@ -112,6 +127,19 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
+def create_service(request):
+    form = DataServiceForm(request.POST)
+    if form.is_valid():
+
+        containerid = form.cleaned_data['cid']
+        name = form.cleaned_data['name']
+        dataservice = handlers.create_data_service(request,containerid,name)
+
+        return redirect('/browse/service/'+str(dataservice.id))
+    else:
+        containerid = form.data['cid']
+        return render_container(request,containerid,form=form)
+
 #@staff_member_required
 def render_service(request,id,form=MFileForm(),newmfile=None):
     service = DataService.objects.get(pk=id)
@@ -172,6 +200,99 @@ def render_serviceauth(request,authid,form=MFileForm()):
     dict["methods"] = methods
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
+def create_auth(request):
+    form = SubAuthForm(request.POST)
+    if form.is_valid():
+
+        authname = form.cleaned_data['authname']
+        roles_csv = form.cleaned_data['roles_csv']
+        parent = form.cleaned_data['id_parent']
+
+        subauth = SubAuth(authname=authname)
+        subauth.save()
+        
+        rolenames = roles_csv.split(',')
+        rolestoadd = rolenames
+        allowedroles = []
+
+        r = None
+        try:
+            parent_auth = MFileAuth.objects.get(id=parent)
+            roles = Role.objects.filter(auth=parent_auth)
+            for role in roles:
+                allowedroles.append(role.rolename)
+                if role.rolename in rolenames:
+                    rolestoadd.remove(role.rolename)
+                    subauth.roles.add(role)
+        except ObjectDoesNotExist:
+            pass
+
+        if len(rolestoadd) != 0:
+            subauth.delete()
+            return render_error(request,"Could not add methods '%s'. Allowed = %s" % (','.join(rolestoadd),','.join(set(allowedroles))))
+
+
+        child = str(subauth.id)
+
+        join = JoinAuth(parent=parent,child=child)
+        join.save()
+
+        return redirect('/browse/auth/%s/' % str(subauth.id))
+
+    else:
+        return render_error(request,form)
+
+def create_mfileauth(request):
+    form = MFileAuthForm(request.POST)
+    if form.is_valid():
+        authname = form.cleaned_data['authname']
+        roles_csv = form.cleaned_data['roles']
+        mfileid = form.cleaned_data['dsid']
+        mfile = MFile.objects.get(pk=mfileid)
+
+        mfileauth = MFileAuth(mfile=mfile,authname=authname)
+        mfileauth.save()
+
+        auths = MFileAuth.objects.filter(mfile=mfile)
+
+        rolenames = roles_csv.split(',')
+        rolestoadd = rolenames
+        allowedroles = []
+
+        for auth in auths:
+            roles  = Role.objects.filter(auth=auth)
+            for role in roles:
+                allowedroles.append(role.rolename)
+                if role.rolename in rolenames:
+                    rolestoadd.remove(role.rolename)
+                    mfileauth.roles.add(role)
+
+        if len(rolestoadd) != 0:
+            mfileauth.delete()
+            return render_error(request,"Could not add methods '%s'. Allowed = %s" % (','.join(rolestoadd),','.join(set(allowedroles))))
+
+        return render_mfileauth(request, mfileauth.mfile, mfileauth)
+
+    else:
+        return render_error(request,form)
+
+def create_mfile(request):
+    form = MFileForm(request.POST,request.FILES)
+    if form.is_valid():
+
+        if request.FILES.has_key('file'):
+            file = request.FILES['file']
+        else:
+            file = None
+        serviceid = form.cleaned_data['sid']
+        #service = DataService.objects.get(id=serviceid)
+        mfile = create_mfile(request, serviceid, file)
+
+        return redirect('/browse/mfile/'+str(mfile.id)+"/")
+    else:
+        serviceid = form.data['sid']
+        return render_service(request,serviceid,form=form)
+
 def render_mfile(request,id, form=MFileAuthForm(), show=False):
     mfile = MFile.objects.get(pk=id)
 
@@ -215,6 +336,87 @@ def render_mfile(request,id, form=MFileAuthForm(), show=False):
     
     return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
 
+def render_auth(request, id):
+    '''
+    Have to add the case where this could be a hosting container or data
+    service auth.
+    '''
+    auth = Auth.objects.get(id=id)
+    if utils.is_mfileauth(auth):
+        mfileauth = MFileAuth.objects.get(id=id)
+        methods = get_auth_methods(mfileauth)
+        if 'get' in methods:
+            return render_mfileauth(request, mfileauth.mfile, mfileauth, show=True)
+        else:
+            return render_mfileauth(request, mfileauth.mfile, mfileauth, show=False)
+
+
+    if utils.is_serviceauth(auth):
+        dsa = DataServiceAuth.objects.get(pk=auth.id)
+        return render_serviceauth(request,dsa.id)
+
+    if utils.is_containerauth(auth):
+        hca = HostingContainerAuth.objects.get(pk=auth.id)
+        return views.render_containerauth(request,hca.id)
+
+    dsAuth, methods_intersection = find_mfile_auth(id)
+
+    if dsAuth is None:
+        return HttpResponseBadRequest("No Interface for %s " % (id))
+
+    auth = SubAuth.objects.get(id=id)
+    methods = get_auth_methods(auth)
+
+    dict = {}
+    dict['actions'] = methods
+    dict['actionprefix'] = "mfileapi"
+    dict['authapi'] = id
+    if 'get' in methods:
+        return render_mfileauth(request, dsAuth.mfile, auth, show=True, dict=dict)
+    else:
+        return render_mfileauth(request, dsAuth.mfile, auth, show=False, dict=dict)
+
+def get_auth_methods(auth):
+    methods = []
+    for role in auth.roles.all():
+        methods = methods + role.methods()
+    return list(set(methods))
+
+def find_mfile_auth(parent):
+    dsAuth = None
+    methods_intersection = None
+    all_methods = set()
+    done = False
+    while not done:
+        try:
+            joins = JoinAuth.objects.get(child=parent)
+            parent = joins.parent
+
+            try:
+                subauth = SubAuth.objects.get(id=parent)
+                if methods_intersection is None:
+                    methods_intersection = set(get_auth_methods(subauth))
+                methods_intersection = methods_intersection & set(get_auth_methods(subauth))
+                all_methods = all_methods | set(get_auth_methods(subauth))
+            except ObjectDoesNotExist:
+                pass
+            try:
+                MFileauth = MFileAuth.objects.get(id=parent)
+                dsAuth = MFileauth
+                if methods_intersection is None:
+                    methods_intersection = set(get_auth_methods(MFileauth))
+                methods_intersection = methods_intersection & set(get_auth_methods(MFileauth))
+                all_methods = all_methods | set(get_auth_methods(MFileauth))
+                done = True
+                pass
+            except ObjectDoesNotExist:
+                pass
+
+        except ObjectDoesNotExist:
+            parent = None
+            done = True
+    return dsAuth, methods_intersection
+
 def render_mfileauth(request, mfile, auth, show=False, dict={}):
     sub_auths = JoinAuth.objects.filter(parent=auth.id)
     subauths = []
@@ -248,7 +450,7 @@ def render_mfileauth(request, mfile, auth, show=False, dict={}):
     dict["auths"] = subauths
     dict["fullaccess"] = False
     dict["methods"] = methods
-    dict["formtarget"] = "/auth/"
+    dict["formtarget"] = "/form/auth/"
     return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
 
 #@staff_member_required

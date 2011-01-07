@@ -9,7 +9,7 @@
 <h3>Data Services</h3>
 <ul>
     {% for service in services %}
-        <li><a href="/service/{{ service.id }}/">{{ service.name }}</a></li>
+        <li><a href="/browse/service/{{ service.id }}/">{{ service.name }}</a></li>
     {% endfor %}
 </ul>
 {% if not services %}
@@ -17,7 +17,7 @@
 {% endif %}
 <h3>Create New Service</h3>
 
-<form action="/service/" method="post">
+<form action="/form/service/" method="post">
     {{ form.as_p }}
     <input type="submit" value="Submit" />
 </form>

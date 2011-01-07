@@ -119,8 +119,11 @@ public class APIConsumer {
     }
 
     public String  makeMFileREST(String id, File file) throws MalformedURLException {
+        System.out.println("makeMFileREST ");
         String url = new String(protocol + host + "/mfile/");
+        System.out.println("makeMFileREST url "+url);
         String output = doFilePostToREST(url, id, file);
+        System.out.println("makeMFileREST output "+output);
         try {
 
             System.out.println("makeMFileREST output "+output);
@@ -128,6 +131,7 @@ public class APIConsumer {
             JSONObject ob = new JSONObject(output);
             return ob.getString("id");
         } catch (JSONException ex) {
+            System.out.println("makeMFileREST "+ex);
             throw new RuntimeException(ex);
         }
     }
@@ -165,6 +169,7 @@ public class APIConsumer {
     }
 
     public String doFilePostToREST(String url, String id, File f) {
+        System.out.println("doFilePostToREST url "+url);
         try{
             HttpClient client = new HttpClient();
             PostMethod filePost = new PostMethod(url);
@@ -183,6 +188,7 @@ public class APIConsumer {
             filePost.setRequestEntity(
                     new MultipartRequestEntity(parts, filePost.getParams()));
 
+
             client.executeMethod(filePost);
 
             InputStream stream = filePost.getResponseBodyAsStream();
@@ -196,9 +202,11 @@ public class APIConsumer {
             buf.close();
             filePost.releaseConnection();
 
+            System.out.println("doFilePostToREST output "+output);
+
             return output;
 
-        }catch(IOException ex){
+        }catch(Exception ex){
             throw new RuntimeException(ex);
         }
     }
@@ -302,7 +310,8 @@ public class APIConsumer {
 
             String output = getOutputFromURL(getresourcesurl);
 
-            JSONObject ob = new JSONObject(output);
+            JSONArray arr = new JSONArray(output);
+            JSONObject ob = arr.getJSONObject(0);
 
             return ob;
 
@@ -321,7 +330,8 @@ public class APIConsumer {
 
             String output = getOutputFromURL(getresourcesurl);
 
-            JSONObject ob = new JSONObject(output);
+            JSONArray arr = new JSONArray(output);
+            JSONObject ob = arr.getJSONObject(0);
 
             return ob;
 
@@ -340,7 +350,8 @@ public class APIConsumer {
 
             String output = getOutputFromURL(getresourcesurl);
 
-            JSONObject ob  = new JSONObject(output);
+            JSONArray arr = new JSONArray(output);
+            JSONObject ob = arr.getJSONObject(0);
 
             return ob;
 

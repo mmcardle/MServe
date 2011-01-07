@@ -57,26 +57,45 @@ public class APIConsumerTest {
     @Test
     public void testAPI() {
         try {
-            System.out.println("testAPI");
+            System.out.println("testAPI createContainer");
 
             String containerid = consumer.createContainer();
+            System.out.println("testAPI makeServiceREST");
             String serviceid1 = consumer.makeServiceREST(containerid);
+            System.out.println("testAPI getServices");
             consumer.getServices(containerid);
+            System.out.println("testAPI makeMFileREST "+serviceid1+" file ");
             String stagerid1 = consumer.makeMFileREST(serviceid1, file);
+            System.out.println("testAPI makeEmptyMFileRest");
             String emptystagerid1 = consumer.makeEmptyMFileREST(serviceid1);
+            System.out.println("testAPI putToEmptyMFileREST");
             consumer.putToEmptyMFileREST(emptystagerid1,file);
+            System.out.println("testAPI putToEmptyMFileURL");
             consumer.putToEmptyMFileURL(emptystagerid1, file2);
+            System.out.println("testAPI getMFiles");
             consumer.getMFiles(serviceid1);
+            System.out.println("testAPI makeServiceREST 2");
             String serviceid2 = consumer.makeServiceREST(containerid);
+            System.out.println("testAPI getServices 2");
             consumer.getServices(containerid);
+            System.out.println("testAPI makeMFileURL");
             String stagerid2 = consumer.makeMFileURL(serviceid2,file);
+            System.out.println("testAPI getMFiles2");
             consumer.getMFiles(serviceid2);
+            System.out.println("testAPI deleteMFile");
             consumer.deleteMFile(stagerid1);
+            System.out.println("testAPI deleteMFile 2");
             consumer.deleteMFile(emptystagerid1);
+            System.out.println("testAPI deleteMFile 3");
             consumer.deleteMFile(stagerid2);
+            System.out.println("testAPI deleteService");
             consumer.deleteService(serviceid1);
+            System.out.println("testAPI deleteService 2");
             consumer.deleteService(serviceid2);
+            System.out.println("testAPI deleteContainer");
             consumer.deleteContainer(containerid);
+
+            System.out.println("Done testAPI");
 
         } catch (Exception ex) {
             ex.printStackTrace(System.out);
@@ -368,6 +387,8 @@ public class APIConsumerTest {
         assertEquals(result.getLong("size"), file.length());
         assertEquals(result.getString("id"), mid);
         assertTrue(result.getString("mimetype").startsWith("image"));
+        assertNotNull(result.getString("created"));
+        assertNotNull(result.getString("updated"));
         containersToDelete.add(cid);
     }
 

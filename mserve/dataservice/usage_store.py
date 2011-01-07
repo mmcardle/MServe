@@ -240,15 +240,12 @@ def inprogress_to_aggregates(base,inprogress,base_metrics):
     aggregates = {}
 
     for metric in base_metrics:
-        #logging.info("Base %s" % base)
         aggregates[metric] = agg = AggregateUsageRate(base=base,current=maxdate)
         agg.usageSoFar = 0.0
-        agg.rate = 0.0
-        agg.current = 0.0
+        agg.rate = 0.0 
         agg.metric=metric
 
     for usage in inprogress:
-        #logging.info("Usage = %s " % usage)
         agg_ur = aggregates[usage.metric]
         agg_ur.rate = agg_ur.rate + usage.rate
         agg_ur.usageSoFar = agg_ur.usageSoFar + usage.usageSoFar

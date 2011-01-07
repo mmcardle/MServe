@@ -48,17 +48,30 @@ urlpatterns = patterns('',
     url(r'^mfileauth/$', mfile_auth_handler),
     url(r'^auth/$', auth_handler),
 
+    # HTML Views
+    url(r'^browse/container/(?P<id>[^/]+)/', "dataservice.views.render_container"),
+    url(r'^browse/service/(?P<id>[^/]+)/', "dataservice.views.render_service"),
+    url(r'^browse/mfile/(?P<id>[^/]+)/', "dataservice.views.render_mfile",{'show':True}),
+    url(r'^browse/auth/(?P<id>[^/]+)/', "dataservice.views.render_auth"),
+
+    # HTML Forms
+    url(r'^form/container/', "dataservice.views.create_container"),
+    url(r'^form/service/', "dataservice.views.create_service"),
+    url(r'^form/mfile/', "dataservice.views.create_mfile"),
+    url(r'^form/mfileauth/', "dataservice.views.create_mfileauth"),
+    url(r'^form/auth/', "dataservice.views.create_auth"),
+
     # REST Methods for GET
-    url(r'^container/(?P<containerid>[^/]+)/', hosting_handler),
-    url(r'^service/(?P<serviceid>[^/]+)/', dataservice_handler),
-    url(r'^mfile/(?P<mfileid>[^/]+)/$', mfile_handler),
+    url(r'^container/(?P<id>[^/]+)/', hosting_handler),
+    url(r'^service/(?P<id>[^/]+)/', dataservice_handler),
+    url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
     url(r'^mfileauth/(?P<mfileauthid>[^/]+)/', mfile_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
     url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
     #url(r'^accesscontrol/(?P<pk>[^/]+)/$', access_control_handler),
 
 
-    url(r'^authority/(?P<method>[^/]+)/(?P<pk>[^/]+)/$', access_control_handler),
+    url(r'^authority/(?P<method>[^/]+)/(?P<id>[^/]+)/$', access_control_handler),
 
     #url(r'^auth/getorcreateauth/(?P<pk>[^/]+)/$', access_control_handler),
     #url(r'^auth/addauth/(?P<pk>[^/]+)/$', access_control_handler),

@@ -107,7 +107,7 @@ class AggregateUsageRate(models.Model):
     metric     = models.CharField(max_length=4096)
     rate       = models.FloatField() # The current rate
     usageSoFar = models.FloatField() # Cumulative unreported usage before that point
-    count = models.IntegerField(default=0)
+    count      = models.IntegerField(default=0)
 
 def sizeof_fmt(num):
     for x in ['bytes','KB','MB','GB','TB']:

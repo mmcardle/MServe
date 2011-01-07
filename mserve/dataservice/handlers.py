@@ -96,8 +96,6 @@ def create_container(request,name):
 
     hostingcontainerauth.roles.add(owner_role)
 
-    logging.info(owner_role)
-
     managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=DEFAULT_ACCESS_SPEED)
     managementproperty.save()
 
@@ -269,7 +267,6 @@ def create_mfile(request,serviceid,file):
         usage_store.record(mfile.id,usage_store.metric_disc,mfile.size)
         usage_store.record(mfile.id,usage_store.metric_ingest,mfile.size)
 
-
     logging.debug("Backing up '%s' "%mfile)
 
     if file is not None:
@@ -304,112 +301,70 @@ class GlobalHandler(BaseHandler):
          dict["containers"] = containers
          return dict
 
-
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
-    fields = ('name', 'id' )
+    fields = ('name', 'id','dataservice_set' )
     exclude = ('pk')
 
-    def delete(self, request, containerid):
-        logging.info("Deleting Container %s " % containerid)
-        delete_container(request,containerid)
+    def delete(self, request, id):
+        logging.info("Deleting Container %s " % id)
+        delete_container(request,id)
         r = rc.DELETED
         return r
-    
-    def read(self, request, containerid):
-        container = HostingContainer.objects.get(id=containerid)
-        if request.META["HTTP_ACCEPT"] == "application/json":
-            return container
-        return views.render_container(request,containerid)
 
     def create(self, request):
-        reqjson = (request.META["HTTP_ACCEPT"] == "application/json")
         form = HostingContainerForm(request.POST)
         if form.is_valid():
-
             name = form.cleaned_data['name']
             hostingcontainer = create_container(request,name)
-
-            if reqjson:
-                return hostingcontainer
-
-            return redirect('/container/'+str(hostingcontainer.id))
+            return hostingcontainer
         else:
-            return views.home(request,form=form)
-            if reqjson:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request!")
-                return r
-            if request.META.has_key("HTTP_REFERER"):
-                return HttpResponseRedirect(request.META["HTTP_REFERER"])
-            else:
-                r = rc.BAD_REQUEST
-                return r
+            r = rc.BAD_REQUEST
+            resp.write("Invalid Request!")
+            return r
 
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
-    fields = ('name', 'id' )
+    #fields = ('name', 'id')
+    fields = ('name', 'id', 'mfile_set','job_set')
     exclude = ('pk')
 
-    def delete(self, request, serviceid):
-        logging.info("Deleting Service %s " % serviceid)
-        delete_service(request,serviceid)
+    def delete(self, request, id):
+        logging.info("Deleting Service %s " % id)
+        delete_service(request,id)
         r = rc.DELETED
         return r
-    
-    def read(self, request, serviceid):
-        service = DataService.objects.get(id=serviceid)
-        if request.META["HTTP_ACCEPT"] == "application/json":
-           return service
-        return views.render_service(request,service.id)
 
     def create(self, request):
-        reqjson = (request.META["HTTP_ACCEPT"] == "application/json")
         form = DataServiceForm(request.POST) 
         if form.is_valid(): 
             
             containerid = form.cleaned_data['cid']
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
+            return dataservice
 
-            if reqjson:
-                return dataservice
-
-            return redirect('/service/'+str(dataservice.id))
         else:
-            if reqjson:
-                r = rc.BAD_REQUEST
-                resp.write("Invalid Request!")
-                return r
-            containerid = form.data['cid']
-            return views.render_container(request,containerid,form=form)
+            r = rc.BAD_REQUEST
+            resp.write("Invalid Request!")
+            return r
+
 
 class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
-
         form = DataServiceURLForm(request.POST)
-        logging.info("Request data = %s" % form)
-
         if form.is_valid(): 
-            logging.info("Form valid = %s" % form)
             name = form.cleaned_data['name']
             dataservice = create_data_service(request,containerid,name)
-
-            if request.META["HTTP_ACCEPT"] == "application/json":
-                logging.info("Returning JSON = " % dataservice)
-                return dataservice
-
-            logging.info("Returning Redirect = %s" % dataservice)
-            return redirect('/service/'+str(dataservice.id))
+            return dataservice
         else:
-            if reqjson:
-                r = rc.BAD_REQUEST
-                resp.write("Invalid Request!")
-                return r
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            r = rc.BAD_REQUEST
+            resp.write("Invalid Request!")
+            return r
+
 
 class ThumbHandler(BaseHandler):
     allowed_methods = ('GET','POST')
@@ -474,37 +429,20 @@ class CorruptionHandler(BaseHandler):
 class MFileJSONHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
-    fields = ('name', 'id', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated', 'jobmfile_set' )
+    fields = ('name', 'id', 'size', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated')
+    #fields = ('name', 'id', 'size', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated', 'jobmfile_set' )
     exclude = ('pk')
 
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
-    #model = MFile
-    #fields = ('name', 'id', 'file','checksum', ('thumb', ('id','name','file') ) )
-    #exclude = ('pk')
+    model = MFile
+    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'created' , 'updated')
 
-    def delete(self, request, mfileid):
-        logging.info("Deleting mfile %s " % mfileid)
-        delete_mfile(request,mfileid)
+    def delete(self, request, id):
+        logging.info("Deleting mfile %s " % id)
+        delete_mfile(request,id)
         r = rc.DELETED
         return r
-
-    def read(self, request, mfileid):
-        try:
-            mfile = MFile.objects.get(pk=mfileid)
-            base = NamedBase.objects.get(pk=mfileid)
-
-            if re.match("application/json", request.META["HTTP_ACCEPT"]):
-            #if request.META["HTTP_ACCEPT"].contains("application/json"):
-                return mfile
-            return views.render_mfile(request,mfile.id,show=True)
-        except ObjectDoesNotExist:
-            error = "The file with the id %s does not exist "%mfileid
-            if re.match("application/json", request.META["HTTP_ACCEPT"]):
-                r = rc.NOT_FOUND
-                r.write(error)
-                return r
-            return views.render_error(request,error)
 
     def update(self, request):
         form = UpdateMFileForm(request.POST,request.FILES)
@@ -516,6 +454,8 @@ class MFileHandler(BaseHandler):
             mfile = MFile.objects.get(pk=mfileid)
             mfile.file = file
             mfile.size = file.size
+            
+            mfile.save()
 
             backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
             backup.save()
@@ -523,12 +463,8 @@ class MFileHandler(BaseHandler):
             usage_store.startrecording(mfileid,usage_store.metric_disc,mfile.size)
             usage_store.startrecording(mfileid,usage_store.metric_archived,mfile.size)
 
-            mfile.save()
+            return mfile
 
-            if request.META["HTTP_ACCEPT"] == "application/json":
-                return mfile
-
-            return redirect('/mfile/'+str(mfile.id)+"/")
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
@@ -557,10 +493,9 @@ class MFileHandler(BaseHandler):
         return render_to_response('mfile.html', dict)
 
     def create(self, request):
-        reqjson=(request.META["HTTP_ACCEPT"] == "application/json")
+        logging.debug("Create MFile")
         form = MFileForm(request.POST,request.FILES)
         if form.is_valid(): 
-            
             if request.FILES.has_key('file'):
                 file = request.FILES['file']
             else:
@@ -568,21 +503,12 @@ class MFileHandler(BaseHandler):
             serviceid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
             mfile = create_mfile(request, serviceid, file)
-
-            if reqjson:
-                return mfile
-
-            return redirect('/mfile/'+str(mfile.id)+"/")
-            #return views.render_service(request,serviceid,newmfile=MFile.id)
+            return mfile
         else:
-            if reqjson:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request!")
-                return r
-                #return views.render_mfile(request,mfile.id)
             r = rc.BAD_REQUEST
-            r.write("%s"%form)
+            r.write("Invalid Request!")
             return r
+
 
 class JobServiceHandler(BaseHandler):
     allowed_methods = ('GET',)
@@ -615,11 +541,12 @@ class JobServiceHandler(BaseHandler):
 class JobMFileHandler(BaseHandler):
     model = JobMFile
     allowed_methods = ('GET','POST','DELETE')
-    fields = ('id','name','created','taskset_id')
+    #fields = ()
+    #fields = ('id','name','created','taskset_id')
 
     def read(self, request, mfileid):
         mfile = MFile.objects.get(pk=mfileid)
-        jobmfiles = Jobmfile.objects.filter(mfile=mfile)
+        jobmfiles = JobMFile.objects.filter(mfile=mfile)
 
         arr = []
         for jobmfile in jobmfiles:
@@ -647,6 +574,7 @@ class JobHandler(BaseHandler):
     model = Job
     allowed_methods = ('GET','POST','DELETE')
     fields = ('id','name','created','taskset_id')
+    #fields = ('id','name','created','taskset_id','jobmfile_set')
 
     def delete(self, request, id):
         job = Job.objects.get(id=id)
@@ -731,7 +659,7 @@ class RenderHandler(BaseHandler):
         job = Job(name="Render",service=mfile.service,taskset_id=tsr.taskset_id)
         job.save()
 
-        jobmfile = Jobmfile(mfile=mfile,job=job,index=0)
+        jobmfile = JobMFile(mfile=mfile,job=job,index=0)
         jobmfile.save()
         dict = {}
         dict["taskset_id"] = tsr.taskset_id
@@ -754,7 +682,7 @@ class RenderHandler(BaseHandler):
         service = mfile.service
         job = Job(name="Render",service=service)
         job.save()
-        js = Jobmfile(job=job,mfile=mfile,index=0)
+        js = JobMFile(job=job,mfile=mfile,index=0)
         js.save()
 
         folder = os.path.join(os.path.dirname(mfile.file.path),"render")
@@ -871,14 +799,11 @@ class MFileURLHandler(BaseHandler):
             mfile.size = file.size
             mfile.save()
 
-            if request.META["HTTP_ACCEPT"] == "application/json":
-                return mfile
+            return mfile
 
-            return redirect('/mfile/'+str(mfile.id)+"/")
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
-            logging.info("MFileURLHandler %s "%form)
             return r
 
     def create(self, request, serviceid):
@@ -1443,12 +1368,12 @@ class MFileAuthHandler(BaseHandler):
                 MFileauth.delete()
                 return HttpResponseBadRequest("Could not add %s " % ','.join(existingroles))
 
-            if request.META["HTTP_ACCEPT"] == "application/json":
-                return MFileauth
+            return MFileauth
 
-            return redirect('/mfile/%s/' % str(mfile.id))
         else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
 
 class AuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
@@ -1467,96 +1392,14 @@ class AuthHandler(BaseHandler):
 
             for role in roles_csv.split(','):
                 role = Role.objects.get(rolename=role)
-                import logging
-                logging.info("Role %s" % role)
 
             child = str(subauth.id)
             join = JoinAuth(parent=parent,child=child)
             join.save()
-
-            return redirect('/auth/%s/' % str(subauth.id))
+            
+            return subauth
             
         else:
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
-
-    def read(self, request, id):
-
-        '''
-        Have to add the case where this could be a hosting container or data
-        service auth.
-        '''
-        auth = Auth.objects.get(id=id)
-        if utils.is_mfileauth(auth):
-            mfileauth = MFileAuth.objects.get(id=id)
-            methods = get_auth_methods(mfileauth)
-            if 'get' in methods:
-                return views.render_mfileauth(request, mfileauth.mfile, mfileauth, show=True)
-            else:
-                return views.render_mfileauth(request, mfileauth.mfile, mfileauth, show=False)
-
-
-        if utils.is_serviceauth(auth):
-            dsa = DataServiceAuth.objects.get(pk=auth.id)
-            return views.render_serviceauth(request,dsa.id)
-
-        if utils.is_containerauth(auth):
-            hca = HostingContainerAuth.objects.get(pk=auth.id)
-            return views.render_containerauth(request,hca.id)
-
-        dsAuth, methods_intersection = find_MFile_auth(id)
-                
-        if dsAuth is None:
-            return HttpResponseBadRequest("No Interface for %s " % (id))
-
-        auth = SubAuth.objects.get(id=id)
-        #methods = get_auth_methods(auth)
-
-        dict = {}
-        dict['actions'] = methods
-        dict['actionprefix'] = "mfileapi"
-        dict['authapi'] = id
-        if 'get' in methods:
-            return views.render_mfileauth(request, dsAuth.mfile, auth, show=True, dict=dict)
-        else:
-            return views.render_mfileauth(request, dsAuth.mfile, auth, show=False, dict=dict)
-
-def get_auth_methods(auth):
-    methods = []
-    for role in auth.roles.all():
-        methods = methods + role.methods()
-    return list(set(methods))
-
-def find_MFile_auth(parent):
-    dsAuth = None
-    methods_intersection = None
-    all_methods = set()
-    done = False
-    while not done:
-        try:
-            joins = JoinAuth.objects.get(child=parent)
-            parent = joins.parent
-
-            try:
-                subauth = SubAuth.objects.get(id=parent)
-                if methods_intersection is None:
-                    methods_intersection = set(get_auth_methods(subauth))
-                methods_intersection = methods_intersection & set(get_auth_methods(subauth))
-                all_methods = all_methods | set(get_auth_methods(subauth))
-            except ObjectDoesNotExist:
-                pass
-            try:
-                MFileauth = MFileAuth.objects.get(id=parent)
-                dsAuth = MFileauth
-                if methods_intersection is None:
-                    methods_intersection = set(get_auth_methods(MFileauth))
-                methods_intersection = methods_intersection & set(get_auth_methods(MFileauth))
-                all_methods = all_methods | set(get_auth_methods(MFileauth))
-                done = True
-                pass
-            except ObjectDoesNotExist:
-                pass
-
-        except ObjectDoesNotExist:
-            parent = None
-            done = True
-    return dsAuth, methods_intersection
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
