@@ -23,6 +23,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+var mfiles = [];
+
 var Uploader = function() {
 };
 
@@ -169,12 +171,186 @@ Uploader.prototype = {
               if (status == '200' && evt.target.responseText && xhr.readyState == 4) {// Loaded State
                 $("#upload-"+xhr.r).hide('slide');
                 var mfile = jQuery.parseJSON(evt.target.responseText);
-                load_mfile(mfile.id)
+                reloadMFiles(mfile.id)
               }
           }
     }
 };
 
+function loadContainers(){
+    $.ajax({
+       type: "GET",
+       url: "/container/",
+       success: function(msg){
+            containers = msg;
+
+            if(containers.length==0){
+                 $("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
+                return;
+            }else{
+                $("#nocontainers").remove()
+            }
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>containers.length){
+                    end=containers.length;
+                }
+                for(var i=start;i<end;i++) {
+                    var c = $("<div>"+containers[i].name+"  <a href='/browse/container/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
+                    $('#containerpaginator').append(c)
+                }
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+            $("#containerpaginator").pagination(msg.length, {
+                    items_per_page:20,
+                    callback:handlePaginationClick
+            });
+       },
+       error: function(msg){
+            showError( "Failure to get containers ",msg );
+       }
+     });
+}
+
+function mfile_template(mfile){
+    var name = mfile.name
+    if(name.length>20){
+        name = name.substring(0,20)+"..."
+    }
+    return "<div id='image-"+mfile.id+"' class='fluid' onmouseover='$(\"#id-"+mfile.id+"\").show();'"
+               +"onmouseout='$(\"#id-"+mfile.id+"\").hide();' >"
+            +"<table cellpadding='0' cellspacing='0' style='background-image:url(\"/mservethumbs/"+mfile.thumb+"\");' class='thumb'>"
+            +"<colgroup><col>"
+            +"</colgroup>"
+            +"<tbody>"
+              +"<tr><td><div class='title'><a href='/browse/mfile/"+mfile.id+"/'>"+name+"</a></div></td></tr>"
+              +"<tr><td>"
+                      +"<div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position: relative ' id='id-"+mfile.id+"'>"
+                          +"<div>Size: "+mfile.size+"</div>"
+                          +"<div style='font-size: x-small;'>Type</div>"
+                          +"<div style='font-size: xx-small;text-align: center'>"+mfile.mimetype+"</div>"
+                          +"<div style='font-size: x-small;'>Created: "+mfile.created+"</div>"
+                          +"<div style='font-size: x-small;'>Updated: "+mfile.updated+"</div>"
+                          +"<div style='font-size: xx-small;'>Checksum:</div>"
+                          +"<div style='font-size: xx-small;text-align: center;'>"+mfile.checksum+"</div>"
+                      +"</div>"
+                +"</td></tr>"
+            +"</tbody>"
+        +"</table>"
+    +"</div>";
+}
+
+
+function loadServices(containerid){
+    $.ajax({
+       type: "GET",
+       url: "/container/"+containerid+"/",
+       success: function(msg){
+            services = msg[0].dataservice_set;
+
+            if(services.length==0){
+                 $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
+                return;
+            }else{
+                $("#noservices").remove()
+            }
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>services.length){
+                    end=services.length;
+                }
+
+                for(var i=start;i<end;i++) {
+                    var c = $("<div>"+services[i].name+"  <a href='/browse/service/"+services[i].id+"/'>"+services[i].id+"</a>&nbsp;<em>"+services[i].mfile_set.length+" files</em></div>")
+                    $('#servicepaginator').append(c)
+                }
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+            $("#servicepaginator").pagination(msg.length, {
+                    items_per_page:20,
+                    callback:handlePaginationClick
+            });
+       },
+       error: function(msg){
+            showError( "Failure to get services ",msg );
+       }
+     });
+}
+
+function getShort( name , len) {
+    if(name.length>len){
+        return name.substr(0,len)+"..."
+    }else{
+        return name
+    }
+}
+
+
+var serviceid = ""
+function loadMFiles(sid){
+    serviceid = sid
+    reloadMFiles();
+}
+
+function reloadMFiles(newfileid){
+    $.ajax({
+       type: "GET",
+       url: "/service/"+serviceid+"/",
+       success: function(msg){
+            mfiles = msg[0].mfile_set;
+
+            if(mfiles.length==0){
+                 $("#mfilemessages").append("<div id='nofiles' class='message' >No Files</div>");
+                return;
+            }else{
+                $("#nofiles").remove()
+            }
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>mfiles.length){
+                    end=mfiles.length;
+                }
+
+                $( "#mfileList" ).empty()
+                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#mfileList" );
+
+                if(newfileid != null){
+                    $("#image-"+newfileid).show('bounce')
+                }
+
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+
+            // Render the template with the movies data and insert
+            // the rendered HTML under the "movieList" element
+            $("#mfilepaginator").pagination(mfiles.length, {
+                    items_per_page:12,
+                    callback:handlePaginationClick
+            });
+       },
+       error: function(msg){
+            showError( "Failure to get files",msg );
+       }
+     });
+}
 
 function make_drop_upload(el,serviceid){
      $(el).bind(
@@ -327,8 +503,7 @@ function make_drop_upload_webkit(item,serviceid){
                                     showError('Server error.');
                                     return;
                             }
-                            load_mfile(result.id);
-                            
+                            reloadMFiles(result.id)
                     }
             }
     );
@@ -353,7 +528,6 @@ function load_render_preview(mfileid){
 }
 
 function load_mfile(mfileid){
-         $("#emptymfilelist").remove();
          $.ajax({
            type: "GET",
            url: "/mfileapi/thumb/"+mfileid+"/",
@@ -390,14 +564,16 @@ function objectToString(ob){
     return output;
 }
 
-function load_jobs_service(serviceid){
+function loadJobs(serviceid){
      $.ajax({
        type: "GET",
        url: '/serviceapi/getjobs/'+serviceid+"/",
        success: function(msg){
             for (i in msg){
-                create_job_holder(msg[i].job)
-                check_job(msg[i].job,serviceid)
+                create_job_holder(msg[i])
+                if(!msg[i].ready){
+                    check_job(msg[i].job,serviceid)
+                }
             }
        },
        error: function(msg){
@@ -412,8 +588,10 @@ function load_jobs_mfile(mfileid){
        url: '/mfileapi/getjobs/'+mfileid+"/",
        success: function(msg){
             for (i in msg){
-                create_job_holder(msg[i].job)
-                check_job(msg[i].job,mfileid)
+                create_job_holder(msg[i])
+                if(!msg[i].ready){
+                    check_job(msg[i].job,mfileid)
+                }
             }
        },
        error: function(msg){
@@ -422,7 +600,8 @@ function load_jobs_mfile(mfileid){
      });
 }
 
-function create_job_holder(job){
+function create_job_holder(task){
+    job = task.job
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
@@ -436,6 +615,27 @@ function create_job_holder(job){
                     +"<tr><table>"
                     +"</div>")
         $("#jobs").prepend(jobholder);
+
+        var allDone = true
+
+        var jobs = $("#job-"+job.id)
+        var percent = (task.completed_count/task.total)*100
+        var info = $( "#jobinfo-"+job.id )
+        var icon = $( "#jobicon-"+job.id )
+        var progressbar = $( "#progressbar-"+job.id )
+
+        info.html("<b>"+task.completed_count+"</b> frames of <b>"+task.total+"</b> complete : "+Math.round(percent)+"%" )
+
+        if(job.waiting){
+            icon.addClass('taskrunning')
+        }else{
+            icon.addClass('ui-icon-check')
+            icon.removeClass('taskrunning')
+        }
+
+        progressbar.progressbar({
+                value: percent
+        });
     }
 }
 
@@ -444,6 +644,7 @@ function mfile_render(mfileid){
        type: "POST",
        url: '/jobapi/render/'+mfileid+"/",
        success: function(msg){
+            create_job_holder(msg)
             check_job(msg.job,mfileid)
        },
        error: function(msg){
@@ -578,7 +779,7 @@ function mfile_backup_corrupt(mfileid){
  }
 
 function showMessage(title,message){
-     var html = "<div id='dialog-message-mfile-delete' title='"+title+"'><p><span class='ui-icon ui-icon-circle-check' style='float:left; margin:0 7px 50px 0;'></span>"+message+"</p></div>"
+     var html = "<div id='dialog-message-mfile-delete' title='"+title+"'  style='width: 400px;'><p style='overflow: scroll; hieght: 300px;'><span class='ui-icon ui-icon-circle-check' style='float:left; margin:0 7px 50px 0;'></span>"+message+"</p></div>"
      $( html ).dialog({
             modal: true,
             buttons: {
@@ -592,7 +793,7 @@ function showMessage(title,message){
 
 
 function showError(title,message){
-    var html =  "<div id='dialog-message-mfile-delete' title='"+title+"'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span> <strong>Alert:</strong>"+message+"</p><div></div>"
+    var html =  "<div id='dialog-message-mfile-delete' title='"+title+"' style='width: 400px;'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p style='overflow: scroll;height:300px'><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span> <strong>Alert:</strong>"+message+"</p><div></div>"
      $( html ).dialog({
             modal: true,
             buttons: {

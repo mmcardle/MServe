@@ -1,296 +1,33 @@
-import os.path
+
 from piston.handler import BaseHandler
 from piston.utils import rc
 from dataservice.models import *
 from dataservice.forms import *
-from dataservice import views
 from django.conf import settings
 from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.shortcuts import render_to_response
-from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.files.uploadedfile import InMemoryUploadedFile
-
-from dataservice.tasks import thumbvideo
 from dataservice.tasks import thumbimage
 from dataservice.tasks import render_blender
 from django.http import HttpResponse
-from celery.result import AsyncResult
 from celery.result import TaskSetResult
 from celery.task.sets import TaskSet
-
 from anyjson import serialize as JSON_dump
+
 import utils as utils
+import api as api
 import usage_store as usage_store
-import djcelery
 import time
-import pickle
-import base64
 import logging
-import magic
-import hashlib
 import os
+import os.path
 import shutil
-import Image
-import tempfile
 
-base            = "/home/"
-container_base  = "/container/"
-service_base    = "/service/"
-mfile_base      = "/mfile/"
-auth_base       = "/auth/"
-
-thumbsize = (210,128)
-postersize = (420,256)
 sleeptime = 10
-DEFAULT_ACCESS_SPEED = "50"
-
-generic_get_methods = ["getauths","getroles"]
-
-generic_post_methods = ["getorcreateauth","addauth"]
-
-generic_put_methods = ["setroles"]
-
-generic_delete_methods = ["revokeauth"]
-
-generic_methods = ["getusagesummary","getroleinfo","getmanagedresources"] + generic_get_methods + generic_post_methods + generic_put_methods + generic_delete_methods
-
-all_container_methods = ["makeserviceinstance","getservicemetadata","getdependencies",
-    "getprovides","setresourcelookup", "getstatus","setmanagementproperty"] + generic_methods
-
-service_customer_methods =  ["createmfile"] + generic_methods
-service_admin_methods =  service_customer_methods + ["setmanagementproperty"]
-
-all_service_methods = [] + service_admin_methods
-
-mfile_monitor_methods = ["getusagesummary"]
-mfile_owner_methods = ["get", "put", "post", "delete", "verify"] + generic_methods
-
-all_mfile_methods = mfile_owner_methods + mfile_monitor_methods
-
-def gen_sec_link_orig(rel_path,prefix):
-      import time, hashlib
-      if not rel_path.startswith("/"):
-        rel_path = "%s%s" % ("/", rel_path)
-      secret = 'ugeaptuk6'
-      uri_prefix = '/%s/' % prefix
-      hextime = "%08x" % time.time()
-      token = hashlib.md5(secret + rel_path + hextime).hexdigest()
-      return '%s%s/%s%s' % (uri_prefix, token, hextime, rel_path)
-
-def create_container(request,name):
-    hostingcontainer = HostingContainer(name=name)
-    hostingcontainer.save()
-
-    hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="full")
-
-    hostingcontainerauth.save()
-
-    owner_role = Role(rolename="admin")
-    owner_role.setmethods(all_container_methods)
-    owner_role.description = "Full access to the container"
-    owner_role.save()
-
-    hostingcontainerauth.roles.add(owner_role)
-
-    managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=DEFAULT_ACCESS_SPEED)
-    managementproperty.save()
-
-    usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
-
-    return hostingcontainer
-
-def delete_container(request,containerid):
-    usage_store.stoprecording(containerid,usage_store.metric_container)
-    container = HostingContainer.objects.get(id=containerid)
-    logging.info("Deleteing service %s %s" % (container.name,containerid))
-
-    usages = Usage.objects.filter(base=container)
-    for usage in usages:
-        usage.base = None
-        usage.save()
-
-    container.delete()
-    logging.info("Container Deleted %s " % containerid)
-
-def create_data_service(request,containerid,name):
-    container = HostingContainer.objects.get(id=containerid)
-    dataservice = DataService(name=name,container=container)
-    dataservice.save()
-
-    serviceauth = DataServiceAuth(dataservice=dataservice,authname="full")
-    
-    serviceauth.save()
-
-    owner_role = Role(rolename="serviceadmin")
-    owner_role.setmethods(service_admin_methods)
-    owner_role.description = "Full control of the service"
-    owner_role.save()
-
-    customer_role = Role(rolename="customer")
-    customer_role.setmethods(service_customer_methods)
-    customer_role.description = "Customer Access to the service"
-    customer_role.save()
-
-    serviceauth.roles.add(owner_role)
-    serviceauth.roles.add(customer_role)
-
-    customerauth = DataServiceAuth(dataservice=dataservice,authname="customer")
-    customerauth.save()
-
-    customerauth.roles.add(customer_role)
-
-    managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=DEFAULT_ACCESS_SPEED)
-    managementproperty.save()
-
-    usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
-    
-    return dataservice
-
-def delete_service(request,serviceid):
-    usage_store.stoprecording(serviceid,usage_store.metric_service)
-    service = DataService.objects.get(id=serviceid)
-    logging.info("Deleteing service %s %s" % (service.name,serviceid))
-
-    usages = Usage.objects.filter(base=service)
-    for usage in usages:
-        usage.base = service.container
-        usage.save()
-
-    service.delete()
-    logging.info("Service Deleted %s " % serviceid)
-
-def create_mfile(request,serviceid,file):
-    service = DataService.objects.get(id=serviceid)
-    if file==None:
-        mfile = MFile(name="Empty File",service=service)
-    else:
-        mfile = MFile(name=file.name,service=service,file=file)
-    mfile.save()
-
-    logging.debug("MFile creation started '%s' "%mfile)
-    logging.debug("Creating roles for '%s' "%mfile)
-    
-    mfileauth_owner = MFileAuth(mfile=mfile,authname="owner")
-    mfileauth_owner.save()
-
-    owner_role = Role(rolename="owner")
-    methods = mfile_owner_methods
-    owner_role.setmethods(methods)
-    owner_role.description = "Owner of the data"
-    owner_role.save()
-
-    mfileauth_owner.roles.add(owner_role)
-
-    monitor_role = Role(rolename="monitor")
-    methods = mfile_monitor_methods
-    monitor_role.setmethods(methods)
-    monitor_role.description = "Collect usage reports"
-    monitor_role.save()
-
-    mfileauth_owner.roles.add(monitor_role)
-
-    mfileauth_monitor = MFileAuth(mfile=mfile,authname="monitor")
-    mfileauth_monitor.save()
-
-    mfileauth_monitor.roles.add(monitor_role)
-
-    if mfile.file:
-        # MIME type
-        m = magic.open(magic.MAGIC_MIME)
-        m.load()
-        mimetype = m.file(mfile.file.path)
-        mfile.mimetype = mimetype
-        # checksum
-        mfile.checksum = utils.md5_for_file(mfile.file)
-        # record size
-        mfile.size = file.size
-        # save it
-        mfile.save()
-
-        thumbpath = os.path.join( str(mfile.file) + ".thumb.jpg")
-        posterpath = os.path.join( str(mfile.file) + ".poster.jpg")
-        fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
-        fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
-        (thumbhead,tail) = os.path.split(fullthumbpath)
-        (posterhead,tail) = os.path.split(fullposterpath)
-
-        if not os.path.isdir(thumbhead):
-            os.makedirs(thumbhead)
-
-        if not os.path.isdir(posterhead):
-            os.makedirs(posterhead)
-            
-        use_celery = settings.USE_CELERY
-
-        if use_celery:
-            logging.info("Using CELERY for processing ")
-        else:
-            logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
-
-        if mimetype.startswith('video'):
-
-            if use_celery:
-                thumbtask = thumbvideo.delay(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
-            else:
-                thumbtask = thumbvideo(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
-            mfile.thumb = thumbpath
-            if use_celery:
-                postertask = thumbvideo.delay(mfile.file.path,fullposterpath,postersize[0],postersize[1])
-            else:
-                postertask = thumbvideo(mfile.file.path,fullposterpath,postersize[0],postersize[1])
-
-            mfile.poster = posterpath
-
-        elif mimetype.startswith('image'):
-            logging.info("Creating thumb inprocess for Image '%s' %s " % (mfile,mimetype))
-            if use_celery:
-                thumbtask = thumbimage.delay(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
-            else:
-                thumbtask = thumbimage(mfile.file.path,fullthumbpath,thumbsize[0],thumbsize[1])
-
-            mfile.thumb = thumbpath
-            if use_celery:
-                postertask = thumbimage.delay(mfile.file.path,fullposterpath,postersize[0],postersize[1])
-            else:
-                postertask = thumbimage(mfile.file.path,fullposterpath,postersize[0],postersize[1])
-            mfile.poster = posterpath
-        else:
-            logging.info("Not creating thumb for '%s' %s " % (mfile,mimetype))
-
-        mfile.save()
-        usage_store.startrecording(mfile.id,usage_store.metric_mfile,1)
-        usage_store.startrecording(mfile.id,usage_store.metric_archived,1)
-        usage_store.record(mfile.id,usage_store.metric_disc,mfile.size)
-        usage_store.record(mfile.id,usage_store.metric_ingest,mfile.size)
-
-    logging.debug("Backing up '%s' "%mfile)
-
-    if file is not None:
-        backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
-        backup.save()
-
-    return mfile
-
-def delete_mfile(request,mfileid):
-    mfile = MFile.objects.get(id=mfileid)
-    if mfile.file == None:
-        usage_store.stoprecording(mfileid,usage_store.metric_mfile)
-        usage_store.stoprecording(mfileid,usage_store.metric_archived)
-    logging.info("Deleteing mfile %s %s" % (mfile.name,mfileid))
-
-    usages = Usage.objects.filter(base=mfile)
-    logging.info("Deleteing mfile usage")
-    for usage in usages:
-        logging.info("Saving Usage %s " % usage)
-        usage.base = mfile.service
-        usage.save()
-
-    mfile.delete()
-    logging.info("MFile Deleted %s " % mfileid)
+DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 
 class GlobalHandler(BaseHandler):
      allowed_methods = ('GET')
@@ -304,12 +41,12 @@ class GlobalHandler(BaseHandler):
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
-    fields = ('name', 'id','dataservice_set' )
+    fields = ('name', 'id','dataservice_set',"reportnum")
     exclude = ('pk')
 
     def delete(self, request, id):
         logging.info("Deleting Container %s " % id)
-        delete_container(request,id)
+        api.delete_container(request,id)
         r = rc.DELETED
         return r
 
@@ -317,7 +54,7 @@ class HostingContainerHandler(BaseHandler):
         form = HostingContainerForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
-            hostingcontainer = create_container(request,name)
+            hostingcontainer = api.create_container(request,name)
             return hostingcontainer
         else:
             r = rc.BAD_REQUEST
@@ -328,25 +65,27 @@ class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
     #fields = ('name', 'id')
-    fields = ('name', 'id', 'mfile_set','job_set')
+    fields = ('name', 'id', 'mfile_set','job_set','reportnum')
     exclude = ('pk')
 
     def delete(self, request, id):
         logging.info("Deleting Service %s " % id)
-        delete_service(request,id)
+        api.delete_service(request,id)
         r = rc.DELETED
         return r
 
     def create(self, request):
-        form = DataServiceForm(request.POST) 
+        form = DataServiceForm(request.POST)
+        logging.info(form)
         if form.is_valid(): 
             
             containerid = form.cleaned_data['cid']
             name = form.cleaned_data['name']
-            dataservice = create_data_service(request,containerid,name)
+            dataservice = api.create_data_service(request,containerid,name)
             return dataservice
 
         else:
+            logging.info(form)
             r = rc.BAD_REQUEST
             resp.write("Invalid Request!")
             return r
@@ -358,7 +97,7 @@ class DataServiceURLHandler(BaseHandler):
         form = DataServiceURLForm(request.POST)
         if form.is_valid(): 
             name = form.cleaned_data['name']
-            dataservice = create_data_service(request,containerid,name)
+            dataservice = api.create_data_service(request,containerid,name)
             return dataservice
         else:
             r = rc.BAD_REQUEST
@@ -440,7 +179,7 @@ class MFileHandler(BaseHandler):
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
-        delete_mfile(request,id)
+        api.delete_mfile(request,id)
         r = rc.DELETED
         return r
 
@@ -502,7 +241,7 @@ class MFileHandler(BaseHandler):
                 file = None
             serviceid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
-            mfile = create_mfile(request, serviceid, file)
+            mfile = api.create_mfile(request, serviceid, file)
             return mfile
         else:
             r = rc.BAD_REQUEST
@@ -760,7 +499,7 @@ class MFileContentsHandler(BaseHandler):
 
         p = str(file)
 
-        redirecturl = gen_sec_link_orig(p,dlfoldername)
+        redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
         redirecturl = redirecturl[1:]
 
         SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
@@ -815,7 +554,7 @@ class MFileURLHandler(BaseHandler):
 
             upload = SimpleUploadedFile( filename, request.raw_post_data )
 
-            mfile = create_mfile(request, serviceid, upload)
+            mfile = api.create_mfile(request, serviceid, upload)
 
             logging.info(mfile)
 
@@ -828,7 +567,7 @@ class MFileURLHandler(BaseHandler):
             logging.debug("Handler Files %s" %request.FILES)
 
             file = request.FILES['file']
-            mfile = create_mfile(request, serviceid, file)
+            mfile = api.create_mfile(request, serviceid, file)
 
             logging.info(request.FILES)
 
@@ -840,59 +579,36 @@ class MFileURLHandler(BaseHandler):
 
 class ManagedResourcesContainerHandler(BaseHandler):
     allowed_methods = ('GET')
-    model = ContainerResourcesReport
-    fields = ('services','base','reportnum')
-    exclude = ('pk')
     
     def read(self, request, containerid, last_known=-1):
 
         last = int(last_known)
-        container = None
-        try:
-            container = HostingContainer.objects.get(id=containerid)
-        except ObjectDoesNotExist:
-            try:
-                containerauth = HostingContainerAuth.objects.get(id=containerid)
-                container = containerauth.hostingcontainer
-            except ObjectDoesNotExist:
-                pass
-
-        report,created = ContainerResourcesReport.objects.get_or_create(base=container)
+        container = HostingContainer.objects.get(id=containerid)
 
         if last is not -1:
-            while last == report.reportnum:
+            while last == container.reportnum:
                 logging.info("Waiting for new services lastreport=%s" % (last))
                 time.sleep(sleeptime)
-                report = ContainerResourcesReport.objects.get(base=container)
+                container = HostingContainer.objects.get(id=containerid)
 
-        services = DataService.objects.filter(container=container)
-        report.services = services
-        report.save()
-        return report
+        return container
 
 class ManagedResourcesServiceHandler(BaseHandler):
     allowed_methods = ('GET')
-    model = ServiceResourcesReport
-    fields = ('mfiles','meta','base','reportnum')
-
 
     def read(self, request, serviceid, last_known=-1):
 
         last = int(last_known)
         service = DataService.objects.get(id=serviceid)
-
-        report,created = ServiceResourcesReport.objects.get_or_create(base=service)
-
+        logging.info("Waiting for new services lastreport=%s" % (service.reportnum))
+        logging.info("Waiting for new services lastknown=%s" % (last ))
         if last is not -1:
-            while last == report.reportnum:
+            while last == service.reportnum:
                 logging.info("Waiting for new mfiles lastreport=%s" % (last))
                 time.sleep(sleeptime)
-                report = ServiceResourcesReport.objects.get(base=service)
-        
-        mfiles = MFile.objects.filter(service=service)
-        report.mfiles = mfiles
-        report.save()
-        return report
+                service = DataService.objects.get(id=serviceid)
+
+        return service
 
 class ManagedResourcesmfileHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -924,7 +640,7 @@ class RoleHandler(BaseHandler):
             logging.info(a)
             logging.info(dir(a))
 
-        allowed_methods = all_container_methods + all_service_methods + all_mfile_methods
+        allowed_methods = api.all_container_methods + api.all_service_methods + api.all_mfile_methods
 
         # TODO: Should we check each type of authority this role could be under?
         #if hasattr(role.auth,"hostingcontainerauth"):
@@ -1022,7 +738,7 @@ class AccessControlHandler(BaseHandler):
 
         logging.info("update %s %s" % (method,pk))
 
-        if not method in generic_put_methods:
+        if not method in api.generic_put_methods:
             return HttpResponseBadRequest("Cannot do 'PUT' %s on %s" % (method,pk))
 
         if method == "setroles":
@@ -1041,15 +757,15 @@ class AccessControlHandler(BaseHandler):
             return HttpResponse("called %s on %s roles=%s" % (method,pk,",".join(roleids)))
 
             if utils.is_containerauth(auth):
-                if roles in all_container_methods:
+                if roles in api.all_container_methods:
                     role.setmethods(roles)
                     role.save()
             if utils.is_mfileauth(auth):
-                if roles in all_service_methods:
+                if roles in api.all_service_methods:
                     role.setmethods(roles)
                     role.save()
             if utils.is_mfileauth(auth):
-                if roles in all_mfile_methods:
+                if roles in api.all_mfile_methods:
                     role.setmethods(roles)
                     role.save()
 
@@ -1059,7 +775,7 @@ class AccessControlHandler(BaseHandler):
 
     def read(self,request, method, pk):
 
-        if not method in generic_get_methods:
+        if not method in api.generic_get_methods:
             return HttpResponseBadRequest("Cannot do 'GET' %s on %s" % (method,pk))
         
         if method == "getauths":
@@ -1242,6 +958,7 @@ class UsageSummaryHandler(BaseHandler):
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
+    fields = ("value","property","id")
 
     def read(self,request, baseid):
         base = NamedBase.objects.get(id=baseid)

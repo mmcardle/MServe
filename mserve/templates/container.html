@@ -7,14 +7,27 @@
 {% block content %}
 
 <h3>Data Services</h3>
+
+<div class="paginator" id="servicepaginator"></div>
+<div id="servicemessages"></div>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        loadServices('{{ container.id }}');
+    });
+</script>
+
+<!--
 <ul>
     {% for service in services %}
-        <li><a href="/browse/service/{{ service.id }}/">{{ service.name }}</a></li>
+        <li><a href="/browse/service/{{ service.id }}/">{{ service.name }}</a> <em>{{service.mfile_set.all|length}} files</em></li>
     {% endfor %}
 </ul>
 {% if not services %}
     <ul><li>Empty</li></ul>
 {% endif %}
+
+-->
 <h3>Create New Service</h3>
 
 <form action="/form/service/" method="post">
@@ -27,21 +40,25 @@
 
 {% block rightcontent %}
 
-{% include "methods.html" %}
+{% if user.is_staff %}
+    {% include "methods.html" %}
 
-<h3>Management Properties</h3>
 
-<table style="table-layout: fixed;width:300px;">
-    <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
-    {% for property in properties%}
-    <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
-            <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
-                <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
-            </form>-->
-            </td>
-        </tr>
-    {% endfor %}
-</table>
+    <h3>Management Properties</h3>
+
+    <table style="table-layout: fixed;width:300px;">
+        <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
+        {% for property in properties%}
+        <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
+                <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
+                    <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
+                </form>-->
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+{% endif %}
 
 <!--
 <h5>Set Management Property</h5>

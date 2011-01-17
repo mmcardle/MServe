@@ -68,6 +68,11 @@ td {
     padding:0px;
 }
 
+.message{
+    clear:both;
+    
+}
+
 .auth {
     margin: 2px;
     padding: 3px;
@@ -113,7 +118,7 @@ dt {
     color:red;
 }
 
-.failed,.passed{
+.failed,.passed,.message{
     width: 50%;
     border: 1px outset black;
     padding: 10px;
@@ -126,7 +131,10 @@ dt {
     background-color: #336600;
     color: white;
 }
-
+.message {
+    background-color: whitesmoke;
+    color: black;
+}
 
 
 .fluid{
@@ -216,6 +224,7 @@ li.fluid a {
     background-image: url('/mservemedia/images/busy.gif');
     background-position: left;
     background-repeat: no-repeat;
+    padding-left: 20px;
 }
 .taskerror{
     color:red;

@@ -1,4 +1,26 @@
 import hashlib
+import hashlib
+import time
+import uuid
+import os
+
+fmt = "%3.2f"
+
+def create_filename(instance, filename):
+    timeformat = time.strftime("%Y/%m/%d/")
+    return os.path.join(timeformat ,instance.id ,filename)
+
+def random_id():
+    return str(uuid.uuid4())
+
+def gen_sec_link_orig(rel_path,prefix):
+      if not rel_path.startswith("/"):
+        rel_path = "%s%s" % ("/", rel_path)
+      secret = 'ugeaptuk6'
+      uri_prefix = '/%s/' % prefix
+      hextime = "%08x" % time.time()
+      token = hashlib.md5(secret + rel_path + hextime).hexdigest()
+      return '%s%s/%s%s' % (uri_prefix, token, hextime, rel_path)
 
 def md5_for_file(file):
     """Return hex md5 digest for a Django FieldFile"""

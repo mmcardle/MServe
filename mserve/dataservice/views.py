@@ -9,6 +9,7 @@ from django.template import RequestContext
 from piston.utils import rc
 import usage_store as usage_store
 import utils as utils
+import api as api
 import handlers as handlers
 import logging
 
@@ -52,7 +53,7 @@ def create_container(request):
     if form.is_valid():
 
         name = form.cleaned_data['name']
-        hostingcontainer = handlers.create_container(request,name)
+        hostingcontainer = api.create_container(request,name)
 
         return redirect('/browse/container/'+str(hostingcontainer.id))
     else:
@@ -133,7 +134,7 @@ def create_service(request):
 
         containerid = form.cleaned_data['cid']
         name = form.cleaned_data['name']
-        dataservice = handlers.create_data_service(request,containerid,name)
+        dataservice = api.create_data_service(request,containerid,name)
 
         return redirect('/browse/service/'+str(dataservice.id))
     else:
@@ -286,7 +287,7 @@ def create_mfile(request):
             file = None
         serviceid = form.cleaned_data['sid']
         #service = DataService.objects.get(id=serviceid)
-        mfile = create_mfile(request, serviceid, file)
+        mfile = api.create_mfile(request, serviceid, file)
 
         return redirect('/browse/mfile/'+str(mfile.id)+"/")
     else:

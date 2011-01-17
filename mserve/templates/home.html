@@ -3,16 +3,29 @@
 {% block title %}MServe Home{% endblock %}
 
 {% block content %}
-
 <h3>Containers</h3>
+
+<div class="paginator" id="containerpaginator"></div>
+<div id="containermessages"></div>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        loadContainers();
+    });
+</script>
+<!--
 <ul>
     {% for hosting in hostingcontainers.all %}
-    <li>{{ hosting.name }}&nbsp;<a href="/browse/container/{{ hosting.id }}/">{{ hosting.id }}</a></li>
+    <li>{{ hosting.name }}&nbsp;<a href="/browse/container/{{ hosting.id }}/">{{ hosting.id }} </a><em>{{hosting.dataservice_set.all|length}} services</em></li>
     {% endfor %}
 </ul>
+
+
 {% if not hostingcontainers %}
 <ul><li>Empty</li></ul>
 {% endif %}
+
+-->
 <h3>Create New Hosting Container</h3>
 <form action="/form/container/" method="post">
     {{ form.as_p }}

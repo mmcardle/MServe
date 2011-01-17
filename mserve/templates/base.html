@@ -5,37 +5,17 @@
 <script type="text/javascript" src="http://www.google.com/jsapi"></script>
 <link type="text/css" href="/mservemedia/css/smoothness/jquery-ui-1.8.6.custom.css" rel="stylesheet" />
 <link type="text/css" href="/mservemedia/css/mserve.css" rel="stylesheet" />
+<link type="text/css" href="/mservemedia/css/pagination.css" rel="stylesheet" />
 {% block script %}{% endblock %}
 <script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.html5-fileupload.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery-ui-1.8.6.custom.min.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/jquery.pagination.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/jquery.universalpaginate.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/jquery.tmpl.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/mserve.js" ></script>
 
 <script type="text/javascript">
-
-    function runEffect(selectedEffect,id) {
-
-            // most effect types need no options passed by default
-            var options = {};
-            // some effects have required parameters
-            if ( selectedEffect === "scale" ) {
-                    options = { percent: 0 };
-            } else if ( selectedEffect === "size" ) {
-                    options = { to: { width: 200, height: 60 } };
-            }
-
-            // run the effect
-            $("#id-9b9c21ca-91a7-4983-a66e-e71e236fd251").show( selectedEffect, options, 1000, callback );
-    };
-
-        // callback function to bring a hidden box back
-        function callback() {
-                setTimeout(function() {
-                        $( "#effect" ).removeAttr( "style" ).hide().fadeIn();
-                }, 1000 );
-        };
-
-
 
      function setManagementPropertyAccessSpeed(service){
         var speed = prompt("What speed do you wish to set access", "");
@@ -129,6 +109,39 @@
 </head>
 
 <body id="wrapper">
+
+    <script id="mfileTemplate" type="text/x-jquery-tmpl">
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
+                                         onmouseout="$('#id-${id}').hide();" >
+            <table cellpadding='0' cellspacing='0' style='background-image:url("/mservethumbs/${thumb}/");' class='thumb'>
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr><td>
+                    <div class='title'>
+                        <a href='/browse/mfile/${id}/'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                        </a></div></td></tr>
+            <tr><td>
+                    <a href='/browse/mfile/${id}/'>
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                          <div>Size: ${size}</div>
+                          <div style='font-size: x-small;'>Type</div>
+                          <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
+                          <div style='font-size: x-small;'>Created: ${created}</div>
+                          <div style='font-size: x-small;'>Updated: ${updated}</div>
+                          <div style='font-size: xx-small;'>Checksum:</div>
+                          <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
+                      </div>
+                    </a>
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+    </script>
+
    <div id="debug"></div>
    <div style="display:none">
        
@@ -182,8 +195,6 @@
 
                 {% endblock %}
 
-
-
             </th>
             
             <td >
@@ -198,7 +209,7 @@
                 {% endblock %}
 
                 {% block auths %}
-                <h3  class="ilink" onclick="$('#authscontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Auths</h3>
+                <h3  class="ilink" onclick="$('#authscontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Auths</h3>
                 <div id="authscontent" style="display:none;">
                 {% if auths %}
                     {% for auth in auths %}

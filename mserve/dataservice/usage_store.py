@@ -73,24 +73,23 @@ def reportusage(base):
     toreport = []
 
     if utils.is_container(base):
-
+        logging.info("Base %s "%base)
         toreport =  [base]
 
     if utils.is_service(base):
         container = HostingContainer.objects.get(dataservice=base)
-        container_report,created = ContainerResourcesReport.objects.get_or_create(base=container)
-        container_report.reportnum = container_report.reportnum+1
-        container_report.save()
+        container.reportnum += 1
+        container.save()
 
         toreport =  [container,base]
 
     if utils.is_mfile(base):
         service   = DataService.objects.get(mfile=base)
+        service.reportnum += 1
+        service.save()
         container = HostingContainer.objects.get(dataservice=service)
-
-        service_report,created = ServiceResourcesReport.objects.get_or_create(base=service)
-        service_report.reportnum = service_report.reportnum+1
-        service_report.save()
+        container.reportnum += 1
+        container.save()
 
         toreport =  [container,service,base]
 

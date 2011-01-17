@@ -1,23 +1,14 @@
 from django.db import models
-from celery.result import AsyncResult
-import uuid
 import pickle
 import base64
 import os
 import time
-import logging
 import storage
 import datetime
+import utils as utils
 
 ID_FIELD_LENGTH = 200
 fmt = "%3.2f"
-
-def random_id():
-    return str(uuid.uuid4())
-
-def create_filename(instance, filename):
-    timeformat = time.strftime("%Y/%m/%d/")
-    return os.path.join(timeformat ,instance.id ,filename)
 
 class UsageReport(models.Model):
     base = models.ForeignKey('NamedBase')
@@ -174,53 +165,55 @@ class NamedBase(Base):
 
 class HostingContainer(NamedBase):
     status = models.CharField(max_length=200)
+    reportnum = models.IntegerField(default=0)
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(HostingContainer, self).save()
-
-class ManagementProperty(models.Model):
-    base        = models.ForeignKey(NamedBase)
-    property    = models.CharField(max_length=200)
-    value       = models.CharField(max_length=200)
 
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
     status = models.CharField(max_length=200)
+    reportnum = models.IntegerField(default=0)
+
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(DataService, self).save()
 
 class MFile(NamedBase):
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     service  = models.ForeignKey(DataService)
     #file     = models.FileField(upload_to=create_filename,storage=storage.getdiscstorage())
-    file     = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.getdiscstorage())
+    file     = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
     size     = models.IntegerField(default=0)
-    thumb    = models.ImageField(upload_to=create_filename,null=True,storage=storage.getthumbstorage())
-    poster   = models.ImageField(upload_to=create_filename,null=True,storage=storage.getthumbstorage())
+    thumb    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
+    poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
     created  = models.DateTimeField(auto_now_add=True)
     updated  = models.DateTimeField(auto_now=True)
+    reportnum = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ('-created','name')
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         self.updated = datetime.datetime.now()
         super(MFile, self).save()
 
 class BackupFile(NamedBase):
     mfile = models.ForeignKey(MFile)
-    file = models.FileField(upload_to=create_filename,blank=True,null=True,storage=storage.gettapestorage())
+    file = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.gettapestorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(BackupFile, self).save()
 
 class Job(NamedBase):
@@ -233,7 +226,7 @@ class Job(NamedBase):
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(Job, self).save()
 
     def __unicode__(self):
@@ -246,26 +239,13 @@ class JobMFile(Base):
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(JobMFile, self).save()
 
-class ContainerResourcesReport(models.Model):
-    base = models.ForeignKey('NamedBase')
-    reportnum = models.IntegerField(default=0)
-    services   = models.ManyToManyField(DataService,related_name="con2ser")
-    meta       = models.CharField(max_length=200,blank=True,null=True)
-
-    def __unicode__(self):
-        return "Container Managed Services Report for %s reportnum=%s" % (self.base,self.reportnum);
-
-class ServiceResourcesReport(models.Model):
-    base = models.ForeignKey('NamedBase')
-    reportnum = models.IntegerField(default=0)
-    mfiles   = models.ManyToManyField(MFile,related_name="ser2sta")
-    meta       = models.CharField(max_length=200,blank=True,null=True)
-
-    def __unicode__(self):
-        return "Service Managed Services Report for %s reportnum=%s" % (self.base,self.reportnum);
+class ManagementProperty(models.Model):
+    base        = models.ForeignKey(NamedBase)
+    property    = models.CharField(max_length=200)
+    value       = models.CharField(max_length=200)
 
 class Auth(Base):
     authname = models.CharField(max_length=50)
@@ -278,7 +258,7 @@ class Role(Base):
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(Role, self).save()
 
     def methods(self):
@@ -298,7 +278,7 @@ class Role(Base):
 class SubAuth(Auth):
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(SubAuth, self).save()
 
 class JoinAuth(models.Model):
@@ -312,14 +292,14 @@ class MFileAuth(Auth):
     mfile = models.ForeignKey(MFile)
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(MFileAuth, self).save()
 
 class DataServiceAuth(Auth):
     dataservice = models.ForeignKey(DataService)
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(DataServiceAuth, self).save()
 
 class HostingContainerAuth(Auth):
@@ -327,7 +307,7 @@ class HostingContainerAuth(Auth):
 
     def save(self):
         if not self.id:
-            self.id = random_id()
+            self.id = utils.random_id()
         super(HostingContainerAuth, self).save()
 
 

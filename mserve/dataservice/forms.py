@@ -5,7 +5,7 @@ from django.forms import MultipleChoiceField
 
 class HostingContainerForm(ModelForm):
     class Meta:
-        exclude=['id','status']
+        exclude=['id','status','reportnum']
         model = HostingContainer
 
 class ManagementPropertyForm(ModelForm):
@@ -15,39 +15,39 @@ class ManagementPropertyForm(ModelForm):
 
 class DataServiceURLForm(ModelForm):
     class Meta:
-        exclude=['id','status','container']
+        exclude=['id','status','container','reportnum']
         model = DataService
 
 class DataServiceForm(ModelForm):
     cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     
     class Meta:
-        exclude=['id','status','container']
+        exclude=['id','status','container','reportnum']
         model = DataService
 
 class MFileURLForm(ModelForm):
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
         model = MFile
 
 class MFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
         model = MFile
 
 class UpdateMFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
         model = MFile
 
 class UpdateMFileFormURL(ModelForm):
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
         model = MFile
 
 class MFileAuthForm(ModelForm):

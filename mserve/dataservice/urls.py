@@ -39,8 +39,6 @@ mfile_corruption_handler = Resource(CorruptionHandler)
 
 urlpatterns = patterns('',
 
-    url(r'^tasks/', 'djcelery.views.registered_tasks'),
-
     # REST Methods for POST
     url(r'^container/$', hosting_handler),
     url(r'^service/$', dataservice_handler),
@@ -67,19 +65,9 @@ urlpatterns = patterns('',
     url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
     url(r'^mfileauth/(?P<mfileauthid>[^/]+)/', mfile_auth_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
+
     url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
-    #url(r'^accesscontrol/(?P<pk>[^/]+)/$', access_control_handler),
-
-
     url(r'^authority/(?P<method>[^/]+)/(?P<id>[^/]+)/$', access_control_handler),
-
-    #url(r'^auth/getorcreateauth/(?P<pk>[^/]+)/$', access_control_handler),
-    #url(r'^auth/addauth/(?P<pk>[^/]+)/$', access_control_handler),
-    #url(r'^auth/getauths/(?P<pk>[^/]+)/$', access_control_handler),
-    #url(r'^auth/getroles/(?P<pk>[^/]+)/$', access_control_handler),
-    #url(r'^auth/setroles/(?P<pk>[^/]+)/$', access_control_handler),
-    #url(r'^auth/revokeauth/(?P<pk>[^/]+)/$', access_control_handler),
-
 
     # Container Methods
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
@@ -93,8 +81,8 @@ urlpatterns = patterns('',
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_url_handler),
-    url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/', managedresources_service_handler),
-    url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/', managedresources_service_handler),
+    url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/$', managedresources_service_handler),
+    url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_service_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
     url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
     url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
@@ -119,9 +107,19 @@ urlpatterns = patterns('',
     url(r'^mfileapi/getpreview/(?P<mfileid>[^/]+)/$', render_results_handler),
     url(r'^mfileapi/getjobs/(?P<mfileid>[^/]+)/$', jobmfile_handler),
 
+    #url(r'^auth/getorcreateauth/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/addauth/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/getauths/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/getroles/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/setroles/(?P<pk>[^/]+)/$', access_control_handler),
+    #url(r'^auth/revokeauth/(?P<pk>[^/]+)/$', access_control_handler),
+
     # Job Methods
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),
     url(r'^jobapi/(?P<id>[^/]+)/$', job_handler),
+
+    # TEMP - Needs Sorting
+    url(r'^tasks/', 'djcelery.views.registered_tasks'),
 
     # Thumb methods
     url(r'^thumbapi/$', thumb_handler),

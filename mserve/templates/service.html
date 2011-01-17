@@ -9,6 +9,7 @@
 {% load mservetags %}
 </head>
 <body>
+
 <h3 style="clear:both">Create New File</h3>
 <table>
 <tr>
@@ -31,7 +32,7 @@
         </td>
         <td>
             <h4>..Or Upload with Form</h4>
-            <form name="uploadform" action="/mfile/" method="post" enctype="multipart/form-data" >
+            <form name="uploadform" action="/form/mfile/" method="post" enctype="multipart/form-data" >
                 {{ form.as_p }}
                 <input type="submit" value="Submit" />
             </form>
@@ -40,19 +41,13 @@
 </table>
 
 <h3>Files</h3>
-<div  id="mfilelist">
-    {% for mfile in mfiles %}
 
-    {% include "mfilethumb.html" %}
+<div class="paginator" id="mfilepaginator"></div>
 
-    {% endfor %}
+<div id="mfilemessages"></div>
+
+<div id="mfileList">
 </div>
-
-{% if not mfiles %}
-<div  id="emptymfilelist">
-    <ul><li>Empty</li></ul>
-</div>
-{% endif %}
 
 <div style="clear:both"></div>
 
@@ -63,7 +58,10 @@
 </div>
 
 <script type="text/javascript">
-    load_jobs_service('{{service.id}}')
+    $(document).ready(function() {
+        loadMFiles('{{ service.id }}');
+        loadJobs('{{service.id}}')
+    });
 </script>
 
 {% endblock %}
