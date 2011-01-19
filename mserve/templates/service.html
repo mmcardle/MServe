@@ -19,8 +19,10 @@
             </div>
             <script type="text/javascript">
                 if ($.browser.webkit) {
+                    // Do Webkit uploader (chrome)
                     make_drop_upload_webkit("#dropbox",'{{service.id}}');
                 }else{
+                    // Do Non-Webkit uploader (Firefox)
                     make_drop_upload("#dropbox",'{{service.id}}');
                 }
             </script>

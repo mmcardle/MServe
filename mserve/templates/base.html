@@ -11,9 +11,11 @@
 <script type="text/javascript" src="/mservemedia/js/jquery.html5-fileupload.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery-ui-1.8.6.custom.min.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.pagination.js" ></script>
-<script type="text/javascript" src="/mservemedia/js/jquery.universalpaginate.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.tmpl.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/base.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/uploader.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/mserve.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/ui.js" ></script>
 
 <script type="text/javascript">
 
@@ -104,6 +106,10 @@
 
 </script>
 
+<style type="text/css">
+
+</style>
+
 <!--<link rel="stylesheet" href="style.css" />-->
 <title>{% block title %}MServe{% endblock %}</title>
 </head>
@@ -113,7 +119,7 @@
     <script id="mfileTemplate" type="text/x-jquery-tmpl">
     <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
                                          onmouseout="$('#id-${id}').hide();" >
-            <table cellpadding='0' cellspacing='0' style='background-image:url("/mservethumbs/${thumb}/");' class='thumb'>
+            <table cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
             <colgroup><col>
             </colgroup>
             <tbody>
@@ -155,14 +161,14 @@
        
    </div>
     <h2>{% block heading %}MServe{% endblock %}</h2>
-    <table id="maintable">
+    <table id="maintable" >
         <tr>
             
-            <th id="sidebar" width="10%" rowspan="3" >
+            <th id="sidebar" rowspan="3" >
                 
                 {% block sidebar %}
                 {% if user.is_staff %}
-                    <div><a href="/home/">Home</a></div>
+                    <div><a href="/">Home</a></div>
                     <div><a href="/admin/">Admin</a></div>
                     <div><a href="/usage/">Usage</a></div>
                     <div><a href="/map/">Map</a></div>
@@ -180,7 +186,7 @@
                 {% endif %}
 
                 {% if user.is_staff %}
-                    <div><a href="#"></a></div>
+                    <!--<div><a href="#"></a></div>
                     <div><a href="/submit/">Submit</a></div>
                     <div><a href="/tasks/">Tasks</a></div>
 
@@ -188,9 +194,9 @@
                     <div id="debugcontent">
                     <div><a onclick="javascript:putroles();" class="ascript" >Test Put roles</a></div>
                     <div><a onclick="javascript:getorcreateauth();" class="ascript" >Test getorcreateauth</a></div>
-                    <div><a onclick="javascript:addauth();" class="ascript" >Test addauth</a></div>
-                    <div><a onclick="javascript:setManagementPropertyAccessSpeed('{{service.id}}');" class="ascript" >setManagementProperty</a></div>
-                    </div>
+                    <div><a onclick="javascript:addauth();" class="ascript" >addauth</a></div>
+                    <div><a onclick="javascript:setManagementPropertyAccessSpeed('{{service.id}}');" class="ascript" >setMP</a></div>
+                    </div>-->
                 {% endif %}
 
                 {% endblock %}
@@ -203,7 +209,7 @@
 
             </tr><tr>
 
-            <td style="max-width: 20em">
+            <td width="*">
                 {% block rightcontent %}
 
                 {% endblock %}

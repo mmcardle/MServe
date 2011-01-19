@@ -1,6 +1,6 @@
 {% if mfile.file %}
     <div id="image-{{mfile.id}}" style=" height: 256px; padding: 0.4em; position: relative;" >
-        <img id="mfileposter" title="{{mfile.name}}" alt="{{mfile.name}}" src="/mservethumbs/{{mfile.poster}}" />
+        <img id="mfileposter" title="{{mfile.name}}" alt="{{mfile.name}}" src="{{mfile.posterurl}}" />
     </div>
 {% endif %}
 {% if not mfile.file %}

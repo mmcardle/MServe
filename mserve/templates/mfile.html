@@ -5,7 +5,7 @@
 {% block heading%}{{mfile.name}}{% endblock %}
 
 {% block content %}
-    <h3 class="ilink" onclick="$('#content').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
+    <h3 class="ilink" onclick="$('#content').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
     <div id="content">
     <div id="message"></div>
 
@@ -46,7 +46,7 @@
 
 {% load mservetags %}
 
-<h3 class="ilink" onclick="$('#previewcontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Preview</h3>
+<h3 class="ilink" onclick="$('#previewcontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Preview</h3>
 
 <div id="previewcontent">
 
@@ -76,17 +76,34 @@
 
 {% if mfile.name|endswith:".blend"  %}
 
-<h3 class="ilink" onclick="$('#jobcontent').toggle('slow');"><span  style="float:left" class="ui-icon ui-icon-circle-plus"></span>Jobs</h3>
+<h3 class="ilink" onclick="$('#jobcontent').toggle('blind');"><span  style="float:left" class="ui-icon ui-icon-circle-plus"></span>Jobs</h3>
 <div id="jobcontent">
-<button id="button2" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_render('{{mfile.id}}');">
-    <span class="ui-button-text">New Render</span>
-</button>
+
+<button id="create-render">New Render</button>
+    
+    <div id="dialog-form" title="Create New Render">
+	<p class="validateTips">Input start frame and end frame.</p>
+
+        <form>
+	<fieldset>
+		<label for="name">Start</label>
+		<input type="text" name="start" id="start" class="text ui-widget-content ui-corner-all" />
+		<label for="email">End</label>
+		<input type="text" name="end" id="end" value="" class="text ui-widget-content ui-corner-all" />
+	</fieldset>
+	</form>
+</div>
+
 <div id="jobs">
 
 </div>
 
 <script type="text/javascript">
-    load_jobs_mfile('{{mfile.id}}')
+    $(document).ready(function() {
+        create_new_render_ui('{{mfile.id}}')
+        load_jobs_mfile('{{mfile.id}}')
+    });
+    
 </script>
 
 </div>
@@ -99,7 +116,7 @@
 
 {% include "methods.html" %}
 
-<h3 class="ilink" onclick="$('#authcontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Create Auth</h3>
+<h3 class="ilink" onclick="$('#authcontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Create Auth</h3>
 
 <div id="authcontent" style="display:none;">
 

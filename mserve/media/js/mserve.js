@@ -1,181 +1,6 @@
-/*
- * Copyright (c) 2008-2009, Ionut Gabriel Stan. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- *    * Redistributions of source code must retain the above copyright notice,
- *      this list of conditions and the following disclaimer.
- *
- *    * Redistributions in binary form must reproduce the above copyright notice,
- *      this list of conditions and the following disclaimer in the documentation
- *      and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+
 
 var mfiles = [];
-
-var Uploader = function() {
-};
-
-Uploader.prototype = {
-    headers : {},
-
-    /**
-     * @return Array
-     */
-    get elements() {
-        return [];
-    },
-
-    /**
-     * @return String
-     */
-    generateBoundary : function() {
-        return "---------------------------" + (new Date).getTime();
-    },
-
-    /**
-     * @param  Array elements
-     * @param  String boundary
-     * @return String
-     */
-    buildMessage : function(boundary, file) {
-        var CRLF  = "\r\n";
-        var parts = [];
-
-        part = ""
-
-        var fieldName = "file";
-        var fileName  = file.name || file.fileName;
-
-        /*
-         * Content-Disposition header contains name of the field used
-         * to upload the file and also the name of the file as it was
-         * on the user's computer.
-         */
-        part += 'Content-Disposition: form-data; ';
-        part += 'name="' + fieldName + '"; ';
-        part += 'filename="'+ fileName + '"' + CRLF;
-
-        /*
-         * Content-Type header contains the mime-type of the file to
-         * send. Although we could build a map of mime-types that match
-         * certain file extensions, we'll take the easy approach and
-         * send a general binary header: application/octet-stream.
-         */
-        part += "Content-Type: application/octet-stream" + CRLF + CRLF;
-
-        /*
-         * File contents read as binary data, obviously
-         */
-        //part += element.files[0].getAsBinary() + CRLF;
-
-        part += file.getAsBinary() + CRLF;
-
-        parts.push(part);
-
-        var request = "--" + boundary + CRLF;
-            request+= parts.join("--" + boundary + CRLF);
-            request+= "--" + boundary + "--" + CRLF;
-
-        return request;
-    },
-
-    /**
-     * @return null
-     */
-    send : function(file,url) {
-        var boundary = this.generateBoundary();
-        var xhr      = new XMLHttpRequest;
-
-          var info = {
-                // properties of standard File object || Gecko 1.9 properties
-                type: file.type || '', // MIME type
-                size: file.size || file.fileSize,
-                name: file.name || file.fileName,
-                shortname : file.name.substring(0, 10) + "..." || file.fileName.substring(0, 10) + "..."
-          };
-          xhr.info = info
-          xhr.r = "r-"+parseInt(Math.random()*(2 << 16));
-          xhr.upload.addEventListener('loadstart', onloadstartHandler, false);
-          xhr.upload.addEventListener('progress', onprogressHandler, false);
-          xhr.upload.addEventListener('load', onloadHandler, false);
-          xhr.addEventListener('readystatechange', onreadystatechangeHandler, false);
-
-        xhr.open("POST", url, true);
-        var contentType = "multipart/form-data; boundary=" + boundary;
-        xhr.setRequestHeader("X-File-Name", file.name);
-        xhr.setRequestHeader("Content-Type", contentType);
-
-        for (var header in this.headers) {
-            xhr.setRequestHeader(header, headers[header]);
-        }
-
-        // finally send the request as binary data
-        xhr.sendAsBinary(this.buildMessage(boundary, file));
-
-          function onloadstartHandler(evt) {
-                shortname=xhr.info.shortname
-                size=xhr.info.size
-                r=xhr.r
-
-                var uploadHtml = "<div class='upload' id='upload-"+r+"' >"
-                uploadHtml +=    "<div id='spinner-"+r+"' >"+shortname+", "+size+"b</div>"
-                uploadHtml +=    "<div id='status-"+r+"' ><img src='/mservemedia/images/busy.gif' />Upload Progress</div>"
-                uploadHtml +=    "<div style='height:10px;' class='progress' id='progress-"+r+"' ></div>"
-                uploadHtml +=    "</div>"
-
-                var p = $(uploadHtml)
-                $("#progressbox").append(p);
-                p.show('slide');
-               $('#upload-status').html('Upload started!');
-          }
-
-          function onloadHandler(evt) {
-                $("#status-"+xhr.r).html("<img src='/mservemedia/images/busy.gif' />Processing...");
-          }
-
-          function onprogressHandler(evt) {
-              var percent = parseInt(evt.loaded/evt.total*100);
-              $("#spinner-"+xhr.r).html(xhr.info.shortname+", "+size+"b "+percent+"%");
-              $("#progress-"+xhr.r).progressbar({
-                value: percent
-              });
-          }
-
-          function onreadystatechangeHandler(evt) {
-              var status = null;
-
-              try {
-                  status = evt.target.status;
-              }
-              catch(e) {
-                  return;
-              }
-
-              if (status == '200' && evt.target.responseText && xhr.readyState == 3) {
-
-              }
-
-              if (status == '200' && evt.target.responseText && xhr.readyState == 4) {// Loaded State
-                $("#upload-"+xhr.r).hide('slide');
-                var mfile = jQuery.parseJSON(evt.target.responseText);
-                reloadMFiles(mfile.id)
-              }
-          }
-    }
-};
 
 function loadContainers(){
     $.ajax({
@@ -225,7 +50,7 @@ function mfile_template(mfile){
     }
     return "<div id='image-"+mfile.id+"' class='fluid' onmouseover='$(\"#id-"+mfile.id+"\").show();'"
                +"onmouseout='$(\"#id-"+mfile.id+"\").hide();' >"
-            +"<table cellpadding='0' cellspacing='0' style='background-image:url(\"/mservethumbs/"+mfile.thumb+"\");' class='thumb'>"
+            +"<table cellpadding='0' cellspacing='0' style='background-image:url(\"/"+mfile.thumburl+"\");' class='thumb'>"
             +"<colgroup><col>"
             +"</colgroup>"
             +"<tbody>"
@@ -252,7 +77,7 @@ function loadServices(containerid){
        type: "GET",
        url: "/container/"+containerid+"/",
        success: function(msg){
-            services = msg[0].dataservice_set;
+            services = msg.dataservice_set;
 
             if(services.length==0){
                  $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
@@ -288,15 +113,6 @@ function loadServices(containerid){
        }
      });
 }
-
-function getShort( name , len) {
-    if(name.length>len){
-        return name.substr(0,len)+"..."
-    }else{
-        return name
-    }
-}
-
 
 var serviceid = ""
 function loadMFiles(sid){
@@ -352,163 +168,6 @@ function reloadMFiles(newfileid){
      });
 }
 
-function make_drop_upload(el,serviceid){
-     $(el).bind(
-            'dragover', // dragover behavior should be blocked for drop to invoke.
-            function(ev) {
-                    return false;
-            }
-    ).bind(
-            'drop',
-            function (ev) {
-                    if (!ev.originalEvent.dataTransfer.files) {
-                            log('ERROR: No FileList object present; user might had dropped text.');
-                            return false;
-                    }
-                    if (!ev.originalEvent.dataTransfer.files.length) {
-                            log('ERROR: User had dropped a virual file (e.g. "My Computer")');
-                            return false;
-                    }
-                    if (!ev.originalEvent.dataTransfer.files.length > 1) {
-                            log('WARN: Multiple file upload not implemented yet, only first file will be uploaded.');
-                    }
-                    doUpload(ev.originalEvent.dataTransfer.files[0],serviceid)
-                    return false;
-            }
-    );
-}
-
-function doUpload(file,serviceid) {
-    var uploader  = new Uploader();
-    uploader.send(file,"/serviceapi/create/"+serviceid+"/");
-}
-
-function supportAjaxUploadWithProgress() {
-    return supportFileAPI() && supportAjaxUploadProgressEvents();
-
-    function supportFileAPI() {
-        var fi = document.createElement('INPUT');
-        fi.type = 'file';
-        return 'files' in fi;
-    };
-
-    function supportAjaxUploadProgressEvents() {
-        var xhr = new XMLHttpRequest();
-        return !! (xhr && ('upload' in xhr) && ('onprogress' in xhr.upload));
-    };
-}
-
-function doUpload__old(file,serviceid) {
-
-
-  var xhr = new XMLHttpRequest();
-  var info = {
-        // properties of standard File object || Gecko 1.9 properties
-        type: file.type || '', // MIME type
-        size: file.size || file.fileSize,
-        name: file.name || file.fileName,
-        shortname : file.name.substring(0, 10) + "..." || file.fileName.substring(0, 10) + "..."
-  };
-  xhr.info = info
-  xhr.r = "r-"+parseInt(Math.random()*(2 << 16));
-  xhr.upload.addEventListener('loadstart', onloadstartHandler, false);
-  xhr.upload.addEventListener('progress', onprogressHandler, false);
-  xhr.upload.addEventListener('load', onloadHandler, false);
-  xhr.addEventListener('readystatechange', onreadystatechangeHandler, false);
-  xhr.open('POST', '/serviceapi/create/'+serviceid+'/', true);
-  xhr.setRequestHeader("Content-Type", "application/octet-stream");
-  //xhr.setRequestHeader("Content-Type", "multipart/form-data");
-  xhr.setRequestHeader("X-File-Name", file.name);
-  xhr.send(file); // Simple!
-
-  function onloadstartHandler(evt) {
-        shortname=xhr.info.shortname
-        size=xhr.info.size
-        r=xhr.r
-
-        var uploadHtml = "<div class='upload' id='upload-"+r+"' >"
-        uploadHtml +=    "<div id='spinner-"+r+"' >"+shortname+", "+size+"b</div>"
-        uploadHtml +=    "<div id='status-"+r+"' ><img src='/mservemedia/images/busy.gif' />Upload Progress</div>"
-        uploadHtml +=    "<div style='height:10px;' class='progress' id='progress-"+r+"' ></div>"
-        uploadHtml +=    "</div>"
-
-        var p = $(uploadHtml)
-        $("#progressbox").append(p);
-        p.show('slide');
-       $('#upload-status').html('Upload started!');
-  }
-
-  function onloadHandler(evt) {
-        $("#status-"+xhr.r).html("<img src='/mservemedia/images/busy.gif' />Processing...");
-  }
-
-  function onprogressHandler(evt) {
-      var percent = parseInt(evt.loaded/evt.total*100);
-      $("#spinner-"+xhr.r).html(xhr.info.shortname+", "+size+"b "+percent+"%");
-      $("#progress-"+xhr.r).progressbar({
-        value: percent
-      });
-  }
-
-  function onreadystatechangeHandler(evt) {
-      var status = null;
-
-      try {
-          status = evt.target.status;
-      }
-      catch(e) {
-          return;
-      }
-
-      if (status == '200' && evt.target.responseText && xhr.readyState == 3) {
-
-      }
-
-      if (status == '200' && evt.target.responseText && xhr.readyState == 4) {// Loaded State
-        $("#upload-"+xhr.r).hide('slide');
-        var mfile = jQuery.parseJSON(evt.target.responseText);
-        load_mfile(mfile.id)
-      }
-  }
-}
-
-function onprogressHandler(evt) {
-    var percent = evt.loaded/evt.total*100;
-    $('#testprogress').html(""+percent)
-}
-
-function make_drop_upload_webkit(item,serviceid){
-    $(item).fileUpload(
-            {
-                    url: "/serviceapi/create/"+serviceid+"/",
-                    type: 'POST',
-                    dataType: 'json',
-                    beforeSend: function () {
-                            name=this.info.name
-                            size=this.info.size
-                            //showMessage("info",objectToString(this.info))
-                            r=this.r
-                            if (name.length > 13)
-                                name = this.info.name.substring(0, 10) + "..."
-
-                            var p = $("<div class='spinner' id='spinner-"+r+"' >"+name+", "+size+"b</div><div class='progress' id='progress-"+r+"' ></div>")
-                            $("#progressbox").append(p);
-                            p.show('slide');
-                    },
-                    complete: function () {
-                            $("#spinner-"+this.r).hide('slide');
-                    },
-                    success: function (result, status, xhr) {
-                            if (!result) {
-                                    showError('Server error.');
-                                    return;
-                            }
-                            reloadMFiles(result.id)
-                    }
-            }
-    );
-}
-
 function load_render_preview(mfileid){
          $.ajax({
            type: "GET",
@@ -539,29 +198,6 @@ function load_mfile(mfileid){
                 showError( "Failure to get mfile thumb " );
            }
          });
-}
-
-function objectToStringShallow(ob){
-    var output = '';
-    for (property in ob) {
-        //alert(typeof ob[property])
-        output += "<b>"+property + '</b>: ' + ob[property]+'<br /><br /><br />';
-    }
-    return output;
-}
-
-function objectToString(ob){
-    var output = '';
-    for (property in ob) {
-        //alert(typeof ob[property])
-      if (typeof ob[property] == "object"){
-            output += property + ': ' + objectToString(ob[property]) +'';
-      }else{
-            output += "<b>"+property + '</b>: ' + ob[property]+'<br /><br /><br />';
-      }
-      
-    }
-    return output;
 }
 
 function loadJobs(serviceid){
@@ -640,9 +276,12 @@ function create_job_holder(task){
 }
 
 function mfile_render(mfileid){
+    mfile_render(mfileid,0,10)
+}
+function mfile_render(mfileid,start,end){
      $.ajax({
        type: "POST",
-       url: '/jobapi/render/'+mfileid+"/",
+       url: '/jobapi/render/'+mfileid+"/"+start+"/"+end+"/",
        success: function(msg){
             create_job_holder(msg)
             check_job(msg.job,mfileid)
@@ -778,38 +417,11 @@ function mfile_backup_corrupt(mfileid){
      });
  }
 
-function showMessage(title,message){
-     var html = "<div id='dialog-message-mfile-delete' title='"+title+"'  style='width: 400px;'><p style='overflow: scroll; hieght: 300px;'><span class='ui-icon ui-icon-circle-check' style='float:left; margin:0 7px 50px 0;'></span>"+message+"</p></div>"
-     $( html ).dialog({
-            modal: true,
-            buttons: {
-                    Ok: function() {
-                            $( this ).dialog( "close" );
-                    }
-            }
-    });
-}
-
-
-
-function showError(title,message){
-    var html =  "<div id='dialog-message-mfile-delete' title='"+title+"' style='width: 400px;'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p style='overflow: scroll;height:300px'><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span> <strong>Alert:</strong>"+message+"</p><div></div>"
-     $( html ).dialog({
-            modal: true,
-            buttons: {
-                    Ok: function() {
-                            $( this ).dialog( "close" );
-                    }
-            }
-    });
-}
-
-
 function getPoster(mfileid){
     url = '/mfile/'+mfileid+'/'
     $.getJSON(url, function(data) {
         if(data.poster!=""){
-            $("#mfileposter").attr("src", "/mservethumbs/"+data.poster)
+            $("#mfileposter").attr("src", "/"+data.posterurl)
         }else{
             window.setTimeout("getPoster(\'"+mfileid+"\')",1000)
             //id = $("<div >Thumb doesnt exist "+data.thumb.file+" "+data.thumb.file+"</div>&nbsp;")
