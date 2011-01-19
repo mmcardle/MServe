@@ -6,9 +6,12 @@ import time
 import storage
 import datetime
 import utils as utils
+from django.conf import settings
 
 ID_FIELD_LENGTH = 200
 fmt = "%3.2f"
+
+thumbpath = settings.THUMB_PATH
 
 class UsageReport(models.Model):
     base = models.ForeignKey('NamedBase')
@@ -198,6 +201,12 @@ class MFile(NamedBase):
 
     class Meta:
         ordering = ('-created','name')
+
+    def thumburl(self):
+        return "%s%s" % (thumbpath,self.thumb)
+
+    def posterurl(self):
+        return "%s%s" % (thumbpath,self.poster)
 
     def save(self):
         if not self.id:

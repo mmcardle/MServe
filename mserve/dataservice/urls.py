@@ -15,8 +15,6 @@ managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 mfile_handler = Resource(MFileHandler)
-mfile_json_handler = Resource(MFileJSONHandler)
-mfile_url_handler = Resource(MFileURLHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
 mfile_verify_handler = Resource(MFileVerifyHandler)
 mfile_auth_handler = Resource(MFileAuthHandler)
@@ -24,7 +22,6 @@ auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
 role_handler = Resource(RoleHandler)
 role_info_handler = Resource(RoleInfoHandler)
-global_handler = Resource(GlobalHandler)
 render_handler = Resource(RenderHandler)
 job_handler = Resource(JobHandler)
 jobmfile_handler = Resource(JobMFileHandler)
@@ -80,7 +77,7 @@ urlpatterns = patterns('',
     url(r'^containerapi/getaccesscontrol/(?P<baseid>[^/]+)/$', container_access_control_handler),
 
     # Service Methods
-    url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_url_handler),
+    url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/$', managedresources_service_handler),
     url(r'^serviceapi/getmanagedresources/(?P<serviceid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_service_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
@@ -91,7 +88,7 @@ urlpatterns = patterns('',
     url(r'^serviceapi/getjobs/(?P<serviceid>[^/]+)/$', jobservice_handler),
 
     # MFile Methods
-    url(r'^mfileapi/update/(?P<mfileid>[^/]+)/$', mfile_url_handler),
+    url(r'^mfileapi/update/(?P<mfileid>[^/]+)/$', mfile_handler),
     url(r'^mfileapi/getmanagedresources/(?P<mfileid>[^/]+)/$', managedresources_mfile_handler),
     url(r'^mfileapi/getmanagedresources/(?P<mfileid>[^/]+)/(?P<last_known>[^/]+)/$', managedresources_mfile_handler),
     url(r'^mfileapi/get/(?P<mfileid>[^/]+)/$', mfile_contents_handler),
@@ -103,7 +100,7 @@ urlpatterns = patterns('',
     url(r'^mfileapi/corrupt/(?P<mfileid>[^/]+)/$', mfile_corruption_handler),
     url(r'^mfileapi/corruptbackup/(?P<mfileid>[^/]+)/$', mfile_corruption_handler, {'backup':True}),
     url(r'^mfileapi/thumb/(?P<mfileid>[^/]+)/$', 'dataservice.views.thumb'),
-    url(r'^mfileapi/(?P<id>[^/]+)/$', mfile_json_handler),
+    url(r'^mfileapi/(?P<id>[^/]+)/$', mfile_handler),
     url(r'^mfileapi/getpreview/(?P<mfileid>[^/]+)/$', render_results_handler),
     url(r'^mfileapi/getjobs/(?P<mfileid>[^/]+)/$', jobmfile_handler),
 
@@ -116,6 +113,7 @@ urlpatterns = patterns('',
 
     # Job Methods
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),
+    url(r'^jobapi/render/(?P<mfileid>[^/]+)/(?P<start>[^/]+)/(?P<end>[^/]+)/$', render_handler),
     url(r'^jobapi/(?P<id>[^/]+)/$', job_handler),
 
     # TEMP - Needs Sorting
@@ -125,11 +123,8 @@ urlpatterns = patterns('',
     url(r'^thumbapi/$', thumb_handler),
     url(r'^thumbapi/(?P<pk>[^/]+)/$', thumb_handler),
 
-    # Global Methods
-    url(r'^api/getcontainers/$', global_handler),
-
     # HTML Views
-    (r'^home/',  'dataservice.views.home'),
+    (r'^$',  'dataservice.views.home'),
     (r'^usage/',  'dataservice.views.usage'),
     (r'^map/',  'dataservice.views.map'),
     (r'^viz/',  'dataservice.views.viz'),
@@ -137,7 +132,4 @@ urlpatterns = patterns('',
     (r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
     (r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),
     (r'^accounts/profile/$', 'dataservice.views.profile'),
-
-    # Root
-    (r'^$',  'dataservice.views.profile'),
 )

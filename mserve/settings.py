@@ -51,6 +51,7 @@ USE_I18N = True
 # Example: "/home/media/media.lawrence.com/"
 MEDIA_ROOT = '/var/mserve/www-root/mservedata/'
 THUMB_ROOT = '/var/mserve/www-root/mservethumbs/'
+THUMB_PATH = "/mservethumbs/"
 
 # MServe Specific Setting
 
@@ -117,6 +118,8 @@ INSTALLED_APPS = (
     'mserve.dataservice',
     'djcelery'
 )
+
+LOGIN_REDIRECT_URL='/'
 
 # JOB CONFIG
 USE_CELERY=True

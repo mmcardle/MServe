@@ -1,39 +1,29 @@
 from mserve.dataservice.models import MFileAuth
 from mserve.dataservice.models import Auth
-import os.path
 from mserve.dataservice.models import *
 from mserve.dataservice.forms import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from piston.utils import rc
 import usage_store as usage_store
 import utils as utils
 import api as api
-import handlers as handlers
-import logging
-
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
 from django.contrib.admin.views.decorators import staff_member_required
 
-#from dataservice.tasks import ProcessVideoTask
-from dataservice.tasks import thumbvideo
-from dataservice.tasks import render_blender
-from django.http import HttpResponse
-from django.shortcuts import redirect
-
-#@staff_member_required
-def home(request,form=HostingContainerForm()):
+def home(request,form=HostingContainerForm()):    
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.usagesummary()
     usagerate = UsageRate.objects.all()
     usage = Usage.objects.all()
     dict = {}
-    dict["hostingcontainers"] = hostings
-    dict["form"] = form
-    dict["usage"] = usage
-    dict["usagesummary"] = usagesummary
-    dict["usagerate"] = usagerate
+    if request.user.is_authenticated() and request.user.is_staff:
+        dict["hostingcontainers"] = hostings
+        dict["form"] = form
+        dict["usage"] = usage
+        dict["usagesummary"] = usagesummary
+        dict["usagerate"] = usagerate
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
 def thumb(request,mfileid):
@@ -48,6 +38,7 @@ def profile(request):
     dict ={}
     return render_to_response('user.html', dict, context_instance=RequestContext(request))
 
+@staff_member_required
 def create_container(request):
     form = HostingContainerForm(request.POST)
     if form.is_valid():
@@ -59,7 +50,6 @@ def create_container(request):
     else:
         return home(request,form=form)
 
-#@staff_member_required
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
     auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
@@ -310,7 +300,7 @@ def render_mfile(request,id, form=MFileAuthForm(), show=False):
     if mfile.thumb == "":
         dict["thumburl"] = "/mservemedia/images/busy.gif"
     else:
-        dict["thumburl"] = "%s%s" % ("/mservethumbs/",mfile.thumb)
+        dict["thumburl"] = "%s" % (mfile.thumburl())
 
     if not show or mfile.file == '' or mfile.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
@@ -430,14 +420,14 @@ def render_mfileauth(request, mfile, auth, show=False, dict={}):
     form = SubAuthForm()
     form.fields['id_parent'].initial = auth.id
     dict["mfile"] = mfile
-    dict["thumburl"] = "%s%s%s" % ("/mservethumbs/",mfile.file,".thumb.jpg")
+    dict["thumburl"] = "%s" % (mfile.thumburl())
 
     dict["thumburl"] = "/mservemedia/images/empty.png"
 
     if mfile.thumb == "":
         dict["thumburl"] = "/mservemedia/images/busy.gif"
     else:
-        dict["thumburl"] = "%s%s" % ("/mservethumbs/",mfile.thumb)
+        dict["thumburl"] = "%s" % (mfile.thumburl())
 
     if mfile.file == '' or mfile.file == None:
         dict["altfile"] = "/mservemedia/images/empty.png"
@@ -454,7 +444,7 @@ def render_mfileauth(request, mfile, auth, show=False, dict={}):
     dict["formtarget"] = "/form/auth/"
     return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
 
-#@staff_member_required
+@staff_member_required
 def usage(request):
     usagesummary = usage_store.usagesummary()
     usagerate = UsageRate.objects.all()
@@ -465,7 +455,7 @@ def usage(request):
     dict["usagerate"] = usagerate
     return render_to_response('allusage.html', dict, context_instance=RequestContext(request))
 
-#@staff_member_required
+@staff_member_required
 def viz(request):
     dict={}
 
@@ -527,7 +517,7 @@ class Row:
         self.parent = parent
 
 
-#@staff_member_required
+@staff_member_required
 def map(request):
     dict = {}
     

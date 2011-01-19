@@ -31,7 +31,7 @@ class MFileURLForm(ModelForm):
         model = MFile
 
 class MFileForm(ModelForm):
-    sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+    sid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
 
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']

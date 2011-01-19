@@ -1,4 +1,3 @@
-
 from piston.handler import BaseHandler
 from piston.utils import rc
 from dataservice.models import *
@@ -16,6 +15,7 @@ from django.http import HttpResponse
 from celery.result import TaskSetResult
 from celery.task.sets import TaskSet
 from anyjson import serialize as JSON_dump
+import settings as settings
 
 import utils as utils
 import api as api
@@ -25,24 +25,26 @@ import logging
 import os
 import os.path
 import shutil
+import string
 
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
-
-class GlobalHandler(BaseHandler):
-     allowed_methods = ('GET')
-
-     def read(self, request):
-         containers = HostingContainer.objects.all()
-         dict = {}
-         dict["containers"] = containers
-         return dict
 
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
     fields = ('name', 'id','dataservice_set',"reportnum")
     exclude = ('pk')
+
+    def read(self, request, id=None):
+        if id == None and request.user.is_staff:
+            return super(HostingContainerHandler, self).read(request)
+        else:
+            if id == None and not request.user.is_staff:
+                r = rc.FORBIDDEN
+                return r
+            else:
+                return HostingContainer.objects.get(id=str(id))
 
     def delete(self, request, id):
         logging.info("Deleting Container %s " % id)
@@ -76,20 +78,17 @@ class DataServiceHandler(BaseHandler):
 
     def create(self, request):
         form = DataServiceForm(request.POST)
-        logging.info(form)
+
         if form.is_valid(): 
-            
             containerid = form.cleaned_data['cid']
             name = form.cleaned_data['name']
             dataservice = api.create_data_service(request,containerid,name)
             return dataservice
-
         else:
             logging.info(form)
             r = rc.BAD_REQUEST
             resp.write("Invalid Request!")
             return r
-
 
 class DataServiceURLHandler(BaseHandler):
 
@@ -165,17 +164,10 @@ class CorruptionHandler(BaseHandler):
         
         return mfile
 
-class MFileJSONHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT','DELETE')
-    model = MFile
-    fields = ('name', 'id', 'size', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated')
-    #fields = ('name', 'id', 'size', 'file','checksum', 'thumb', 'poster', 'mimetype', 'created', 'updated', 'jobmfile_set' )
-    exclude = ('pk')
-
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
-    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'created' , 'updated')
+    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'created' , 'updated','thumburl','posterurl')
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
@@ -183,15 +175,17 @@ class MFileHandler(BaseHandler):
         r = rc.DELETED
         return r
 
-    def update(self, request):
+    def update(self, request, mfileid=None):
         form = UpdateMFileForm(request.POST,request.FILES)
         if form.is_valid(): 
             
             file = request.FILES['file']
             mfileid = form.cleaned_data['sid']
+            logging.info("Update %s" % mfileid)
             #service = DataService.objects.get(id=serviceid)
             mfile = MFile.objects.get(pk=mfileid)
             mfile.file = file
+            mfile.name = file.name
             mfile.size = file.size
             
             mfile.save()
@@ -231,16 +225,76 @@ class MFileHandler(BaseHandler):
         dict["formtarget"] = "/auth/"
         return render_to_response('mfile.html', dict)
 
-    def create(self, request):
+    '''def create2(self, request, serviceid):
+        logging.info("Loading content of size %s"%len(request.raw_post_data))
+
+        if len(request.raw_post_data)!=0 :
+            filename = request.META['HTTP_X_FILE_NAME']
+            logging.info(filename)
+
+            upload = SimpleUploadedFile( filename, request.raw_post_data )
+
+            mfile = api.create_mfile(request, serviceid, upload)
+
+            logging.info(mfile)
+
+            return mfile
+
+        #logging.info(dir(request))
+        form = MFileURLForm(request.POST,request.FILES)
+        if form.is_valid():
+
+            logging.debug("Handler Files %s" %request.FILES)
+
+            file = request.FILES['file']
+            mfile = api.create_mfile(request, serviceid, file)
+
+            logging.info(request.FILES)
+
+            return mfile
+
+        else:
+            logging.info(form)
+            return HttpResponseRedirect(request.META["HTTP_REFERER"])'''
+
+    def create(self, request, serviceid=None):
         logging.debug("Create MFile")
+        logging.debug("Create MFile len(request.raw_post_data)=%s "% (len(request.raw_post_data)))
+
+        if len(request.raw_post_data)!=0 :
+            filename = request.META['HTTP_X_FILE_NAME']
+            logging.info(filename)
+
+            upload = SimpleUploadedFile( filename, request.raw_post_data )
+
+            logging.info("Uploading %s " % upload)
+
+            mfile = api.create_mfile(request, serviceid, upload)
+
+            logging.info(mfile)
+
+            return mfile
+
         form = MFileForm(request.POST,request.FILES)
-        if form.is_valid(): 
+        if form.is_valid():
+
+            logging.info("Uploading from form %s" % form)
+            logging.info("request.FILES %s" % request.FILES)
+            logging.info("request.FILES %s" % request.FILES.has_key('file'))
+
             if request.FILES.has_key('file'):
                 file = request.FILES['file']
+                logging.debug("Form Field File  " % file)
             else:
                 file = None
-            serviceid = form.cleaned_data['sid']
+                logging.debug("Form Field File  " % file)
+
+            if serviceid == None:
+                logging.debug("Form Field serviceid  " % serviceid )
+                serviceid = form.cleaned_data['sid']
             #service = DataService.objects.get(id=serviceid)
+            #logging.debug("File size %s " % file.size)
+
             mfile = api.create_mfile(request, serviceid, file)
             return mfile
         else:
@@ -381,14 +435,17 @@ class RenderHandler(BaseHandler):
         return HttpResponse(JSON_dump(dict),mimetype="application/json")
         #return djcelery.views.task_status(request, taskid)
 
-    def create(self,request,mfileid):
+    def create(self,request,mfileid,start=0, end=10):
         mfile = MFile.objects.get(pk=mfileid)
         tasks = []
         folder = os.path.join(os.path.dirname(mfile.file.path),"render")
         if not os.path.exists(folder):
             os.makedirs(folder)
-        for i in range(1,100):
-            t = render_blender.subtask([mfile.file.path,i,i,folder],callback=thumbimage)
+
+        fname = "file"
+        padding = 4
+        for i in range(int(start),int(end)+1):
+            t = render_blender.subtask([mfile.file.path,i,i,folder,fname],padding=padding,callback=thumbimage)
             tasks.append(t)
         
         ts = TaskSet(tasks=tasks)
@@ -415,30 +472,6 @@ class RenderHandler(BaseHandler):
         dict["total"] = tsr.total
         dict["waiting"] = tsr.waiting()
         return HttpResponse(dict,mimetype="application/json")
-
-
-        
-        service = mfile.service
-        job = Job(name="Render",service=service)
-        job.save()
-        js = JobMFile(job=job,mfile=mfile,index=0)
-        js.save()
-
-        folder = os.path.join(os.path.dirname(mfile.file.path),"render")
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        dict = {}
-        tasks = []
-
-        for x in range(1,100):
-            t = render_blender.delay(mfile.file.path,x,x,folder,callback=thumbimage)
-            jobtask = JobTask(job=job,task=t.task_id)
-            jobtask.save()
-            logging.info(dir(t))
-            tasks.append(t)
-        dict["job"] = job
-        dict["n"] = len(tasks)
-        return dict
 
 class MFileVerifyHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -525,57 +558,7 @@ class MFileContentsHandler(BaseHandler):
         return redirect("/%s"%redirecturl)
 
 
-class MFileURLHandler(BaseHandler):
-    
-    def update(self, request, mfileid):
-        form = UpdateMFileFormURL(request.POST,request.FILES)
-        if form.is_valid(): 
-            
-            file = request.FILES['file']
-            mfile = MFile.objects.get(pk=mfileid)
-            mfile.file = file
-            mfile.name = file.name
-            mfile.size = file.size
-            mfile.save()
 
-            return mfile
-
-        else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
-
-    def create(self, request, serviceid):
-        logging.info("Loading content of size %s"%len(request.raw_post_data))
-
-        if len(request.raw_post_data)!=0 :
-            filename = request.META['HTTP_X_FILE_NAME']
-            logging.info(filename)
-
-            upload = SimpleUploadedFile( filename, request.raw_post_data )
-
-            mfile = api.create_mfile(request, serviceid, upload)
-
-            logging.info(mfile)
-
-            return mfile
-
-        #logging.info(dir(request))
-        form = MFileURLForm(request.POST,request.FILES)
-        if form.is_valid(): 
-
-            logging.debug("Handler Files %s" %request.FILES)
-
-            file = request.FILES['file']
-            mfile = api.create_mfile(request, serviceid, file)
-
-            logging.info(request.FILES)
-
-            return mfile
-
-        else:
-            logging.info(form)
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
 class ManagedResourcesContainerHandler(BaseHandler):
     allowed_methods = ('GET')

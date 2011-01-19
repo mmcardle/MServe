@@ -29,25 +29,25 @@ def add(x, y):
     return x + y
 
 @task
-def render_blender(scenepath,s,e,outputdir,callback=None):
+def render_blender(scenepath,s,e,outputdir,fname,padding=4,format="PNG",callback=None):
     logging.info("Processing render job %s start %s to end %s" % (scenepath,s,e))
     if not os.path.exists(scenepath):
         logging.info("Scene %s does not exist" % (scenepath))
         return False
-    outputformat = "%s/file_####" % (outputdir)
-    ss= string.zfill(str(s), 4)
-    ee= string.zfill(str(e), 4)
-    format = "png"
-    args = ["blender","-b",scenepath,"-x","1","-o",outputformat,"-F","PNG","-s",ss,"-e",ee,"-a"]
+    hashes = "#" * padding
+    outputformat = "%s/%s%s" % (outputdir,fname,hashes)
+    ss= string.zfill(str(s), padding)
+    ee= string.zfill(str(e), padding)
+    args = ["blender","-b",scenepath,"-x","1","-o",outputformat,"-F",format.upper(),"-s",ss,"-e",ee,"-a"]
     logging.info(args)
     ret = subprocess.call(args)
     if callback:
         # The callback may have been serialized with JSON,
         # so best practice is to convert the subtask dict back
         # into a subtask object.
-        n = str(s).zfill(4)
-        ifile = os.path.join(outputdir,"file_%s.%s"%(n,format))
-        ofile = os.path.join(outputdir,"file_%s.thumb.png"%n)
+        n = str(s).zfill(padding)
+        ifile = os.path.join(outputdir,"%s%s.%s"%(fname,n,format.lower()))
+        ofile = os.path.join(outputdir,"%s%s.thumb.png"%(fname,n))
         subtask(callback).delay( ifile ,ofile  ,40,40 )
     return ret
 
