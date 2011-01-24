@@ -20,7 +20,6 @@ import subprocess
 import urllib
 import Image
 import pycurl
-import time
 import tempfile
 import string
 

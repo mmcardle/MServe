@@ -1,4 +1,3 @@
-
 from dataservice.models import *
 from dataservice.forms import *
 from django.http import *
@@ -6,7 +5,6 @@ from django.conf import settings
 import settings as settings
 from dataservice.tasks import thumbvideo
 from dataservice.tasks import thumbimage
-
 import utils as utils
 import api as api
 import usage_store as usage_store
@@ -39,6 +37,11 @@ mfile_owner_methods = ["get", "put", "post", "delete", "verify"] + generic_metho
 
 all_mfile_methods = mfile_owner_methods + mfile_monitor_methods
 
+use_celery = settings.USE_CELERY
+
+if use_celery:
+    thumbvideo = thumbvideo.delay
+    thumbimage = thumbimage.delay
 
 def create_data_service(request,containerid,name):
     container = HostingContainer.objects.get(id=containerid)
@@ -135,7 +138,7 @@ def create_mfile(request,serviceid,file):
         if not os.path.isdir(posterhead):
             os.makedirs(posterhead)
 
-        use_celery = settings.USE_CELERY
+        
 
         if use_celery:
             logging.info("Using CELERY for processing ")
@@ -143,40 +146,22 @@ def create_mfile(request,serviceid,file):
             logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
 
         if mimetype.startswith('video'):
-
-            if use_celery:
-                thumbtask = thumbvideo.delay(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
-            else:
-                thumbtask = thumbvideo(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
+            thumbtask = thumbvideo(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
             mfile.thumb = thumbpath
-            if use_celery:
-                postertask = thumbvideo.delay(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
-            else:
-                postertask = thumbvideo(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
-
+            postertask = thumbvideo(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
             mfile.poster = posterpath
 
         elif mimetype.startswith('image'):
             logging.info("Creating thumb inprocess for Image '%s' %s " % (mfile,mimetype))
-            if use_celery:
-                thumbtask = thumbimage.delay(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
-            else:
-                thumbtask = thumbimage(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
-
+            thumbtask = thumbimage(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
             mfile.thumb = thumbpath
-            if use_celery:
-                postertask = thumbimage.delay(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
-            else:
-                postertask = thumbimage(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
+            postertask = thumbimage(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
             mfile.poster = posterpath
 
         elif file.name.endswith('blend'):
             logging.info("Creating Blender thumb '%s' %s " % (mfile,mimetype))
             # TODO : Change to a Preview of a frame of the blend file
-            if use_celery:
-                thumbtask = thumbimage.delay("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
-            else:
-                thumbtask = thumbimage("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
+            thumbtask = thumbimage("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
             mfile.thumb = thumbpath
         else:
             logging.info("Not creating thumb for '%s' %s " % (mfile,mimetype))

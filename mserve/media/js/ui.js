@@ -73,5 +73,5 @@ function create_new_render_ui(mfileid) {
 			.click(function() {
 				$( "#dialog-form" ).dialog( "open" );
 			});
-	}
+}
 

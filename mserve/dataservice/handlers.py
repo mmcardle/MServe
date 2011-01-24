@@ -261,20 +261,6 @@ class MFileHandler(BaseHandler):
         logging.debug("Create MFile")
         logging.debug("Create MFile len(request.raw_post_data)=%s "% (len(request.raw_post_data)))
 
-        if len(request.raw_post_data)!=0 :
-            filename = request.META['HTTP_X_FILE_NAME']
-            logging.info(filename)
-
-            upload = SimpleUploadedFile( filename, request.raw_post_data )
-
-            logging.info("Uploading %s " % upload)
-
-            mfile = api.create_mfile(request, serviceid, upload)
-
-            logging.info(mfile)
-
-            return mfile
-
         form = MFileForm(request.POST,request.FILES)
         if form.is_valid():
 
@@ -974,7 +960,7 @@ class ManagementPropertyHandler(BaseHandler):
                 return existingmanagementproperty
             except ObjectDoesNotExist:
                 resp = rc.BAD_REQUEST
-                resp.write("Object doesnt exist")
+                resp.write(" The Management Property '%s' doesn't exist " % (property))
                 return resp
 
         else:

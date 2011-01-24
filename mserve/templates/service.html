@@ -59,10 +59,26 @@
 
 </div>
 
+
+<div id="set-management-property-button-dialog-form" title="Set Management Property>
+    <p class="validateTips">Input management property and value.</p>
+
+    <form>
+    <fieldset>
+            <label for="property">Property</label>
+            <input type="text" name="prop" id="prop" class="text ui-widget-content ui-corner-all" />
+            <label for="value">Value</label>
+            <input type="text" name="val" id="val" value="" class="text ui-widget-content ui-corner-all" />
+    </fieldset>
+    </form>
+</div>
+
+
 <script type="text/javascript">
     $(document).ready(function() {
         loadMFiles('{{ service.id }}');
-        loadJobs('{{service.id}}')
+        loadJobs('{{service.id}}');
+        service_setmanagementproperty('{{service.id}}');
     });
 </script>
 
@@ -77,7 +93,7 @@
 <table style="table-layout: fixed;width:300px;">
     <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
     {% for property in properties%}
-    <tr><td>{{ property.property }}</td><td class="accesspeed">{{property.value }}</td><td>
+    <tr><td>{{ property.property }}</td><td class="{{ property.property }}">{{property.value }}</td><td>
             <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
                 <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
             </form>-->

@@ -5,22 +5,28 @@
 <h3 class="ilink" onclick="$('#methodscontent').toggle('slow');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Methods</h3>
 <div id="methodscontent">
 {% if container %}
-    {% for method in methods %}<a href="/containerapi/{{method}}/{{container.id}}/" >{{method}}</a>
+    {% for method in methods %}
+    <button id="button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:container_{{method}}('{{container.id}}');">
+        <span class="ui-button-text" >{{method}}</span></button>
     {% endfor %}
 {% endif %}
 
 {% if service  %}
-    {% for method in methods %}<a href="/serviceapi/{{method}}/{{service.id}}/" >{{method}}</a>
+    {% for method in methods %}
+    <button id="service-{{method}}-button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
+        <span class="ui-button-text" >{{method}}</span></button>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                check_service_method('{{method}}');
+            });
+        </script>
     {% endfor %}
 {% endif %}
 
 {% if mfile %}
-    <!--{% for method in methods %}<a href="/mfileapi/{{method}}/{{mfile.id}}/" >{{method}}</a>{% endfor %}
+
     {% for method in methods %}
-        <a class="ascript" onclick="javascript:mfile_{{method}}('{{mfile.id}}');" >{{method}}</a>
-    {% endfor %}-->
-    {% for method in methods %}
-        <button id="button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_{{method}}('{{mfile.id}}');">
+        <button id="service-{{method}}-button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_{{method}}('{{mfile.id}}');">
             <span class="ui-button-text" >{{method}}</span></button>
     {% endfor %}
 
