@@ -1,11 +1,20 @@
 {% extends "base.html" %}
-
+{% load mservetags %}
 {% block title %}MServe File{% endblock %}
 
-{% block heading%}{{mfile.name}}{% endblock %}
+{% block usages %}
+            <span>Name:&nbsp;<em class="sm">{{mfile.name|trunc:20}}</em>&nbsp;</span>
+            <span>Mimetype:&nbsp;<em class="sm">{{mfile.mimetype}}</em>&nbsp;</span>
+            <span>Created:&nbsp;<em class="sm">{{mfile.created|date}},&nbsp;{{mfile.created|time}}</em>&nbsp;</span>
+            <span>Updated:&nbsp;<em class="sm">{{mfile.updated|date}},&nbsp;{{mfile.updated|time}}</em>&nbsp;</span>
+            <span>Size:&nbsp;<em class="sm">{{mfile.size|filesizeformat}}</em>&nbsp;</span>
+{% endblock %}
 
 {% block content %}
-    <h3 class="ilink" onclick="$('#content').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
+
+
+<h3 class="ilink" onclick="$('#content').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
+
     <div id="content">
     <div id="message"></div>
 

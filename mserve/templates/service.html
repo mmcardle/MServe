@@ -2,13 +2,44 @@
 
 {% block title %}MServe Service{% endblock %}
 
-{% block heading%}{{service.name}}{% endblock %}
+{% load mservetags %}
+
+{% block usages %}
+    <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
+    <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.job_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
+    {% if usagesummary %}
+            {% for usagesummary in usagesummary %}
+                {% if usagesummary.metric == "http://prestoprime/disc" %}
+                    <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.fmt_max}}</em>&nbsp;&nbsp;&nbsp;</span>
+                    <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}</em>&nbsp;&nbsp;&nbsp;</span>
+                    <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.fmt_sum}}</em>&nbsp;&nbsp;&nbsp;</span>
+                {% endif %}
+                {% if usagesummary.metric == "http://prestoprime/responsetime" %}
+                    <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
+                {% endif %}
+
+            {% endfor %}
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 
-{% load mservetags %}
-</head>
-<body>
+<div class="demo">
+
+<div id="tabs">
+	<ul>
+		<li><a href="#tabs-1">Data</a></li>
+		<li><a href="#tabs-2">Jobs</a></li>
+		<li><a href="#tabs-3">Usage</a></li>
+		<li><a href="#tabs-4">Auths</a></li>
+	</ul>
+	<div id="tabs-1">
+		<div class="paginator" id="mfilepaginator"></div>
+
+<div id="mfilemessages"></div>
+
+<div id="mfileList">
+</div>
 
 <h3 style="clear:both">Create New File</h3>
 <table>
@@ -35,85 +66,100 @@
         <td>
             <h4>..Or Upload with Form</h4>
             <form name="uploadform" action="/form/mfile/" method="post" enctype="multipart/form-data" >
-                {{ form.as_p }}
-                <input type="submit" value="Submit" />
+                {{ form.non_field_errors }}
+                <div class="fieldWrapper">
+                    {{ form.file.errors }}
+                        {% for hidden in form.hidden_fields %}
+                    {{ hidden }}
+                    {% endfor %}
+                    <table>
+                        <tr>
+                            <td style="vertical-align: middle;text-align: center;">{{ form.file }}</td>
+                            <td><input type="submit" value="Submit" /></td>
+                        </tr>
+                    </table>
+                </div>
             </form>
         </td>
 </tr>
 </table>
+        </div>
+             <div id="tabs-2">
+             <h3>Jobs</h3>
 
-<h3>Files</h3>
+            <div id="jobs">
 
-<div class="paginator" id="mfilepaginator"></div>
+            </div>
 
-<div id="mfilemessages"></div>
 
-<div id="mfileList">
+            <div id="set-management-property-button-dialog-form" title="Set Management Property">
+                <p class="validateTips">Input management property and value.</p>
+
+                <form >
+                <fieldset>
+                    <legend></legend>
+                        <label for="property">Property</label>
+                        <input type="text" name="prop" id="prop" class="text ui-widget-content ui-corner-all" />
+                        <label for="value">Value</label>
+                        <input type="text" name="val" id="val" value="" class="text ui-widget-content ui-corner-all" />
+                </fieldset>
+                </form>
+            </div>
+
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    loadMFiles('{{ service.id }}');
+                    loadJobs('{{service.id}}');
+                    service_setmanagementproperty('{{service.id}}');
+                });
+            </script>
+
+        </div>
+	<div id="tabs-3">
+
+            {% include "methods.html" %}
+
+            <h3>Management Properties</h3>
+
+            <table style="table-layout: fixed;width:300px;">
+                <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
+                {% for property in properties%}
+                <tr><td>{{ property.property }}</td><td class="{{ property.property }}">{{property.value }}</td><td>
+                        <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
+                            <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
+                        </form>-->
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+
+            {% include "usage.html" %}
+     </div>
+    	<div id="tabs-4">
+            {% include "auths.html" %}
+     </div>
 </div>
+
+        <script>
+	$(function() {
+		$( "#tabs" ).tabs();
+	});
+	</script>
+
+
+</div><!-- End demo -->
+
 
 <div style="clear:both"></div>
-
-<h3>Jobs</h3>
-
-<div id="jobs">
-
-</div>
-
-
-<div id="set-management-property-button-dialog-form" title="Set Management Property>
-    <p class="validateTips">Input management property and value.</p>
-
-    <form>
-    <fieldset>
-            <label for="property">Property</label>
-            <input type="text" name="prop" id="prop" class="text ui-widget-content ui-corner-all" />
-            <label for="value">Value</label>
-            <input type="text" name="val" id="val" value="" class="text ui-widget-content ui-corner-all" />
-    </fieldset>
-    </form>
-</div>
-
-
-<script type="text/javascript">
-    $(document).ready(function() {
-        loadMFiles('{{ service.id }}');
-        loadJobs('{{service.id}}');
-        service_setmanagementproperty('{{service.id}}');
-    });
-</script>
 
 {% endblock %}
 
 {% block rightcontent %}
 
-{% include "methods.html" %}
-
-<h3>Management Properties</h3>
-
-<table style="table-layout: fixed;width:300px;">
-    <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
-    {% for property in properties%}
-    <tr><td>{{ property.property }}</td><td class="{{ property.property }}">{{property.value }}</td><td>
-            <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
-                <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
-            </form>-->
-            </td>
-        </tr>
-    {% endfor %}
-</table>
-
-<!--
-<h5>Set Management Property</h5>
-
-<form action="/serviceapi/managementproperty/{{service.id}}/" method="POST">
-    {{ managementpropertyform.as_p }}
-    <input type="submit" value="Submit" />
-</form>
-
--->
 {% endblock %}
 
 {% block bottomcontent %}
-{% include "usage.html" %}
+
 {% endblock %}
 

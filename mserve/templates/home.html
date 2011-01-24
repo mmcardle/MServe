@@ -2,6 +2,26 @@
 
 {% block title %}MServe Home{% endblock %}
 
+{% block usages %}
+    {% if user.is_staff %}
+        <span>Number of Containers&nbsp;&nbsp;<em class="numcontainers"></em>&nbsp;&nbsp;&nbsp;</span>
+                    {% if usagesummary %}
+                    {% for usagesummary in usagesummary %}
+                        {% if usagesummary.metric == "http://prestoprime/disc" %}
+                            <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.fmt_max}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.fmt_sum}}</em>&nbsp;&nbsp;&nbsp;</span>
+                        {% endif %}
+                        {% if usagesummary.metric == "http://prestoprime/responsetime" %}
+                            <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
+                        {% endif %}
+
+                    {% endfor %}
+            {% endif %}
+    {% endif %}
+{% endblock %}
+
+
 {% block content %}
 
 {% if user.is_staff %}
@@ -10,6 +30,7 @@
 
 <div class="paginator" id="containerpaginator"></div>
 <div id="containermessages"></div>
+
 
 <script type="text/javascript">
     $(document).ready(function() {

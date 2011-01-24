@@ -13,6 +13,7 @@ function loadContainers(){
                  $("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
                 return;
             }else{
+                $(".numcontainers").html(containers.length);
                 $("#nocontainers").remove()
             }
 
@@ -83,6 +84,7 @@ function loadServices(containerid){
                  $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
                 return;
             }else{
+                $(".numservices").html(services.length);
                 $("#noservices").remove()
             }
 
@@ -424,8 +426,6 @@ function getPoster(mfileid){
             $("#mfileposter").attr("src", "/"+data.posterurl)
         }else{
             window.setTimeout("getPoster(\'"+mfileid+"\')",1000)
-            //id = $("<div >Thumb doesnt exist "+data.thumb.file+" "+data.thumb.file+"</div>&nbsp;")
-            //$(id).appendTo("#debug");
         }
     });
  }
