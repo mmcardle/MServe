@@ -8,7 +8,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
 from dataservice.tasks import thumbimage
 from dataservice.tasks import render_blender
 from django.http import HttpResponse
@@ -25,7 +24,6 @@ import logging
 import os
 import os.path
 import shutil
-import string
 
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
@@ -53,6 +51,7 @@ class HostingContainerHandler(BaseHandler):
         return r
 
     def create(self, request):
+        logging.info(request)
         form = HostingContainerForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
@@ -167,7 +166,7 @@ class CorruptionHandler(BaseHandler):
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
-    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'created' , 'updated','thumburl','posterurl')
+    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'created' , 'updated','thumburl','posterurl','reportnum')
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
@@ -264,22 +263,13 @@ class MFileHandler(BaseHandler):
         form = MFileForm(request.POST,request.FILES)
         if form.is_valid():
 
-            logging.info("Uploading from form %s" % form)
-            logging.info("request.FILES %s" % request.FILES)
-            logging.info("request.FILES %s" % request.FILES.has_key('file'))
-
             if request.FILES.has_key('file'):
                 file = request.FILES['file']
-                logging.debug("Form Field File  " % file)
             else:
                 file = None
-                logging.debug("Form Field File  " % file)
 
             if serviceid == None:
-                logging.debug("Form Field serviceid  " % serviceid )
                 serviceid = form.cleaned_data['sid']
-            #service = DataService.objects.get(id=serviceid)
-            #logging.debug("File size %s " % file.size)
 
             mfile = api.create_mfile(request, serviceid, file)
             return mfile
@@ -543,48 +533,6 @@ class MFileContentsHandler(BaseHandler):
 
         return redirect("/%s"%redirecturl)
 
-
-
-
-class ManagedResourcesContainerHandler(BaseHandler):
-    allowed_methods = ('GET')
-    
-    def read(self, request, containerid, last_known=-1):
-
-        last = int(last_known)
-        container = HostingContainer.objects.get(id=containerid)
-
-        if last is not -1:
-            while last == container.reportnum:
-                logging.info("Waiting for new services lastreport=%s" % (last))
-                time.sleep(sleeptime)
-                container = HostingContainer.objects.get(id=containerid)
-
-        return container
-
-class ManagedResourcesServiceHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self, request, serviceid, last_known=-1):
-
-        last = int(last_known)
-        service = DataService.objects.get(id=serviceid)
-        logging.info("Waiting for new services lastreport=%s" % (service.reportnum))
-        logging.info("Waiting for new services lastknown=%s" % (last ))
-        if last is not -1:
-            while last == service.reportnum:
-                logging.info("Waiting for new mfiles lastreport=%s" % (last))
-                time.sleep(sleeptime)
-                service = DataService.objects.get(id=serviceid)
-
-        return service
-
-class ManagedResourcesmfileHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self, request, mfileid, last_known=-1):
-        return {}
-
 class AggregateUsageRateHandler(BaseHandler):
     model =  AggregateUsageRate
     exclude =('pk','base','id')
@@ -785,59 +733,9 @@ class AccessControlHandler(BaseHandler):
 
         return HttpResponse("called %s on %s" % (method,pk))
 
-class ContainerAccessControlHandler(BaseHandler):
-    allowed_methods = ('GET',)
-    model = HostingContainerAuth
-    fields = ('id', 'authname', ('roles', ('description','id','rolename'),),)
-    #exclude = ('hostingcontainer', 'auth_ptr' )fg
-
-    def read(self,request, baseid):
-        container = HostingContainer.objects.get(pk=baseid)
-        containerauths = HostingContainerAuth.objects.filter(hostingcontainer=container)
-        #roles = []
-        #for containerauth in containerauths:
-        #    for role in containerauth.roles.all():
-        #        roles.append(role)#
-
-        #dict = {}
-        #dict["auth"] = ""
-        return containerauths
-
-class ServiceAccessControlHandler(BaseHandler):
-    allowed_methods = ('GET',)
-
-    def read(self,request, baseid):
-        service = DataService.objects.get(pk=baseid)
-        serviceauths = DataServiceAuth.objects.filter(dataservice=service)
-        roles = []
-        for serviceauth in serviceauths:
-            for role in serviceauth.roles.all():
-                roles.append(role)
-
-        dict = {}
-        dict["roles"] = roles
-        return dict
-
-class MFileAccessControlHandler(BaseHandler):
-    allowed_methods = ('GET',)
-
-    def read(self,request, baseid):
-        mfile = MFile.objects.get(pk=baseid)
-        mfileauths = MFileAuth.objects.filter(mfile=mfile)
-        roles = []
-        for mfileauth in mfileauths:
-            for role in mfileauth.roles.all():
-                roles.append(role)
-
-        dict = {}
-        dict["roles"] = set(roles)
-        return dict
-
-
-
 class RoleInfoHandler(BaseHandler):
-    def read(self,request, pk):
-        base = NamedBase.objects.get(pk=pk)
+    def read(self,request, id):
+        base = NamedBase.objects.get(pk=id)
         if utils.is_container(base):
             containerauths = HostingContainerAuth.objects.filter(hostingcontainer=base)
             roles = []
@@ -882,11 +780,11 @@ class UsageSummaryHandler(BaseHandler):
     model = UsageReport
     fields = ('summarys','inprogress','reportnum')
 
-    def read(self,request, baseid, last_report=-1):
+    def read(self,request, id, last_report=-1):
 
         lr = int(last_report)
 
-        base = NamedBase.objects.get(pk=baseid)
+        base = NamedBase.objects.get(pk=id)
 
         usagereport, created = UsageReport.objects.get_or_create(base=base)
 
@@ -901,17 +799,17 @@ class UsageSummaryHandler(BaseHandler):
         inprogress= []
         summarys= []
         if utils.is_container(base):
-            inprogress = usage_store.container_inprogresssummary(baseid)
-            summarys = usage_store.container_usagesummary(baseid)
+            inprogress = usage_store.container_inprogresssummary(id)
+            summarys = usage_store.container_usagesummary(id)
             logging.info(summarys)
 
         if utils.is_service(base):
-            inprogress = usage_store.service_inprogresssummary(baseid)
-            summarys = usage_store.service_usagesummary(baseid)
+            inprogress = usage_store.service_inprogresssummary(id)
+            summarys = usage_store.service_usagesummary(id)
 
         if utils.is_mfile(base):
-            inprogress = usage_store.mfile_inprogresssummary(baseid)
-            summarys = usage_store.mfile_usagesummary(baseid)
+            inprogress = usage_store.mfile_inprogresssummary(id)
+            summarys = usage_store.mfile_usagesummary(id)
 
         for summary in summarys:
             summary.save()
@@ -929,20 +827,20 @@ class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
     fields = ("value","property","id")
 
-    def read(self,request, baseid):
-        base = NamedBase.objects.get(id=baseid)
+    def read(self,request, id):
+        base = NamedBase.objects.get(id=id)
         properties = ManagementProperty.objects.filter(base=base)
         properties_json = []
         for prop in properties:
             properties_json.append(prop)
         return properties_json
 
-    def create(self, request, baseid):
+    def create(self, request, id):
         resp = rc.BAD_REQUEST
         #resp.write("Not Allowed")
         return resp
 
-    def update(self, request, baseid):
+    def update(self, request, id):
         form = ManagementPropertyForm(request.POST) 
         if form.is_valid(): 
 
@@ -1089,3 +987,47 @@ class AuthHandler(BaseHandler):
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
             return r
+
+class ResourcesHandler(BaseHandler):
+    allowed_methods = ('GET')
+
+    def read(self, request, id, last_known=-1):
+
+        last = int(last_known)
+        base = NamedBase.objects.get(pk=id)
+
+        if utils.is_container(base):
+            container = HostingContainer.objects.get(id=id)
+
+            if last is not -1:
+                while last == container.reportnum:
+                    logging.debug("Waiting for new services lastreport=%s" % (last))
+                    time.sleep(sleeptime)
+                    container = HostingContainer.objects.get(id=containerid)
+
+            return container
+
+        if utils.is_service(base):
+            service = DataService.objects.get(id=id)
+            if last is not -1:
+                while last == service.reportnum:
+                    logging.debug("Waiting for new mfiles lastreport=%s" % (last))
+                    time.sleep(sleeptime)
+                    service = DataService.objects.get(id=serviceid)
+
+            return service
+
+        if utils.is_mfile(base):
+            mfile = MFile.objects.get(id=id)
+
+            if last is not -1:
+                while last == mfile.reportnum:
+                    logging.debug("Waiting for new mfiles lastreport=%s" % (last))
+                    time.sleep(sleeptime)
+                    mfile = MFile.objects.get(id=id)
+
+            return mfile
+
+        r = rc.BAD_REQUEST
+        resp.write("Unknown Resource")
+        return r

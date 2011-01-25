@@ -4,6 +4,7 @@ import base64
 import os
 import time
 import storage
+import logging
 import datetime
 import utils as utils
 from django.conf import settings
@@ -50,7 +51,6 @@ class UsageRate(models.Model):
 
     def __unicode__(self):
         return "Usage: %s %s %s reported=%s rate=%f usageSoFar=%f" % (self.base,self.base.id,self.metric,self.current,self.rate,self.usageSoFar)
-
 
     def ctime(self):
         return self.current.ctime()
@@ -159,7 +159,11 @@ class Base(models.Model):
 
 class NamedBase(Base):
     name = models.CharField(max_length=200)
+    metrics = []
 
+    def get_value_for_metric(self, metric):
+        logging.info("Override this method to report usage for metric %s" % metric)
+        return None
     #class Meta:
         #abstract = True
 
@@ -199,8 +203,15 @@ class MFile(NamedBase):
     updated  = models.DateTimeField(auto_now=True)
     reportnum = models.IntegerField(default=0)
 
+    metrics = ("http://metric1", "http://metric2")
+    #metrics = u
+
     class Meta:
         ordering = ('-created','name')
+
+    def __init__(self, *args, **kwargs):
+        # Example INIT
+        super(MFile, self).__init__(*args, **kwargs)
 
     def thumburl(self):
         return "%s%s" % (thumbpath,self.thumb)
@@ -208,11 +219,39 @@ class MFile(NamedBase):
     def posterurl(self):
         return "%s%s" % (thumbpath,self.poster)
 
+    def my_handler(self, sender, instance=False, **kwargs):
+        logging.info("TODO POST SAVE method %s " % instance)
+
+    def get_value_for_metric(self, metric):
+        if metric == "http://metric1":
+            return 7
+        if metric == "http://metric2":
+            return 6
+        else:
+            logging.info("Don't know how to get value for metric %s" % metric)
+
     def save(self):
+        saved = True
         if not self.id:
+            saved = False
             self.id = utils.random_id()
+            from django.db.models.signals import post_save
+            post_save.connect(self.my_handler, sender=MFile)
         self.updated = datetime.datetime.now()
         super(MFile, self).save()
+        if not saved:
+            import usage_store as usage_store
+            logging.info("Creating stager")
+            if self.file:
+                for metric in self.metrics:
+                    v = self.get_value_for_metric(metric)
+                    if v is not None:
+                        logging.info("TODO Recording usage here for metric %s value= %s" % (metric,v) )
+                    else:
+                        logging.info("TODO Asked to report metric %s but dont know how to get value " % (metric) )
+
+
+
 
 class BackupFile(NamedBase):
     mfile = models.ForeignKey(MFile)
