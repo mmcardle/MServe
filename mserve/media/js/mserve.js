@@ -9,11 +9,11 @@ function loadContainers(){
        success: function(msg){
             containers = msg;
 
+            $(".numcontainers").html(containers.length);
             if(containers.length==0){
                  $("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
                 return;
             }else{
-                $(".numcontainers").html(containers.length);
                 $("#nocontainers").remove()
             }
 
@@ -80,11 +80,12 @@ function loadServices(containerid){
        success: function(msg){
             services = msg.dataservice_set;
 
+            $(".numservices").html(services.length);
             if(services.length==0){
                  $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
                 return;
             }else{
-                $(".numservices").html(services.length);
+                
                 $("#noservices").remove()
             }
 

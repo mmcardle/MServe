@@ -134,6 +134,7 @@ def create_service(request):
 #@staff_member_required
 def render_service(request,id,form=MFileForm(),newmfile=None):
     service = DataService.objects.get(pk=id)
+    base = NamedBase.objects.get(pk=id)
     mfiles = MFile.objects.filter(service=service).order_by('created').reverse()
     properties = ManagementProperty.objects.filter(base=service)
     auths = DataServiceAuth.objects.filter(dataservice=id)
@@ -153,7 +154,9 @@ def render_service(request,id,form=MFileForm(),newmfile=None):
     dict["form"] = form
     dict["usage"] = Usage.objects.filter(base=service)
     dict["usagerate"] = UsageRate.objects.filter(base=service)
+    dict["usagerate"] = UsageRate.objects.filter(base=base)
     dict["usagesummary"] = usage_store.service_usagesummary(service.id)
+    logging.info("USAGESUMMARY %s  " % usage_store.service_usagesummary(service.id))
     dict["methods"] = methods
     if newmfile is not None:
         dict["newmfile"] = newmfile

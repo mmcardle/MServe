@@ -7,7 +7,7 @@
         <span>Number of Services&nbsp;&nbsp;<em class="numservices"></em>&nbsp;&nbsp;&nbsp;</span>
                     {% if usagesummary %}
                     {% for usagesummary in usagesummary %}
-                        {% if usagesummary.metric == "http://prestoprime/disc" %}
+                        {% if usagesummary.metric == "http://prestoprime/disc_space" %}
                             <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.fmt_max}}</em>&nbsp;&nbsp;&nbsp;</span>
                             <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}</em>&nbsp;&nbsp;&nbsp;</span>
                             <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.fmt_sum}}</em>&nbsp;&nbsp;&nbsp;</span>

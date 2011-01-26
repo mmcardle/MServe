@@ -1,13 +1,13 @@
 from django.db import models
 import pickle
 import base64
-import os
-import time
 import storage
 import logging
 import datetime
 import utils as utils
 from django.conf import settings
+from django.db.models.signals import post_save
+from django.db.models.signals import post_init
 
 ID_FIELD_LENGTH = 200
 fmt = "%3.2f"
@@ -157,15 +157,43 @@ class Base(models.Model):
     class Meta:
         abstract = True
 
+#class NamedBase(Base):
+#    name = models.CharField(max_length=200)
+
+    #def __unicode__(self):
+     #   return self.name;
+
 class NamedBase(Base):
-    name = models.CharField(max_length=200)
     metrics = []
+    newusage = models.BooleanField(default=True)
+    name = models.CharField(max_length=200)
+
+    def save(self):
+        logging.info("Save %s (newusage=%s)"% (self,self.newusage))
+        super(NamedBase, self).save()
+        import usage_store as usage_store
+        if self.newusage:
+            for metric in self.metrics:
+
+                v = self.get_value_for_metric(metric)
+                if v is not None:
+                    logging.info("Recording usage for metric %s value= %s" % (metric,v) )
+                    usage_store.record(self.id,metric,v)
+
+                r = self.get_rate_for_metric(metric)
+                if r is not None:
+                    logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
+                    usage_store.startrecording(self.id,metric,r)
+            self.newusage = False
+            super(NamedBase, self).save()
 
     def get_value_for_metric(self, metric):
-        logging.info("Override this method to report usage for metric %s" % metric)
+        #logging.info("Override this method to report usage for metric %s" % metric)
         return None
-    #class Meta:
-        #abstract = True
+
+    def get_rate_for_metric(self, metric):
+        #logging.info("Override this method to report usage for metric %s" % metric)
+        return None
 
     def __unicode__(self):
         return self.name;
@@ -173,6 +201,16 @@ class NamedBase(Base):
 class HostingContainer(NamedBase):
     status = models.CharField(max_length=200)
     reportnum = models.IntegerField(default=0)
+
+    def __init__(self, *args, **kwargs):
+        super(HostingContainer, self).__init__(*args, **kwargs)
+        import usage_store as usage_store
+        self.metrics = usage_store.container_metrics
+
+    def get_value_for_metric(self, metric):
+        import usage_store as usage_store
+        if metric == usage_store.metric_container:
+            return 1
 
     def save(self):
         if not self.id:
@@ -183,6 +221,16 @@ class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
     status = models.CharField(max_length=200)
     reportnum = models.IntegerField(default=0)
+
+    def __init__(self, *args, **kwargs):
+        super(DataService, self).__init__(*args, **kwargs)
+        import usage_store as usage_store
+        self.metrics = usage_store.service_metrics
+
+    def get_value_for_metric(self, metric):
+        import usage_store as usage_store
+        if metric == usage_store.metric_service:
+            return 1
 
     def save(self):
         if not self.id:
@@ -203,15 +251,28 @@ class MFile(NamedBase):
     updated  = models.DateTimeField(auto_now=True)
     reportnum = models.IntegerField(default=0)
 
-    metrics = ("http://metric1", "http://metric2")
-    #metrics = u
-
     class Meta:
         ordering = ('-created','name')
 
     def __init__(self, *args, **kwargs):
-        # Example INIT
         super(MFile, self).__init__(*args, **kwargs)
+        import usage_store as usage_store
+        self.metrics = usage_store.mfile_metrics
+
+    def get_value_for_metric(self, metric):
+        import usage_store as usage_store
+        if metric == usage_store.metric_mfile:
+            return 1
+        if metric == usage_store.metric_disc_space:
+            return self.file.size
+        if metric == usage_store.metric_ingest:
+            return self.file.size
+
+    def get_rate_for_metric(self, metric):
+        import usage_store as usage_store
+        if metric == usage_store.metric_disc:
+            return self.file.size
+
 
     def thumburl(self):
         return "%s%s" % (thumbpath,self.thumb)
@@ -219,38 +280,21 @@ class MFile(NamedBase):
     def posterurl(self):
         return "%s%s" % (thumbpath,self.poster)
 
-    def my_handler(self, sender, instance=False, **kwargs):
+    def post_save_handler(self, sender, instance=False, **kwargs):
         logging.info("TODO POST SAVE method %s " % instance)
 
-    def get_value_for_metric(self, metric):
-        if metric == "http://metric1":
-            return 7
-        if metric == "http://metric2":
-            return 6
-        else:
-            logging.info("Don't know how to get value for metric %s" % metric)
-
     def save(self):
-        saved = True
         if not self.id:
-            saved = False
             self.id = utils.random_id()
-            from django.db.models.signals import post_save
-            post_save.connect(self.my_handler, sender=MFile)
         self.updated = datetime.datetime.now()
         super(MFile, self).save()
-        if not saved:
-            import usage_store as usage_store
-            logging.info("Creating stager")
-            if self.file:
-                for metric in self.metrics:
-                    v = self.get_value_for_metric(metric)
-                    if v is not None:
-                        logging.info("TODO Recording usage here for metric %s value= %s" % (metric,v) )
-                    else:
-                        logging.info("TODO Asked to report metric %s but dont know how to get value " % (metric) )
 
+#def post_init_handler( sender, instance=False, **kwargs):
+#    logging.info("Overide this method to report usage for %s " % instance)
 
+#post_init.connect(post_init_handler, sender=DataService)
+#post_init.connect(self.post_init_handler, sender=MFile)
+#post_init.connect(self.post_init_handler, sender=HostingContainer)
 
 
 class BackupFile(NamedBase):
@@ -258,6 +302,23 @@ class BackupFile(NamedBase):
     file = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.gettapestorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
+
+    def __init__(self, *args, **kwargs):
+        super(BackupFile, self).__init__(*args, **kwargs)
+        import usage_store as usage_store
+        self.metrics = usage_store.backupfile_metrics
+
+    def get_value_for_metric(self, metric):
+        import usage_store as usage_store
+        if metric == usage_store.metric_backupfile:
+            return 1
+        if metric == usage_store.metric_disc_space:
+            return self.file.size
+
+    def get_rate_for_metric(self, metric):
+        import usage_store as usage_store
+        if metric == usage_store.metric_disc:
+            return self.file.size
 
     def save(self):
         if not self.id:

@@ -5,6 +5,8 @@ from django.conf import settings
 import settings as settings
 from dataservice.tasks import thumbvideo
 from dataservice.tasks import thumbimage
+from dataservice.tasks import mimefile
+from dataservice.tasks import md5file
 import utils as utils
 import api as api
 import usage_store as usage_store
@@ -73,8 +75,6 @@ def create_data_service(request,containerid,name):
     managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
     managementproperty.save()
 
-    usage_store.startrecording(dataservice.id,usage_store.metric_service,1)
-
     return dataservice
 
 def create_mfile(request,serviceid,file):
@@ -114,16 +114,11 @@ def create_mfile(request,serviceid,file):
 
     if mfile.file:
         # MIME type
-        m = magic.open(magic.MAGIC_MIME)
-        m.load()
-        mimetype = m.file(mfile.file.path)
-        mfile.mimetype = mimetype
+        mfile.mimetype = mimetype = mimefile(mfile.file.path)
         # checksum
-        mfile.checksum = utils.md5_for_file(mfile.file)
+        mfile.checksum = md5file(mfile.file.path)
         # record size
         mfile.size = file.size
-        # save it
-        mfile.save()
 
         thumbpath = os.path.join( str(mfile.file) + ".thumb.jpg")
         posterpath = os.path.join( str(mfile.file) + ".poster.jpg")
@@ -137,8 +132,6 @@ def create_mfile(request,serviceid,file):
 
         if not os.path.isdir(posterhead):
             os.makedirs(posterhead)
-
-        
 
         if use_celery:
             logging.info("Using CELERY for processing ")
@@ -167,10 +160,7 @@ def create_mfile(request,serviceid,file):
             logging.info("Not creating thumb for '%s' %s " % (mfile,mimetype))
 
         mfile.save()
-        usage_store.startrecording(mfile.id,usage_store.metric_mfile,1)
-        usage_store.startrecording(mfile.id,usage_store.metric_archived,1)
-        usage_store.record(mfile.id,usage_store.metric_disc,mfile.size)
-        usage_store.record(mfile.id,usage_store.metric_ingest,mfile.size)
+
 
     logging.debug("Backing up '%s' "%mfile)
 
@@ -197,8 +187,6 @@ def create_container(request,name):
 
     managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=settings.DEFAULT_ACCESS_SPEED)
     managementproperty.save()
-
-    usage_store.startrecording(hostingcontainer.id,usage_store.metric_container,1)
 
     return hostingcontainer
 

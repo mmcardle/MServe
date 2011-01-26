@@ -18,10 +18,12 @@ from celery.task.sets import subtask
 import logging
 import subprocess
 import urllib
+import hashlib
 import Image
 import pycurl
 import tempfile
 import string
+import magic
 
 @task
 def add(x, y):
@@ -61,6 +63,30 @@ def thumbvideo(videopath,thumbpath,width,height):
     logging.info(args)
     ret = subprocess.call(args)
     return ret
+
+@task
+def mimefile(mfilepath):
+    m = magic.open(magic.MAGIC_MIME)
+    m.load()
+    mimetype = m.file(mfilepath)
+    logging.info("Mime for file %s is %s" % (mfilepath,mimetype))
+    return mimetype
+
+@task
+def md5file(mfilepath):
+    """Return hex md5 digest for a Django FieldFile"""
+    file = open(mfilepath,'r')
+    md5 = hashlib.md5()
+    while True:
+        data = file.read(8192)  # multiple of 128 bytes is best
+        if not data:
+            break
+        md5.update(data)
+    file.close()
+    md5string = md5.hexdigest()
+    logging.info("MD5 calclated %s" % (md5string ))
+
+    return md5string
 
 @task
 def thumbimage(mfilepath,thumbpath,width,height):

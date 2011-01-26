@@ -5,7 +5,7 @@ from django.forms import MultipleChoiceField
 
 class HostingContainerForm(ModelForm):
     class Meta:
-        exclude=['id','status','reportnum']
+        exclude=['id','status','reportnum','newusage']
         model = HostingContainer
 
 class ManagementPropertyForm(ModelForm):
@@ -15,39 +15,39 @@ class ManagementPropertyForm(ModelForm):
 
 class DataServiceURLForm(ModelForm):
     class Meta:
-        exclude=['id','status','container','reportnum']
+        exclude=['id','status','container','reportnum','newusage']
         model = DataService
 
 class DataServiceForm(ModelForm):
     cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     
     class Meta:
-        exclude=['id','status','container','reportnum']
+        exclude=['id','status','container','reportnum','newusage']
         model = DataService
 
 class MFileURLForm(ModelForm):
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','newusage']
         model = MFile
 
 class MFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','newusage']
         model = MFile
 
 class UpdateMFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','newusage']
         model = MFile
 
 class UpdateMFileFormURL(ModelForm):
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','newusage']
         model = MFile
 
 class MFileAuthForm(ModelForm):

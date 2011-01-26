@@ -51,7 +51,6 @@ class HostingContainerHandler(BaseHandler):
         return r
 
     def create(self, request):
-        logging.info(request)
         form = HostingContainerForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
@@ -772,7 +771,7 @@ class RoleInfoHandler(BaseHandler):
             return dict
 
         r = rc.BAD_REQUEST
-        resp.write("Invalid Request!")
+        r.write("Invalid Request!")
         return r
 
 class UsageSummaryHandler(BaseHandler):
@@ -1029,5 +1028,5 @@ class ResourcesHandler(BaseHandler):
             return mfile
 
         r = rc.BAD_REQUEST
-        resp.write("Unknown Resource")
+        r.write("Unknown Resource")
         return r

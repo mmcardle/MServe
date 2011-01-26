@@ -91,12 +91,12 @@ urlpatterns = patterns('',
 
 
     # DEPRECATED
-    url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
-    url(r'^serviceapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^mfileapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
-    url(r'^mfileapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^containerapi/getusagesummary/(?P<baseid>[^/]+)/$', usagesummary_handler),
-    url(r'^containerapi/getusagesummary/(?P<baseid>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^serviceapi/getusagesummary/(?P<id>[^/]+)/$', usagesummary_handler),
+    url(r'^serviceapi/getusagesummary/(?P<id>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^mfileapi/getusagesummary/(?P<id>[^/]+)/$', usagesummary_handler),
+    url(r'^mfileapi/getusagesummary/(?P<id>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^containerapi/getusagesummary/(?P<id>[^/]+)/$', usagesummary_handler),
+    url(r'^containerapi/getusagesummary/(?P<id>[^/]+)/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^serviceapi/getmanagedresources/(?P<id>[^/]+)/$', resources_handler),
     url(r'^serviceapi/getmanagedresources/(?P<id>[^/]+)/(?P<last_known>[^/]+)/$', resources_handler),
     url(r'^mfileapi/getmanagedresources/(?P<id>[^/]+)/$', resources_handler),

@@ -1,6 +1,5 @@
+from mserve.dataservice.models import NamedBase
 from dataservice.models import *
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Max
 import utils as utils
 import datetime
 import time
@@ -9,11 +8,13 @@ import logging
 
 # Metrics for objects
 metric_mfile = "http://prestoprime/file"
+metric_backupfile = "http://prestoprime/backupfile"
 metric_container = "http://prestoprime/container"
 metric_service = "http://prestoprime/service"
 
 # Metrics for mfiles
 metric_disc = "http://prestoprime/disc"
+metric_disc_space = "http://prestoprime/disc_space"
 metric_ingest = "http://prestoprime/ingest"
 metric_access = "http://prestoprime/access"
 metric_archived = "http://prestoprime/archived"
@@ -21,15 +22,16 @@ metric_dataloss = "http://prestoprime/dataloss"
 metric_corruption = "http://prestoprime/corruption"
 metric_responsetime = "http://prestoprime/responsetime"
 
-metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
+metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_disc_space,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
 
 # What metric are reported fro each type
 container_metrics = metrics
-service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
-mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
+service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption,metric_responsetime,metric_disc_space]
+mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime,metric_disc_space]
+backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 
 # Other Metric groups
-byte_metrics = [metric_disc]
+byte_metrics = [metric_disc_space]
 
 def record(id,metric,value,report=True):
     base = NamedBase.objects.get(pk=id)
@@ -40,8 +42,40 @@ def record(id,metric,value,report=True):
 
 def startrecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)
-    usagerate = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
-    usagerate.save()
+    logging.info("base %s "% base)
+
+    #obj, created = UsageRate.objects.get_or_create(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
+    #if created:
+    #    logging.info("created %s "% obj)
+    #else:
+    #    logging.info("existing %s " % obj)
+
+    try:
+        usagereport = UsageRate.objects.get(base=base,metric=metric)
+        logging.info("usagereport %s "% usagereport)
+        if rate == usagereport.rate:
+            logging.info("Usage allready exists for %s at current rate %s " % (usagereport.metric,rate))
+        else:
+            logging.info("Usage allready exists for %s at rate %s, changing rate %s " % (usagereport.metric, usagereport.rate, rate))
+            c = usagereport.current
+
+            todate = datetime.datetime.now()
+            td = todate-usagereport.current
+            dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
+
+            amount = dif*usagereport.rate
+
+            usagereport.usageSoFar = usagereport.usageSoFar + amount
+            usagereport.current = todate
+            usagereport.rate = rate
+            usagereport.save()
+
+    except UsageRate.DoesNotExist:
+        logging.info("DoesNotExist  ")
+        usagereport = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
+        logging.info("created %s " % usagereport)
+        usagereport.save()
+
     if report:
         reportusage(base)
 
@@ -132,14 +166,20 @@ def service_usagesummary(serviceid):
     summary = []
     service  = DataService.objects.get(pk=serviceid)
 
+    logging.info("Getting usagesummary for %s " % service)
+
     mfiles = MFile.objects.filter(service=service)
+
     for mfile in mfiles:
+        logging.info("Getting usagesummary for %s " % mfile)
         ss = mfile_usagesummary(mfile.id)
         for s in ss:
             summary.append(s)
     ss = __usagesummary_by_base(service)
     for s in ss:
         summary.append(s)
+
+    logging.info("Usagesummarys  %s " % summary)
 
     dict = {}
     for s in summary:
@@ -158,6 +198,8 @@ def service_usagesummary(serviceid):
         aggregate.max  = max(s.max,aggregate.max )
         aggregate.min  = min(s.min,aggregate.min )
         aggregate.sums += s.sums
+
+    logging.info("Usagesummarys  %s " % dict.values())
 
     return dict.values()
 
@@ -245,10 +287,11 @@ def inprogress_to_aggregates(base,inprogress,base_metrics):
         agg.metric=metric
 
     for usage in inprogress:
-        agg_ur = aggregates[usage.metric]
-        agg_ur.rate = agg_ur.rate + usage.rate
-        agg_ur.usageSoFar = agg_ur.usageSoFar + usage.usageSoFar
-        agg_ur.count = agg_ur.count+1
+        if aggregates.has_key(usage.metric):
+            agg_ur = aggregates[usage.metric]
+            agg_ur.rate = agg_ur.rate + usage.rate
+            agg_ur.usageSoFar = agg_ur.usageSoFar + usage.usageSoFar
+            agg_ur.count = agg_ur.count+1
 
     logging.info(aggregates)
 
