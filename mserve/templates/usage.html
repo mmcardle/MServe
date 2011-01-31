@@ -6,7 +6,7 @@
         <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Numbers</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
         {% for summary in usagesummary%}
             <tr>
-                <td style="text-align: left;">{{summary.metric}}</td>
+                <td style="text-align: left;"><b>{{summary.metric}}</b></td>
                 <td>{{summary.min}}</td>
                 <td>{{summary.max}}</td>
                 <td>{{summary.n}}</td>
@@ -22,9 +22,15 @@
 {% if usage %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
         {% for u in usage %}
+            {% if u.rate == 0.0 %}
             <tr>
-                <td>Usage of <a href="/browse/{{u.base.id}}">{{u.base}}</a>&nbsp;</td><td><b>{{u.metric}}</b></td><td>at {{u.fmt_rtime}} was<td><b>{{u.total}}</b></td><td>and is at rate of</td><td><b>{{u.rate}}</b></td>
+                <td>Usage of <a href="/browse/{{u.base.id}}">{{u.base}}</a>&nbsp;</td><td><b>{{u.metric}}</b></td><td>at <b>{{u.fmt_rtime}}</b> was<td><b>{{u.total}}</b></td>
             </tr>
+             {% else%}
+            <tr>
+                <td>Usage of <a href="/browse/{{u.base.id}}">{{u.base}}</a>&nbsp;</td><td><b>{{u.metric}}</b></td><td>at <b>{{u.fmt_rtime}}</b> was<td><b>{{u.rate}} per second</b></td>
+            </tr>
+            {% endif %}
         {% endfor %}
     </table>
 {% endif %}

@@ -28,6 +28,9 @@ import shutil
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 
+metric_corruption = "http://mserve/corruption"
+metric_dataloss = "http://mserve/dataloss"
+
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
     model = HostingContainer
@@ -191,8 +194,8 @@ class MFileHandler(BaseHandler):
             backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
             backup.save()
 
-            usage_store.startrecording(mfileid,usage_store.metric_disc,mfile.size)
-            usage_store.startrecording(mfileid,usage_store.metric_archived,mfile.size)
+            #usage_store.startrecording(mfileid,usage_store.metric_disc,mfile.size)
+            #usage_store.startrecording(mfileid,usage_store.metric_archived,mfile.size)
 
             return mfile
 
@@ -482,7 +485,8 @@ class MFileContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        dlfoldername = "dl%s"%accessspeed
+        #dlfoldername = "dl%s"%accessspeed
+        dlfoldername = "dl"
 
         check1 = mfile.checksum
         check2 = utils.md5_for_file(mfile.file)
@@ -493,7 +497,7 @@ class MFileContentsHandler(BaseHandler):
             logging.info("Verification of %s on read ok" % mfile)
         else:
             logging.info("Verification of %s on read FAILED" % mfile)
-            usage_store.record(mfile.id,usage_store.metric_corruption,1)
+            usage_store.record(mfile.id,metric_corruption,1)
             backup = BackupFile.objects.get(mfile=mfile)
             check3 = mfile.checksum
             check4 = utils.md5_for_file(backup.file)
@@ -502,7 +506,7 @@ class MFileContentsHandler(BaseHandler):
                 file = backup.file
             else:
                 logging.info("The file %s has been lost" % mfile)
-                usage_store.record(mfile.id,usage_store.metric_dataloss,mfile.size)
+                usage_store.record(mfile.id,metric_dataloss,mfile.size)
                 return rc.NOT_HERE
 
         p = str(file)
@@ -528,7 +532,8 @@ class MFileContentsHandler(BaseHandler):
         if not os.path.exists(fullfilepath):
             os.link(mfilefilepath,fullfilepath)
 
-        usage_store.record(mfile.id,usage_store.metric_access,mfile.size)
+        import dataservice.models as models
+        usage_store.record(mfile.id,models.metric_access,mfile.size)
 
         return redirect("/%s"%redirecturl)
     
@@ -776,9 +781,7 @@ class UsageHandler(BaseHandler):
     fields = ('squares','total','nInProgress','metric','rate','reports','time,','rateCumulative','total','rateTime')
 
     def read(self,request, id):
-        base = NamedBase.objects.get(pk=id)
-        return base.usages.all()
-
+        return usage_store.get_usage(id)
 
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')

@@ -6,33 +6,6 @@ import time
 import logging
 from django.db.models import Count,Max,Min,Avg,Sum,StdDev,Variance
 
-# Metrics for objects
-metric_mfile = "http://prestoprime/file"
-metric_backupfile = "http://prestoprime/backupfile"
-metric_container = "http://prestoprime/container"
-metric_service = "http://prestoprime/service"
-
-# Metrics for mfiles
-metric_disc = "http://prestoprime/disc"
-metric_disc_space = "http://prestoprime/disc_space"
-metric_ingest = "http://prestoprime/ingest"
-metric_access = "http://prestoprime/access"
-metric_archived = "http://prestoprime/archived"
-metric_dataloss = "http://prestoprime/dataloss"
-metric_corruption = "http://prestoprime/corruption"
-metric_responsetime = "http://prestoprime/responsetime"
-
-metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_disc_space,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime]
-
-# What metric are reported fro each type
-container_metrics = metrics
-service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_dataloss,metric_corruption,metric_responsetime,metric_disc_space]
-mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_dataloss,metric_corruption,metric_responsetime,metric_disc_space]
-backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
-
-# Other Metric groups
-byte_metrics = [metric_disc_space]
-
 def record(id,metric,total,report=True):
     base = NamedBase.objects.get(pk=id)
     usage = Usage(base=base,metric=metric,total=total,rate=0,rateCumulative=0,rateTime=datetime.datetime.now(),nInProgress=0,reports=1,squares=(total*total))
@@ -53,7 +26,6 @@ def startrecording(id,metric,rate,report=True):
             logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
             logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
-            #c = usage.current
 
             now = datetime.datetime.now()
             td = now-usage.rateTime
@@ -89,13 +61,6 @@ def _stoprecording_(usage):
 
     usagedelta = float(lastUsage) + float(lastRate) * (t2 - t1)
 
-    logging.info("now %s " % ( now))
-    logging.info("t2 - t1 %s " % ( t2 - t1 ))
-    logging.info("t2 - t1 %s " % ( (t2 - t1) ))
-    logging.info("lastRateTime %s lastRate %s lastUsage %s" % ( lastRateTime, lastRate, lastUsage ))
-    logging.info("Usage since last report between %s and %s is %s" % (t2,t1,usagedelta))
-    logging.info("Total usage is %s + %s " % (usage.rateCumulative,usagedelta))
-
     usage.rateTime = now
     usage.rateCumulative = usage.rateCumulative + usagedelta
     usage.rate = 0
@@ -106,9 +71,6 @@ def stoprecording(id,metric,report=True):
     logging.debug("Stop Recording "+id)
 
     base = NamedBase.objects.get(id=id)
-
-    logging.debug("Base str usages  %s" % Usage.objects.filter(base=str(base)))
-    logging.debug("Stop Recording %s" % base)
 
     try:
         usages = Usage.objects.filter(base=str(base))
@@ -139,6 +101,29 @@ def reportusage(base):
         ob.reportnum += 1
         ob.save()
 
+def get_usage(id=None):
+    if id==None:
+        usages = Usage.objects.all()
+        return usages
+    else:
+        base = NamedBase.objects.get(pk=id)
+        ids = []
+        if utils.is_container(base):
+            hc = HostingContainer.objects.get(id=id)
+            serviceids = [service.id for service in hc.dataservice_set.all()  ]
+            mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
+            ids = serviceids + mfileids + [base.id]
+
+        if utils.is_service(base):
+            service   = DataService.objects.get(id=id)
+            ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
+
+        if utils.is_mfile(base):
+            ids=[base.id]
+
+        usages = Usage.objects.filter(base__in=ids)
+        return usages
+
 def get_usage_summary(id=None):
     
     summary = []
@@ -147,7 +132,6 @@ def get_usage_summary(id=None):
         usages = Usage.objects.all()
         
     else:
-        logging.info("Some")
         base = NamedBase.objects.get(pk=id)
 
         ids = []
@@ -186,5 +170,4 @@ def get_usage_summary(id=None):
         .annotate(min=Min('total')) \
         .annotate(sum=Sum('total'))
 
-    logging.info("summary %s " % summary)
     return summary

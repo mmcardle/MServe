@@ -9,12 +9,12 @@
         <span>Number of Services&nbsp;&nbsp;<em class="numservices"></em>&nbsp;&nbsp;&nbsp;</span>
                     {% if usagesummary %}
                     {% for usagesummary in usagesummary %}
-                        {% if usagesummary.metric == "http://prestoprime/disc_space" %}
+                        {% if usagesummary.metric == "http://mserve/disc_space" %}
                             <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.max|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
                             <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.avg|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
                             <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.sum|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
                         {% endif %}
-                        {% if usagesummary.metric == "http://prestoprime/responsetime" %}
+                        {% if usagesummary.metric == "http://mserve/responsetime" %}
                             <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
                         {% endif %}
                     {% endfor %}
@@ -36,17 +36,6 @@
     });
 </script>
 
-<!--
-<ul>
-    {% for service in services %}
-        <li><a href="/browse/service/{{ service.id }}/">{{ service.name }}</a> <em>{{service.mfile_set.all|length}} files</em></li>
-    {% endfor %}
-</ul>
-{% if not services %}
-    <ul><li>Empty</li></ul>
-{% endif %}
-
--->
 <h3>Create New Service</h3>
 
 <form action="/form/service/" method="post">

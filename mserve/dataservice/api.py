@@ -192,7 +192,6 @@ def create_container(request,name):
 
 
 def delete_container(request,containerid):
-    usage_store.stoprecording(containerid,usage_store.metric_container)
     container = HostingContainer.objects.get(id=containerid)
     logging.info("Deleteing service %s %s" % (container.name,containerid))
 
@@ -205,7 +204,6 @@ def delete_container(request,containerid):
     logging.info("Container Deleted %s " % containerid)
 
 def delete_service(request,serviceid):
-    usage_store.stoprecording(serviceid,usage_store.metric_service)
     service = DataService.objects.get(id=serviceid)
     logging.info("Deleteing service %s %s" % (service.name,serviceid))
 

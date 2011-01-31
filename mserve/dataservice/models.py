@@ -13,6 +13,30 @@ from django.db.models.signals import pre_delete
 ID_FIELD_LENGTH = 200
 thumbpath = settings.THUMB_PATH
 
+# Metrics for objects
+metric_mfile = "http://mserve/file"
+metric_backupfile = "http://mserve/backupfile"
+metric_container = "http://mserve/container"
+metric_service = "http://mserve/service"
+
+# Metrics for mfiles
+metric_disc = "http://mserve/disc"
+metric_disc_space = "http://mserve/disc_space"
+metric_ingest = "http://mserve/ingest"
+metric_access = "http://mserve/access"
+metric_archived = "http://mserve/archived"
+
+metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_disc_space,metric_ingest,metric_access,metric_archived]
+
+# What metric are reported fro each type
+container_metrics = metrics
+service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_disc_space]
+mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_disc_space]
+backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
+
+# Other Metric groups
+byte_metrics = [metric_disc_space]
+
 class Usage(models.Model):
     base            = models.ForeignKey('NamedBase',null=True, blank=True)
     metric          = models.CharField(max_length=4096)
@@ -103,12 +127,10 @@ class HostingContainer(NamedBase):
     
     def __init__(self, *args, **kwargs):
         super(HostingContainer, self).__init__(*args, **kwargs)
-        import usage_store as usage_store
-        self.metrics = usage_store.container_metrics
+        self.metrics = container_metrics
 
     def get_value_for_metric(self, metric):
-        import usage_store as usage_store
-        if metric == usage_store.metric_container:
+        if metric == metric_container:
             return 1
 
     def save(self):
@@ -122,12 +144,10 @@ class DataService(NamedBase):
 
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
-        import usage_store as usage_store
-        self.metrics = usage_store.service_metrics
+        self.metrics = service_metrics
 
     def get_value_for_metric(self, metric):
-        import usage_store as usage_store
-        if metric == usage_store.metric_service:
+        if metric == metric_service:
             return 1
 
     def save(self):
@@ -153,25 +173,21 @@ class MFile(NamedBase):
 
     def __init__(self, *args, **kwargs):
         super(MFile, self).__init__(*args, **kwargs)
-        import usage_store as usage_store
-        self.metrics = usage_store.mfile_metrics
+        self.metrics = mfile_metrics
 
     def get_value_for_metric(self, metric):
-        import usage_store as usage_store
-        if metric == usage_store.metric_mfile:
+        if metric == metric_mfile:
             return 1
         if not self.empty:
-            if metric == usage_store.metric_disc_space:
+            if metric == metric_disc_space:
                 return self.file.size
-            if metric == usage_store.metric_ingest:
+            if metric == metric_ingest:
                 return self.file.size
 
     def get_rate_for_metric(self, metric):
-        import usage_store as usage_store
         if not self.empty:
-            if metric == usage_store.metric_disc:
+            if metric == metric_disc:
                 return self.file.size
-
 
     def thumburl(self):
         return "%s%s" % (thumbpath,self.thumb)
@@ -216,21 +232,18 @@ class BackupFile(NamedBase):
 
     def __init__(self, *args, **kwargs):
         super(BackupFile, self).__init__(*args, **kwargs)
-        import usage_store as usage_store
-        self.metrics = usage_store.backupfile_metrics
+        self.metrics = backupfile_metrics
 
     def get_value_for_metric(self, metric):
-        import usage_store as usage_store
-        if metric == usage_store.metric_backupfile:
+        if metric == metric_backupfile:
             return 1
         if file:
-            if metric == usage_store.metric_disc_space:
+            if metric == metric_disc_space:
                 return self.file.size
 
     def get_rate_for_metric(self, metric):
-        import usage_store as usage_store
         if file:
-            if metric == usage_store.metric_disc:
+            if metric == metric_disc:
                 return self.file.size
 
     def save(self):

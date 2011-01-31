@@ -40,10 +40,7 @@ urlpatterns = patterns('',
     url(r'^auth/$', auth_handler),
 
     # HTML Views
-    url(r'^browse/container/(?P<id>[^/]+)/', "dataservice.views.render_container"),
-    url(r'^browse/service/(?P<id>[^/]+)/', "dataservice.views.render_service"),
-    url(r'^browse/mfile/(?P<id>[^/]+)/', "dataservice.views.render_mfile",{'show':True}),
-    url(r'^browse/auth/(?P<id>[^/]+)/', "dataservice.views.render_auth"),
+    url(r'^browse/(?P<id>[^/]+)/$', "dataservice.views.render_base"),
 
     # HTML Forms
     url(r'^form/container/', "dataservice.views.create_container"),
@@ -115,6 +112,10 @@ urlpatterns = patterns('',
     url(r'^serviceapi/getaccesscontrol/(?P<id>[^/]+)/$', role_info_handler),
     url(r'^containerapi/getaccesscontrol/(?P<id>[^/]+)/$', role_info_handler),
     url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
+    url(r'^browse/container/(?P<id>[^/]+)/', "dataservice.views.render_container"),
+    url(r'^browse/service/(?P<id>[^/]+)/', "dataservice.views.render_service"),
+    url(r'^browse/mfile/(?P<id>[^/]+)/', "dataservice.views.render_mfile",{'show':True}),
+    url(r'^browse/auth/(?P<id>[^/]+)/', "dataservice.views.render_auth"),
 
     # Job Methods
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),

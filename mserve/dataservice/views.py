@@ -1,3 +1,4 @@
+from mserve.dataservice.models import HostingContainer
 from mserve.dataservice.models import MFileAuth
 from mserve.dataservice.models import Auth
 from mserve.dataservice.models import *
@@ -15,7 +16,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 def home(request,form=HostingContainerForm()):    
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.get_usage_summary(None)
-    usage = Usage.objects.all()
+    usage = usage_store.get_usage(None)
     dict = {}
     if request.user.is_authenticated() and request.user.is_staff:
         dict["hostingcontainers"] = hostings
@@ -31,6 +32,20 @@ def thumb(request,mfileid):
     r = render_to_response('mfilethumb.html', dict, context_instance=RequestContext(request))
     return r
 
+def render_base(request,id):
+    base = NamedBase.objects.get(id=id)
+
+    if utils.is_container(base):
+        return render_container(request,id)
+
+    if utils.is_service(base):
+        return render_service(request,id)
+
+    if utils.is_mfile(base):
+        return render_mfile(request,id,show=True)
+
+    return
+
 @login_required
 def profile(request):
     dict ={}
@@ -44,7 +59,7 @@ def create_container(request):
         name = form.cleaned_data['name']
         hostingcontainer = api.create_container(request,name)
 
-        return redirect('/browse/container/'+str(hostingcontainer.id))
+        return redirect('/browse/'+str(hostingcontainer.id))
     else:
         return home(request,form=form)
 
@@ -60,7 +75,7 @@ def render_container(request,id,form=DataServiceForm()):
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     form.fields['cid'].initial = id
-    usage = Usage.objects.filter(base=container)
+    usage = usage_store.get_usage(id)
     usagesummary = usage_store.get_usage_summary(container.id)
 
     managementpropertyform = ManagementPropertyForm()
@@ -95,8 +110,8 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     form.fields['cid'].initial = container.id
-    usage = Usage.objects.filter(base=container)
-    usagesummary = usage_store.container_usagesummary(container)
+    usage = usage_store.get_usage(id)
+    usagesummary = usage_store.get_usage_summary(container.id)
 
     managementpropertyform = ManagementPropertyForm()
     dict = {}
@@ -122,7 +137,7 @@ def create_service(request):
         name = form.cleaned_data['name']
         dataservice = api.create_data_service(request,containerid,name)
 
-        return redirect('/browse/service/'+str(dataservice.id))
+        return redirect('/browse/'+str(dataservice.id))
     else:
         containerid = form.data['cid']
         return render_container(request,containerid,form=form)
@@ -148,7 +163,7 @@ def render_service(request,id,form=MFileForm()):
     dict["auths"] = auths
     dict["roles"] = roles
     dict["form"] = form
-    dict["usage"] = Usage.objects.filter(base=service)
+    dict["usage"] = usage_store.get_usage(id)
     dict["usagesummary"] = usage_store.get_usage_summary(service.id)
     dict["methods"] = set(methods)
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
@@ -180,7 +195,7 @@ def render_serviceauth(request,authid,form=MFileForm()):
     dict["jobs"] = service.job_set
     dict["form"] = form
     dict["usage"] = Usage.objects.filter(base=service)
-    dict["usagesummary"] = usage_store.service_usagesummary(service.id)
+    dict["usagesummary"] = usage_store.get_usage_summary(id)
     dict["methods"] = set(methods)
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
@@ -221,7 +236,7 @@ def create_auth(request):
         join = JoinAuth(parent=parent,child=child)
         join.save()
 
-        return redirect('/browse/auth/%s/' % str(subauth.id))
+        return redirect('/browse/%s/' % str(subauth.id))
 
     else:
         return render_error(request,form)
@@ -272,7 +287,7 @@ def create_mfile(request):
         #service = DataService.objects.get(id=serviceid)
         mfile = api.create_mfile(request, serviceid, file)
 
-        return redirect('/browse/mfile/'+str(mfile.id)+"/")
+        return redirect('/browse/'+str(mfile.id)+"/")
     else:
         serviceid = form.data['sid']
         return render_service(request,serviceid,form=form)
@@ -313,7 +328,7 @@ def render_mfile(request,id, form=MFileAuthForm(), show=False):
     dict["form"] = form
     dict["auths"] = auths
     dict["formtarget"] = "/mfileauth/"
-    dict["usage"] = Usage.objects.filter(base=mfile)
+    dict["usage"] = usage_store.get_usage(id)
     dict["usagesummary"] = usage_store.get_usage_summary(mfile.id)
     dict["roles"] = roles
     dict["methods"] = set(methods)

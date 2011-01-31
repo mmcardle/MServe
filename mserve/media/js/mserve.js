@@ -25,7 +25,7 @@ function loadContainers(){
                     end=containers.length;
                 }
                 for(var i=start;i<end;i++) {
-                    var c = $("<div>"+containers[i].name+"  <a href='/browse/container/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
+                    var c = $("<div>"+containers[i].name+"  <a href='/browse/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
                     $('#containerpaginator').append(c)
                 }
                 return false;
@@ -55,7 +55,7 @@ function mfile_template(mfile){
             +"<colgroup><col>"
             +"</colgroup>"
             +"<tbody>"
-              +"<tr><td><div class='title'><a href='/browse/mfile/"+mfile.id+"/'>"+name+"</a></div></td></tr>"
+              +"<tr><td><div class='title'><a href='/browse/"+mfile.id+"/'>"+name+"</a></div></td></tr>"
               +"<tr><td>"
                       +"<div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position: relative ' id='id-"+mfile.id+"'>"
                           +"<div>Size: "+mfile.size+"</div>"
@@ -98,7 +98,7 @@ function loadServices(containerid){
                 }
 
                 for(var i=start;i<end;i++) {
-                    var c = $("<div>"+services[i].name+"  <a href='/browse/service/"+services[i].id+"/'>"+services[i].id+"</a>&nbsp;<em>"+services[i].mfile_set.length+" files</em></div>")
+                    var c = $("<div>"+services[i].name+"  <a href='/browse/"+services[i].id+"/'>"+services[i].id+"</a>&nbsp;<em>"+services[i].mfile_set.length+" files</em></div>")
                     $('#servicepaginator').append(c)
                 }
                 return false;

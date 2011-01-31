@@ -1,8 +1,9 @@
 import re
-import logging
 import usage_store as usage_store
 import datetime
 from dataservice.models import *
+
+metric_responsetime = "http://mserve/responsetime"
 
 class AuthMiddleware(object):
 
@@ -17,12 +18,11 @@ class AuthMiddleware(object):
                     endtime = datetime.datetime.now()
                     timetaken = endtime - starttime
                     tt = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
-                    usage_store.record(mfileid,usage_store.metric_responsetime,tt)
+                    usage_store.record(mfileid,metric_responsetime,tt)
 
         return response
 
     def process_request(self, request):
-        
         if request.META.has_key('REQUEST_URI'):
             uri = request.META['REQUEST_URI']
             if uri.startswith("/mfileapi/get/"):
