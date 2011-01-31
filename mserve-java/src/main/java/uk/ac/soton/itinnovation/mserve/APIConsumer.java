@@ -12,12 +12,17 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.httpclient.Credentials;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.UsernamePasswordCredentials;
+import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
@@ -31,6 +36,29 @@ public class APIConsumer {
 
     private String protocol = "http://";
     private String host = "localhost";
+
+    public static void main(String[] args){
+        try {
+            APIConsumer consumer = new APIConsumer();
+            String cid = consumer.createContainer();
+            String sid = consumer.makeServiceREST(cid);
+            String mid = consumer.makeMFileURL(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+            consumer.getUsage(cid);
+            consumer.getUsage(sid);
+            consumer.getUsage(mid);
+            consumer.deleteContainer(cid);
+
+            //String mid1 = consumer.makeMFileURL(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+            //String mid2 = consumer.makeMFileREST(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+            //String mid = consumer.makeEmptyMFileREST(sid);
+            //consumer.putToEmptyMFileREST(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+            //consumer.putToEmptyMFileURL(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(APIConsumer.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
 
     public APIConsumer(){}
 
@@ -275,13 +303,13 @@ public class APIConsumer {
 
     public List<String> getServices(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/containerapi/getmanagedresources/" + id +"/-1/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/resources/");
 
             String output = getOutputFromURL(getresourcesurl);
 
             JSONObject ob = new JSONObject(output);
 
-            JSONArray arr = ob.getJSONArray("services");
+            JSONArray arr = ob.getJSONArray("dataservice_set");
 
             ArrayList<String> ids = new ArrayList<String>();
 
@@ -350,8 +378,7 @@ public class APIConsumer {
 
             String output = getOutputFromURL(getresourcesurl);
 
-            JSONArray arr = new JSONArray(output);
-            JSONObject ob = arr.getJSONObject(0);
+            JSONObject ob = new JSONObject(output);
 
             return ob;
 
@@ -394,13 +421,13 @@ public class APIConsumer {
 
     public List<String> getMFiles(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/serviceapi/getmanagedresources/" + id +"/-1/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/resources/");
 
             String output = getOutputFromURL(getresourcesurl);
 
             JSONObject ob  = new JSONObject(output);
 
-            JSONArray arr = ob.getJSONArray("mfiles");
+            JSONArray arr = ob.getJSONArray("mfile_set");
 
             ArrayList<String> ids = new ArrayList<String>();
             if(arr.length()>0){
@@ -465,7 +492,7 @@ public class APIConsumer {
 
             HttpClient client = new HttpClient();
             HttpMethod method = new GetMethod(url.toString());
-            method.setRequestHeader("Accept", "application/json");;
+            method.setRequestHeader("Accept", "application/json");
 
             client.executeMethod(method);
 
@@ -480,6 +507,7 @@ public class APIConsumer {
             buf.close();
 
             if(method.getStatusCode()!=200){
+                System.err.println(""+output);
                 throw new RuntimeException("Response is "+method.getStatusText()+" code="+method.getStatusCode());
             }
 
@@ -506,7 +534,7 @@ public class APIConsumer {
             filePost.releaseConnection();
 
             if(result != 204){
-                throw new RuntimeException("Response from DELETE request for container was not 204, but was '"+result+"'");
+                throw new RuntimeException("Response from DELETE request for container was not 204, but was '"+result+"' ");
             }else{
                 return true;
             }
@@ -582,34 +610,26 @@ public class APIConsumer {
         }
     }
 
-    public void getContainerUsageReport(String id) {
+    public void getContainerManagedResources(String id) {
+        getManagedResources(id);
+    }
+    public void getServiceManagedResources(String id) {
+        getManagedResources(id);
+    }
+    public void getMFileManagedResources(String id) {
+        getManagedResources(id);
+    }
+
+    public void getManagedResources(String id) {
       try {
-            URL getresourcesurl = new URL(protocol + host + "/containerapi/getusagesummary/" + id +"/-1/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/resources/");
 
             String output = getOutputFromURL(getresourcesurl);
 
             JSONObject ob  = new JSONObject(output);
 
+            System.out.println("getManaged Resources result='"+ob+"'");
             System.out.println("Report Number "+ob.getString("reportnum"));
-
-            JSONArray inp_arr = ob.getJSONArray("inprogress");
-
-            ArrayList<String> ids = new ArrayList<String>();
-            if(inp_arr.length()>0){
-                for (int i = 0; i < inp_arr.length(); i++) {
-                    JSONObject jsonob = inp_arr.getJSONObject(i);
-                    System.out.println("In Progress "+jsonob);
-                }
-            }
-
-            JSONArray sum_arr = ob.getJSONArray("inprogress");
-
-            if(sum_arr.length()>0){
-                for (int i = 0; i < sum_arr.length(); i++) {
-                    JSONObject jsonob = sum_arr.getJSONObject(i);
-                    System.out.println("In Progress "+jsonob);
-                }
-            }
 
         } catch (JSONException ex) {
             throw new RuntimeException(ex);
@@ -619,4 +639,156 @@ public class APIConsumer {
             throw new RuntimeException(ex);
         }
     }
+
+    public JSONArray getContainerUsageSummary(String id) {
+      return getUsageSummary(id);
+    }
+    public JSONArray getServiceUsageSummary(String id) {
+      return getUsageSummary(id);
+    }
+    public JSONArray getMFileUsageSummary(String id) {
+      return getUsageSummary(id);
+    }
+
+    public JSONArray getUsageSummary(String id) {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/usagesummary/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONObject ob  = new JSONObject(output);
+
+            System.out.println("Report Number "+ob.getString("reportnum"));
+
+            JSONArray usages_arr = ob.getJSONArray("usages");
+
+            if(usages_arr.length()>0){
+                for (int i = 0; i < usages_arr.length(); i++) {
+                    JSONObject jsonob = usages_arr.getJSONObject(i);
+                    System.out.println("Usage "+jsonob);
+                }
+            }
+
+            return usages_arr;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+    
+    public JSONArray getContainerUsage(String id) {
+      return getUsage(id);
+    }
+    public JSONArray getServiceUsage(String id) {
+      return getUsage(id);
+    }
+    public JSONArray getMFileUsage(String id) {
+      return getUsage(id);
+    }
+
+    public JSONArray getUsage(String id) {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/usage/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONArray usages_arr  = new JSONArray(output);
+
+            if(usages_arr.length()>0){
+                for (int i = 0; i < usages_arr.length(); i++) {
+                    JSONObject jsonob = usages_arr.getJSONObject(i);
+                    System.out.println("Usage "+jsonob);
+                }
+            }
+
+            return usages_arr;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+    
+    public JSONArray getContainerRoleInfo(String id) {
+      return getRoleInfo(id);
+    }
+    public JSONArray getServiceRoleInfo(String id) {
+      return getRoleInfo(id);
+    }
+    public JSONArray getMFileRoleInfo(String id) {
+      return getRoleInfo(id);
+    }
+
+    public JSONArray getRoleInfo(String id) {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/roleinfo/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONObject ob  = new JSONObject(output);
+            
+            JSONArray role_arr = ob.getJSONArray("roles");
+
+            if(role_arr.length()>0){
+                for (int i = 0; i < role_arr.length(); i++) {
+                    JSONObject jsonob = role_arr.getJSONObject(i);
+                    System.out.println("Role "+jsonob);
+                }
+            }
+
+            return role_arr;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public JSONArray getContainerManagementProperty(String id) {
+      return getRoleInfo(id);
+    }
+    public JSONArray getServiceManagementProperty(String id) {
+      return getRoleInfo(id);
+    }
+    public JSONArray getMFileManagementProperty(String id) {
+      return getRoleInfo(id);
+    }
+
+    public JSONArray getManagementProperty(String id) {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/managementproperty/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONArray arr  = new JSONArray(output);
+
+            if(arr.length()>0){
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject jsonob = arr.getJSONObject(i);
+                    System.out.println("Management Property "+jsonob);
+                }
+            }
+
+            return arr;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+
 }
