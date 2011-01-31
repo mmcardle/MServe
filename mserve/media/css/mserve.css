@@ -4,8 +4,9 @@ body {
     font-family: Tahoma, sans-serif;
     font-size: 10pt;
     text-align:center;
-    	margin:0;
-	padding:0;
+    margin:0;
+    padding:0;
+    width:100%;
 }
 html, .main {
 	padding:0;
@@ -246,7 +247,6 @@ dt{
 }
 .table_usage th,.table_usage td {
     padding:1px;
-    text-align: left;
 }
 .table_usage th {
     text-align: right;
@@ -256,7 +256,7 @@ dt{
     min-width: 50px;
 }
 .table_usage td {
-    text-align: right;
+
 }
 
 .errorlist li {
@@ -317,6 +317,7 @@ li.fluid a {
     position: relative;
     top:9px;
     left: 12px;
+
 }
 #dropbox, #progressbox{
     width:208px;
@@ -493,3 +494,84 @@ div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%;
 div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
 .ui-dialog .ui-state-error { padding: .3em; }
 .validateTips { border: 1px solid transparent; padding: 0.3em; }
+
+
+.fbg {
+	padding:10px 0 0 0;
+	background:#393939 url(/mservemedia/images/fbg_bg.gif) bottom repeat-x;
+	margin:10px 0 0 0;
+}
+.fbg_resize {
+	margin:0 auto;
+	padding:20px 20px;
+	width:930px;
+}
+.fbg h2 {
+	color:#dedddd;
+}
+.fbg p {
+	color:#959595;
+}
+.fbg a {
+	color:#78bbe6;
+	text-decoration:none;
+}
+.fbg img {
+	padding:4px;
+	border:1px solid #cfd2d4;
+	background-color:#fff;
+}
+.fbg .col {
+	margin:0;
+	float:left;
+}
+.fbg .c1 {
+	padding:0 16px 0 0;
+	width:266px;
+}
+.fbg .c2 {
+	padding:0 16px;
+	width:300px;
+}
+.fbg .c3 {
+	padding:0 0 0 16px;
+	width:260px;
+}
+.fbg .c1 img {
+	margin:8px;
+}
+.fbg .c3 img {
+	margin:8px 16px 4px 0;
+	float:left;
+}
+.footer {
+	width:970px;
+	margin:0 auto;
+	padding:40px 0 20px 0;
+}
+.footer p {
+	margin:0;
+	padding:4px 0;
+	line-height:normal;
+}
+.footer a {
+	color:#959595;
+	padding:inherit;
+	text-decoration:underline;
+}
+.footer a:hover {
+	text-decoration:none;
+}
+.footer .lf {
+	float:left;
+}
+.footer .rf {
+	float:right;
+}
+ol {
+	list-style:none;
+}
+ol li {
+	display:block;
+	clear:both;
+}

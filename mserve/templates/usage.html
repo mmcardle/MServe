@@ -1,65 +1,35 @@
-<h3 class="ilink" onclick="$('#usagecontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Current Usage</h3>
-<div id="usagecontent" style="display:none;">
-{% if usagerate %}
-    <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th align="left">Metric</th><th>Name</th><th>Last Report</th><th>Rate</th><th>Usage</th><th>Time</th></tr>
-        {% for usagerate in usagerate%}
-            <tr>
-                <td style="text-align: left;">{{usagerate.metric}}</td>
-                <td><a href="{{usagerate.path}}{{usagerate.base.id}}/">{{usagerate.base}}</a></td>
-                <td>{{usagerate.ctime}}</td>
-                <td>{{usagerate.calc_rate}}</td>
-                <td>{{usagerate.calc_so_far}}</td>
-                <td>{{usagerate.time_since_last_report}}</td>
-            </tr>
-        {% endfor %}
-    </table>
-{% endif %}
-
-{% if not usagerate %}
-    <div>None</div>
-{% endif %}
-
-<h3>UsageSummary</h3>
+{% load mservetags %}
+<h3>Usage Summary</h3>
+<div id="usagecontent" >
 {% if usagesummary %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th align="left">Metric</th><th>Num</th><th>Sum</th><th>Min</th><th>Max</th><th>Avg</th><th>Sums</th></tr>
-        {% for usagesummary in usagesummary %}
+        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Numbers</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
+        {% for summary in usagesummary%}
             <tr>
-                <td  style="text-align: left;">{{usagesummary.metric}}</td>
-                <td>{{usagesummary.fmt_n}}</td>
-                <td>{{usagesummary.fmt_sum}}</td>
-                <td>{{usagesummary.fmt_min}}</td>
-                <td>{{usagesummary.fmt_max}}</td>
-                <td>{{usagesummary.fmt_avg}}</td>
-                <td>{{usagesummary.fmt_sums}}</td>
+                <td style="text-align: left;">{{summary.metric}}</td>
+                <td>{{summary.min}}</td>
+                <td>{{summary.max}}</td>
+                <td>{{summary.n}}</td>
+                <td>{{summary.avg}}</td>
+                <td>{{summary.stddev}}</td>
+                <td>{{summary.var}}</td>
             </tr>
         {% endfor %}
     </table>
 {% endif %}
 
-{% if not usagesummary %}
-    <div>None</div>
-{% endif %}
-
-<h3>Previous Usage</h3>
-{%block usage %}
+<h3>Historical Usage</h3>
 {% if usage %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th align="left">Metric</th><th>Time</th><th>Value</th></tr>
-        {% for usage in usage%}
+        {% for u in usage %}
             <tr>
-                <td style="text-align: left;">{{usage.metric}}</td>
-                <td>{{usage.fmt_ctime}}</td>
-                <td>{{usage.fmt_value}}</td>
+                <td>Usage of <a href="/browse/{{u.base.id}}">{{u.base}}</a>&nbsp;</td><td><b>{{u.metric}}</b></td><td>at {{u.fmt_rtime}} was<td><b>{{u.total}}</b></td><td>and is at rate of</td><td><b>{{u.rate}}</b></td>
             </tr>
         {% endfor %}
     </table>
 {% endif %}
-
-{% if not usage %}
-    <div>None</div>
-{% endif %}
-
 </div>
+
+{%block usage %}
+
 {%endblock usage %}

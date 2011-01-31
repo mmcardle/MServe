@@ -14,8 +14,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 def home(request,form=HostingContainerForm()):    
     hostings = HostingContainer.objects.all()
-    usagesummary = usage_store.usagesummary()
-    usagerate = UsageRate.objects.all()
+    usagesummary = usage_store.get_usage_summary(None)
     usage = Usage.objects.all()
     dict = {}
     if request.user.is_authenticated() and request.user.is_staff:
@@ -23,7 +22,6 @@ def home(request,form=HostingContainerForm()):
         dict["form"] = form
         dict["usage"] = usage
         dict["usagesummary"] = usagesummary
-        dict["usagerate"] = usagerate
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
 def thumb(request,mfileid):
@@ -55,14 +53,15 @@ def render_container(request,id,form=DataServiceForm()):
     auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
     roles = Role.objects.filter(auth=auths)
     methods = []
-    for role in roles:
-        methods  = methods + role.methods()
+    for auth in auths:
+        roles = Role.objects.filter(auth=auth)
+        for role in roles:
+            methods  = methods + role.methods()
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     form.fields['cid'].initial = id
-    usagerates = UsageRate.objects.filter(base=container)
     usage = Usage.objects.filter(base=container)
-    usagesummary = usage_store.container_usagesummary(container)
+    usagesummary = usage_store.get_usage_summary(container.id)
 
     managementpropertyform = ManagementPropertyForm()
     dict = {}
@@ -73,10 +72,9 @@ def render_container(request,id,form=DataServiceForm()):
     dict["managementpropertyform"] = managementpropertyform
     dict["auths"] = auths
     dict["usage"] = usage
-    dict["usagerate"] = usagerates
     dict["usagesummary"] = usagesummary
     dict["roles"] = roles
-    dict["methods"] = methods
+    dict["methods"] = set(methods)
 
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
@@ -92,12 +90,11 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     roles = Role.objects.filter(auth=auths)
     #roles = hca.roles.all()
     methods = []
-    for role in  hca.roles.all():
-        methods  = methods + role.methods()
+    #for role in  hca.roles.all():
+    #    methods  = methods + role.methods()
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     form.fields['cid'].initial = container.id
-    usagerates = UsageRate.objects.filter(base=container)
     usage = Usage.objects.filter(base=container)
     usagesummary = usage_store.container_usagesummary(container)
 
@@ -111,10 +108,9 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     dict["managementpropertyform"] = managementpropertyform
     dict["auths"] = auths
     dict["usage"] = usage
-    dict["usagerate"] = usagerates
     dict["usagesummary"] = usagesummary
     dict["roles"] = roles
-    dict["methods"] = methods
+    dict["methods"] = set(methods)
     
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
@@ -132,16 +128,16 @@ def create_service(request):
         return render_container(request,containerid,form=form)
 
 #@staff_member_required
-def render_service(request,id,form=MFileForm(),newmfile=None):
+def render_service(request,id,form=MFileForm()):
     service = DataService.objects.get(pk=id)
-    base = NamedBase.objects.get(pk=id)
     mfiles = MFile.objects.filter(service=service).order_by('created').reverse()
     properties = ManagementProperty.objects.filter(base=service)
-    auths = DataServiceAuth.objects.filter(dataservice=id)
-    roles = Role.objects.filter(auth=auths)
     methods = []
-    for role in roles:
-        methods  = methods + role.methods()
+    auths = DataServiceAuth.objects.filter(dataservice=id)
+    for auth in auths:
+        roles = Role.objects.filter(auth=auth)
+        for role in roles:
+            methods  = methods + role.methods()
     managementpropertyform = ManagementPropertyForm()
     form.fields['sid'].initial = service.id
     dict = {}
@@ -153,13 +149,8 @@ def render_service(request,id,form=MFileForm(),newmfile=None):
     dict["roles"] = roles
     dict["form"] = form
     dict["usage"] = Usage.objects.filter(base=service)
-    dict["usagerate"] = UsageRate.objects.filter(base=service)
-    dict["usagerate"] = UsageRate.objects.filter(base=base)
-    dict["usagesummary"] = usage_store.service_usagesummary(service.id)
-    logging.info("USAGESUMMARY %s  " % usage_store.service_usagesummary(service.id))
-    dict["methods"] = methods
-    if newmfile is not None:
-        dict["newmfile"] = newmfile
+    dict["usagesummary"] = usage_store.get_usage_summary(service.id)
+    dict["methods"] = set(methods)
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
 def render_serviceauth(request,authid,form=MFileForm()):
@@ -174,8 +165,8 @@ def render_serviceauth(request,authid,form=MFileForm()):
         subauth = SubAuth.objects.get(id=sub.child)
         auths.append(subauth)
     methods = []
-    for role in  dsa.roles.all():
-        methods  = methods + role.methods()
+    #for role in  dsa.roles.all():
+    #    methods  = methods + role.methods()
     roles = Role.objects.filter(auth=auths)
     managementpropertyform = ManagementPropertyForm()
     form.fields['sid'].initial = service.id
@@ -189,9 +180,8 @@ def render_serviceauth(request,authid,form=MFileForm()):
     dict["jobs"] = service.job_set
     dict["form"] = form
     dict["usage"] = Usage.objects.filter(base=service)
-    dict["usagerate"] = UsageRate.objects.filter(base=service)
     dict["usagesummary"] = usage_store.service_usagesummary(service.id)
-    dict["methods"] = methods
+    dict["methods"] = set(methods)
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
 def create_auth(request):
@@ -290,11 +280,12 @@ def create_mfile(request):
 def render_mfile(request,id, form=MFileAuthForm(), show=False):
     mfile = MFile.objects.get(pk=id)
 
-    auths = MFileAuth.objects.filter(mfile=id)
-    roles = Role.objects.filter(auth=auths)
     methods = []
-    for role in roles:
-        methods  = methods + role.methods()
+    auths = MFileAuth.objects.filter(mfile=id)
+    for auth in auths:
+        roles = Role.objects.filter(auth=auth)
+        for role in roles:
+            methods  = methods + role.methods()
     form.fields['dsid'].initial = mfile.id
     dict = {}
 
@@ -323,10 +314,9 @@ def render_mfile(request,id, form=MFileAuthForm(), show=False):
     dict["auths"] = auths
     dict["formtarget"] = "/mfileauth/"
     dict["usage"] = Usage.objects.filter(base=mfile)
-    dict["usagerate"] = UsageRate.objects.filter(base=mfile)
-    dict["usagesummary"] = usage_store.mfile_usagesummary(mfile.id)
+    dict["usagesummary"] = usage_store.get_usage_summary(mfile.id)
     dict["roles"] = roles
-    dict["methods"] = methods
+    dict["methods"] = set(methods)
     
     return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
 
@@ -343,7 +333,6 @@ def render_auth(request, id):
             return render_mfileauth(request, mfileauth.mfile, mfileauth, show=True)
         else:
             return render_mfileauth(request, mfileauth.mfile, mfileauth, show=False)
-
 
     if utils.is_serviceauth(auth):
         dsa = DataServiceAuth.objects.get(pk=auth.id)
@@ -449,13 +438,11 @@ def render_mfileauth(request, mfile, auth, show=False, dict={}):
 
 @staff_member_required
 def usage(request):
-    usagesummary = usage_store.usagesummary()
-    usagerate = UsageRate.objects.all()
+    usagesummary = usage_store.get_usage_summary(None)
     usage = Usage.objects.all()
     dict = {}
     dict["usage"] = usage
     dict["usagesummary"] = usagesummary
-    dict["usagerate"] = usagerate
     return render_to_response('allusage.html', dict, context_instance=RequestContext(request))
 
 @staff_member_required

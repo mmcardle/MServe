@@ -3,8 +3,8 @@ from dataservice.models import *
 import utils as utils
 import datetime
 import time
-import sys
 import logging
+from django.db.models import Count,Max,Min,Avg,Sum,StdDev,Variance
 
 # Metrics for objects
 metric_mfile = "http://prestoprime/file"
@@ -33,354 +33,158 @@ backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 # Other Metric groups
 byte_metrics = [metric_disc_space]
 
-def record(id,metric,value,report=True):
+def record(id,metric,total,report=True):
     base = NamedBase.objects.get(pk=id)
-    usage = Usage(base=base,metric=metric,value=value)
+    usage = Usage(base=base,metric=metric,total=total,rate=0,rateCumulative=0,rateTime=datetime.datetime.now(),nInProgress=0,reports=1,squares=(total*total))
     usage.save()
+    base.usages.add(usage)
+    base.save()
     if report:
         reportusage(base)
+    return usage
 
 def startrecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)
     logging.info("base %s "% base)
 
-    #obj, created = UsageRate.objects.get_or_create(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
-    #if created:
-    #    logging.info("created %s "% obj)
-    #else:
-    #    logging.info("existing %s " % obj)
-
     try:
-        usagereport = UsageRate.objects.get(base=base,metric=metric)
-        logging.info("usagereport %s "% usagereport)
-        if rate == usagereport.rate:
-            logging.info("Usage allready exists for %s at current rate %s " % (usagereport.metric,rate))
+        usage = Usage.objects.get(base=base,metric=metric)
+        if rate == usage.rate:
+            logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
-            logging.info("Usage allready exists for %s at rate %s, changing rate %s " % (usagereport.metric, usagereport.rate, rate))
-            c = usagereport.current
+            logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
+            #c = usage.current
 
-            todate = datetime.datetime.now()
-            td = todate-usagereport.current
+            now = datetime.datetime.now()
+            td = now-usage.rateTime
             dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
 
-            amount = dif*usagereport.rate
+            amount = dif*usage.rate
 
-            usagereport.usageSoFar = usagereport.usageSoFar + amount
-            usagereport.current = todate
-            usagereport.rate = rate
-            usagereport.save()
+            usage.rateCumulative = usage.rateCumulative + amount
+            usage.rateTime = now
+            usage.rate = rate
+            usage.save()
+            if report:
+                reportusage(base)
+            return usage
+    except Usage.DoesNotExist:
+        logging.info("Usage DoesNotExist  ")
+        usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
+        logging.info("created %s " % usage)
+        usage.save()
+        if report:
+            reportusage(base)
+        return usage
 
-    except UsageRate.DoesNotExist:
-        logging.info("DoesNotExist  ")
-        usagereport = UsageRate(base=base,metric=metric,rate=rate,usageSoFar=0.0,current=datetime.datetime.now())
-        logging.info("created %s " % usagereport)
-        usagereport.save()
+def _stoprecording_(usage):
 
-    if report:
-        reportusage(base)
-
-def stoprecording(id,metric,report=True):
-    logging.debug("Stop Recording "+id)
-    base = NamedBase.objects.get(pk=id)
-    usagerates = UsageRate.objects.filter(base=base,metric=metric)
-
-    if len(usagerates)>1:
-        for ur in usagerates:
-            logging.debug("XXX Found duplicate usage - %s" % ur)
-    usagerate = UsageRate.objects.get(base=base,metric=metric)
-    lastRateTime, lastRate, lastUsage = usagerate.current,usagerate.rate,usagerate.usageSoFar
+    logging.info("Stopping Recording %s" % usage)
 
     now = datetime.datetime.now()
+    lastRateTime, lastRate, lastUsage = usage.rateTime,usage.rate,usage.rateCumulative
 
     t2 = time.mktime(now.timetuple())+float("0.%s"%now.microsecond)
     t1 = time.mktime(lastRateTime.timetuple())+float("0.%s"%lastRateTime.microsecond)
 
-    usage = float(lastUsage) + float(lastRate) * (t2 - t1)
-    print "Stop Recording Usage = %s" % usage
-    record(id, metric, usage)
-    usagerate.delete()
-    if report:
-        reportusage(base)
+    usagedelta = float(lastUsage) + float(lastRate) * (t2 - t1)
+
+    logging.info("now %s " % ( now))
+    logging.info("t2 - t1 %s " % ( t2 - t1 ))
+    logging.info("t2 - t1 %s " % ( (t2 - t1) ))
+    logging.info("lastRateTime %s lastRate %s lastUsage %s" % ( lastRateTime, lastRate, lastUsage ))
+    logging.info("Usage since last report between %s and %s is %s" % (t2,t1,usagedelta))
+    logging.info("Total usage is %s + %s " % (usage.rateCumulative,usagedelta))
+
+    usage.rateTime = now
+    usage.rateCumulative = usage.rateCumulative + usagedelta
+    usage.rate = 0
+    usage.nInProgress = 0
+    usage.save()
+
+def stoprecording(id,metric,report=True):
+    logging.debug("Stop Recording "+id)
+
+    base = NamedBase.objects.get(id=id)
+
+    logging.debug("Base str usages  %s" % Usage.objects.filter(base=str(base)))
+    logging.debug("Stop Recording %s" % base)
+
+    try:
+        usages = Usage.objects.filter(base=str(base))
+        logging.info("Usages %s" % usages)
+        usage = Usage.objects.get(base=base,metric=metric)
+
+        _stoprecording_(usage)
+
+    except Usage.DoesNotExist:
+        logging.error("ERROR : Usage Rate does not exist to stop recording %s metric=%s" % (base,metric) )
     
 def reportusage(base):
-    #logging.info("Report usage %s" % base)
     toreport = []
 
     if utils.is_container(base):
-        logging.info("Base %s "%base)
         toreport =  [base]
 
     if utils.is_service(base):
         container = HostingContainer.objects.get(dataservice=base)
-        container.reportnum += 1
-        container.save()
-
         toreport =  [container,base]
 
     if utils.is_mfile(base):
         service   = DataService.objects.get(mfile=base)
-        service.reportnum += 1
-        service.save()
-        container = HostingContainer.objects.get(dataservice=service)
-        container.reportnum += 1
-        container.save()
-
-        toreport =  [container,service,base]
+        toreport =  [service.container,service,base]
 
     for ob in toreport:
-        #logging.info("Reporting usage for %s "%ob)
-        reports = UsageReport.objects.filter(base=ob)
-        for r in reports:
-            #logging.info("\tReport %s "%r)
-            r.reportnum = r.reportnum + 1
-            r.save()
+        logging.info("Reporting usage for %s "%ob)
+        ob.reportnum += 1
+        ob.save()
 
-def mfile_usagesummary(mfileid):
-    summary = []
-    mfile = MFile.objects.get(pk=mfileid)
-    ss = __usagesummary_by_base(mfile)
-    for s in ss:
-        summary.append(s)
-    dict = {}
-    for s in summary:
-        m = s.metric
-        aggregate = None
-        if dict.has_key(m):
-            aggregate = dict[m]
-        else:
-            aggregate = UsageSummary()
-            aggregate.metric = m
-            aggregate.min = sys.float_info.max
-            dict[m] = aggregate
-
-        aggregate.n    += s.n
-        aggregate.sum  += s.sum
-        aggregate.max  = max(s.max,aggregate.max )
-        aggregate.min  = min(s.min,aggregate.min )
-        aggregate.sums += s.sums
-
-    return dict.values()
-    
-def service_usagesummary(serviceid):
-
-    summary = []
-    service  = DataService.objects.get(pk=serviceid)
-
-    logging.info("Getting usagesummary for %s " % service)
-
-    mfiles = MFile.objects.filter(service=service)
-
-    for mfile in mfiles:
-        logging.info("Getting usagesummary for %s " % mfile)
-        ss = mfile_usagesummary(mfile.id)
-        for s in ss:
-            summary.append(s)
-    ss = __usagesummary_by_base(service)
-    for s in ss:
-        summary.append(s)
-
-    logging.info("Usagesummarys  %s " % summary)
-
-    dict = {}
-    for s in summary:
-        m = s.metric
-        aggregate = None
-        if dict.has_key(m):
-            aggregate = dict[m]
-        else:
-            aggregate = UsageSummary()
-            aggregate.metric = m
-            aggregate.min = sys.float_info.max
-            dict[m] = aggregate
-
-        aggregate.n    += s.n
-        aggregate.sum  += s.sum
-        aggregate.max  = max(s.max,aggregate.max )
-        aggregate.min  = min(s.min,aggregate.min )
-        aggregate.sums += s.sums
-
-    logging.info("Usagesummarys  %s " % dict.values())
-
-    return dict.values()
-
-
-def mfile_inprogresssummary(mfile):
-    s = MFile.objects.get(pk=mfile)
-    inprogress = []
-    for p in UsageRate.objects.filter(base=mfile):
-        logging.info("mfile_inprogresssummary %s " % p)
-        inprogress.append(p)
-
-    if len(inprogress)==0:
-        return []
-
-    return inprogress_to_aggregates(s, inprogress, mfile_metrics)
-
-def __mfile_inprogresssummary__(mfile):
-    inprogress = []
-    for p in UsageRate.objects.filter(base=mfile):
-        inprogress.append(p)
-    return inprogress
-
-
-def service_inprogresssummary(service):
-    ser = DataService.objects.get(pk=service)
-    mfiles = MFile.objects.filter(service=service)
-    inprogress = []
-    for mfile in mfiles:
-        for s in __mfile_inprogresssummary__(mfile):
-            inprogress.append(s)
-
-    for p in UsageRate.objects.filter(base=service):
-        inprogress.append(p)
-
-    if len(inprogress)==0:
-        return []
-
-    return inprogress_to_aggregates(ser, inprogress, service_metrics)
-
-def __service_inprogresssummary__(service):
-    inprogress = []
-    mfiles = MFile.objects.filter(service=service)
-    for mfile in mfiles:
-        for s in __mfile_inprogresssummary__(mfile):
-            inprogress.append(s)
-
-    for p in UsageRate.objects.filter(base=service):
-        inprogress.append(p)
-
-    return inprogress
-
-def container_inprogresssummary(container):
-    c = HostingContainer.objects.get(pk=container)
-    services = DataService.objects.filter(container=container)
-    inprogress = []
-    for service in services:
-        for s in __service_inprogresssummary__(service):
-            inprogress.append(s)
-
-    for p in UsageRate.objects.filter(base=container):
-        inprogress.append(p)
-
-    if len(inprogress)==0:
-        return []
-
-    return inprogress_to_aggregates(c, inprogress, container_metrics)
-
-def inprogress_to_aggregates(base,inprogress,base_metrics):
-    maxdate = None
-    for inp in inprogress:
-        if maxdate == None:
-            maxdate = inp.current
-        else:
-            maxdate = max(maxdate,inp.current)
-
-    for ur in inprogress:
-        __update_usagereport__(ur,maxdate)
-
-    aggregates = {}
-
-    for metric in base_metrics:
-        aggregates[metric] = agg = AggregateUsageRate(base=base,current=maxdate)
-        agg.usageSoFar = 0.0
-        agg.rate = 0.0 
-        agg.metric=metric
-
-    for usage in inprogress:
-        if aggregates.has_key(usage.metric):
-            agg_ur = aggregates[usage.metric]
-            agg_ur.rate = agg_ur.rate + usage.rate
-            agg_ur.usageSoFar = agg_ur.usageSoFar + usage.usageSoFar
-            agg_ur.count = agg_ur.count+1
-
-    logging.info(aggregates)
-
-    return aggregates.values()
-
-def __update_usagereport__(usagereport,todate):
-    c = usagereport.current
-    if c == todate:
-        return
-
-    td = todate-usagereport.current
-    dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
-
-    amount = dif*usagereport.rate
-
-    usagereport.usageSoFar = usagereport.usageSoFar + amount
-    usagereport.current = todate
-    usagereport.save()
-
-def container_usagesummary(containerid):
-    summary = []
-    container = HostingContainer.objects.get(pk=containerid)
-
-    services  = DataService.objects.filter(container=container)
-    for service in services:
-        ss = service_usagesummary(service.id)
-        for s in ss:
-            summary.append(s)
-    ss = __usagesummary_by_base(container)
-    for s in ss:
-        summary.append(s)
-
-    dict = {}
-    for s in summary:
-        m = s.metric
-        aggregate = None
-        if dict.has_key(m):
-            aggregate = dict[m]
-        else:
-            aggregate = UsageSummary()
-            aggregate.metric = m
-            aggregate.min = sys.float_info.max
-            dict[m] = aggregate
-
-        aggregate.n    += s.n
-        aggregate.sum  += s.sum
-        aggregate.max  = max(s.max,aggregate.max )
-        aggregate.min  = min(s.min,aggregate.min )
-        aggregate.sums += s.sums
-
-    return [] + dict.values()
-
-def __usagesummary_by_base(base):
+def get_usage_summary(id=None):
     
     summary = []
-    for metric in metrics:
-        s = usagesummary_by_metric_base(metric,base)
-        if s is not None:
-            summary.append(s)
-    return summary
-
-def usage_to_summary(usages):
-    if len(usages) == 0:
-        return None
-
-    metric = None
-    n,sum,umax,sums = 0,0,0,0
-    umin  = sys.float_info.max
-    for u in usages:
-        n = n + 1
-        metric = u.metric
-        sum = sum + u.value
-        umax = max(umax,u.value)
-        umin = min(umin,u.value)
-        sums = sums + (u.value*u.value)
+    usages = None
+    if id==None:
+        usages = Usage.objects.all()
         
-    summary = UsageSummary(metric=metric,n=n,sum=sum,min=umin,max=umax,sums=sums)
-    return summary
+    else:
+        logging.info("Some")
+        base = NamedBase.objects.get(pk=id)
 
-def usagesummary_by_metric_base(metric,base):
-    usages = Usage.objects.filter(metric=metric,base=base)
-    return usage_to_summary(usages)
+        ids = []
 
-def usagesummary_by_metric(metric):
-    usages = Usage.objects.filter(metric=metric)
-    return usage_to_summary(usages)
+        if utils.is_container(base):
+            hc = HostingContainer.objects.get(id=id)
+            serviceids = [service.id for service in hc.dataservice_set.all()  ]
+            mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
+            ids = serviceids + mfileids + [base.id]
 
-def usagesummary():
-    summary = []
-    for metric in metrics:
-        summary.append(usagesummary_by_metric(metric))
+        if utils.is_service(base):
+            service   = DataService.objects.get(id=id)
+            ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
+
+        if utils.is_mfile(base):
+            ids=[base.id]
+
+        usages = Usage.objects.filter(base__in=ids)
+    
+    if settings.DATABASE_ENGINE != "sqlite3":
+        summary += usages.values('metric') \
+        .annotate(n=Count('total')) \
+        .annotate(avg=Avg('total')) \
+        .annotate(max=Max('total')) \
+        .annotate(min=Min('total')) \
+        .annotate(sum=Sum('total')) \
+        .annotate(stddev=StdDev('total'))\
+        .annotate(var=Variance('total'))
+
+    else:
+        # sqlite3 - No built-in variance and std deviation
+        summary += usages.values('metric') \
+        .annotate(n=Count('total')) \
+        .annotate(avg=Avg('total')) \
+        .annotate(max=Max('total')) \
+        .annotate(min=Min('total')) \
+        .annotate(sum=Sum('total'))
+
+    logging.info("summary %s " % summary)
     return summary

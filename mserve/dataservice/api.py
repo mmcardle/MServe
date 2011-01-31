@@ -80,9 +80,9 @@ def create_data_service(request,containerid,name):
 def create_mfile(request,serviceid,file):
     service = DataService.objects.get(id=serviceid)
     if file==None:
-        mfile = MFile(name="Empty File",service=service)
+        mfile = MFile(name="Empty File",service=service,empty=True)
     else:
-        mfile = MFile(name=file.name,service=service,file=file)
+        mfile = MFile(name=file.name,service=service,file=file,empty=False)
     mfile.save()
 
     logging.debug("MFile creation started '%s' "%mfile)
@@ -219,17 +219,6 @@ def delete_service(request,serviceid):
 
 def delete_mfile(request,mfileid):
     mfile = MFile.objects.get(id=mfileid)
-    if mfile.file == None:
-        usage_store.stoprecording(mfileid,usage_store.metric_mfile)
-        usage_store.stoprecording(mfileid,usage_store.metric_archived)
-    logging.info("Deleteing mfile %s %s" % (mfile.name,mfileid))
-
-    usages = Usage.objects.filter(base=mfile)
-    logging.info("Deleteing mfile usage")
-    for usage in usages:
-        logging.info("Saving Usage %s " % usage)
-        usage.base = mfile.service
-        usage.save()
 
     mfile.delete()
     logging.info("MFile Deleted %s " % mfileid)

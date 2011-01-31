@@ -2,20 +2,18 @@
 
 {% block title %}MServe Service{% endblock %}
 
-{% load mservetags %}
-
 {% block usages %}
     <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
     <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.job_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
     {% if usagesummary %}
             {% for usagesummary in usagesummary %}
                 {% if usagesummary.metric == "http://prestoprime/disc_space" %}
-                    <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.fmt_max}}</em>&nbsp;&nbsp;&nbsp;</span>
-                    <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}</em>&nbsp;&nbsp;&nbsp;</span>
-                    <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.fmt_sum}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.max}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.avg}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.sum}}</em>&nbsp;&nbsp;&nbsp;</span>
                 {% endif %}
                 {% if usagesummary.metric == "http://prestoprime/responsetime" %}
-                    <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.fmt_avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
+                    <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
                 {% endif %}
 
             {% endfor %}
@@ -30,8 +28,10 @@
 	<ul>
 		<li><a href="#tabs-1">Data</a></li>
 		<li><a href="#tabs-2">Jobs</a></li>
-		<li><a href="#tabs-3">Usage</a></li>
-		<li><a href="#tabs-4">Auths</a></li>
+		<li><a href="#tabs-3">Actions</a></li>
+		<li><a href="#tabs-4">Config</a></li>
+		<li><a href="#tabs-5">Usage</a></li>
+		<li><a href="#tabs-6">Auths</a></li>
 	</ul>
 	<div id="tabs-1">
 		<div class="paginator" id="mfilepaginator"></div>
@@ -120,6 +120,8 @@
 
             {% include "methods.html" %}
 
+       </div>
+       <div id="tabs-4">
             <h3>Management Properties</h3>
 
             <table style="table-layout: fixed;width:300px;">
@@ -134,9 +136,12 @@
                 {% endfor %}
             </table>
 
+            
+     </div>
+    <div id="tabs-5">
             {% include "usage.html" %}
      </div>
-    	<div id="tabs-4">
+    	<div id="tabs-6">
             {% include "auths.html" %}
      </div>
 </div>

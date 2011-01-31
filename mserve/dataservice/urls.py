@@ -17,6 +17,7 @@ mfile_verify_handler = Resource(MFileVerifyHandler)
 mfile_auth_handler = Resource(MFileAuthHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
+usage_handler = Resource(UsageHandler)
 role_handler = Resource(RoleHandler)
 role_info_handler = Resource(RoleInfoHandler)
 render_handler = Resource(RenderHandler)
@@ -66,6 +67,8 @@ urlpatterns = patterns('',
     url(r'^api/(?P<id>[^/]+)/resources/(?P<last_known>[^/]+)/$', resources_handler),
     url(r'^api/(?P<id>[^/]+)/usagesummary/$', usagesummary_handler),
     url(r'^api/(?P<id>[^/]+)/usagesummary/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^api/(?P<id>[^/]+)/usage/$', usage_handler),
+    #url(r'^api/(?P<id>[^/]+)/usage/(?P<last_report>[^/]+)/$', usage_handler),
     url(r'^api/(?P<id>[^/]+)/managementproperty/$', managementproperty_handler),
     url(r'^api/(?P<id>[^/]+)/roleinfo/$', role_info_handler),
     url(r'^api/(?P<id>[^/]+)/accesscontrol/$', role_info_handler),
@@ -103,8 +106,8 @@ urlpatterns = patterns('',
     url(r'^mfileapi/getmanagedresources/(?P<id>[^/]+)/(?P<last_known>[^/]+)/$', resources_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/$', resources_handler),
     url(r'^containerapi/getmanagedresources/(?P<containerid>[^/]+)/(?P<last_known>[^/]+)/$', resources_handler),
-    url(r'^containerapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
-    url(r'^serviceapi/managementproperty/(?P<baseid>[^/]+)/$', managementproperty_handler),
+    url(r'^containerapi/managementproperty/(?P<bid>[^/]+)/$', managementproperty_handler),
+    url(r'^serviceapi/managementproperty/(?P<id>[^/]+)/$', managementproperty_handler),
     url(r'^containerapi/getroleinfo/(?P<id>[^/]+)/$', role_info_handler),
     url(r'^mfileapi/getroleinfo/(?P<id>[^/]+)/$', role_info_handler),
     url(r'^serviceapi/getroleinfo/(?P<id>[^/]+)/$', role_info_handler),

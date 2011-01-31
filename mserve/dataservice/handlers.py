@@ -65,7 +65,7 @@ class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
     #fields = ('name', 'id')
-    fields = ('name', 'id', 'mfile_set','job_set','reportnum')
+    fields = ('name', 'id','reportnum', 'mfile_set','job_set')
     exclude = ('pk')
 
     def delete(self, request, id):
@@ -531,10 +531,6 @@ class MFileContentsHandler(BaseHandler):
         usage_store.record(mfile.id,usage_store.metric_access,mfile.size)
 
         return redirect("/%s"%redirecturl)
-
-class AggregateUsageRateHandler(BaseHandler):
-    model =  AggregateUsageRate
-    exclude =('pk','base','id')
     
 class RoleHandler(BaseHandler):
     allowed_methods = ('GET','PUT')
@@ -774,53 +770,37 @@ class RoleInfoHandler(BaseHandler):
         r.write("Invalid Request!")
         return r
 
+class UsageHandler(BaseHandler):
+    allowed_methods = ('GET')
+    model = Usage
+    fields = ('squares','total','nInProgress','metric','rate','reports','time,','rateCumulative','total','rateTime')
+
+    def read(self,request, id):
+        base = NamedBase.objects.get(pk=id)
+        return base.usages.all()
+
+
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
-    model = UsageReport
-    fields = ('summarys','inprogress','reportnum')
 
     def read(self,request, id, last_report=-1):
 
-        lr = int(last_report)
-
+        last = int(last_report)
         base = NamedBase.objects.get(pk=id)
 
-        usagereport, created = UsageReport.objects.get_or_create(base=base)
-
-        logging.info("Report = %s" % usagereport)
-
-        if lr != -1:
-            while lr == usagereport.reportnum:
-                #logging.info("Waiting for report=%s lastreport=%s" % (usagereport.reportnum,lr))
+        if last is not -1:
+            while last == base.reportnum:
+                logging.debug("Waiting for new usage lastreport=%s" % last)
                 time.sleep(sleeptime)
-                usagereport = UsageReport.objects.get(pk=usagereport.pk)
+                base = NamedBase.objects.get(id=id)
 
-        inprogress= []
-        summarys= []
-        if utils.is_container(base):
-            inprogress = usage_store.container_inprogresssummary(id)
-            summarys = usage_store.container_usagesummary(id)
-            logging.info(summarys)
+        usages = usage_store.get_usage_summary(id)
 
-        if utils.is_service(base):
-            inprogress = usage_store.service_inprogresssummary(id)
-            summarys = usage_store.service_usagesummary(id)
+        result = {}
+        result["usages"] = usages
+        result["reportnum"] = base.reportnum
 
-        if utils.is_mfile(base):
-            inprogress = usage_store.mfile_inprogresssummary(id)
-            summarys = usage_store.mfile_usagesummary(id)
-
-        for summary in summarys:
-            summary.save()
-    
-        for ip in inprogress:
-            ip.save()
-
-        usagereport.summarys = summarys
-        usagereport.inprogress = inprogress
-        usagereport.save()
-
-        return usagereport
+        return result
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
@@ -843,10 +823,9 @@ class ManagementPropertyHandler(BaseHandler):
         form = ManagementPropertyForm(request.POST) 
         if form.is_valid(): 
 
-            logging.info(baseid)
             property = form.cleaned_data['property']
 
-            base = NamedBase.objects.get(id=baseid)
+            base = NamedBase.objects.get(id=id)
 
             try:
                 existingmanagementproperty = ManagementProperty.objects.get(property=property,base=base)
@@ -995,36 +974,22 @@ class ResourcesHandler(BaseHandler):
         last = int(last_known)
         base = NamedBase.objects.get(pk=id)
 
+        if last is not -1:
+            while last == base.reportnum:
+                logging.debug("Waiting for new services lastreport=%s" % (last))
+                time.sleep(sleeptime)
+                base = NamedBase.objects.get(id=id)
+
         if utils.is_container(base):
             container = HostingContainer.objects.get(id=id)
-
-            if last is not -1:
-                while last == container.reportnum:
-                    logging.debug("Waiting for new services lastreport=%s" % (last))
-                    time.sleep(sleeptime)
-                    container = HostingContainer.objects.get(id=containerid)
-
             return container
 
         if utils.is_service(base):
             service = DataService.objects.get(id=id)
-            if last is not -1:
-                while last == service.reportnum:
-                    logging.debug("Waiting for new mfiles lastreport=%s" % (last))
-                    time.sleep(sleeptime)
-                    service = DataService.objects.get(id=serviceid)
-
             return service
 
         if utils.is_mfile(base):
             mfile = MFile.objects.get(id=id)
-
-            if last is not -1:
-                while last == mfile.reportnum:
-                    logging.debug("Waiting for new mfiles lastreport=%s" % (last))
-                    time.sleep(sleeptime)
-                    mfile = MFile.objects.get(id=id)
-
             return mfile
 
         r = rc.BAD_REQUEST

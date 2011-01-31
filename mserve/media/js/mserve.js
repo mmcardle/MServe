@@ -177,7 +177,8 @@ function load_render_preview(mfileid){
            url: "/mfileapi/getpreview/"+mfileid+"/",
            success: function(msg){
                 for ( i in msg.results){
-                    var im = $("<div class='renderpreview fluid'><img style='height:40px;width:40px;' src='/mservedata/"+msg.results[i]+"' /></div>")
+                    hack = msg.results[i].replace(".thumb","");
+                    var im = $("<a href='/mservedata/"+hack+"'><img style='height:40px;width:40px;' src='/mservedata/"+msg.results[i]+"' /></a>")
                     $("#renderpreview").prepend(im);
                 }
                 //$("#image-"+mfileid).show('bounce')

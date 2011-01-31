@@ -8,6 +8,9 @@ sudo apt-get install python-flup
 sudo apt-get install mercurial
 sudo apt-get install ffmpegthumbnailer
 
+## If using mysql
+sudo apt-get install python-mysqldb
+
 hg clone http://bitbucket.org/david/django-oauth
 cd django-oauth
 python setup.py install

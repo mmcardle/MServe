@@ -8,148 +8,35 @@ import utils as utils
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
+from django.db.models.signals import pre_delete
 
 ID_FIELD_LENGTH = 200
-fmt = "%3.2f"
-
 thumbpath = settings.THUMB_PATH
 
-class UsageReport(models.Model):
-    base = models.ForeignKey('NamedBase')
-    reportnum = models.IntegerField(default=0)
-    summarys   = models.ManyToManyField("UsageSummary")
-    inprogress = models.ManyToManyField("AggregateUsageRate")
-
-    def __unicode__(self):
-        return "Usage Report for %s reportnum=%s" % (self.base,self.reportnum);
-
 class Usage(models.Model):
-    base = models.ForeignKey('NamedBase',null=True, blank=True)
-    created = models.DateTimeField(auto_now_add=True,null=True)
-    metric = models.CharField(max_length=4096)
-    value  = models.FloatField()
+    base            = models.ForeignKey('NamedBase',null=True, blank=True)
+    metric          = models.CharField(max_length=4096)
+    time            = models.DateTimeField(auto_now_add=True)   # Time first recorded (shouldnt change)
+    reports         = models.BigIntegerField(default=0)         # Number of reports
+    total           = models.FloatField(default=0)              # Sum of report values
+    squares         = models.FloatField(default=0)              # Sum of squares of values
+    nInProgress     = models.BigIntegerField(default=0)         # Sum of squares of values
+    rateTime        = models.DateTimeField()                    # Time the rate last changed
+    rate            = models.FloatField()                       # The current rate (change in value per second)
+    rateCumulative  = models.FloatField()                       # Cumulative unreported usage before rateTime
 
     def fmt_ctime(self):
         return self.created.ctime()
 
-    def fmt_value(self):
-        import usage_store as usage_store
-        if self.metric == usage_store.metric_disc:
-            return sizeof_fmt(self.value)
-        else:
-            return "%3.2f" % (self.value)
+    def fmt_rtime(self):
+        return self.rateTime.ctime()
     
     def __unicode__(self):
-        return "%s %s created=%s value=%f " % (self.base,self.metric,self.created,self.value);
-
-class UsageRate(models.Model):
-    base       = models.ForeignKey('NamedBase')
-    current    = models.DateTimeField() # When the current rate was reported
-    metric     = models.CharField(max_length=4096)
-    rate       = models.FloatField() # The current rate
-    usageSoFar = models.FloatField() # Cumulative unreported usage before that point
-
-    def __unicode__(self):
-        return "Usage: %s %s %s reported=%s rate=%f usageSoFar=%f" % (self.base,self.base.id,self.metric,self.current,self.rate,self.usageSoFar)
-
-    def ctime(self):
-        return self.current.ctime()
-
-    def time_since_last_report(self):
-        import datetime
-        import time
-        now = datetime.datetime.now()
-        #t1 = time.mktime(datetime.datetime.now().timetuple())
-        #t2 = time.mktime(self.current.timetuple())
-        #print float(now) - float(self.current)
-        x = now - self.current
-        y = datetime.timedelta(seconds=x.seconds,days=x.days)
-        return y
-
-    def path(self):
-        import usage_store as usage_store
-        if self.metric == usage_store.metric_container:
-            return "/container/"
-        if self.metric == usage_store.metric_service:
-            return "/service/"
-        if self.metric == usage_store.metric_mfile or usage_store.metric_mfile:
-            return "/mfile/"
-        return "/error/"
-
-    def calc_rate(self):
-        import usage_store as usage_store
-        if self.metric == usage_store.metric_disc:
-            return sizeof_fmt(self.rate)
-        else:
-            return self.rate
-    
-    def calc_so_far(self):
-        import datetime
-        import time
-        import usage_store as usage_store
-        now = datetime.datetime.now()
-
-        t2 = time.mktime(now.timetuple())+float("0.%s"%now.microsecond)
-        t1 = time.mktime(self.current.timetuple())+float("0.%s" % self.current.microsecond)
-
-        x = (t2 - t1) * self.rate
-        return fmt % (x)
-
-class AggregateUsageRate(models.Model):
-    base       = models.ForeignKey('NamedBase')
-    current    = models.DateTimeField() # When the current rate was reported
-    metric     = models.CharField(max_length=4096)
-    rate       = models.FloatField() # The current rate
-    usageSoFar = models.FloatField() # Cumulative unreported usage before that point
-    count      = models.IntegerField(default=0)
-
-def sizeof_fmt(num):
-    for x in ['bytes','KB','MB','GB','TB']:
-        if num < 1024.0:
-            return "%3.1f%s" % (num, x)
-        num /= 1024.0
-    return "%3.1f%s" % (num, 'TB')
-
-class UsageSummary(models.Model):
-    metric = models.CharField(primary_key=True, max_length=4096)
-    n      = models.FloatField(default=0.0)
-    sum    = models.FloatField(default=0.0)
-    min    = models.FloatField(default=0.0)
-    max    = models.FloatField(default=0.0)
-    sums   = models.FloatField(default=0.0)
-
-    def __fmt(self,num):
-        import usage_store as usage_store
-        if self.metric in usage_store.byte_metrics:
-            return sizeof_fmt(num)
-        else:
-            return fmt % (num)
-
-    def fmt_n(self):
-        return fmt % (self.n)
-
-    def fmt_sum(self):
-        return self.__fmt(self.sum)
-    
-    def fmt_min(self):
-        return self.__fmt(self.min)
-    
-    def fmt_max(self):
-        return self.__fmt(self.max)
-    
-    def fmt_sums(self):
-        import locale
-        locale.setlocale(locale.LC_ALL, "")
-        return locale.format(fmt, self.sums, True)
-
-    def fmt_avg(self):
-        if self.n == 0:
-            return self.__fmt(self.sum)
-        return self.__fmt(self.sum/self.n)
-
-    def __unicode__(self):
-        return "%s {n=%s,sum=%s,min=%s,max=%s,sums=%s}" % (self.metric,self.n,self.sum,self.min,self.max,self.sums);
-
+        object = ""
+        if self.base:
+            object = self.base
+        return "Usage:%s metric=%s total=%f reports=%s nInProgress=%s rate=%s rateTime=%s rateCumulative=%s" \
+                % (object,self.metric,self.total,self.reports,self.nInProgress,self.rate,self.rateTime,self.rateCumulative);
 
 class Base(models.Model):
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
@@ -165,26 +52,34 @@ class Base(models.Model):
 
 class NamedBase(Base):
     metrics = []
-    newusage = models.BooleanField(default=True)
-    name = models.CharField(max_length=200)
+    initial_usage_recorded = models.BooleanField(default=False)
+    name    = models.CharField(max_length=200)
+    usages  = models.ManyToManyField("Usage")
+    reportnum = models.IntegerField(default=1)
 
     def save(self):
-        logging.info("Save %s (newusage=%s)"% (self,self.newusage))
         super(NamedBase, self).save()
         import usage_store as usage_store
-        if self.newusage:
+        if not self.initial_usage_recorded:
+            startusages = []
             for metric in self.metrics:
-
+                #  Recored Initial Values
                 v = self.get_value_for_metric(metric)
                 if v is not None:
                     logging.info("Recording usage for metric %s value= %s" % (metric,v) )
-                    usage_store.record(self.id,metric,v)
+                    usage = usage_store.record(self.id,metric,v)
+                    startusages.append(usage)
 
+                # Start recording initial rates
                 r = self.get_rate_for_metric(metric)
                 if r is not None:
                     logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
-                    usage_store.startrecording(self.id,metric,r)
-            self.newusage = False
+                    usage = usage_store.startrecording(self.id,metric,r)
+                    startusages.append(usage)
+
+            self.usages = startusages
+            self.reportnum=1
+            self.initial_usage_recorded = True
             super(NamedBase, self).save()
 
     def get_value_for_metric(self, metric):
@@ -195,13 +90,17 @@ class NamedBase(Base):
         #logging.info("Override this method to report usage for metric %s" % metric)
         return None
 
+    def _delete_usage_(self):
+        import usage_store as usage_store
+        for usage in self.usages.all():
+            usage_store._stoprecording_(usage)
+
     def __unicode__(self):
         return self.name;
 
 class HostingContainer(NamedBase):
     status = models.CharField(max_length=200)
-    reportnum = models.IntegerField(default=0)
-
+    
     def __init__(self, *args, **kwargs):
         super(HostingContainer, self).__init__(*args, **kwargs)
         import usage_store as usage_store
@@ -220,7 +119,6 @@ class HostingContainer(NamedBase):
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
     status = models.CharField(max_length=200)
-    reportnum = models.IntegerField(default=0)
 
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
@@ -239,8 +137,8 @@ class DataService(NamedBase):
 
 class MFile(NamedBase):
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
+    empty    = models.BooleanField(default=False)
     service  = models.ForeignKey(DataService)
-    #file     = models.FileField(upload_to=create_filename,storage=storage.getdiscstorage())
     file     = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
@@ -249,7 +147,6 @@ class MFile(NamedBase):
     poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
     created  = models.DateTimeField(auto_now_add=True)
     updated  = models.DateTimeField(auto_now=True)
-    reportnum = models.IntegerField(default=0)
 
     class Meta:
         ordering = ('-created','name')
@@ -263,15 +160,17 @@ class MFile(NamedBase):
         import usage_store as usage_store
         if metric == usage_store.metric_mfile:
             return 1
-        if metric == usage_store.metric_disc_space:
-            return self.file.size
-        if metric == usage_store.metric_ingest:
-            return self.file.size
+        if not self.empty:
+            if metric == usage_store.metric_disc_space:
+                return self.file.size
+            if metric == usage_store.metric_ingest:
+                return self.file.size
 
     def get_rate_for_metric(self, metric):
         import usage_store as usage_store
-        if metric == usage_store.metric_disc:
-            return self.file.size
+        if not self.empty:
+            if metric == usage_store.metric_disc:
+                return self.file.size
 
 
     def thumburl(self):
@@ -280,26 +179,38 @@ class MFile(NamedBase):
     def posterurl(self):
         return "%s%s" % (thumbpath,self.poster)
 
-    def post_save_handler(self, sender, instance=False, **kwargs):
-        logging.info("TODO POST SAVE method %s " % instance)
-
     def save(self):
         if not self.id:
             self.id = utils.random_id()
         self.updated = datetime.datetime.now()
         super(MFile, self).save()
 
-#def post_init_handler( sender, instance=False, **kwargs):
-#    logging.info("Overide this method to report usage for %s " % instance)
+def pre_delete_handler( sender, instance=False, **kwargs):
+    #logging.info("Pre delete sender=%s instance=%s" % (sender,instance))
+    #logging.info("Deleting %s" % (instance.metrics))
+    instance._delete_usage_()
 
-#post_init.connect(post_init_handler, sender=DataService)
-#post_init.connect(self.post_init_handler, sender=MFile)
-#post_init.connect(self.post_init_handler, sender=HostingContainer)
+pre_delete.connect(pre_delete_handler, sender=MFile, dispatch_uid="dataservice.models")
 
+def post_init_handler( sender, instance=False, **kwargs):
+    pass
+    #logging.info("Post init sender=%s instance=%s" % (sender,instance))
+    #logging.info(" %s" % (instance.metrics))
+    #instance._delete_usage_()
+
+post_init.connect(post_init_handler, sender=MFile, dispatch_uid="dataservice.models")
+
+def post_save_handler( sender, instance=False, **kwargs):
+    pass
+    #logging.info("post_save sender=%s instance=%s" % (sender,instance))
+    #logging.info(" %s" % (instance.metrics))
+    #instance._delete_usage_()
+
+post_save.connect(post_save_handler, sender=MFile, dispatch_uid="dataservice.models")
 
 class BackupFile(NamedBase):
     mfile = models.ForeignKey(MFile)
-    file = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.gettapestorage())
+    file = models.FileField(upload_to=utils.create_filename,storage=storage.gettapestorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
 
@@ -312,13 +223,15 @@ class BackupFile(NamedBase):
         import usage_store as usage_store
         if metric == usage_store.metric_backupfile:
             return 1
-        if metric == usage_store.metric_disc_space:
-            return self.file.size
+        if file:
+            if metric == usage_store.metric_disc_space:
+                return self.file.size
 
     def get_rate_for_metric(self, metric):
         import usage_store as usage_store
-        if metric == usage_store.metric_disc:
-            return self.file.size
+        if file:
+            if metric == usage_store.metric_disc:
+                return self.file.size
 
     def save(self):
         if not self.id:
@@ -359,11 +272,17 @@ class ManagementProperty(models.Model):
 class Auth(Base):
     authname = models.CharField(max_length=50)
 
+    def __unicode__(self):
+        return "Auth: authname=%s" % (self.authname);
+
 class Role(Base):
     auth = models.ManyToManyField(Auth, related_name='roles')
     rolename = models.CharField(max_length=50)
     description= models.CharField(max_length=200)
     methods_encoded = models.TextField()
+
+    def __unicode__(self):
+        return "Role: rolename=%s methods=%s" % (self.rolename,self.methods());
 
     def save(self):
         if not self.id:
