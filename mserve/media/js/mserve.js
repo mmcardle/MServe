@@ -1,7 +1,4 @@
 
-
-var mfiles = [];
-
 function loadContainers(){
     $.ajax({
        type: "GET",
@@ -43,35 +40,6 @@ function loadContainers(){
        }
      });
 }
-
-function mfile_template(mfile){
-    var name = mfile.name
-    if(name.length>20){
-        name = name.substring(0,20)+"..."
-    }
-    return "<div id='image-"+mfile.id+"' class='fluid' onmouseover='$(\"#id-"+mfile.id+"\").show();'"
-               +"onmouseout='$(\"#id-"+mfile.id+"\").hide();' >"
-            +"<table cellpadding='0' cellspacing='0' style='background-image:url(\"/"+mfile.thumburl+"\");' class='thumb'>"
-            +"<colgroup><col>"
-            +"</colgroup>"
-            +"<tbody>"
-              +"<tr><td><div class='title'><a href='/browse/"+mfile.id+"/'>"+name+"</a></div></td></tr>"
-              +"<tr><td>"
-                      +"<div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position: relative ' id='id-"+mfile.id+"'>"
-                          +"<div>Size: "+mfile.size+"</div>"
-                          +"<div style='font-size: x-small;'>Type</div>"
-                          +"<div style='font-size: xx-small;text-align: center'>"+mfile.mimetype+"</div>"
-                          +"<div style='font-size: x-small;'>Created: "+mfile.created+"</div>"
-                          +"<div style='font-size: x-small;'>Updated: "+mfile.updated+"</div>"
-                          +"<div style='font-size: xx-small;'>Checksum:</div>"
-                          +"<div style='font-size: xx-small;text-align: center;'>"+mfile.checksum+"</div>"
-                      +"</div>"
-                +"</td></tr>"
-            +"</tbody>"
-        +"</table>"
-    +"</div>";
-}
-
 
 function loadServices(containerid){
     $.ajax({
@@ -171,25 +139,6 @@ function reloadMFiles(newfileid){
      });
 }
 
-function load_render_preview(mfileid){
-         $.ajax({
-           type: "GET",
-           url: "/mfileapi/getpreview/"+mfileid+"/",
-           success: function(msg){
-                for ( i in msg.results){
-                    hack = msg.results[i].replace(".thumb","");
-                    var im = $("<a href='/mservedata/"+hack+"'><img style='height:40px;width:40px;' src='/mservedata/"+msg.results[i]+"' /></a>")
-                    $("#renderpreview").prepend(im);
-                }
-                //$("#image-"+mfileid).show('bounce')
-           },
-           error: function(msg){
-                $("#renderpreview").prepend(objectToString(msg));
-                //showError( "Failure to get mfile preview ",obmsg );
-           }
-         });
-}
-
 function load_mfile(mfileid){
          $.ajax({
            type: "GET",
@@ -225,14 +174,45 @@ function loadJobs(serviceid){
 function load_jobs_mfile(mfileid){
      $.ajax({
        type: "GET",
-       url: '/mfileapi/getjobs/'+mfileid+"/",
+       url: '/jobapi/getjobs/'+mfileid+"/",
        success: function(msg){
+
             for (i in msg){
                 create_job_holder(msg[i])
+
+                var jobid = msg[i].job.id
+
+                joboutputs = msg[i].job.joboutput_set
+
+                var jobpaginator = $("#jobpreviewpaginator-"+jobid)
+
+                function handlePaginationClick(new_page_index, jobpaginator) {
+                    // This selects elements from a content array
+                    start = new_page_index*this.items_per_page
+                    end   = (new_page_index+1)*this.items_per_page
+                    if(end>joboutputs.length){
+                        end=joboutputs.length;
+                    }
+                    for(var j=start;j<end;j++) {
+                        var im = $("<a target='_blank' href='/jobapi/contents/"+joboutputs[j].id+"/' ><img src='"+joboutputs[j].thumburl+"' /></a>")
+                        jobpaginator.append(im)
+                    }
+                    return false;
+                }
+
+                // First Parameter: number of items
+                // Second Parameter: options object
+                jobpaginator.pagination(joboutputs.length, {
+                        items_per_page:4,
+                        callback:handlePaginationClick
+                });
+
                 if(!msg[i].ready){
                     check_job(msg[i].job,mfileid)
                 }
+   
             }
+
        },
        error: function(msg){
             showError("Render",objectToString(msg))
@@ -245,16 +225,7 @@ function create_job_holder(task){
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
-        icon = "<span id='jobicon-"+job.id+"' class='ui-icon ui-icon-circle-check' ></span>"
-
-        jobholder = $("<div id='job-"+job.id+"' class='job' ><h5>"+job.name+", "+job.created+"</h5>"
-                   +"<table style='width:100%'><tr>"
-                   +"<td>"+icon+"</td>"
-                   +"<td ><div id='jobinfo-"+job.id+"' class='jobinfo' ></div></td>"
-                   +"<td width='*' ><div style='height:10px;width:30em' id='progressbar-"+job.id+"'></div></td>"
-                    +"<tr><table>"
-                    +"</div>")
-        $("#jobs").prepend(jobholder);
+        $( "#jobTemplate" ).tmpl( task ) .appendTo( "#jobs" );
 
         var allDone = true
 
@@ -262,9 +233,7 @@ function create_job_holder(task){
         var percent = (task.completed_count/task.total)*100
         var info = $( "#jobinfo-"+job.id )
         var icon = $( "#jobicon-"+job.id )
-        var progressbar = $( "#progressbar-"+job.id )
-
-        info.html("<b>"+task.completed_count+"</b> frames of <b>"+task.total+"</b> complete : "+Math.round(percent)+"%" )
+        var progressbar = $( "#jobprogressbar-"+job.id )
 
         if(job.waiting){
             icon.addClass('taskrunning')
@@ -276,6 +245,14 @@ function create_job_holder(task){
         progressbar.progressbar({
                 value: percent
         });
+
+        var id = job.id
+        $('#jobpreviewpaginator-'+id).hide()
+        $('#jobheader-'+id).click(function() {          $('#jobpreviewpaginator-'+id).toggle('blind');      });
+        $('#jobicon-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
+        $('#jobinfo-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
+        $('#jobprogressbar-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
+
     }
 }
 
@@ -332,7 +309,7 @@ function check_job(job,mfileid){
         var percent = (msg.completed_count/msg.total)*100
         var info = $( "#jobinfo-"+job.id )
         var icon = $( "#jobicon-"+job.id )
-        var progressbar = $( "#progressbar-"+job.id )
+        var progressbar = $( "#jobprogressbar-"+job.id )
 
         if(msg.waiting){
             icon.addClass('taskrunning')
@@ -349,6 +326,13 @@ function check_job(job,mfileid){
 
         if(msg.waiting){
             window.setTimeout(function(){ check_job(job,mfileid) },3000)
+        }else{
+            if(msg.failed){
+                $('#job-'+job.id).addClass('ui-state-error')
+            }else{
+                load_render_preview_output(job.id)
+                $('#jobpreview-'+job.id).show('blind')
+            }
         }
 
        },

@@ -251,32 +251,6 @@ class BackupFile(NamedBase):
             self.id = utils.random_id()
         super(BackupFile, self).save()
 
-class Job(NamedBase):
-    service  = models.ForeignKey(DataService)
-    created  = models.DateTimeField(auto_now_add=True)
-    taskset_id = models.CharField(max_length=200)
-
-    class Meta:
-        ordering = ('created', 'name')
-
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(Job, self).save()
-
-    def __unicode__(self):
-        return "%s" % (self.name);
-
-class JobMFile(Base):
-    job  = models.ForeignKey(Job)
-    mfile = models.ForeignKey(MFile)
-    index = models.IntegerField(default=0)
-
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(JobMFile, self).save()
-
 class ManagementProperty(models.Model):
     base        = models.ForeignKey(NamedBase)
     property    = models.CharField(max_length=200)

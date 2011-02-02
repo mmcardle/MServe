@@ -1,4 +1,4 @@
-function create_new_render_ui(mfileid) {
+function create_new_render_ui_dialog(mfileid) {
 		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
 		$( "#dialog:ui-dialog" ).dialog( "destroy" );
 

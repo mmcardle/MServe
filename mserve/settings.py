@@ -107,7 +107,7 @@ BROKER_USER = "mm"
 BROKER_PASSWORD = "pass"
 BROKER_VHOST = "mmhost"
 
-CELERY_IMPORTS = ("dataservice.tasks", )
+CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks" )
 
 import djcelery
 djcelery.setup_loader()
@@ -119,6 +119,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.admin',
     'mserve.dataservice',
+    'mserve.jobservice',
     'djcelery'
 )
 

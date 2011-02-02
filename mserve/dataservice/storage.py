@@ -18,11 +18,11 @@ def gettapestorage():
 
 class DiskSystemStorage(FileSystemStorage):
 
-    def __init__(self,location):
-        super(DiskSystemStorage, self).__init__(location=location);
+    def __init__(self,location,base_url=None):
+        super(DiskSystemStorage, self).__init__(location=location,base_url=base_url);
 
 def getdiscstorage():
     return DiskSystemStorage(location=settings.MEDIA_ROOT)
 
 def getthumbstorage():
-    return DiskSystemStorage(location=settings.THUMB_ROOT)
+    return DiskSystemStorage(location=settings.THUMB_ROOT,base_url="/mservethumbs/")

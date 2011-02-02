@@ -1,4 +1,19 @@
 
+<script id="jobTemplate" type="text/x-jquery-tmpl">
+    <h5 id='jobheader-${job.id}' >Template ${job.name}, ${job.created}</h5>
+    
+    <div id='job-${job.id}' class='job'  >
+        <table style='width:100%;'>
+        <tr>
+            <td width="2%"><span id='jobicon-${job.id}' class='ui-icon ui-icon-circle-check' ></span></td>
+            <td width="25%"><div id='jobinfo-${job.id}' class='jobinfo' ><b>${completed_count}</b> frames of <b>${total}</b> complete : ${percent}&#37; </div></td>
+            <td width='*' ><div style='height:10px;width:*' id='jobprogressbar-${job.id}'></div></td>
+        <tr>
+        </table>
+        <div  id='jobpreviewpaginator-${job.id}' class="jobpaginators" ></div>
+    </div>
+</script>
+
 <script id="mfileTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder">
     <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"

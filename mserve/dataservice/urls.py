@@ -6,6 +6,7 @@ admin.autodiscover()
 
 from piston.resource import Resource
 from dataservice.handlers import *
+from jobservice.handlers import *
 
 hosting_handler = Resource(HostingContainerHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
@@ -20,11 +21,6 @@ usagesummary_handler = Resource(UsageSummaryHandler)
 usage_handler = Resource(UsageHandler)
 role_handler = Resource(RoleHandler)
 role_info_handler = Resource(RoleInfoHandler)
-render_handler = Resource(RenderHandler)
-job_handler = Resource(JobHandler)
-jobmfile_handler = Resource(JobMFileHandler)
-jobservice_handler = Resource(JobServiceHandler)
-render_results_handler = Resource(RenderResultsHandler)
 access_control_handler = Resource(AccessControlHandler)
 thumb_handler = Resource(ThumbHandler)
 mfile_corruption_handler = Resource(CorruptionHandler)
@@ -75,7 +71,6 @@ urlpatterns = patterns('',
 
     # Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_handler),
-    url(r'^serviceapi/getjobs/(?P<serviceid>[^/]+)/$', jobservice_handler),
 
     # MFile Methods
     url(r'^mfileapi/update/(?P<mfileid>[^/]+)/$', mfile_handler),
@@ -85,8 +80,6 @@ urlpatterns = patterns('',
     url(r'^mfileapi/corruptbackup/(?P<mfileid>[^/]+)/$', mfile_corruption_handler, {'backup':True}),
     url(r'^mfileapi/thumb/(?P<mfileid>[^/]+)/$', 'dataservice.views.thumb'),
     url(r'^mfileapi/(?P<id>[^/]+)/$', mfile_handler),
-    url(r'^mfileapi/getpreview/(?P<mfileid>[^/]+)/$', render_results_handler),
-    url(r'^mfileapi/getjobs/(?P<mfileid>[^/]+)/$', jobmfile_handler),
 
 
 
@@ -116,11 +109,6 @@ urlpatterns = patterns('',
     url(r'^browse/service/(?P<id>[^/]+)/', "dataservice.views.render_service"),
     url(r'^browse/mfile/(?P<id>[^/]+)/', "dataservice.views.render_mfile",{'show':True}),
     url(r'^browse/auth/(?P<id>[^/]+)/', "dataservice.views.render_auth"),
-
-    # Job Methods
-    url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),
-    url(r'^jobapi/render/(?P<mfileid>[^/]+)/(?P<start>[^/]+)/(?P<end>[^/]+)/$', render_handler),
-    url(r'^jobapi/(?P<id>[^/]+)/$', job_handler),
 
     # TEMP - Needs Sorting
     url(r'^tasks/', 'djcelery.views.registered_tasks'),
