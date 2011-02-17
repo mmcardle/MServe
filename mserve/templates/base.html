@@ -14,11 +14,13 @@
 <script type="text/javascript" src="/mservemedia/js/jquery.pagination.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.tmpl.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/base.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/auth.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/container.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/service.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/uploader.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/mserve.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/ui.js" ></script>
-
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
 <script type="text/javascript">
 
      function setManagementPropertyAccessSpeed(service){
@@ -79,32 +81,6 @@
          });
      }
 
-     function poplulate_methods(roleid, methods){
-           $('.methods'+roleid).empty()
-           $.each(methods, function(i,item){
-                id = $("<a href='#'>"+item+"&nbsp;</a>&nbsp;")
-                $(id).appendTo('.methods'+roleid);
-           });
-     }
-
-     function addAuthMethod(roleid){
-        var methods = prompt("What methods do you wish to add\nComma separated", "");
-        if (methods == null)
-            return;
-        if (methods == "")
-            return;
-        $.ajax({
-           type: "PUT",
-           url: '/roles/'+roleid+"/",
-           data: "methods="+methods,
-           success: function(msg){
-               poplulate_methods(roleid,msg["methods"])
-           },
-           error: function(msg){
-             alert( "Failure to add methods '" + methods + "'\nStatus: '" + msg.status+ "'\nResponse Text:\n" + msg.responseText);
-           }
-         });
-     }
 
 </script>
 

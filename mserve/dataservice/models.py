@@ -258,9 +258,17 @@ class ManagementProperty(models.Model):
 
 class Auth(Base):
     authname = models.CharField(max_length=50)
+    base     = models.ForeignKey(NamedBase, blank=True, null=True)
+    parent   = models.ForeignKey('Auth', blank=True, null=True)
+
+    def save(self):
+        if not self.id:
+            self.id = utils.random_id()
+        super(Auth, self).save()
 
     def __unicode__(self):
-        return "Auth: authname=%s" % (self.authname);
+        return "Auth: authname=%s base=%s parent=%s" % (self.authname,self.base,self.parent);
+
 
 class Role(Base):
     auth = models.ManyToManyField(Auth, related_name='roles')
@@ -289,40 +297,3 @@ class Role(Base):
     def addmethods(self,methods):
         newmethods = list(set(methods + self.methods()))
         self.methods_encoded = base64.b64encode(pickle.dumps(newmethods))
-
-class SubAuth(Auth):
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(SubAuth, self).save()
-
-class JoinAuth(models.Model):
-    parent = models.CharField(max_length=50)
-    child  = models.CharField(max_length=50)
-
-    def __unicode__(self):
-        return str(self.parent) + " - " + str(self.child)
-
-class MFileAuth(Auth):
-    mfile = models.ForeignKey(MFile)
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(MFileAuth, self).save()
-
-class DataServiceAuth(Auth):
-    dataservice = models.ForeignKey(DataService)
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(DataServiceAuth, self).save()
-
-class HostingContainerAuth(Auth):
-    hostingcontainer = models.ForeignKey(HostingContainer)
-
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(HostingContainerAuth, self).save()
-
-

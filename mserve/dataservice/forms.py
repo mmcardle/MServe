@@ -50,16 +50,10 @@ class UpdateMFileFormURL(ModelForm):
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages']
         model = MFile
 
-class MFileAuthForm(ModelForm):
+class AuthForm(ModelForm):
     dsid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     roles = forms.CharField(max_length=200,label='Roles (comma separated)')
-    class Meta:
-        exclude=['id','methods_encoded','mfile']
-        model = MFileAuth
 
-class SubAuthForm(ModelForm):
-    roles_csv = forms.CharField(max_length=200,label='Roles (comma separated)')
-    id_parent = forms.CharField(max_length=200,widget=forms.HiddenInput)
     class Meta:
-        exclude=['id','methods_encoded']
-        model = SubAuth
+        exclude=['id','methods_encoded','base']
+        model = Auth

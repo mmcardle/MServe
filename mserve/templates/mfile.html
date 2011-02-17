@@ -12,103 +12,116 @@
 
 {% block content %}
 
+<div id="tabs">
 
-<h3 class="ilink" onclick="$('#content').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Details</h3>
+    <ul>
+        <li><a href="#tabs-1">Data</a></li>
+        <li><a href="#tabs-2">Actions</a></li>
+        <li><a href="#tabs-3">Access Control</a></li>
+        <li><a href="#tabs-4">Usage</a></li>
+    </ul>
 
-    <div id="content">
-    <div id="message"></div>
+    <div id="tabs-1">
 
-    {% if verify %}
-        {% if not verifystate %}
-            <div class="failed">Error: Verification has failed</div>
-        {% else%}
-            <div class="passed">Success: Verification OK</div>
-        {% endif %}
-    {% endif %}
-    <table><tr><td>
-        <dl>
-            <dt>Name</dt>
-            <dd>{{mfile.name}}</dd>
-            <dt>Checksum</dt>
-            <dd>{{mfile.checksum}}</dd>
-            {% if verifychecksum%}
-            <dt>Verify</dt>
-            <dd class="highlight">{{verifychecksum}}</dd>
+        <div id="content" style="min-height: 500px;">
+
+        {% if verify %}
+            {% if not verifystate %}
+                <div class="failed">Error: Verification has failed</div>
+            {% else%}
+                <div class="passed">Success: Verification OK</div>
             {% endif %}
-            <dt>Mime</dt>
-            <dd>{{mfile.mimetype}}</dd>
+        {% endif %}
+        <table><tr><td>
+            <dl>
+                <dt>Name</dt>
+                <dd>{{mfile.name}}</dd>
+                <dt>Checksum</dt>
+                <dd>{{mfile.checksum}}</dd>
+                {% if verifychecksum%}
+                <dt>Verify</dt>
+                <dd class="highlight">{{verifychecksum}}</dd>
+                {% endif %}
+                <dt>Mime</dt>
+                <dd>{{mfile.mimetype}}</dd>
+            </dl>
+         </td><td>
+            <dl>
+                <dt>Created</dt>
+                <dd>{{mfile.created|date}},&nbsp;{{mfile.created|time}}</dd>
+                <dt>Updated</dt>
+                <dd>{{mfile.updated|date}},&nbsp;{{mfile.updated|time}}</dd>
+                <dt>Size</dt>
+                <dd>{{mfile.size|filesizeformat}}</dd>
+            </dl>
+         </td></tr>
 
-        </dl>
-     </td><td>
-        <dl>
-            <dt>Created</dt>
-            <dd>{{mfile.created|date}},&nbsp;{{mfile.created|time}}</dd>
-            <dt>Updated</dt>
-            <dd>{{mfile.updated|date}},&nbsp;{{mfile.updated|time}}</dd>
-            <dt>Size</dt>
-            <dd>{{mfile.size|filesizeformat}}</dd>
-        </dl>
-     </td></tr>
+        </table>
+    
+        <div id="previewcontent">
 
-    </table>
+        {% if mfile.mimetype %}
+
+            {% if mfile.mimetype|startswith:"video"  %}
+                {% include "mediaplayer.html" %}
+            {% else %}
+                {% if mfile.mimetype|startswith:"image"  %}
+                    {% include "image.html" %}
+                {% else %}
+                    {% if mfile.name|endswith:".blend"  %}
+                        {% include "render.html" %}
+                    {% else %}
+                        <p>No Preview</p>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
+        {% else%}
+
+        <p>No Preview</p>
+
+        {% endif %}
+
+        </div>
+</div>
+
     </div>
 
-<h3 class="ilink" onclick="$('#previewcontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Preview</h3>
-
-<div id="previewcontent">
-
-{% if mfile.mimetype %}
-
-    {% if mfile.mimetype|startswith:"video"  %}
-        {% include "mediaplayer.html" %}
-    {% else %}
-        {% if mfile.mimetype|startswith:"image"  %}
-            {% include "image.html" %}
-        {% else %}
-            {% if mfile.name|endswith:".blend"  %}
-                {% include "render.html" %}
-            {% else %}
-                <p>No Preview</p>
-            {% endif %}
-        {% endif %}
-    {% endif %}
-
-{% else%}
-
-<p>No Preview</p>
-
-{% endif %}
-
-</div>
-
-{% if mfile.name|endswith:".blend"  %}
+    <div id="tabs-2">
+        {% include "methods.html" %}
+    </div>
 
 
-{% endif %}
+    <div id="tabs-3">
+        <div id="authcontent" style="display:none;">
 
+            <form action="{{formtarget}}" method="post" >
+                {{ form.as_p }}
+                <input type="submit" value="Submit" />
+            </form>
 
-{% endblock %}
+        </div>
 
-{% block rightcontent %}
+        {% include "auths.html" %}
+    </div>
 
-{% include "methods.html" %}
-
-<h3 class="ilink" onclick="$('#authcontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Create Auth</h3>
-
-<div id="authcontent" style="display:none;">
-
-    <form action="{{formtarget}}" method="post" >
-        {{ form.as_p }}
-        <input type="submit" value="Submit" />
-    </form>
+    <div id="tabs-4">
+        {% include "usage.html" %}
+    </div>
 
 </div>
 
 
-{% include "actions.html" %}
+<script>
+$(document).ready(function() {
+    $(function() {
+        $( "#tabs" ).tabs();
+    });
+});
+</script>
 
 {% endblock %}
 
-{% block bottomcontent %}
-{% include "usage.html" %}
-{% endblock %}
+{% block rightcontent %}{% endblock %}
+
+{% block bottomcontent %}{% endblock %}

@@ -106,23 +106,30 @@ def get_usage(id=None):
         usages = Usage.objects.all()
         return usages
     else:
-        base = NamedBase.objects.get(pk=id)
-        ids = []
-        if utils.is_container(base):
-            hc = HostingContainer.objects.get(id=id)
-            serviceids = [service.id for service in hc.dataservice_set.all()  ]
-            mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
-            ids = serviceids + mfileids + [base.id]
+        try:
+            base = NamedBase.objects.get(pk=id)
+            ids = []
+            if utils.is_container(base):
+                hc = HostingContainer.objects.get(id=id)
+                serviceids = [service.id for service in hc.dataservice_set.all()  ]
+                mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
+                ids = serviceids + mfileids + [base.id]
 
-        if utils.is_service(base):
-            service   = DataService.objects.get(id=id)
-            ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
+            if utils.is_service(base):
+                service   = DataService.objects.get(id=id)
+                ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
 
-        if utils.is_mfile(base):
-            ids=[base.id]
+            if utils.is_mfile(base):
+                ids=[base.id]
 
-        usages = Usage.objects.filter(base__in=ids)
-        return usages
+            usages = Usage.objects.filter(base__in=ids)
+            return usages
+        except NamedBase.DoesNotExist:
+
+            auth = Auth.objects.get(pk=id)
+            logging.info("Getting usage for auth %s " % auth)
+
+            return get_usage(id=auth.base.id)
 
 def get_usage_summary(id=None):
     
@@ -132,24 +139,31 @@ def get_usage_summary(id=None):
         usages = Usage.objects.all()
         
     else:
-        base = NamedBase.objects.get(pk=id)
+        try:
+            base = NamedBase.objects.get(pk=id)
 
-        ids = []
+            ids = []
 
-        if utils.is_container(base):
-            hc = HostingContainer.objects.get(id=id)
-            serviceids = [service.id for service in hc.dataservice_set.all()  ]
-            mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
-            ids = serviceids + mfileids + [base.id]
+            if utils.is_container(base):
+                hc = HostingContainer.objects.get(id=id)
+                serviceids = [service.id for service in hc.dataservice_set.all()  ]
+                mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
+                ids = serviceids + mfileids + [base.id]
 
-        if utils.is_service(base):
-            service   = DataService.objects.get(id=id)
-            ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
+            if utils.is_service(base):
+                service   = DataService.objects.get(id=id)
+                ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
 
-        if utils.is_mfile(base):
-            ids=[base.id]
+            if utils.is_mfile(base):
+                ids=[base.id]
 
-        usages = Usage.objects.filter(base__in=ids)
+            usages = Usage.objects.filter(base__in=ids)
+        except NamedBase.DoesNotExist:
+
+            auth = Auth.objects.get(pk=id)
+            logging.info("Getting usage summary for auth %s " % auth)
+
+            return get_usage_summary(id=auth.base.id)
     
     if settings.DATABASE_ENGINE != "sqlite3":
         summary += usages.values('metric') \
@@ -159,7 +173,7 @@ def get_usage_summary(id=None):
         .annotate(min=Min('total')) \
         .annotate(sum=Sum('total')) \
         .annotate(stddev=StdDev('total'))\
-        .annotate(var=Variance('total'))
+        .annotate(variance=Variance('total'))
 
     else:
         # sqlite3 - No built-in variance and std deviation

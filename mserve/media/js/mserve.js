@@ -1,89 +1,4 @@
 
-function loadContainers(){
-    $.ajax({
-       type: "GET",
-       url: "/container/",
-       success: function(msg){
-            containers = msg;
-
-            $(".numcontainers").html(containers.length);
-            if(containers.length==0){
-                 $("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
-                return;
-            }else{
-                $("#nocontainers").remove()
-            }
-
-            function handlePaginationClick(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
-                if(end>containers.length){
-                    end=containers.length;
-                }
-                for(var i=start;i<end;i++) {
-                    var c = $("<div>"+containers[i].name+"  <a href='/browse/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
-                    $('#containerpaginator').append(c)
-                }
-                return false;
-            }
-
-            // First Parameter: number of items
-            // Second Parameter: options object
-            $("#containerpaginator").pagination(msg.length, {
-                    items_per_page:20,
-                    callback:handlePaginationClick
-            });
-       },
-       error: function(msg){
-            showError( "Failure to get containers ",msg );
-       }
-     });
-}
-
-function loadServices(containerid){
-    $.ajax({
-       type: "GET",
-       url: "/container/"+containerid+"/",
-       success: function(msg){
-            services = msg.dataservice_set;
-
-            $(".numservices").html(services.length);
-            if(services.length==0){
-                 $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
-                return;
-            }else{
-                
-                $("#noservices").remove()
-            }
-
-            function handlePaginationClick(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
-                if(end>services.length){
-                    end=services.length;
-                }
-
-                for(var i=start;i<end;i++) {
-                    var c = $("<div>"+services[i].name+"  <a href='/browse/"+services[i].id+"/'>"+services[i].id+"</a>&nbsp;<em>"+services[i].mfile_set.length+" files</em></div>")
-                    $('#servicepaginator').append(c)
-                }
-                return false;
-            }
-
-            // First Parameter: number of items
-            // Second Parameter: options object
-            $("#servicepaginator").pagination(msg.length, {
-                    items_per_page:20,
-                    callback:handlePaginationClick
-            });
-       },
-       error: function(msg){
-            showError( "Failure to get services ",msg );
-       }
-     });
-}
 
 var serviceid = ""
 function loadMFiles(sid){
@@ -160,6 +75,7 @@ function loadJobs(serviceid){
        success: function(msg){
             for (i in msg){
                 create_job_holder(msg[i])
+                create_job_paginator(msg[i].job)
                 if(!msg[i].ready){
                     check_job(msg[i].job,serviceid)
                 }
@@ -171,6 +87,35 @@ function loadJobs(serviceid){
      });
 }
 
+function create_job_paginator(job){
+        
+        var jobid = job.id
+        var joboutputs = job.joboutput_set
+
+        var jobpaginator = $("#jobpreviewpaginator-"+jobid)
+
+        function handlePaginationClick(new_page_index, jobpaginator) {
+            // This selects elements from a content array
+            start = new_page_index*this.items_per_page
+            end   = (new_page_index+1)*this.items_per_page
+            if(end>joboutputs.length){
+                end=joboutputs.length;
+            }
+            for(var j=start;j<end;j++) {
+                var im = $("<a target='_blank' href='/jobapi/contents/"+joboutputs[j].id+"/' ><img src='"+joboutputs[j].thumburl+"' /></a>")
+                jobpaginator.append(im)
+            }
+            return false;
+        }
+
+        // First Parameter: number of items
+        // Second Parameter: options object
+        jobpaginator.pagination(joboutputs.length, {
+                items_per_page:4,
+                callback:handlePaginationClick
+        });
+}
+
 function load_jobs_mfile(mfileid){
      $.ajax({
        type: "GET",
@@ -179,40 +124,11 @@ function load_jobs_mfile(mfileid){
 
             for (i in msg){
                 create_job_holder(msg[i])
-
-                var jobid = msg[i].job.id
-
-                joboutputs = msg[i].job.joboutput_set
-
-                var jobpaginator = $("#jobpreviewpaginator-"+jobid)
-
-                function handlePaginationClick(new_page_index, jobpaginator) {
-                    // This selects elements from a content array
-                    start = new_page_index*this.items_per_page
-                    end   = (new_page_index+1)*this.items_per_page
-                    if(end>joboutputs.length){
-                        end=joboutputs.length;
-                    }
-                    for(var j=start;j<end;j++) {
-                        var im = $("<a target='_blank' href='/jobapi/contents/"+joboutputs[j].id+"/' ><img src='"+joboutputs[j].thumburl+"' /></a>")
-                        jobpaginator.append(im)
-                    }
-                    return false;
-                }
-
-                // First Parameter: number of items
-                // Second Parameter: options object
-                jobpaginator.pagination(joboutputs.length, {
-                        items_per_page:4,
-                        callback:handlePaginationClick
-                });
-
+                create_job_paginator(msg[i].job)
                 if(!msg[i].ready){
                     check_job(msg[i].job,mfileid)
                 }
-   
             }
-
        },
        error: function(msg){
             showError("Render",objectToString(msg))
@@ -252,7 +168,8 @@ function create_job_holder(task){
         $('#jobicon-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
         $('#jobinfo-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
         $('#jobprogressbar-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
-
+        $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
+        $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
     }
 }
 
@@ -271,31 +188,6 @@ function mfile_render(mfileid,start,end){
             showError("Render",objectToString(msg))
        }
      });
-}
-
-function delete_job(jobid){
-    $( '#dialog-job-dialog' ).dialog({
-            resizable: false,
-            modal: true,
-            buttons: {
-                    "Delete Job?": function() {
-                              $.ajax({
-                               type: "DELETE",
-                               url: '/jobapi/'+jobid+"/",
-                               success: function(msg){
-                                    $('#job-'+jobid).hide('blind')
-                               },
-                               error: function(msg){
-                                    showError("Job Deleted Error",objectToString(msg))
-                               }
-                             });
-                            $( this ).dialog( "close" );
-                    },
-                    Cancel: function() {
-                            $( this ).dialog( "close" );
-                    }
-            }
-    });
 }
 
 function check_job(job,mfileid){
@@ -330,8 +222,9 @@ function check_job(job,mfileid){
             if(msg.failed){
                 $('#job-'+job.id).addClass('ui-state-error')
             }else{
-                load_render_preview_output(job.id)
-                $('#jobpreview-'+job.id).show('blind')
+                //load_render_preview_output(job.id)
+                create_job_paginator(job)
+                $("#jobpreviewpaginator-"+job.id).show('slide')
             }
         }
 
@@ -341,7 +234,31 @@ function check_job(job,mfileid){
        }
      });
  }
-
+function delete_job(jobid){
+    $( '#dialog-job-dialog' ).dialog({
+            resizable: false,
+            modal: true,
+            buttons: {
+                    "Delete Job?": function() {
+                              $.ajax({
+                               type: "DELETE",
+                               url: '/jobapi/'+jobid+"/",
+                               success: function(msg){
+                                    $('#job-'+jobid).hide('blind')
+                                    $('#jobheader-'+jobid).hide()
+                               },
+                               error: function(msg){
+                                    showError("Job Deleted Error",objectToString(msg))
+                               }
+                             });
+                            $( this ).dialog( "close" );
+                    },
+                    Cancel: function() {
+                            $( this ).dialog( "close" );
+                    }
+            }
+    });
+}
 function mfile_delete(mfileid){
     $( '#dialog-mfile-dialog' ).dialog({
             resizable: false,
@@ -427,4 +344,48 @@ function getPoster(mfileid){
             showError("Error: Verification has failed","MD5: "+data.md5+"<br>Checksum: "+data.mfile.checksum)
         }
     });
+ }
+
+ function add_auth_method(roleid){
+
+
+    $( '#dialog-mfile-dialog' ).dialog({
+            resizable: false,
+            modal: true,
+            buttons: {
+                    "Delete mfile?": function() {
+                         $.ajax({
+                           type: "DELETE",
+                           url: '/mfile/'+mfileid+"/",
+                           success: function(msg){
+                                showMessage("File Deleted","The mfile has been deleted.")
+                           },
+                           error: function(msg){
+                             alert( "Failure On Delete " + msg );
+                           }
+                         });
+                            $( this ).dialog( "close" );
+                    },
+                    Cancel: function() {
+                            $( this ).dialog( "close" );
+                    }
+            }
+    });
+
+    var methods = prompt("What methods do you wish to add\nComma separated", "");
+    if (methods == null)
+        return;
+    if (methods == "")
+        return;
+    $.ajax({
+       type: "PUT",
+       url: '/roles/'+roleid+"/",
+       data: "methods="+methods,
+       success: function(msg){
+           poplulate_methods(roleid,msg["methods"])
+       },
+       error: function(msg){
+         alert( "Failure to add methods '" + methods + "'\nStatus: '" + msg.status+ "'\nResponse Text:\n" + msg.responseText);
+       }
+     });
  }

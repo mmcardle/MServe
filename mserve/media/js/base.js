@@ -1,4 +1,14 @@
 
+String.prototype.startsWith = function(str){
+    return (this.indexOf(str) === 0);
+}
+
+String.prototype.endsWith = function(str)
+{
+    var lastIndex = this.lastIndexOf(str);
+    return (lastIndex != -1) && (lastIndex + str.length == this.length);
+}
+
 function number_format( number, decimals, dec_point, thousands_sep ) {
     // http://kevin.vanzonneveld.net
     // +   original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)

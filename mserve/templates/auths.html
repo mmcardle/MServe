@@ -1,39 +1,34 @@
 {% block auths %}
-<h3  class="ilink" onclick="$('#authscontent').toggle('blind');"><span style="float:left" class="ui-icon ui-icon-circle-plus"></span>Auths</h3>
-<div id="authscontent" style="display:none;">
+<div id="authscontent">
 {% if auths %}
     {% for auth in auths %}
-    <dl class="auth">
-        <dt >Authority Name</dt>
-        <dd >{{auth.authname}}</dd>
-        <dt >Auth ID</dt>
-        <dd ><a href="/browse/{{auth.id}}/">{{auth.id}}</a></dd>
-
+    <div class="auth"><h3>Access : {{auth.authname}}</h3>
+    <div><a href="/browse/{{auth.id}}" >View Auth </a> </div>
+    <dl>
         {%  for role in auth.roles.all %}
         <dt >Role: {{role.rolename}}</dt>
-        <dd ><em>{{role.description}}</em></dd>
-        <dd ><em>{{role.id}}</em></dd>
+        <dd ><strong>{{role.description}}</strong></dd>
         <dd class="methods{{role.id}}">
-            {% if container %}
-                {% for method in role.methods %}<a href="/containerapi/{{method}}/{{container.id}}/" >{{method}}</a>
-            {% endfor %}
-            {% endif %}
-            {% if service %}
-                {% for method in role.methods %}<a href="/serviceapi/{{method}}/{{service.id}}/" >{{method}}</a>
-            {% endfor %}
-            {% endif %}
-            {% if mfile %}
-                {% for method in role.methods %}<a href="/mfileapi/{{method}}/{{mfile.id}}/" >{{method}}</a>
-            {% endfor %}
-            {% endif %}
+                {% for method in role.methods %}
+                    {{method}}
+                {% endfor %}
         </dd>
-        <dd><a class="ascript" onclick="javascript:addAuthMethod('{{role.id}}');">Add Method</a>
+        <dd><button class="addmethods">Add Method</button>
         </dd>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                // Create new addauth dialog
+                 create_new_add_method_ui_dialog('{{role.id}}')
+            });
+        </script>
         {% endfor %}
     </dl>
+    </div>
     {% endfor %}
 {% endif %}
 </div>
+
+
 
 {% if not auths%}
     <div>None</div>

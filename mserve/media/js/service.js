@@ -1,4 +1,67 @@
 
+
+function create_service(containerid){
+ $.ajax({
+   type: "POST",
+   data: "name=Service&cid="+containerid,
+   url: '/service/',
+   success: function(msg){
+            loadServices(containerid)
+   },
+   error: function(msg){
+     showError("Error", ""+msg.responseText );
+   }
+ });
+}
+
+
+function loadServices(containerid){
+    $.ajax({
+       type: "GET",
+       url: "/container/"+containerid+"/",
+       success: function(msg){
+            services = msg.dataservice_set;
+
+            $(".numservices").html(services.length);
+            if(services.length==0){
+                 $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
+                return;
+            }else{
+
+                $("#noservices").remove()
+            }
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>services.length){
+                    end=services.length;
+                }
+
+                $( "#serviceTemplate" ).tmpl( services.slice(start,end) ) .appendTo( "#servicepaginator" );
+
+                for(var i=start;i<end;i++) {
+                    
+                    //var c = $("<div>"+services[i].name+"  <a href='/browse/"+services[i].id+"/'>"+services[i].id+"</a>&nbsp;<em>"+services[i].mfile_set.length+" files</em></div>")
+                    //$('#servicepaginator').append(c)
+                }
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+            $("#servicepaginator").pagination(msg.length, {
+                    items_per_page:20,
+                    callback:handlePaginationClick
+            });
+       },
+       error: function(msg){
+            showError( "Failure to get services ",msg );
+       }
+     });
+}
+
 function check_service_method(method){
     if (! eval("typeof service_" + method + " == 'function'")) {
         $('#button-'+method+'-button').button({ disabled: true });

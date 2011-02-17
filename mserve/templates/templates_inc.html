@@ -1,13 +1,166 @@
 
+<script id="serviceTemplate" type="text/x-jquery-tmpl">
+    
+<div class="infoholder">
+
+
+
+    <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
+        <tr>
+             {%templatetag openvariable%}if mfile_set[0] {%templatetag closevariable%}
+                          <td class="service_preview_td" style="background-image: url(${mfile_set[0].thumburl});"></td>
+             {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+             {%templatetag openvariable%}if mfile_set[1] {%templatetag closevariable%}
+                          <td class="service_preview_td" style="background-image: url(${mfile_set[1].thumburl});"></td>
+              {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </tr>
+        <tr>
+             {%templatetag openvariable%}if mfile_set[2] {%templatetag closevariable%}
+                          <td style="background-image: url(${mfile_set[2].thumburl});"></td>
+             {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+             {%templatetag openvariable%}if mfile_set[3] {%templatetag closevariable%}
+                           <td class="service_preview_td" style="background-image: url(${mfile_set[3].thumburl});"></td>
+             {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </tr>
+    </table>
+
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
+         onmouseout="$('#id-${id}').hide();" style="position: relative; top: -130px">
+
+        <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr><td>
+                    <div class='title'>
+                        <a href='/browse/${id}/'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                        </a></div></td></tr>
+            <tr><td>
+                    <a href='/browse/${id}/'>
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                          <div>${mfile_set.length} files </div>
+                          <div style="font-weight: bold">Latest Files :</div>
+
+                          {%templatetag openvariable%}each mfile_set{%templatetag closevariable%}
+                                <!-- Show Last 4 files -->
+                              {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
+                                <div>${getShort($value.name,30)}</div>
+                              {%templatetag openvariable%}/if{%templatetag closevariable%}
+                          {%templatetag openvariable%}/each{%templatetag closevariable%}
+                      </div>
+                    </a>
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</script>
+
+<script id="authTemplate" type="text/x-jquery-tmpl">
+
+    <div class="auth"><h3>Access : ${authname}</h3>
+    <div><a href="/browse/${id}/" >View Auth </a> </div>
+    <dl>
+    {%templatetag openvariable%}each roles{%templatetag closevariable%}
+        <dt >Role: ${rolename}</dt>
+        <dd ><strong>${description}</strong></dd>
+        <dd class="role-${id}">
+        {%templatetag openvariable%}each methods{%templatetag closevariable%}
+                ${$value}
+        {%templatetag openvariable%}/each{%templatetag closevariable%}
+        </dd>
+        <dd><button class="addmethods">Add Method</button>
+    {%templatetag openvariable%}/each{%templatetag closevariable%}
+    </dl>
+    </div>
+
+</script>
+
+<script id="mfileDetailsTemplate" type="text/x-jquery-tmpl">
+    <h3>Details</h3>
+    <div id="message"></div>
+    <table><tr><td>
+        <dl>
+            <dt>Name</dt>
+            <dd>${name}</dd>
+            <dt>Checksum</dt>
+            <dd>${checksum}</dd>
+            <dt>Mime</dt>
+            <dd>${mimetype}</dd>
+        </dl>
+     </td><td>
+        <dl>
+            <dt>Created</dt>
+            <dd>${created}</dd>
+            <dt>Updated</dt>
+            <dd>${updated}</dd>
+            <dt>Size</dt>
+            <dd>${size}</dd>
+        </dl>
+     </td></tr>
+    </table>
+    
+</script>
+
+<script id="mfileImageDetailsTemplate" type="text/x-jquery-tmpl">
+        {% templatetag openvariable %}tmpl "#mfileDetailsTemplate" {% templatetag closevariable %}
+        <div class="posterholder">
+            <div class="poster" id="image-preview" style=" height: 256px; padding: 0.4em; position: relative;" >
+                <img id="mfileposter" title="${name}" alt="${name}" src="${posterurl}" />
+            </div>
+        </div>
+</script>
+
+<script id="mfileVideoDetailsTemplate" type="text/x-jquery-tmpl">
+        {% templatetag openvariable %}tmpl "#mfileDetailsTemplate" {% templatetag closevariable %}
+        <p id="container1">Please install the Flash Plugin</p>
+</script>
+
+<script id="mfileRenderDetailsTemplate" type="text/x-jquery-tmpl">
+        {% templatetag openvariable %}tmpl "#mfileDetailsTemplate" {% templatetag closevariable %}
+</script>
+
+<script id="usageTemplate" type="text/x-jquery-tmpl">
+     <tr>
+         <td>Usage of ${metric}</b></td><td>at <b>${rateTime}</b> :</td><td><b>${total}</b></td>
+     </tr>
+</script>
+
+<script id="usageSummaryTemplate" type="text/x-jquery-tmpl">
+    <tr>
+        <td>${metric}</td>
+        <td>${min}</td>
+        <td>${max}</td>
+        <td>${n}</td>
+        <td>${avg}</td>
+        <td>${stddev}</td>
+        <td>${variance}</td>
+    </tr>
+</script>
+
 <script id="jobTemplate" type="text/x-jquery-tmpl">
-    <h5 id='jobheader-${job.id}' >Template ${job.name}, ${job.created}</h5>
+    <h5 id='jobheader-${job.id}' >Template ${job.name}, ${job.created}, ${job.id}</h5>
     
     <div id='job-${job.id}' class='job'  >
         <table style='width:100%;'>
         <tr>
             <td width="2%"><span id='jobicon-${job.id}' class='ui-icon ui-icon-circle-check' ></span></td>
             <td width="25%"><div id='jobinfo-${job.id}' class='jobinfo' ><b>${completed_count}</b> frames of <b>${total}</b> complete : ${percent}&#37; </div></td>
-            <td width='*' ><div style='height:10px;width:*' id='jobprogressbar-${job.id}'></div></td>
+            <td width='*' ><div style='height:10px;' id='jobprogressbar-${job.id}'></div></td>
+            <td width='5%' ><button id='jobdeletebutton-${job.id}'></button></td>
         <tr>
         </table>
         <div  id='jobpreviewpaginator-${job.id}' class="jobpaginators" ></div>
@@ -49,6 +202,41 @@
 </script>
 
 <div style="display:none">
+
+    <div id="dialog-form" title="Create New Render">
+	<p class="validateTips">Input start frame and end frame.</p>
+
+        <form>
+	<fieldset>
+		<label for="name">Start</label>
+		<input type="text" name="start" id="start" class="text ui-widget-content ui-corner-all" />
+		<label for="email">End</label>
+		<input type="text" name="end" id="end" value="" class="text ui-widget-content ui-corner-all" />
+	</fieldset>
+	</form>
+    </div>
+
+    <div id="dialog-add-role-dialog-form" title="Add Role">
+	<p class="validateTips">Input the method name.</p>
+
+        <form>
+	<fieldset>
+		<label for="name">Methods</label>
+		<input type="text" name="methods" id="methods" value="" class="text ui-widget-content ui-corner-all" />
+	</fieldset>
+	</form>
+    </div>
+
+    <div id="dialog-add-methods-dialog-form" title="Share">
+	<p class="validateTips">Share methods.</p>
+
+        <form>
+	<fieldset>
+		<label for="authmethods">Methods</label>
+		<input type="text" name="authmethods" id="authmethods" value="" class="text ui-widget-content ui-corner-all" />
+	</fieldset>
+	</form>
+    </div>
 
    <div id="dialog-mfile-dialog" title="Delete the file?">
         <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This item will be permanently deleted and cannot be recovered. Are you sure?</p>

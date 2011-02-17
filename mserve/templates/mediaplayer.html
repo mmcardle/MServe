@@ -4,11 +4,18 @@ src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js">
 
 
 {% if mfile.file %}
+<video width="640" height="360" src="/mfileapi/get/{{mfile.id}}/" autobuffer >
+    <div class="fallback">
+	    <p>You must have an HTML5 capable browser.</p>
+	</div>
+</video>
+
+
     <p id="container1">Please install the Flash Plugin</p>
 
     <script type="text/javascript" language="javascript">
 
-        var flashvars = { file:"/mservedata/{{mfile.file}}",image:"{{mfile.posterurl}}",autostart:"false" };
+        var flashvars = { file:"/mfileapi/get/{{mfile.id}}/",image:"{{mfile.posterurl}}",autostart:"false" };
         var params = { allowfullscreen:"true", allowscriptaccess:"always" };
         var attributes = { id:"player1", name:"player1" };
         swfobject.embedSWF("/mservemedia/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);

@@ -25,48 +25,80 @@
 
 {% block content %}
 
-<h3>Data Services</h3>
 
-<div class="paginator" id="servicepaginator"></div>
-<div id="servicemessages"></div>
+<div id="tabs">
 
-<script type="text/javascript">
-    $(document).ready(function() {
-        loadServices('{{ container.id }}');
+    <ul>
+        <li><a href="#tabs-1">Services</a></li>
+        <li><a href="#tabs-2">Actions</a></li>
+        <li><a href="#tabs-3">Config</a></li>
+        <li><a href="#tabs-4">Usage</a></li>
+        <li><a href="#tabs-5">Access Control</a></li>
+    </ul>
+
+    <div id="tabs-1">
+        <div class="paginator" id="servicepaginator"></div>
+        <div id="servicemessages" style="clear:both"></div>
+
+        <button id="createservicebutton" >New Service</button>
+
+        <script type="text/javascript">
+            $(document).ready(function() {
+                loadServices('{{ container.id }}');
+                $("#createservicebutton" ).click(function() {  create_service('{{ container.id }}') });
+            });
+        </script>
+    </div>
+
+    <div id="tabs-2">
+        {% if user.is_staff %}
+            {% include "methods.html" %}
+        {% endif %}
+
+    </div>
+    <div id="tabs-3">
+         {% if user.is_staff %}
+
+
+            <h3>Management Properties</h3>
+
+            <table style="table-layout: fixed;width:300px;">
+                <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
+                {% for property in properties%}
+                <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
+                        <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
+                            <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
+                        </form>-->
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+
+        {% endif %}
+
+    </div>
+    <div id="tabs-4">
+        {% include "usage.html" %}
+    </div>
+    <div id="tabs-5">
+        {% include "auths.html" %}
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $(function() {
+        $( "#tabs" ).tabs();
     });
+});
 </script>
-
-<h3>Create New Service</h3>
-
-<form action="/form/service/" method="post">
-    {{ form.as_p }}
-    <input type="submit" value="Submit" />
-</form>
 
 
 {% endblock %}
 
 {% block rightcontent %}
 
-{% if user.is_staff %}
-    {% include "methods.html" %}
 
-
-    <h3>Management Properties</h3>
-
-    <table style="table-layout: fixed;width:300px;">
-        <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
-        {% for property in properties%}
-        <tr><td>{{ property.property }}</td><td>{{property.value }}</td><td>
-                <!--<form style="display: inline" action="/serviceapi/managementproperty/{{service.id}}/" method="post">
-                    <input type="submit" value="Delete" onclick="alert('Not Implemented')" />
-                </form>-->
-                </td>
-            </tr>
-        {% endfor %}
-    </table>
-
-{% endif %}
 
 <!--
 <h5>Set Management Property</h5>
@@ -81,7 +113,7 @@
 {% endblock rightcontent %}
 
 {% block bottomcontent %}
-{% include "usage.html" %}
+
 {% endblock %}
 
 

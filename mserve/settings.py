@@ -84,7 +84,8 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'dataservice.middleware.AuthMiddleware'
+    'dataservice.middleware.AuthMiddleware',
+    'dataservice.middleware.ResponseMiddleware'
 )
 
 ROOT_URLCONF = 'mserve.urls'

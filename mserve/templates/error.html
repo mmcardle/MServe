@@ -2,12 +2,16 @@
 
 {% block title %}MServe{% endblock %}
 
-{% block heading%}Error{% endblock %}
+{% block heading%}{% endblock %}
 
 {% block content %}
 
-<h3>Details</h3>
-<p>{{error}}</p>
+<div class="ui-widget">
+        <div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+                <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+                <strong>Alert:</strong> {{error }}</p>
+        </div>
+</div>
 
 {% block auths %}
 {% endblock auths %}

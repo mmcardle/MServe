@@ -446,6 +446,15 @@ li.fluid a {
     border:1px solid #EEAAAA;
 }
 
+.service_preview_td{
+    height:60px;
+    width:104px;
+    background-position: center;
+    background-size:100%;
+    background-repeat: no-repeat;
+    background-color: black;
+}
+
 
 /*
    *** PAGINATION ***

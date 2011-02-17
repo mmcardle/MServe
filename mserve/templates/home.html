@@ -21,7 +21,6 @@
     {% endif %}
 {% endblock %}
 
-
 {% block content %}
 
 {% if user.is_staff %}
@@ -31,18 +30,14 @@
 <div class="paginator" id="containerpaginator"></div>
 <div id="containermessages"></div>
 
+<button id="createcontainerbutton" >New Container</button>
 
 <script type="text/javascript">
     $(document).ready(function() {
         loadContainers();
+        $("#createcontainerbutton" ).click(function() {  create_container() });
     });
 </script>
-
-<h3>Create New Hosting Container</h3>
-<form action="/form/container/" method="post">
-    {{ form.as_p }}
-    <input type="submit" value="Submit" />
-</form>
 
 {% else %}
 
@@ -62,5 +57,3 @@
 {% block auths %}
 
 {% endblock auths %}
-
-

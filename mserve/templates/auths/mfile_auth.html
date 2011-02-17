@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load mservetags %}
+
+{% block title %}MServe File{% endblock %}
+
+{% if "getusagesummary" in methods %}
+
+    {% block usages %}
+                <span>Name:&nbsp;<em class="sm">{{mfile.name|trunc:20}}</em>&nbsp;</span>
+                <span>Mimetype:&nbsp;<em class="sm">{{mfile.mimetype}}</em>&nbsp;</span>
+                <span>Created:&nbsp;<em class="sm">{{mfile.created|date}},&nbsp;{{mfile.created|time}}</em>&nbsp;</span>
+                <span>Updated:&nbsp;<em class="sm">{{mfile.updated|date}},&nbsp;{{mfile.updated|time}}</em>&nbsp;</span>
+                <span>Size:&nbsp;<em class="sm">{{mfile.size|filesizeformat}}</em>&nbsp;</span>
+    {% endblock %}
+
+
+{% endif %}
+
+{% block content %}
+
+        <h2>Auth </h2>
+        <p>{{ auth }}</p>
+        <p>Methods {{ methods}}</p>
+
+<div id="tabs">
+
+    <ul>
+            <li><a href="#tabs-1">Data</a></li>
+            <li><a href="#tabs-2">Access Control</a></li>
+            <li><a href="#tabs-3">Usage</a></li>
+
+    </ul>
+
+    <div id="tabs-1">
+    {% if "head" in methods %}
+
+        {% include "auths/details_auth.html" %}
+
+    {% else %}
+
+            <p>No Access to the details</p>
+            
+    {% endif %}
+
+
+    </div>
+
+    <div id="tabs-2">
+        {% if "getorcreateauth" in methods %}
+
+            {% include "auths/auth_auth.html" %}
+
+        {% endif %}
+
+    </div>
+
+    <div id="tabs-3">
+       {% include "auths/usage_auth.html" %}
+    </div>
+
+</div>
+
+<script>
+$(document).ready(function() {
+    $(function() {
+        $( "#tabs" ).tabs();
+    });
+});
+</script>
+
+
+{% endblock %}{% block rightcontent %}
+
+{% endblock %}{% block bottomcontent %}
+
+{% endblock %}

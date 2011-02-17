@@ -136,9 +136,9 @@ Follow this guide
 http://celeryq.org/docs/getting-started/broker-installation.html
 
 Or Quick start, paste:
-rabbitmqctl add_user myuser mypassword
-rabbitmqctl add_vhost myvhost
-rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
+sudo abbitmqctl add_user myuser mypassword
+sudo rabbitmqctl add_vhost myvhost
+sudo rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
 
 Celery Startup
 =============

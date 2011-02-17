@@ -1,6 +1,3 @@
-from mserve.dataservice.models import HostingContainer
-from mserve.dataservice.models import MFileAuth
-from mserve.dataservice.models import Auth
 from mserve.dataservice.models import *
 from mserve.dataservice.forms import *
 from django.core.exceptions import ObjectDoesNotExist
@@ -33,16 +30,51 @@ def thumb(request,mfileid):
     return r
 
 def render_base(request,id):
-    base = NamedBase.objects.get(id=id)
+    try:
+        base = NamedBase.objects.get(id=id)
 
-    if utils.is_container(base):
-        return render_container(request,id)
+        if utils.is_container(base):
+            return render_container(request,id)
 
-    if utils.is_service(base):
-        return render_service(request,id)
+        if utils.is_service(base):
+            return render_service(request,id)
 
-    if utils.is_mfile(base):
-        return render_mfile(request,id,show=True)
+        if utils.is_mfile(base):
+            return render_mfile(request,id,show=True)
+    except NamedBase.DoesNotExist:
+        logging.info("Request to browse %s , ID does not relate to a service/container/mfile object." % (id) )
+
+    try:
+        auth = Auth.objects.get(id=id)
+
+        logging.debug("Displaying auth %s" % (auth))
+
+        parent = auth
+
+        while parent.base == None:
+            parent = parent.parent
+            logging.debug("Recurse auth %s" % (parent.id))
+
+        logging.debug("final auth %s" % (auth.id))
+        base = parent.base
+        if utils.is_container(base):
+            return render_container_auth(request,id)
+
+        if utils.is_service(base):
+            return render_service_auth(request,auth)
+
+        if utils.is_mfile(base):
+            return render_mfile_auth(request,auth)
+
+
+
+        dict = {}
+        dict["error"] = "Error displaying the auth with id='%s' " % id
+        return render_to_response('error.html', dict, context_instance=RequestContext(request))
+
+    except Auth.DoesNotExist:
+        logging.info("Request to browse '%s' , ID does not relate to a auth object." % (id))
+
 
     return
 
@@ -51,21 +83,9 @@ def profile(request):
     dict ={}
     return render_to_response('user.html', dict, context_instance=RequestContext(request))
 
-@staff_member_required
-def create_container(request):
-    form = HostingContainerForm(request.POST)
-    if form.is_valid():
-
-        name = form.cleaned_data['name']
-        hostingcontainer = api.create_container(request,name)
-
-        return redirect('/browse/'+str(hostingcontainer.id))
-    else:
-        return home(request,form=form)
-
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
-    auths = HostingContainerAuth.objects.filter(hostingcontainer=container.id)
+    auths = Auth.objects.filter(base=container.id)
     roles = Role.objects.filter(auth=auths)
     methods = []
     for auth in auths:
@@ -93,9 +113,10 @@ def render_container(request,id,form=DataServiceForm()):
 
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
 
+'''
 def render_containerauth(request,authid,form=DataServiceForm()):
     #container = HostingContainer.objects.get(pk=id)
-    hca = HostingContainerAuth.objects.get(pk=authid)
+    hca = Auth.objects.get(pk=authid)
     container=hca.hostingcontainer
     sub_auths = JoinAuth.objects.filter(parent=authid)
     auths = []
@@ -128,19 +149,7 @@ def render_containerauth(request,authid,form=DataServiceForm()):
     dict["methods"] = set(methods)
     
     return render_to_response('container.html', dict, context_instance=RequestContext(request))
-
-def create_service(request):
-    form = DataServiceForm(request.POST)
-    if form.is_valid():
-
-        containerid = form.cleaned_data['cid']
-        name = form.cleaned_data['name']
-        dataservice = api.create_data_service(request,containerid,name)
-
-        return redirect('/browse/'+str(dataservice.id))
-    else:
-        containerid = form.data['cid']
-        return render_container(request,containerid,form=form)
+'''
 
 #@staff_member_required
 def render_service(request,id,form=MFileForm()):
@@ -148,7 +157,7 @@ def render_service(request,id,form=MFileForm()):
     mfiles = MFile.objects.filter(service=service).order_by('created').reverse()
     properties = ManagementProperty.objects.filter(base=service)
     methods = []
-    auths = DataServiceAuth.objects.filter(dataservice=id)
+    auths = Auth.objects.filter(base=id)
     for auth in auths:
         roles = Role.objects.filter(auth=auth)
         for role in roles:
@@ -168,36 +177,21 @@ def render_service(request,id,form=MFileForm()):
     dict["methods"] = set(methods)
     return render_to_response('service.html', dict, context_instance=RequestContext(request))
 
-def render_serviceauth(request,authid,form=MFileForm()):
-    dsa = DataServiceAuth.objects.get(pk=authid)
-    service = dsa.dataservice
-    mfiles = MFile.objects.filter(service=service)
-    properties = ManagementProperty.objects.filter(base=service)
-    #auths = DataServiceAuth.objects.filter(dataservice=id)
-    sub_auths = JoinAuth.objects.filter(parent=authid)
-    auths = []
-    for sub in sub_auths:
-        subauth = SubAuth.objects.get(id=sub.child)
-        auths.append(subauth)
-    methods = []
-    #for role in  dsa.roles.all():
-    #    methods  = methods + role.methods()
-    roles = Role.objects.filter(auth=auths)
-    managementpropertyform = ManagementPropertyForm()
-    form.fields['sid'].initial = service.id
+def render_service_auth(request,auth):
+
+    roles = auth.roles
+
+    methodslist = [ pickle.loads(base64.b64decode(method_enc)) for method_enc in roles.all().values_list('methods_encoded',flat=True) ]
+    methods = [item for sublist in methodslist for item in sublist]
+
+    methods = utils.get_methods_for_auth(auth)
+    logging.info("methods %s" % methods )
+
     dict = {}
-    dict["properties"] = properties
-    dict["managementpropertyform"] = managementpropertyform
-    dict["service"] = service
-    dict["mfiles"] = mfiles
-    dict["auths"] = auths
-    dict["roles"] = roles
-    dict["jobs"] = service.job_set
-    dict["form"] = form
-    dict["usage"] = Usage.objects.filter(base=service)
-    dict["usagesummary"] = usage_store.get_usage_summary(id)
-    dict["methods"] = set(methods)
-    return render_to_response('service.html', dict, context_instance=RequestContext(request))
+    dict["methods"] = methods
+    dict["auth"] = auth
+
+    return render_to_response('auths/service_auth.html', dict, context_instance=RequestContext(request))
 
 def create_auth(request):
     form = SubAuthForm(request.POST)
@@ -240,7 +234,7 @@ def create_auth(request):
 
     else:
         return render_error(request,form)
-
+'''
 def create_mfileauth(request):
     form = MFileAuthForm(request.POST)
     if form.is_valid():
@@ -274,7 +268,7 @@ def create_mfileauth(request):
 
     else:
         return render_error(request,form)
-
+'''
 def create_mfile(request):
     form = MFileForm(request.POST,request.FILES)
     if form.is_valid():
@@ -292,11 +286,12 @@ def create_mfile(request):
         serviceid = form.data['sid']
         return render_service(request,serviceid,form=form)
 
-def render_mfile(request,id, form=MFileAuthForm(), show=False):
+def render_mfile(request, id, form=AuthForm(), show=False):
     mfile = MFile.objects.get(pk=id)
 
     methods = []
-    auths = MFileAuth.objects.filter(mfile=id)
+    auths = Auth.objects.filter(base=id)
+    roles = []
     for auth in auths:
         roles = Role.objects.filter(auth=auth)
         for role in roles:
@@ -325,7 +320,6 @@ def render_mfile(request,id, form=MFileAuthForm(), show=False):
 
     dict["mfile"] = mfile
     dict["fullaccess"] = True
-    dict["form"] = form
     dict["auths"] = auths
     dict["formtarget"] = "/mfileauth/"
     dict["usage"] = usage_store.get_usage(id)
@@ -415,8 +409,22 @@ def find_mfile_auth(parent):
             done = True
     return dsAuth, methods_intersection
 
-def render_mfileauth(request, mfile, auth, show=False, dict={}):
-    sub_auths = JoinAuth.objects.filter(parent=auth.id)
+def render_mfile_auth(request, auth):
+
+    roles = auth.roles
+
+    methodslist = [ pickle.loads(base64.b64decode(method_enc)) for method_enc in roles.all().values_list('methods_encoded',flat=True) ]
+    methods = [item for sublist in methodslist for item in sublist]
+
+    methods = utils.get_methods_for_auth(auth)
+    logging.info("methods %s" % methods )
+
+    dict = {}
+    dict["methods"] = methods
+    dict["auth"] = auth
+
+    return render_to_response('auths/mfile_auth.html', dict, context_instance=RequestContext(request))
+
     subauths = []
     for sub in sub_auths:
         subauth = SubAuth.objects.get(id=sub.child)
@@ -449,7 +457,65 @@ def render_mfileauth(request, mfile, auth, show=False, dict={}):
     dict["fullaccess"] = False
     dict["methods"] = methods
     dict["formtarget"] = "/form/auth/"
-    return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
+    return render_to_response('auths/mfile_auth.html', dict, context_instance=RequestContext(request))
+
+
+def auth(request,id):
+
+    sub_auths = JoinAuth.objects.filter(parent=id)
+    subauths = []
+    for sub in sub_auths:
+        subauth = SubAuth.objects.get(id=sub.child)
+        subauths.append(subauth)
+
+    try:
+        MFile_auth = MFileAuth.objects.get(id=id)
+
+        form = SubAuthForm()
+        dict = {}
+        dict["auth"] = MFile_auth
+        dict["form"] = form
+        dict["subauths"] = subauths
+
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
+    except ObjectDoesNotExist:
+        print "MFileAuth  doesn't exist."
+
+    try:
+        container_auth = HostingContainerAuth.objects.get(id=id)
+        dict = {}
+        dict["auth"] = container_auth
+        dict["subauths"] = subauths
+
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
+    except ObjectDoesNotExist:
+        print "HostingContainer Auth doesn't exist."
+
+    try:
+        dataservice_auths = DataServiceAuth.objects.get(id=id)
+        dict = {}
+        dict["auth"] = dataservice_auths
+
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
+    except ObjectDoesNotExist:
+        print "HostingContainer Auth doesn't exist."
+
+    try:
+        sub_auth = SubAuth.objects.get(id=id)
+        form = SubAuthForm()
+        dict = {}
+        dict["auth"] = sub_auth
+        dict["form"] = form
+        dict["subauths"] = subauths
+
+        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
+    except ObjectDoesNotExist:
+        print "Sub Auth doesn't exist."
+
+    dict = {}
+    dict["error"] = "That Authority does not exist"
+    return render_to_response('error.html', dict, context_instance=RequestContext(request))
+
 
 @staff_member_required
 def usage(request):
@@ -592,62 +658,6 @@ def map(request):
 def render_error(request,error):
     dict = {}
     dict["error"] = error
-    return render_to_response('error.html', dict, context_instance=RequestContext(request))
-
-def auth(request,id):
-
-    sub_auths = JoinAuth.objects.filter(parent=id)
-    subauths = []
-    for sub in sub_auths:
-        subauth = SubAuth.objects.get(id=sub.child)
-        subauths.append(subauth)
-        
-    try:
-        MFile_auth = MFileAuth.objects.get(id=id)
-
-        form = SubAuthForm()
-        dict = {}
-        dict["auth"] = MFile_auth
-        dict["form"] = form
-        dict["subauths"] = subauths
-
-        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
-    except ObjectDoesNotExist:
-        print "MFileAuth  doesn't exist."
-
-    try:
-        container_auth = HostingContainerAuth.objects.get(id=id)
-        dict = {}
-        dict["auth"] = container_auth
-        dict["subauths"] = subauths
-
-        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
-    except ObjectDoesNotExist:
-        print "HostingContainer Auth doesn't exist."
-
-    try:
-        dataservice_auths = DataServiceAuth.objects.get(id=id)
-        dict = {}
-        dict["auth"] = dataservice_auths
-
-        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
-    except ObjectDoesNotExist:
-        print "HostingContainer Auth doesn't exist."
-
-    try:
-        sub_auth = SubAuth.objects.get(id=id)
-        form = SubAuthForm()
-        dict = {}
-        dict["auth"] = sub_auth
-        dict["form"] = form
-        dict["subauths"] = subauths
-
-        return render_to_response('auth.html', dict, context_instance=RequestContext(request))
-    except ObjectDoesNotExist:
-        print "Sub Auth doesn't exist."
-        
-    dict = {}
-    dict["error"] = "That Authority does not exist"
     return render_to_response('error.html', dict, context_instance=RequestContext(request))
 
 

@@ -7,14 +7,10 @@ from dataservice.tasks import thumbvideo
 from dataservice.tasks import thumbimage
 from dataservice.tasks import mimefile
 from dataservice.tasks import md5file
-import utils as utils
 import api as api
-import usage_store as usage_store
 import logging
-import magic
 import os
 import os.path
-import usage_store as usage_store
 
 generic_get_methods = ["getauths","getroles"]
 
@@ -24,18 +20,18 @@ generic_put_methods = ["setroles"]
 
 generic_delete_methods = ["revokeauth"]
 
-generic_methods = ["getusagesummary","getroleinfo","getmanagedresources"] + generic_get_methods + generic_post_methods + generic_put_methods + generic_delete_methods
+generic_methods = ["usage","getusagesummary","getroleinfo","getmanagedresources"] + generic_get_methods + generic_post_methods + generic_put_methods + generic_delete_methods
 
 all_container_methods = ["makeserviceinstance","getservicemetadata","getdependencies",
-    "getprovides","setresourcelookup", "getstatus","setmanagementproperty"] + generic_methods
+    "getprovides","setresourcelookup", "getstatus","setmanagementproperty","getmanagementproperties"] + generic_methods
 
 service_customer_methods =  ["createmfile"] + generic_methods
-service_admin_methods =  service_customer_methods + ["setmanagementproperty"]
+service_admin_methods =  service_customer_methods + ["setmanagementproperty","getmanagementproperties"]
 
 all_service_methods = [] + service_admin_methods
 
 mfile_monitor_methods = ["getusagesummary"]
-mfile_owner_methods = ["get", "put", "post", "delete", "verify"] + generic_methods
+mfile_owner_methods = ["head", "get", "put", "post", "delete", "verify"] + generic_methods
 
 all_mfile_methods = mfile_owner_methods + mfile_monitor_methods
 
@@ -50,7 +46,7 @@ def create_data_service(request,containerid,name):
     dataservice = DataService(name=name,container=container)
     dataservice.save()
 
-    serviceauth = DataServiceAuth(dataservice=dataservice,authname="full")
+    serviceauth = Auth(base=dataservice,authname="full")
 
     serviceauth.save()
 
@@ -67,7 +63,7 @@ def create_data_service(request,containerid,name):
     serviceauth.roles.add(owner_role)
     serviceauth.roles.add(customer_role)
 
-    customerauth = DataServiceAuth(dataservice=dataservice,authname="customer")
+    customerauth = Auth(base=dataservice,authname="customer")
     customerauth.save()
 
     customerauth.roles.add(customer_role)
@@ -88,7 +84,7 @@ def create_mfile(request,serviceid,file):
     logging.debug("MFile creation started '%s' "%mfile)
     logging.debug("Creating roles for '%s' "%mfile)
 
-    mfileauth_owner = MFileAuth(mfile=mfile,authname="owner")
+    mfileauth_owner = Auth(base=mfile,authname="owner")
     mfileauth_owner.save()
 
     owner_role = Role(rolename="owner")
@@ -107,7 +103,7 @@ def create_mfile(request,serviceid,file):
 
     mfileauth_owner.roles.add(monitor_role)
 
-    mfileauth_monitor = MFileAuth(mfile=mfile,authname="monitor")
+    mfileauth_monitor = Auth(base=mfile,authname="monitor")
     mfileauth_monitor.save()
 
     mfileauth_monitor.roles.add(monitor_role)
@@ -174,7 +170,7 @@ def create_container(request,name):
     hostingcontainer = HostingContainer(name=name)
     hostingcontainer.save()
 
-    hostingcontainerauth = HostingContainerAuth(hostingcontainer=hostingcontainer,authname="full")
+    hostingcontainerauth = Auth(base=hostingcontainer,authname="full")
 
     hostingcontainerauth.save()
 

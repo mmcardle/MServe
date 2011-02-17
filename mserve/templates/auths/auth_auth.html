@@ -1,0 +1,12 @@
+{% load mservetags %}
+
+<button id="createauthbutton" >Share</button>
+
+<div id="authcontent"></div>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        load_auths('{{ auth.id }}');
+        create_new_add_auth_ui_dialog('{{ auth.id }}')
+    });
+</script>

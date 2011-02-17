@@ -9,6 +9,7 @@ from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.conf import settings
 from django.http import HttpResponse
+from django.http import HttpResponseNotFound
 import settings as settings
 
 import utils as utils
@@ -160,6 +161,27 @@ class CorruptionHandler(BaseHandler):
         
         return mfile
 
+class HeadHandler(BaseHandler):
+    allowed_methods = ('GET','POST','PUT','DELETE')
+
+    def read(self, request, id):
+        try:
+            auth = Auth.objects.get(id=id)
+            parent = auth
+
+            while parent.base == None:
+                parent = parent.parent
+
+            base = parent.base
+            if utils.is_mfile(base):
+                mfile = MFile.objects.get(id=base.id)
+                return utils.clean_mfile(mfile)
+        except Auth.DoesNotExist:
+            # TODO - fix
+            logger.error("Auth does not exist")
+            return []
+
+
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
@@ -198,60 +220,6 @@ class MFileHandler(BaseHandler):
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
             return r
-        
-    def render_subauth(self, mfile, auth, show=False):
-        sub_auths = JoinAuth.objects.filter(parent=auth.id)
-        subauths = []
-        for sub in sub_auths:
-            subauth = SubAuth.objects.get(id=sub.child)
-            subauths.append(subauth)
-
-        form = SubAuthForm()
-        form.fields['id_parent'].initial = auth.id
-        dict = {}
-        dict["mfile"] = mfile
-        if mfile.file == '' or mfile.file == None:
-            dict["altfile"] = "/mservemedia/images/empty.png"
-        if not show:
-            mfile.file = None
-            dict["altfile"] = "/mservemedia/images/forbidden.png"
-    
-        dict["form"] = form
-        dict["auths"] = subauths
-        dict["formtarget"] = "/auth/"
-        return render_to_response('mfile.html', dict)
-
-    '''def create2(self, request, serviceid):
-        logging.info("Loading content of size %s"%len(request.raw_post_data))
-
-        if len(request.raw_post_data)!=0 :
-            filename = request.META['HTTP_X_FILE_NAME']
-            logging.info(filename)
-
-            upload = SimpleUploadedFile( filename, request.raw_post_data )
-
-            mfile = api.create_mfile(request, serviceid, upload)
-
-            logging.info(mfile)
-
-            return mfile
-
-        #logging.info(dir(request))
-        form = MFileURLForm(request.POST,request.FILES)
-        if form.is_valid():
-
-            logging.debug("Handler Files %s" %request.FILES)
-
-            file = request.FILES['file']
-            mfile = api.create_mfile(request, serviceid, file)
-
-            logging.info(request.FILES)
-
-            return mfile
-
-        else:
-            logging.info(form)
-            return HttpResponseRedirect(request.META["HTTP_REFERER"])'''
 
     def create(self, request, serviceid=None):
         logging.debug("Create MFile")
@@ -364,7 +332,7 @@ class MFileContentsHandler(BaseHandler):
 class RoleHandler(BaseHandler):
     allowed_methods = ('GET','PUT')
     model = Role
-    fields = ('id','rolename','description','methods',('auth'))
+    fields = ('id','rolename','description','methods')
 
     def update(self,request,roleid):
         import logging
@@ -412,6 +380,7 @@ class AccessControlHandler(BaseHandler):
     #model = Auth
 
     def create(self, request, method, pk):
+        
 
         if not method in generic_post_methods:
             return HttpResponseBadRequest("Cannot do 'PUT' %s on %s" % (method,pk))
@@ -424,7 +393,7 @@ class AccessControlHandler(BaseHandler):
 
             if utils.is_container(base):
                 hc = HostingContainer.objects.get(pk=pk)
-                hca,created = HostingContainerAuth.objects.get_or_create(hostingcontainer=hc,authname=name)
+                hca,created = Auth.objects.get_or_create(hostingcontainer=hc,authname=name)
                 if not created and method == "addauth":
                     return rc.DUPLICATE_ENTRY
                 if not created:
@@ -440,7 +409,7 @@ class AccessControlHandler(BaseHandler):
 
             if utils.is_service(base):
                 ser = DataService.objects.get(pk=pk)
-                dsa,created  = DataServiceAuth.objects.get_or_create(dataservice=ser,authname=name)
+                dsa,created  = Auth.objects.get_or_create(dataservice=ser,authname=name)
                 if not created and method == "addauth":
                     return rc.DUPLICATE_ENTRY
                 if not created:
@@ -457,7 +426,7 @@ class AccessControlHandler(BaseHandler):
 
             if utils.is_mfile(base):
                 mfile = MFile.objects.get(pk=pk)
-                dsa,created  = MFileAuth.objects.get_or_create(mfile=mfile,authname=name)
+                dsa,created  = Auth.objects.get_or_create(base=mfile.id,authname=name)
                 logging.info("%s %s " % (created,method))
                 if not created and method == "addauth":
                     return rc.DUPLICATE_ENTRY
@@ -524,13 +493,13 @@ class AccessControlHandler(BaseHandler):
                 base = NamedBase.objects.get(pk=pk)
 
                 if utils.is_container(base):
-                    return HostingContainerAuth.objects.filter(hostingcontainer=base)
+                    return Auth.objects.filter(hostingcontainer=base)
 
                 if utils.is_service(base):
-                    return DataServiceAuth.objects.filter(dataservice=base)
+                    return Auth.objects.filter(dataservice=base)
 
                 if utils.is_mfile(base):
-                    return MFileAuth.objects.filter(mfile=base)
+                    return Auth.objects.filter(base=base)
             except ObjectDoesNotExist:
                 pass
 
@@ -561,7 +530,7 @@ class RoleInfoHandler(BaseHandler):
     def read(self,request, id):
         base = NamedBase.objects.get(pk=id)
         if utils.is_container(base):
-            containerauths = HostingContainerAuth.objects.filter(hostingcontainer=base)
+            containerauths = Auth.objects.filter(base=base.id)
             roles = []
             for containerauth in containerauths:
                 roledict = []
@@ -574,7 +543,7 @@ class RoleInfoHandler(BaseHandler):
             return dict
 
         if utils.is_service(base):
-            serviceauths = DataServiceAuth.objects.filter(dataservice=base)
+            serviceauths = Auth.objects.filter(base=base.id)
             roles = []
             for serviceauth in serviceauths:
                 for role in serviceauth.roles.all():
@@ -585,7 +554,7 @@ class RoleInfoHandler(BaseHandler):
             return dict
 
         if utils.is_mfile(base):
-            mfileauths = MFileAuth.objects.filter(mfile=base)
+            mfileauths = Auth.objects.filter(base=base.id)
             roles = []
             for mfileauth in mfileauths:
                 for a in mfileauth.roles.all():
@@ -611,9 +580,12 @@ class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
 
     def read(self,request, id, last_report=-1):
-
         last = int(last_report)
-        base = NamedBase.objects.get(pk=id)
+        try:
+            base = NamedBase.objects.get(pk=id)
+        except NamedBase.DoesNotExist:
+            auth = Auth.objects.get(pk=id)
+            base = auth.base
 
         if last is not -1:
             while last == base.reportnum:
@@ -669,129 +641,65 @@ class ManagementPropertyHandler(BaseHandler):
         else:
             logging.info("Bad Form %s " % form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
-
-class MFileAuthHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
-    model = MFileAuth
-
-    def read(self, request, mfileauthid):
-
-        sub_auths = JoinAuth.objects.filter(parent=mfileauthid)
-        subauths = []
-        for sub in sub_auths:
-            subauth = SubAuth.objects.get(id=sub.child)
-            subauths.append(subauth)
-
-        try:
-            MFile_auth = MFileAuth.objects.get(id=mfileauthid)
-
-            form = SubAuthForm()
-            form.fields['parent'].initial = mfileauthid
-            dict = {}
-            dict["auth"] = MFile_auth
-            dict["form"] = form
-            dict["subauths"] = subauths
-
-            return render_to_response('auth.html', dict)
-        except ObjectDoesNotExist:
-            logging.info("MFileAuth  doesn't exist.")
-
-        try:
-            container_auth = HostingContainerAuth.objects.get(id=id)
-            dict = {}
-            dict["auth"] = container_auth
-
-            return render_to_response('auth.html', dict)
-        except ObjectDoesNotExist:
-            logging.info("HostingContainer Auth doesn't exist.")
-
-        try:
-            dataservice_auths = DataServiceAuth.objects.get(id=id)
-            dict = {}
-            dict["auth"] = dataservice_auths
-
-            return render_to_response('auth.html', dict)
-        except ObjectDoesNotExist:
-            logging.info("HostingContainer Auth doesn't exist.")
-
-        try:
-            sub_auth = SubAuth.objects.get(id=id)
-            form = SubAuthForm()
-            dict = {}
-            dict["auth"] = sub_auth
-            dict["form"] = form
-            dict["subauths"] = subauths
-
-            return render_to_response('auth.html', dict)
-        except ObjectDoesNotExist:
-            logging.info("Sub Auth doesn't exist.")
-
-        dict = {}
-        dict["error"] = "That Authority does not exist"
-        return render_to_response('error.html', dict)
-    
-    def create(self, request):
-        form = MFileAuthForm(request.POST)
-        if form.is_valid(): 
-            authname = form.cleaned_data['authname']
-            roles_csv = form.cleaned_data['roles']
-            mfileid = form.cleaned_data['dsid']
-            mfile = MFile.objects.get(pk=mfileid)
-
-            MFileauth = MFileAuth(mfile=mfile,authname=authname)
-            MFileauth.save()
-
-            auths = MFileAuth.objects.filter(mfile=mfile)
-
-            rolenames = roles_csv.split(',')
-            existingroles = rolenames
-
-            for auth in auths:
-                roles  = Role.objects.filter(auth=auth)
-                for role in roles:
-                    if role.rolename in rolenames:
-                        existingroles.remove(role.rolename)
-                        MFileauth.roles.add(role)
-
-            if len(existingroles) != 0:
-                MFileauth.delete()
-                return HttpResponseBadRequest("Could not add %s " % ','.join(existingroles))
-
-            return MFileauth
-
-        else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
-
+        
 class AuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
-    model = SubAuth
+    model = Auth
+    fields = ('authname','id','auth_set',('roles' ,('id','rolename','description','methods') ) )
 
-    def create(self, request):
-        form = SubAuthForm(request.POST)
-        if form.is_valid(): 
+
+    def read(self, request, id):
+        try:
+            auth = Auth.objects.get(id=id)
+            return auth
+        except Auth.DoesNotExist:
+            pass
+
+        try:
+            base = NamedBase.objects.get(id=id)
+            return base.auth_set.all()
+        except NamedBase.DoesNotExist:
+            logging.debug("NamedBase does not exist")
+
+
+
+        return HttpResponseNotFound("Auth not found")
+
+
+    def create(self, request, id):
+
+        methods_string = request.POST['methods']
+        methods = methods_string.split(",")
+
+        try:
+            base = NamedBase.objects.get(id=id)
+
             
-            authname = form.cleaned_data['authname']
-            roles_csv = form.cleaned_data['roles_csv']
-            parent = form.cleaned_data['id_parent']
 
-            subauth = SubAuth(authname=authname)
+        except NamedBase.DoesNotExist:
+            logging.debug("NamedBase does not exist")
+
+        try:
+            auth = Auth.objects.get(id=id)
+
+            subauth = Auth(parent=auth,authname="New Auth")
             subauth.save()
 
-            for role in roles_csv.split(','):
-                role = Role.objects.get(rolename=role)
+            role = Role(rolename="newrole")
+            role.setmethods(methods)
+            role.description = "New Role"
+            role.save()
 
-            child = str(subauth.id)
-            join = JoinAuth(parent=parent,child=child)
-            join.save()
-            
+            subauth.roles.add(role)
+
+            logging.debug("create subauth %s for %s with methods %s " % (subauth,auth,methods) )
+
             return subauth
-            
-        else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
+        except Auth.DoesNotExist:
+            logging.debug("Auth does not exist")
+
+        return []
+        
 
 class ResourcesHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -799,25 +707,55 @@ class ResourcesHandler(BaseHandler):
     def read(self, request, id, last_known=-1):
 
         last = int(last_known)
-        base = NamedBase.objects.get(pk=id)
+        try:
+            base = NamedBase.objects.get(pk=id)
 
-        if last is not -1:
-            while last == base.reportnum:
-                logging.debug("Waiting for new services lastreport=%s" % (last))
-                time.sleep(sleeptime)
-                base = NamedBase.objects.get(id=id)
+            if last is not -1:
+                while last == base.reportnum:
+                    logging.debug("Waiting for new services lastreport=%s" % (last))
+                    time.sleep(sleeptime)
+                    base = NamedBase.objects.get(id=id)
 
-        if utils.is_container(base):
-            container = HostingContainer.objects.get(id=id)
-            return container
+            if utils.is_container(base):
+                container = HostingContainer.objects.get(id=id)
+                return container
 
-        if utils.is_service(base):
-            service = DataService.objects.get(id=id)
-            return service
+            if utils.is_service(base):
+                service = DataService.objects.get(id=id)
+                return service
 
-        if utils.is_mfile(base):
-            mfile = MFile.objects.get(id=id)
-            return mfile
+            if utils.is_mfile(base):
+                mfile = MFile.objects.get(id=id)
+                return mfile
+        except NamedBase.DoesNotExist:
+            pass
+
+        try:
+            auth = Auth.objects.get(pk=id)
+            base = auth.base
+
+            if last is not -1:
+                while last == base.reportnum:
+                    logging.debug("Waiting for new services lastreport=%s" % (last))
+                    time.sleep(sleeptime)
+                    base = NamedBase.objects.get(id=base.id)
+
+            if utils.is_container(base):
+                container = HostingContainer.objects.get(id=base.id)
+                return container
+
+            if utils.is_service(base):
+                service = DataService.objects.get(id=base.id)
+                logging.info("Returning Mfile %s " % service)
+                return service
+
+            if utils.is_mfile(base):
+                mfile = MFile.objects.get(id=base.id)
+
+                return mfile
+
+        except Auth.DoesNotExist:
+            pass
 
         r = rc.BAD_REQUEST
         r.write("Unknown Resource")
