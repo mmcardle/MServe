@@ -115,7 +115,7 @@ function load_joboutput_text(id){
                 $("#text-"+id).append("<pre>"+msg+"</pre>");
    },
    error: function(msg){
-     showError("Error", ""+msg.responseText );
+                $("#text-"+id).append("<h3 class='error'>Error</h3><pre>"+msg+"</pre>");
    }
  });
 }

@@ -84,6 +84,9 @@
 
         </div>
 
+        <h3>Actions</h3>
+        <button id="newtaskbutton" >New Task</button>
+
         <div id="jobcontent">
 
             <h4>Jobs</h4>
@@ -95,6 +98,7 @@
             <script type="text/javascript">
                 $(document).ready(function() {
                     load_jobs_mfile('{{mfile.id}}')
+                    create_new_task_ui_dialog('{{mfile.id}}')
                 });
             </script>
 

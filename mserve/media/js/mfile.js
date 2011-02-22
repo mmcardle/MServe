@@ -6,7 +6,11 @@ function mfile_task_ajax(mfileid, jobtype){
        data: "jobtype="+jobtype+"&mfileid="+mfileid,
        url: "/jobapi/",
        success: function(msg){
-                   showMessage("debug",msg)
+                create_job_holder(msg)
+                create_job_paginator(msg.job)
+                if(!msg.ready){
+                    check_job(msg.job,serviceid)
+                }
        },
        error: function(msg){
          showError("Error", ""+msg.responseText );
@@ -24,13 +28,9 @@ function mfile_task(mfileid){
                     tasks += "<option>"+msg['regular'][i]+"</option>"
                 }
                    tasks += "</select>"
-                $("<div style='width:600px'>"+tasks+"</div>").dialog({ 
+                $("<div style='width:600px' title='Choose Task' >"+tasks+"</div>").dialog({
                     width: 500,
                     buttons: [
-                    {
-                        text: "Cancel",
-                        click: function() { $(this).dialog("close"); }
-                    },
                     {
                         text: "Create",
                         click: function() {

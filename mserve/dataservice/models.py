@@ -155,6 +155,11 @@ class DataService(NamedBase):
             self.id = utils.random_id()
         super(DataService, self).save()
 
+    def _delete_usage_(self):
+        import usage_store as usage_store
+        for usage in self.usages.all():
+            usage_store._stoprecording_(usage,obj=self.container)
+
 class MFile(NamedBase):
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     empty    = models.BooleanField(default=False)
@@ -205,26 +210,23 @@ class MFile(NamedBase):
         self.updated = datetime.datetime.now()
         super(MFile, self).save()
 
+    def _delete_usage_(self):
+        import usage_store as usage_store
+        for usage in self.usages.all():
+            usage_store._stoprecording_(usage,obj=self.service)
+
 def pre_delete_handler( sender, instance=False, **kwargs):
-    #logging.info("Pre delete sender=%s instance=%s" % (sender,instance))
-    #logging.info("Deleting %s" % (instance.metrics))
     instance._delete_usage_()
 
 pre_delete.connect(pre_delete_handler, sender=MFile, dispatch_uid="dataservice.models")
 
 def post_init_handler( sender, instance=False, **kwargs):
     pass
-    #logging.info("Post init sender=%s instance=%s" % (sender,instance))
-    #logging.info(" %s" % (instance.metrics))
-    #instance._delete_usage_()
 
 post_init.connect(post_init_handler, sender=MFile, dispatch_uid="dataservice.models")
 
 def post_save_handler( sender, instance=False, **kwargs):
     pass
-    #logging.info("post_save sender=%s instance=%s" % (sender,instance))
-    #logging.info(" %s" % (instance.metrics))
-    #instance._delete_usage_()
 
 post_save.connect(post_save_handler, sender=MFile, dispatch_uid="dataservice.models")
 

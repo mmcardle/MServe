@@ -26,6 +26,30 @@ from tasks import render_blender
 
 import dataservice.utils as utils
 
+
+def job_to_dict(job):
+    taskid = job.taskset_id
+    tsr = TaskSetResult.restore(taskid)
+    dict = {}
+    if tsr is not None:
+        dict["taskset_id"] = tsr.taskset_id
+        # Dont return results until job in complete
+        if tsr.successful():
+            dict["result"] = tsr.join()
+        else:
+            dict["result"] = []
+        dict["completed_count"] = tsr.completed_count()
+        dict["failed"] = tsr.failed()
+        dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
+        dict["ready"] = tsr.ready()
+        dict["successful"] = tsr.successful()
+        dict["total"] = tsr.total
+        dict["waiting"] = tsr.waiting()
+        dict["job"] = job
+
+    return dict
+
+
 class JobServiceHandler(BaseHandler):
     allowed_methods = ('GET',)
 
@@ -34,23 +58,7 @@ class JobServiceHandler(BaseHandler):
 
         arr = []
         for job in service.job_set.all():
-            tsr = TaskSetResult.restore(job.taskset_id)
-            dict = {}
-            dict["taskset_id"] = tsr.taskset_id
-            # Dont return results until job in complete
-            if tsr.successful():
-                dict["result"] = tsr.join()
-            else:
-                dict["result"] = []
-            dict["completed_count"] = tsr.completed_count()
-            dict["failed"] = tsr.failed()
-            dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
-            dict["ready"] = tsr.ready()
-            dict["successful"] = tsr.successful()
-            dict["total"] = tsr.total
-            dict["waiting"] = tsr.waiting()
-            dict["job"] = job
-
+            dict = job_to_dict(job)
             arr.append(dict)
 
         return HttpResponse(arr,mimetype="application/json")
@@ -67,23 +75,7 @@ class JobMFileHandler(BaseHandler):
 
         arr = []
         for jobmfile in jobmfiles:
-            tsr = TaskSetResult.restore(jobmfile.job.taskset_id)
-            dict = {}
-            dict["taskset_id"] = tsr.taskset_id
-            # Dont return results until job in complete
-            if tsr.successful():
-                dict["result"] = tsr.join()
-            else:
-                dict["result"] = []
-            dict["completed_count"] = tsr.completed_count()
-            dict["failed"] = tsr.failed()
-            dict["percent"] = (tsr.completed_count())/(tsr.total)*100.0
-            dict["ready"] = tsr.ready()
-            dict["successful"] = tsr.successful()
-            dict["total"] = tsr.total
-            dict["waiting"] = tsr.waiting()
-            dict["job"] = jobmfile.job
-
+            dict = job_to_dict(jobmfile.job)
             arr.append(dict)
 
         return HttpResponse(arr,mimetype="application/json")
@@ -109,6 +101,8 @@ class JobHandler(BaseHandler):
         jobtype = request.POST['jobtype']
         mfileid = request.POST['mfileid']
 
+        logging.info("Request for job type '%s'" % (jobtype) )
+
         mfile = MFile.objects.get(pk=mfileid)
 
         job = Job(name="Job",service=mfile.service)
@@ -121,7 +115,6 @@ class JobHandler(BaseHandler):
         except Exception as e:
             logging.info("No job description for job type '%s' %s" % (jobtype,e) )
 
-        # TODO How to work out mimetype for job outputs
         output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=mimetype)
 
         fname = "%s.%s" % (mfile.name,"output")
@@ -153,7 +146,7 @@ class JobHandler(BaseHandler):
 
         logging.info("Created Job  %s" % (m))
 
-        return job
+        return job_to_dict(job)
 
     def delete(self, request, id):
         job = Job.objects.get(id=id)
@@ -163,21 +156,7 @@ class JobHandler(BaseHandler):
     
     def read(self, request, id):
         job = Job.objects.get(id=id)
-        tsr = TaskSetResult.restore(job.taskset_id)
-        dict = {}
-        dict["taskset_id"] = tsr.taskset_id
-        # Dont return results until job in complete
-        if tsr.successful():
-            dict["result"] = tsr.join()
-        else:
-            dict["result"] = []
-        dict["completed_count"] = tsr.completed_count()
-        dict["failed"] = tsr.failed()
-        dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
-        dict["ready"] = tsr.ready()
-        dict["successful"] = tsr.successful()
-        dict["total"] = tsr.total
-        dict["waiting"] = tsr.waiting()
+        dict = job_to_dict(job)
         return HttpResponse(dict,mimetype="application/json")
 
 class JobOutputHandler(BaseHandler):
@@ -196,24 +175,9 @@ class RenderHandler(BaseHandler):
     allowed_methods = ('GET','POST')
 
     def read(self, request, jobid):
-
-        tsr = TaskSetResult.restore(taskset_id)
-        dict = {}
-        dict["taskset_id"] = tsr.taskset_id
-        # Dont return results until job in complete
-        if tsr.successful():
-            dict["result"] = tsr.join()
-        else:
-            dict["result"] = []
-        dict["completed_count"] = tsr.completed_count()
-        dict["failed"] = tsr.failed()
-        dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
-        dict["ready"] = tsr.ready()
-        dict["successful"] = tsr.successful()
-        dict["total"] = tsr.total
-        dict["waiting"] = tsr.waiting()
+        job = Job.objects.get(id=jobid)
+        dict = job_to_dict(job)
         return HttpResponse(JSON_dump(dict),mimetype="application/json")
-        #return djcelery.views.task_status(request, taskid)
 
     def create(self,request,mfileid,start=0, end=10):
         mfile = MFile.objects.get(pk=mfileid)
@@ -273,21 +237,8 @@ class RenderHandler(BaseHandler):
 
         jobmfile = JobMFile(mfile=mfile,job=job,index=0)
         jobmfile.save()
-        dict = {}
-        dict["taskset_id"] = tsr.taskset_id
-        dict["job"] = job
-        # Dont return results until job in complete
-        if tsr.successful():
-            dict["result"] = tsr.join()
-        else:
-            dict["result"] = []
-        dict["completed_count"] = tsr.completed_count()
-        dict["failed"] = tsr.failed()
-        dict["percent"] = tsr.completed_count()/tsr.total*100
-        dict["ready"] = tsr.ready()
-        dict["successful"] = tsr.successful()
-        dict["total"] = tsr.total
-        dict["waiting"] = tsr.waiting()
+
+        dict = job_to_dict(job)
         return HttpResponse(dict,mimetype="application/json")
 
 

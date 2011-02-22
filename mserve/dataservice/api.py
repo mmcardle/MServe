@@ -221,5 +221,10 @@ def delete_service(request,serviceid):
 def delete_mfile(request,mfileid):
     mfile = MFile.objects.get(id=mfileid)
 
+    usages = Usage.objects.filter(base=mfile)
+    for usage in usages:
+        usage.base = mfile.service
+        usage.save()
+
     mfile.delete()
     logging.info("MFile Deleted %s " % mfileid)

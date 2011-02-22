@@ -125,6 +125,13 @@ INSTALLED_APPS = (
     'djcelery'
 )
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake'
+    }
+}
+
 LOGIN_REDIRECT_URL='/'
 
 # JOB CONFIG

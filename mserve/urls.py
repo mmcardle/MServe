@@ -8,6 +8,7 @@ urlpatterns = patterns('',
     # Example:
     (r'^', include('mserve.dataservice.urls')),
     (r'^', include('mserve.jobservice.urls')),
+    (r'^', include('mserve.prestoprime.urls')),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:

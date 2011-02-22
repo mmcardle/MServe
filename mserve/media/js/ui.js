@@ -131,12 +131,82 @@ function create_new_add_auth_ui_dialog(authid) {
 		});
 
 		$( "#createauthbutton" )
-			.button()
-			.click(function() {
-				$( "#dialog-add-methods-dialog-form" ).dialog( "open" );
-			});
+                .button()
+                .click(function() {
+                        $( "#dialog-add-methods-dialog-form" ).dialog( "open" );
+                });
 	}
 
+function create_new_task_ui_dialog(mfileid, tasktypes) {
+  $.ajax({
+   type: "GET",
+   url: "/tasks/",
+   success: function(msg){
+       create_new_task_ui_dialog_internal(mfileid,msg['regular'])
+   },
+   error: function(msg){
+     showError("Error", ""+msg.responseText );
+   }
+ });
+}
+
+function create_new_task_ui_dialog_internal(mfileid, tasktypes) {
+    // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+    $( "#dialog:ui-dialog" ).dialog( "destroy" );
+
+    var task = $( "#tasktypes" )
+    var args = $( "#args" )
+    allFields = $( [] ).add( task ).add(args)
+    tips = $( ".validateTips" );
+    for( t in tasktypes){
+        $("#tasktypes").append("<option value='"+tasktypes[t]+"'>"+tasktypes[t]+"</option>")
+    }
+
+    $("#tasktypes").change(function() {
+        selected = task.val()
+        $("#args").empty()
+
+        targs = ["width","height"]
+        for(t in targs){
+            $("#args").append("<label for="+targs[t]+">"+targs[t]+"</label><input type='text' name="+targs[t]+" id="+targs[t]+"  value=''></input>")
+        }
+    });
+
+    function updateTips( t ) {
+        tips.text( t ).addClass( "ui-state-highlight" );
+        setTimeout(function() {
+                tips.removeClass( "ui-state-highlight", 1500 );
+        }, 500 );
+    }
+
+    $( "#dialog-new-task-dialog-form" ).dialog({
+            autoOpen: false,
+            height: 400,
+            width: 450,
+            modal: true,
+            buttons: {
+                    "Create Task": function() {
+                            var bValid = true;
+                            allFields.removeClass( "ui-state-error" );
+                            if ( bValid ) {
+                                    mfile_task_ajax(mfileid,task.val())
+                                    $( this ).dialog( "close" );
+                            }
+                    },
+                    Cancel: function() {
+                            $( this ).dialog( "close" );
+                    }
+            },
+            close: function() {
+                    allFields.val( "" ).removeClass( "ui-state-error" );
+            }
+    });
+
+    $( "#newtaskbutton" )
+        .button().click(function() {
+                $( "#dialog-new-task-dialog-form").dialog( "open" );
+    });
+}
 
 function create_new_add_method_ui_dialog(roleid) {
     // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
@@ -195,7 +265,6 @@ function create_new_add_method_ui_dialog(roleid) {
                 $( "#dialog-add-role-dialog-form").dialog( "open" );
     });
 }
-
 
 function poplulate_methods(roleid, methods){
    $('.methods'+roleid).empty()

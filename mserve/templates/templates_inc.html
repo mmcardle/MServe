@@ -251,6 +251,7 @@
 </script>
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
+    ${mimetype}
     {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
         <a target='_blank' href='/jobapi/contents/${id}/' ><img src='${thumburl}' /></a>
     {%templatetag openvariable%}else{%templatetag closevariable%}
@@ -292,6 +293,21 @@
 	<fieldset>
 		<label for="authmethods">Methods</label>
 		<input type="text" name="authmethods" id="authmethods" value="" class="text ui-widget-content ui-corner-all" />
+	</fieldset>
+	</form>
+    </div>
+
+    <div id="dialog-new-task-dialog-form" title="New Task">
+	<p class="validateTips">New Task methods.</p>
+
+        <form>
+	<fieldset>
+		<label for="task">Task</label>
+                <select name="tasktypes" id="tasktypes"></select>
+                <label for="args">Arguments</label>
+                <fieldset name="args" id="args">
+                    
+                </fieldset>
 	</fieldset>
 	</form>
     </div>

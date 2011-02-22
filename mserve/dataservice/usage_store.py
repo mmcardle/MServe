@@ -49,7 +49,7 @@ def startrecording(id,metric,rate,report=True):
             reportusage(base)
         return usage
 
-def _stoprecording_(usage):
+def _stoprecording_(usage, obj=None):
 
     logging.info("Stopping Recording %s" % usage)
 
@@ -61,11 +61,16 @@ def _stoprecording_(usage):
 
     usagedelta = float(lastUsage) + float(lastRate) * (t2 - t1)
 
+    if obj is not None:
+        obj.usages.add(usage)
+        obj.save()
+
     usage.rateTime = now
     usage.rateCumulative = usage.rateCumulative + usagedelta
     usage.rate = 0
     usage.nInProgress = 0
     usage.save()
+
 
 def stoprecording(id,metric,report=True):
     logging.debug("Stop Recording "+id)
@@ -167,21 +172,18 @@ def get_usage_summary(id=None):
     
     if settings.DATABASE_ENGINE != "sqlite3":
         summary += usages.values('metric') \
-        .annotate(n=Count('total')) \
-        .annotate(avg=Avg('total')) \
-        .annotate(max=Max('total')) \
-        .annotate(min=Min('total')) \
-        .annotate(sum=Sum('total')) \
-        .annotate(stddev=StdDev('total'))\
-        .annotate(variance=Variance('total'))
+            .annotate(n=Count('total')) \
+            .annotate(avg=Avg('total')) \
+            .annotate(max=Max('total')) \
+            .annotate(min=Min('total')) \
+            .annotate(sum=Sum('total')) \
+            .annotate(stddev=StdDev('total'))\
+            .annotate(variance=Variance('total'))
 
     else:
         # sqlite3 - No built-in variance and std deviation
         summary += usages.values('metric') \
-        .annotate(n=Count('total')) \
-        .annotate(avg=Avg('total')) \
-        .annotate(max=Max('total')) \
-        .annotate(min=Min('total')) \
-        .annotate(sum=Sum('total'))
+            .annotate(sum=Sum('rate'))\
+            .annotate(sum=Total('rateCumulative'))
 
     return summary
