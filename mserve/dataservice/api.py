@@ -4,6 +4,7 @@ from django.http import *
 from django.conf import settings
 import settings as settings
 from dataservice.tasks import thumbvideo
+from dataservice.tasks import proxyvideo
 from dataservice.tasks import thumbimage
 from dataservice.tasks import mimefile
 from dataservice.tasks import md5file
@@ -31,7 +32,7 @@ service_admin_methods =  service_customer_methods + ["setmanagementproperty","ge
 all_service_methods = [] + service_admin_methods
 
 mfile_monitor_methods = ["getusagesummary"]
-mfile_owner_methods = ["head", "get", "put", "post", "delete", "verify"] + generic_methods
+mfile_owner_methods = ["info", "get", "put", "post", "delete", "verify"] + generic_methods
 
 all_mfile_methods = mfile_owner_methods + mfile_monitor_methods
 
@@ -40,6 +41,7 @@ use_celery = settings.USE_CELERY
 if use_celery:
     thumbvideo = thumbvideo.delay
     thumbimage = thumbimage.delay
+    proxyvideo = proxyvideo.delay
 
 def create_data_service(request,containerid,name):
     container = HostingContainer.objects.get(id=containerid)
@@ -118,10 +120,13 @@ def create_mfile(request,serviceid,file):
 
         thumbpath = os.path.join( str(mfile.file) + ".thumb.jpg")
         posterpath = os.path.join( str(mfile.file) + ".poster.jpg")
+        proxypath = os.path.join( str(mfile.file) + ".proxy.ogg")
         fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
         fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
+        fullproxypath = os.path.join(settings.THUMB_ROOT , proxypath)
         (thumbhead,tail) = os.path.split(fullthumbpath)
         (posterhead,tail) = os.path.split(fullposterpath)
+        (proxyhead,tail) = os.path.split(fullproxypath)
 
         if not os.path.isdir(thumbhead):
             os.makedirs(thumbhead)
@@ -134,11 +139,13 @@ def create_mfile(request,serviceid,file):
         else:
             logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
 
-        if mimetype.startswith('video'):
+        if mimetype.startswith('video') or file.name.endswith('mxf'):
             thumbtask = thumbvideo(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
             mfile.thumb = thumbpath
             postertask = thumbvideo(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
             mfile.poster = posterpath
+            proxytask = proxyvideo(mfile.file.path,fullproxypath,width=settings.postersize[0],height=settings.postersize[1])
+            mfile.proxy = proxypath
 
         elif mimetype.startswith('image'):
             logging.info("Creating thumb inprocess for Image '%s' %s " % (mfile,mimetype))

@@ -58,23 +58,23 @@
 
         </table>
     
-        <div id="previewcontent">
+        <div id="previewcontent" >
 
         {% if mfile.mimetype %}
 
             {% if mfile.mimetype|startswith:"video"  %}
-                {% include "mediaplayer.html" %}
+                    {% include "mfile/mediaplayer.html" %}
+            {% else %}{% if mfile.mimetype|startswith:"image"  %}
+                    {% include "mfile/image.html" %}
+            {% else %}{% if mfile.mimetype|startswith:"text"  %}
+                    {% include "mfile/text.html" %}
+            {% else %}{% if mfile.name|endswith:".mxf"  %}
+                    {% include "mfile/mediaplayer.html" %}
+            {% else %}{% if mfile.name|endswith:".blend"  %}
+                    {% include "mfile/render.html" %}
             {% else %}
-                {% if mfile.mimetype|startswith:"image"  %}
-                    {% include "image.html" %}
-                {% else %}
-                    {% if mfile.name|endswith:".blend"  %}
-                        {% include "render.html" %}
-                    {% else %}
-                        <p>No Preview</p>
-                    {% endif %}
-                {% endif %}
-            {% endif %}
+                    <p>No Preview</p>
+            {% endif %}{% endif %}{% endif %}{% endif %}{% endif %}
 
         {% else%}
 
@@ -83,6 +83,23 @@
         {% endif %}
 
         </div>
+
+        <div id="jobcontent">
+
+            <h4>Jobs</h4>
+
+            <div id="jobs">
+                <p>No Jobs</p>
+            </div>
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    load_jobs_mfile('{{mfile.id}}')
+                });
+            </script>
+
+        </div>
+
 </div>
 
     </div>

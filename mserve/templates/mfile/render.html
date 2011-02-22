@@ -1,24 +1,9 @@
-<div id="renderpreview" ></div>
-
-<div id="jobcontent">
-
-
-<div id="jobs">
-
-</div>
-
 <button id="create-render">New Render</button>
 
 <script type="text/javascript">
     $(document).ready(function() {
-        load_jobs_mfile('{{mfile.id}}')
-
+        load_render_preview('{{mfile.id}}')
         // Create new render dialog
         create_new_render_ui_dialog('{{mfile.id}}')
-
     });
-
-
 </script>
-
-</div>

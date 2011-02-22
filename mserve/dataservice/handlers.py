@@ -100,69 +100,8 @@ class DataServiceURLHandler(BaseHandler):
             resp.write("Invalid Request!")
             return r
 
-
-class ThumbHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
-
-    def create(self, request):
-        logging.info("Thumb Update")
-        if request.FILES.has_key('file'):
-            file = request.FILES['file']
-            logging.info("file %s"%file)
-            if request.POST.has_key('mfileid'):
-                mfileid = request.POST['mfileid']
-                logging.info("mfileid %s"%mfileid)
-                mfile = MFile.objects.get(id=mfileid)
-                if mfile == None:
-                    logging.info("No such mfile %s"%mfileid)
-                    r = rc.BAD_REQUEST
-                    r.write("Invalid Request!")
-                    return r
-
-                try:
-                    thumb = mfile.thumb
-                    logging.info("Deleting existing thumb for mfile %s"%mfile)
-                    mfile.thumb.delete()
-                except ObjectDoesNotExist:
-                    pass
-
-                logging.info("Updating thumb for mfile %s"%mfile)
-
-                thumb = Thumb(mfile=mfile,file=file)
-                thumb.file = file
-                thumb.save()
-                logging.info("Updated %s"%thumb)
-
-                return thumb
-            else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request!")
-                return r
-        else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
-
-class CorruptionHandler(BaseHandler):
-    allowed_methods = ('PUT')
-
-    def update(self, request, mfileid, backup=False):
-        mfile = MFile.objects.get(pk=mfileid)
-        if not backup:
-            mfile = MFile.objects.get(pk=mfileid)
-            logging.info("Attempting to corrupt file '%s' " % (mfile))
-            f = open(mfile.file.path,'wb')
-            f.writelines(["corruption"])
-        else:
-            logging.info("Attempting to corrupt backup file for file'%s'" % (mfile))
-            backup = BackupFile.objects.get(mfile=mfile)
-            f = open(backup.file.path,'wb')
-            f.writelines(["corruption"])
-        
-        return mfile
-
-class HeadHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT','DELETE')
+class InfoHandler(BaseHandler):
+    allowed_methods = ('GET')
 
     def read(self, request, id):
         try:
@@ -178,14 +117,15 @@ class HeadHandler(BaseHandler):
                 return utils.clean_mfile(mfile)
         except Auth.DoesNotExist:
             # TODO - fix
-            logger.error("Auth does not exist")
-            return []
+            logging.error("Auth does not exist")
+            r = rc.BAD_REQUEST
+            return r
 
 
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
-    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'created' , 'updated','thumburl','posterurl','reportnum')
+    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'proxy', 'created' , 'updated', 'thumburl', 'posterurl', 'proxyurl', 'reportnum')
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
@@ -233,13 +173,17 @@ class MFileHandler(BaseHandler):
             else:
                 file = None
 
+            logging.debug("API call Creating mfile %s" % serviceid)
+
             if serviceid == None:
                 serviceid = form.cleaned_data['sid']
 
+            logging.debug("API call Creating mfile")
             mfile = api.create_mfile(request, serviceid, file)
             return mfile
         else:
             r = rc.BAD_REQUEST
+            logging.debug("API call Creating mfile %s " % form)
             r.write("Invalid Request!")
             return r
 
@@ -328,205 +272,9 @@ class MFileContentsHandler(BaseHandler):
         usage_store.record(mfile.id,models.metric_access,mfile.size)
 
         return redirect("/%s"%redirecturl)
-    
+
+
 class RoleHandler(BaseHandler):
-    allowed_methods = ('GET','PUT')
-    model = Role
-    fields = ('id','rolename','description','methods')
-
-    def update(self,request,roleid):
-        import logging
-        logging.info("updating role")
-
-        role = Role.objects.get(id=roleid)
-        newmethods = request.POST["methods"].split(',')
-
-        logging.info("updating role with methods %s " % newmethods)
-        logging.info("auth %s " % role.auth)
-        logging.info("dir %s " % dir(role.auth))
-
-        for a in role.auth.all():
-            logging.info(a)
-            logging.info(dir(a))
-
-        allowed_methods = api.all_container_methods + api.all_service_methods + api.all_mfile_methods
-
-        # TODO: Should we check each type of authority this role could be under?
-        #if hasattr(role.auth,"hostingcontainerauth"):
-        #    allowed_methods = all_container_methods
-
-        #if hasattr(role.auth,"dataserviceauth"):
-        #    allowed_methods = all_service_methods
-
-        #if hasattr(role.auth,"MFileauth"):
-        #    allowed_methods = all_mfile_methods
-
-        if not set(newmethods).issubset(set(allowed_methods)):
-            return HttpResponseBadRequest("The methods '%s' are not allowed. Allowed Methods '%s' " % (newmethods, allowed_methods))
-
-        existingmethods = role.methods()
-
-        if set(newmethods).issubset(set(existingmethods)):
-            return HttpResponseBadRequest("The methods '%s' are already contained in this role . Existing Methods '%s' " % (newmethods, existingmethods))
-
-        role.addmethods(newmethods)
-        role.save()
-        return role
-
-class AccessControlHandler(BaseHandler):
-    allowed_methods = ('GET','PUT','POST')
-    #fields = ('id','authname',('roles', ('description') ), )
-    #fields = ('id','authname' )
-    #model = Auth
-
-    def create(self, request, method, pk):
-        
-
-        if not method in generic_post_methods:
-            return HttpResponseBadRequest("Cannot do 'PUT' %s on %s" % (method,pk))
-
-        if method == "getorcreateauth" or method == "addauth":
-            name = request.POST["name"]
-            roles_string = request.POST["roles"]
-            roleids = roles_string.split(",")
-            base = NamedBase.objects.get(pk=pk)
-
-            if utils.is_container(base):
-                hc = HostingContainer.objects.get(pk=pk)
-                hca,created = Auth.objects.get_or_create(hostingcontainer=hc,authname=name)
-                if not created and method == "addauth":
-                    return rc.DUPLICATE_ENTRY
-                if not created:
-                    return hca
-                roles = []
-                for roleid in roleids:
-                    role = Role.objects.get(pk=roleid)
-                    roles.append(role)
-
-                hca.save()
-                hca.roles = roles
-                return hca
-
-            if utils.is_service(base):
-                ser = DataService.objects.get(pk=pk)
-                dsa,created  = Auth.objects.get_or_create(dataservice=ser,authname=name)
-                if not created and method == "addauth":
-                    return rc.DUPLICATE_ENTRY
-                if not created:
-                    return dsa
-                roles = []
-                roles = []
-                for roleid in roleids:
-                    role = Role.objects.get(pk=roleid)
-                    roles.append(role)
-
-                dsa.save()
-                dsa.roles = roles
-                return dsa
-
-            if utils.is_mfile(base):
-                mfile = MFile.objects.get(pk=pk)
-                dsa,created  = Auth.objects.get_or_create(base=mfile.id,authname=name)
-                logging.info("%s %s " % (created,method))
-                if not created and method == "addauth":
-                    return rc.DUPLICATE_ENTRY
-                if not created:
-                    return dsa
-                roles = []
-                roles = []
-                for roleid in roleids:
-                    role = Role.objects.get(pk=roleid)
-                    roles.append(role)
-
-                dsa.save()
-                dsa.roles = roles
-                return dsa
-
-        return HttpResponse("called %s on %s" % (method,pk))
-
-    def update(self, request, method, pk):
-
-        logging.info("update %s %s" % (method,pk))
-
-        if not method in api.generic_put_methods:
-            return HttpResponseBadRequest("Cannot do 'PUT' %s on %s" % (method,pk))
-
-        if method == "setroles":
-            roles_string = request.POST["roles"]
-            roleids = roles_string.split(",")
-
-            logging.info("auth pk = %s " % (pk))
-            auth = Auth.objects.get(pk=pk)
-
-            for roleid in roleids:
-                role = Role.objects.get(id=roleid)
-                auth.roles.add(role)
-
-            auth.save()
-
-            return HttpResponse("called %s on %s roles=%s" % (method,pk,",".join(roleids)))
-
-            if utils.is_containerauth(auth):
-                if roles in api.all_container_methods:
-                    role.setmethods(roles)
-                    role.save()
-            if utils.is_mfileauth(auth):
-                if roles in api.all_service_methods:
-                    role.setmethods(roles)
-                    role.save()
-            if utils.is_mfileauth(auth):
-                if roles in api.all_mfile_methods:
-                    role.setmethods(roles)
-                    role.save()
-
-            return HttpResponse("called %s on %s name=%s roles=%s" % (method,pk,name,",".join(roles)))
-
-        return HttpResponse("called %s on %s" % (method,pk))
-
-    def read(self,request, method, pk):
-
-        if not method in api.generic_get_methods:
-            return HttpResponseBadRequest("Cannot do 'GET' %s on %s" % (method,pk))
-        
-        if method == "getauths":
-            try:
-                base = NamedBase.objects.get(pk=pk)
-
-                if utils.is_container(base):
-                    return Auth.objects.filter(hostingcontainer=base)
-
-                if utils.is_service(base):
-                    return Auth.objects.filter(dataservice=base)
-
-                if utils.is_mfile(base):
-                    return Auth.objects.filter(base=base)
-            except ObjectDoesNotExist:
-                pass
-
-            auth = Auth.objects.get(pk=pk)
-            if utils.is_containerauth(auth) \
-                or utils.is_serviceauth(auth) \
-                    or utils.is_mfileauth(auth):
-                        joins = JoinAuth.objects.filter(parent=auth.id)
-                        return SubAuth.objects.filter(pk=joins)
-
-            return HttpResponseBadRequest("Called %s on %s" % (method,pk))
-
-        if method == "getroles":
-            try:
-                auth = Auth.objects.get(pk=pk)
-                dict = {}
-                roles = Role.objects.filter(auth=auth)
-                for role in roles:
-                    dict[role.rolename] = True
-
-                return dict
-            except ObjectDoesNotExist:
-                return HttpResponseBadRequest("No Such Auth %s" % (pk))
-
-        return HttpResponse("called %s on %s" % (method,pk))
-
-class RoleInfoHandler(BaseHandler):
     def read(self,request, id):
         base = NamedBase.objects.get(pk=id)
         if utils.is_container(base):
@@ -709,6 +457,11 @@ class ResourcesHandler(BaseHandler):
         last = int(last_known)
         try:
             base = NamedBase.objects.get(pk=id)
+
+            logging.debug("reportnum = %s " % (base.reportnum))
+
+            if last > base.reportnum:
+                last = base.reportnum
 
             if last is not -1:
                 while last == base.reportnum:

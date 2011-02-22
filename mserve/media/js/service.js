@@ -72,7 +72,7 @@ function service_setmanagementproperty_ajax(service,prop,val){
      $.ajax({
        type: "PUT",
        data: "property="+prop+"&value="+val,
-       url: '/serviceapi/managementproperty/'+service+'/',
+       url: '/api/'+service+'/setmanagementproperty/',
        success: function(msg){
          showMessage("Property Set", "Property '"+prop+"' set to "+val);
          $("."+prop).html(val)

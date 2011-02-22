@@ -13,17 +13,17 @@ class Base(object):
         self.usage = {}
         self.properties = {}
         self.auths = []
-        self.access = {
+        self.urls = {
             "auth":[],
             "property":[],
             "usage":[]
             }
         
-    def check(self, entity , method):
-        if entity==None:
+    def check(self, url , method):
+        if url==None:
             return method in self.methods
         else:
-            return method in self.access[entity]
+            return method in self.urls[url]
 
     def do(self, method, url=None, args=None):
         if url==None:
@@ -32,8 +32,8 @@ class Base(object):
             print "%s : /%s/ on %s args=%s" % (method,url,self,args)
         
         if not self.check(url,method):
-            print  "Exception: Cannot do %s: on /%s/ methods are %s, access is %s"\
-                % (method,url,self.methods,self.access)
+            print  "Exception: Cannot do %s: on /%s/ methods are %s, urls are %s"\
+                % (method,url,self.methods,self.urls)
             return None
 
         if method=="GET" and url=="auth":
@@ -58,7 +58,7 @@ class Base(object):
         if method=="GET":
             return self.get(url)
         if method=="POST":
-            return self.post(url)
+            return self.post(url,args=args)
         if method=="PUT":
             return self.put(url,args=args)
 
@@ -70,16 +70,15 @@ class Auth(Base):
         super(Auth,self).__init__()
         self.base = base
         self.methods = args["methods"]
-        self.access = args["access"]
+        self.urls = args["urls"]
 
-    def check(self, entity, method):
-        if entity==None:
-            return method in self.methods and method in self.base.methods
+    def check(self, url, method):
+        if url==None:
+            return method in self.methods and self.base.check(url,method)
         else:
-            return self.access.has_key(entity)\
-            and method in self.access[entity]\
-            and self.base.access.has_key(entity)\
-            and method in self.base.access[entity]
+            return self.urls.has_key(url)\
+            and method in self.urls[url]\
+            and self.base.check(url,method)
         
     def get(self,url):
         return self.base.get(url)
@@ -98,7 +97,7 @@ class Hosting(Base):
     def __init__(self):
         super(Hosting,self).__init__()
         self.methods = ["GET","POST","PUT"]
-        self.access = {
+        self.urls = {
             "auth":["GET","PUT","POST","DELETE"],
             "property":["GET","PUT"],
             "usage":["GET"]
@@ -122,7 +121,7 @@ class Service(Base):
         super(Service,self).__init__()
         self.properties = {"speed":100}
         self.methods = ["GET","POST","PUT","DELETE"]
-        self.access = {
+        self.urls = {
             "auth":["GET","PUT","POST","DELETE"],
             "property":["GET","PUT"],
             "usage":["GET"]
@@ -131,7 +130,7 @@ class Service(Base):
     def get(self,url):
         return self
 
-    def post(self,url):
+    def post(self,url,args={}):
         return MFile()
 
     def put(self,url,args={}):
@@ -147,7 +146,7 @@ class MFile(Base):
         self.file = "NoFile"
         self.usage = {"disc_access":100}
         self.methods = ["GET","POST","PUT","DELETE"]
-        self.access = {
+        self.urls = {
             "auth":["GET","PUT","POST","DELETE"],
             "property":["GET","PUT"],
             "usage":["GET"]
@@ -157,7 +156,7 @@ class MFile(Base):
         self.usage["disc_access"] = self.usage["disc_access"] + 100
         return self
 
-    def post(self,url):
+    def post(self,url,args={}):
         if url=="":
             return Service()
 
@@ -183,11 +182,11 @@ if __name__ == "__main__":
     print "\t-> %s" % mfile
 
     print "\n### Do a PUT on Mfile readwrite"
-    mfilereadwriteauth = mfile.do("POST", "auth", {"methods":["GET","PUT"],"access":[]})
+    mfilereadwriteauth = mfile.do("POST", "auth", {"methods":["GET","PUT"],"urls":[]})
     print "\t-> %s " % mfilereadwriteauth
     mfilereadwriteauth = mfilereadwriteauth.do("PUT", args={"file":"newimage.jpg"})
     
-    mfilereadauth = mfile.do("POST", "auth", {"methods":["GET"],"access":[]})
+    mfilereadauth = mfile.do("POST", "auth", {"methods":["GET"],"urls":[]})
     print "\t-> %s " % mfilereadauth
 
     print "\n### Do a GET on Mfile readonly"
@@ -216,30 +215,30 @@ if __name__ == "__main__":
     auths = service.do("GET","auth")
     print "\t-> %s " % auths
 
-    auth = service.do("POST","auth",{"methods":[],"access":{}})
+    auth = service.do("POST","auth",{"methods":[],"urls":{}})
     print "\t-> %s " % auth
 
     auth.do("GET","auth")
 
     print "\n### Create sufficient auth"
-    sufficient_auth = service.do("POST","auth",{"methods":["GET","POST"],"access":{"auth":["GET","POST"]}})
+    sufficient_auth = service.do("POST","auth",{"methods":["GET","POST"],"urls":{"auth":["GET","POST"]}})
 
     print "\n### Try post on sufficient auth"
-    sufficient_auth.do("POST","auth",{"methods":["GET","POST"],"access":{}})
+    sufficient_auth.do("POST","auth",{"methods":["GET","POST"],"urls":{}})
     
     print "\n### Create insufficient auth"
-    not_sufficient_auth = service.do("POST","auth",{"methods":["GET"],"access":{}})
+    not_sufficient_auth = service.do("POST","auth",{"methods":["GET"],"urls":{}})
     
     print "\n### Try post on insufficient auth"
-    not_sufficient_auth.do("POST","auth",{"methods":["GET","POST"],"access":{}})
+    not_sufficient_auth.do("POST","auth",{"methods":["GET","POST"],"urls":{}})
 
     print "\n### Create subauth"
-    subauth = sufficient_auth.do("POST","auth",{"methods":["POST"],"access":{}})
+    subauth = sufficient_auth.do("POST","auth",{"methods":["POST"],"urls":{}})
     sub_notsufficient_subauth = subauth.do("GET","auth")
     print "\t-> %s " % (sub_notsufficient_subauth)
 
     print "\n### Create auth for getting properties"
-    propauth = mfile.do("POST","auth",{"methods":[],"access":{"property":"GET"}})
+    propauth = mfile.do("POST","auth",{"methods":[],"urls":{"property":"GET"}})
     print propauth
 
     print propauth.do("GET","property")

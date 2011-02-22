@@ -39,7 +39,7 @@ def check_method_for_auth(authid,method):
             logging.info("Authority Check OK for method '%s' in auth methods '%s' and basemethods '%s' " % (method,methods,basemethods)  )
             return True
         else:
-            logging.info("Authority Check Failed for method '%s'  not in auth methods '%s' or not in base methods '%s'" % (method,methods,basemethods)  )
+            logging.info("Authority Check Failed for method '%s'  not in auth methods '%s' and not in base methods '%s'" % (method,methods,basemethods)  )
     else:
         # This auth is a sub authority of another auth
         authparent = auth.parent

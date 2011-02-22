@@ -38,6 +38,7 @@ class JobMFile(Base):
 
 class JobOutput(NamedBase):
     job   = models.ForeignKey(Job)
+    mimetype = models.CharField(max_length=200,blank=True,null=True)
     file  = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     thumb = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
 

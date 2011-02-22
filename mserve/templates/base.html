@@ -4,7 +4,6 @@
 {% load mservetags %}
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<script type="text/javascript" src="http://www.google.com/jsapi"></script>
 <link type="text/css" href="/mservemedia/css/smoothness/jquery-ui-1.8.6.custom.css" rel="stylesheet" />
 <link type="text/css" href="/mservemedia/css/mserve.css" rel="stylesheet" />
 {% block script %}{% endblock %}
@@ -17,70 +16,13 @@
 <script type="text/javascript" src="/mservemedia/js/auth.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/container.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/service.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/mfile.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/uploader.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/mserve.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/ui.js" ></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
+<!--<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js"></script>-->
+
 <script type="text/javascript">
-
-     function setManagementPropertyAccessSpeed(service){
-        var speed = prompt("What speed do you wish to set access", "");
-         $.ajax({
-           type: "PUT",
-           data: "property=accessspeed&value="+speed,
-           url: '/serviceapi/managementproperty/'+service+'/',
-           success: function(msg){
-             showMessage("Property Set", "Property 'accessspeed' set to "+speed);
-             $(".accesspeed").html(speed)
-           },
-           error: function(msg){
-             showError("Error", ""+msg.responseText );
-           }
-         });
-     }
-
-     function addauth(){
-         $.ajax({
-           type: "POST",
-           data: "name=newmonitorauth&roles=8b57f3b2-a8ec-4f08-a920-6cd016b22b90",
-           url: '/authority/addauth/820e9b0e-fd19-4fa7-b63e-f6d6c716d472/',
-           success: function(msg){
-             alert( "POST " +msg + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText   );
-           },
-           error: function(msg){
-             alert( "Failure On POST " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
-           }
-         });
-     }
-
-    function getorcreateauth(){
-         $.ajax({
-           type: "POST",
-           data: "name=newmonitorauth&roles=8b57f3b2-a8ec-4f08-a920-6cd016b22b90",
-           url: '/authority/getorcreateauth/820e9b0e-fd19-4fa7-b63e-f6d6c716d472/',
-           success: function(msg){
-             alert( "POST " +msg  );
-           },
-           error: function(msg){
-             alert( "Failure On POST " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
-           }
-         });
-     }
-
-     function putroles(){
-         $.ajax({
-           type: "PUT",
-           data: "roles=8b57f3b2-a8ec-4f08-a920-6cd016b22b90,2ebecd1d-a0c6-4374-ab2c-435902dc4bd9",
-           url: '/authority/setroles/f3b4adc3-f198-4c3b-aa97-12519446852b/',
-           success: function(msg){
-             alert( "PUT " +msg  );
-           },
-           error: function(msg){
-             alert( "Failure On PUT " + "'\nStatus: '" + msg.status+"'\nResponse Text:\n" +msg.responseText );
-           }
-         });
-     }
-
 
 </script>
 
@@ -108,8 +50,6 @@
             <li><a href="/">Home</a></li>
             <li><a href="/admin/">Admin</a></li>
             <li><a href="/usage/">Usage</a></li>
-            <li><a href="/map/">Map</a></li>
-            <li><a href="/viz/">Vizualizations</a></li>
 
             {% endif %}
 
@@ -194,13 +134,29 @@
     <div class="fbg">
     <div class="fbg_resize">
       <div class="col c1">
-        <h2><span>Image Gallery</span></h2>
-        <a href="#"><img src="/mservemedia/images/gallery_1.jpg" width="58" height="58" alt="" /></a>
-        <a href="#"><img src="/mservemedia/images/gallery_2.jpg" width="58" height="58" alt="" /></a>
-        <a href="#"><img src="/mservemedia/images/gallery_3.jpg" width="58" height="58" alt="" /></a>
-        <a href="#"><img src="/mservemedia/images/gallery_4.jpg" width="58" height="58" alt="" /></a>
-        <a href="#"><img src="/mservemedia/images/gallery_5.jpg" width="58" height="58" alt="" /></a>
-        <a href="#"><img src="/mservemedia/images/gallery_6.jpg" width="58" height="58" alt="" /></a> </div>
+        <table class="icontable">
+            <tr>
+                <th>Usage</th>
+                <th>Messages</th>
+                <th>Network</th>
+            </tr>
+            <tr>
+                <td><img src="/mservemedia/images/icon_usage.png" width="32" height="32" alt="" /></td>
+                <td><img src="/mservemedia/images/icon_message.png" width="32" height="32" alt="" /></td>
+                <td><img src="/mservemedia/images/icon_network.png" width="32" height="32" alt="" /></td>
+            </tr>
+            <!--<tr>
+                <th>4</th>
+                <th>5</th>
+                <th>6</th>
+            </tr>
+            <tr>
+                <td><img src="/mservemedia/images/gallery_1.png" width="32" height="32" alt="" /></td>
+                <td><img src="/mservemedia/images/gallery_1.png" width="32" height="32" alt="" /></td>
+                <td><img src="/mservemedia/images/gallery_1.png" width="32" height="32" alt="" /></td>
+            </tr>-->
+        </table>
+      </div>
       <div class="col c2">
         <h2><span>Mserve Systems</span></h2>
         <p>Mserve is written in <a href="http://python.org">python.</a> using the <a href="http://www.djangoproject.com/">django.</a> framework.

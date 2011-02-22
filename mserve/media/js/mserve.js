@@ -54,20 +54,6 @@ function reloadMFiles(newfileid){
      });
 }
 
-function load_mfile(mfileid){
-         $.ajax({
-           type: "GET",
-           url: "/mfileapi/thumb/"+mfileid+"/",
-           success: function(msg){
-                $("#mfilelist").prepend(msg);
-                $("#image-"+mfileid).show('bounce')
-           },
-           error: function(msg){
-                showError( "Failure to get mfile thumb " );
-           }
-         });
-}
-
 function loadJobs(serviceid){
      $.ajax({
        type: "GET",
@@ -101,9 +87,13 @@ function create_job_paginator(job){
             if(end>joboutputs.length){
                 end=joboutputs.length;
             }
+
+            $( "#jobOutputTemplate" ).tmpl( joboutputs.slice(start,end) ) .appendTo( jobpaginator );
+
             for(var j=start;j<end;j++) {
-                var im = $("<a target='_blank' href='/jobapi/contents/"+joboutputs[j].id+"/' ><img src='"+joboutputs[j].thumburl+"' /></a>")
-                jobpaginator.append(im)
+                if(joboutputs[j].mimetype && joboutputs[j].mimetype.startsWith('text')){
+                    load_joboutput_text(joboutputs[j].id)
+                }
             }
             return false;
         }
@@ -116,13 +106,58 @@ function create_job_paginator(job){
         });
 }
 
+function load_joboutput_text(id){
+
+ $.ajax({
+   type: "GET",
+   url: "/jobapi/contents/"+id+"/",
+   success: function(msg){
+                $("#text-"+id).append("<pre>"+msg+"</pre>");
+   },
+   error: function(msg){
+     showError("Error", ""+msg.responseText );
+   }
+ });
+}
+
+function load_render_preview(mfileid){
+
+ $.ajax({
+   type: "GET",
+   url: "/jobapi/getjobs/"+mfileid+"/",
+   success: function(msg){
+      var thumbs = []
+      for(i in msg){
+            task = msg[i]
+            job = task.job
+            job.joboutput_set[0].thumburl
+            
+            if(job.joboutput_set.length > 0){
+                thumbs.push(job.joboutput_set[0].thumburl)
+            }
+      }
+        $("#previewcontent").append("<div style='clear:both' ></div>")
+      for(i in thumbs){
+        $("#previewcontent").append("<img src='"+thumbs[i]+"' />")
+      }
+   },
+   error: function(msg){
+     showError("Error", ""+msg.responseText );
+   }
+ });
+
+}
+
 function load_jobs_mfile(mfileid){
      $.ajax({
        type: "GET",
        url: '/jobapi/getjobs/'+mfileid+"/",
        success: function(msg){
-
+        if(msg.length > 0){
+            $("#jobs").empty()
+        }
             for (i in msg){
+                
                 create_job_holder(msg[i])
                 create_job_paginator(msg[i].job)
                 if(!msg[i].ready){
@@ -294,33 +329,6 @@ $(document).ready(function(){
 function mfile_get(mfileid){
         window.open("/mfileapi/get/"+mfileid+"/")
 }
-
-
-function mfile_file_corrupt(mfileid){
-     $.ajax({
-       type: "PUT",
-       url: '/mfileapi/corrupt/'+mfileid+"/",
-       success: function(msg){
-            showMessage("File Corrupted","The file has been corrupted.")
-       },
-       error: function(msg){
-            showError("Failed Corruption","Failed to corrupt the file, Status: " + msg.status+ "Response Text:" + msg.responseText)
-       }
-     });
- }
-
-function mfile_backup_corrupt(mfileid){
-     $.ajax({
-       type: "PUT",
-       url: '/mfileapi/corruptbackup/'+mfileid+"/",
-       success: function(msg){
-            showMessage("File Corrupted","The file has been corrupted.")
-       },
-       error: function(msg){
-            showError("Failed Corruption","Failed to corrupt the file, Status: " + msg.status+ "Response Text:" + msg.responseText)
-       }
-     });
- }
 
 function getPoster(mfileid){
     url = '/mfile/'+mfileid+'/'

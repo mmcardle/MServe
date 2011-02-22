@@ -1,0 +1,36 @@
+{% load mservetags %}
+
+<h3>Usage Summary</h3>
+{% if "getusagesummary" in methods %}
+
+    <table class="table_usage" cellpadding="5" cellspacing="5">
+        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Numbers</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
+        <tbody id="usagesummarycontent"></tbody>
+    </table>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            load_usagesummary_auth('{{auth.id}}');
+        });
+    </script>
+{% else %}
+
+            <p>No Access to the usage summary</p>
+
+{% endif %}
+
+<h3>Historical Usage</h3>
+{% if "usage" in methods %}
+
+    <table class="table_usage" cellpadding="5" cellspacing="5"><tbody id="usagecontent"></tbody></table>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            load_usage_auth('{{auth.id}}');
+        });
+    </script>
+ {% else %}
+
+            <p>No Access to the Usage</p>
+
+{% endif %}

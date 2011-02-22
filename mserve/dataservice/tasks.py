@@ -1,18 +1,4 @@
 import os.path
-
-# We can register as a class ....
-
-#from celery.task import Task
-#from celery.registry import tasks
-#class ProcessVideoTask(Task):
-#    def run(self, object_id, **kwargs):
-#        logger = self.get_logger(**kwargs)
-#        logger.info("Processed video for %s." % object_id)
-#        return True
-#tasks.register(ProcessVideoTask)
-
-# .... or use the @task decorator
-
 from celery.decorators import task
 import logging
 import subprocess
@@ -23,7 +9,6 @@ import pycurl
 import tempfile
 import magic
 
-
 @task
 def thumbvideo(videopath,thumbpath,width,height):
     logging.info("Processing video thumb %sx%s for %s to %s" % (width,height,videopath,thumbpath))
@@ -32,6 +17,17 @@ def thumbvideo(videopath,thumbpath,width,height):
         return False
     args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",thumbpath]
     
+    logging.info(args)
+    ret = subprocess.call(args)
+    return ret
+
+@task
+def proxyvideo(videopath,proxypath,width="420",height="256"):
+    logging.info("Processing video proxy for %s to %s" % (videopath,proxypath))
+    if not os.path.exists(videopath):
+        logging.info("Video %s does not exist" % (videopath))
+        return False
+    args = ["ffmpeg","-s","%sx%s"%(width,height),"-i",videopath,"-f","ogg","-vcodec","libtheora","-b","800k","-g","300","-acodec","libvorbis","-ab","128k",proxypath]
     logging.info(args)
     ret = subprocess.call(args)
     return ret

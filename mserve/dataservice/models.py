@@ -165,6 +165,7 @@ class MFile(NamedBase):
     size     = models.IntegerField(default=0)
     thumb    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
     poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
+    proxy    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getproxystorage())
     created  = models.DateTimeField(auto_now_add=True)
     updated  = models.DateTimeField(auto_now=True)
 
@@ -194,6 +195,9 @@ class MFile(NamedBase):
 
     def posterurl(self):
         return "%s%s" % (thumbpath,self.poster)
+
+    def proxyurl(self):
+        return "%s%s" % (thumbpath,self.proxy)
 
     def save(self):
         if not self.id:

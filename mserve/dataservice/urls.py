@@ -19,12 +19,8 @@ auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
 usage_handler = Resource(UsageHandler)
 role_handler = Resource(RoleHandler)
-role_info_handler = Resource(RoleInfoHandler)
-access_control_handler = Resource(AccessControlHandler)
-thumb_handler = Resource(ThumbHandler)
-mfile_corruption_handler = Resource(CorruptionHandler)
 resources_handler = Resource(ResourcesHandler)
-head_handler = Resource(HeadHandler)
+info_handler = Resource(InfoHandler)
 
 urlpatterns = patterns('',
 
@@ -39,50 +35,44 @@ urlpatterns = patterns('',
     url(r'^service/(?P<id>[^/]+)/', dataservice_handler),
     url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
     url(r'^auth/(?P<id>[^/]+)/', auth_handler),
-    url(r'^roles/(?P<roleid>[^/]+)/$', role_handler),
-    
-    url(r'^authority/(?P<method>[^/]+)/(?P<id>[^/]+)/$', access_control_handler),
 
     #Global
-    url(r'^api/(?P<id>[^/]+)/head/$', head_handler),
-    url(r'^api/(?P<id>[^/]+)/getmanagedresources/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/getmanagementproperties/$', managementproperty_handler),
+    url(r'^api/(?P<id>[^/]+)/info/$', info_handler),
     url(r'^api/(?P<id>[^/]+)/resources/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/resources/(?P<last_known>[^/]+)/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/getusagesummary/$', usagesummary_handler),
-    url(r'^api/(?P<id>[^/]+)/getusagesummary/(?P<last_report>[^/]+)/$', usagesummary_handler),
     url(r'^api/(?P<id>[^/]+)/usage/$', usage_handler),
-    url(r'^api/(?P<id>[^/]+)/managementproperty/$', managementproperty_handler),
-    url(r'^api/(?P<id>[^/]+)/getroles/$', role_info_handler),
-    url(r'^api/(?P<id>[^/]+)/accesscontrol/$', role_info_handler),
+    #url(r'^api/(?P<id>[^/]+)/property/$', property_handler),
 
-    # Container Methods
+    #url(r'^api/(?P<id>[^/]+)/role/$', role_handler),
+
+    # TING specific
+    url(r'^api/(?P<id>[^/]+)/getusagesummary/$', usagesummary_handler),
+    url(r'^api/(?P<id>[^/]+)/getroles/$', role_handler),
+    url(r'^api/(?P<id>[^/]+)/resources/(?P<last_known>[^/]+)/$', resources_handler),
+    url(r'^api/(?P<id>[^/]+)/getusagesummary/(?P<last_report>[^/]+)/$', usagesummary_handler),
+    url(r'^api/(?P<id>[^/]+)/getmanagedresources/$', resources_handler),
+    url(r'^api/(?P<id>[^/]+)/getmanagedresources/(?P<last_known>[^/]+)/$', resources_handler),
+    url(r'^api/(?P<id>[^/]+)/getmanagementproperties/$', managementproperty_handler),
+    url(r'^api/(?P<id>[^/]+)/setmanagementproperty/$', managementproperty_handler),
+
+    # TING Container Methods
     url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
 
-    # Service Methods
+    # TING Service Methods
     url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_handler),
 
-    # MFile Methods
-    url(r'^mfileapi/update/(?P<mfileid>[^/]+)/$', mfile_handler),
+    # TING MFile Methods
     url(r'^mfileapi/get/(?P<mfileid>[^/]+)/$', mfile_contents_handler),
-    url(r'^mfileapi/verify/(?P<mfileid>[^/]+)/$', mfile_verify_handler),
-    url(r'^mfileapi/corrupt/(?P<mfileid>[^/]+)/$', mfile_corruption_handler),
-    url(r'^mfileapi/corruptbackup/(?P<mfileid>[^/]+)/$', mfile_corruption_handler, {'backup':True}),
-    url(r'^mfileapi/thumb/(?P<mfileid>[^/]+)/$', 'dataservice.views.thumb'),
     url(r'^mfileapi/(?P<id>[^/]+)/$', mfile_handler),
+
+    # This should be a job
+    url(r'^mfileapi/verify/(?P<mfileid>[^/]+)/$', mfile_verify_handler),
 
     # TODO - TEMP - Needs Sorting
     url(r'^tasks/', 'djcelery.views.registered_tasks'),
 
-    # Thumb methods
-    url(r'^thumbapi/$', thumb_handler),
-    url(r'^thumbapi/(?P<pk>[^/]+)/$', thumb_handler),
-
     # HTML Views
     url(r'^$',  'dataservice.views.home'),
     url(r'^usage/',  'dataservice.views.usage'),
-    url(r'^map/',  'dataservice.views.map'),
-    url(r'^viz/',  'dataservice.views.viz'),
     url(r'^browse/(?P<id>[^/]+)/$', "dataservice.views.render_base"),
     url(r'^form/mfile/', "dataservice.views.create_mfile"),
 

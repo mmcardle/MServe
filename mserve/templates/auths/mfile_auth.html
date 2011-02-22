@@ -13,7 +13,6 @@
                 <span>Size:&nbsp;<em class="sm">{{mfile.size|filesizeformat}}</em>&nbsp;</span>
     {% endblock %}
 
-
 {% endif %}
 
 {% block content %}
@@ -32,7 +31,7 @@
     </ul>
 
     <div id="tabs-1">
-    {% if "head" in methods %}
+    {% if "info" in methods %}
 
         {% include "auths/details_auth.html" %}
 
@@ -41,7 +40,6 @@
             <p>No Access to the details</p>
             
     {% endif %}
-
 
     </div>
 
@@ -67,7 +65,6 @@ $(document).ready(function() {
     });
 });
 </script>
-
 
 {% endblock %}{% block rightcontent %}
 

@@ -208,6 +208,17 @@ td {
     vertical-align: top;
 }
 
+.icontable{
+    color:white;
+    text-align: center;
+}
+.icontable th{
+    font-variant: small-caps;
+}
+.icontable td{
+    border: 1px outset gray;
+}
+
 #sidebar {
     vertical-align: top;
     margin-top: 20px;
@@ -333,7 +344,7 @@ li.fluid a {
     margin: 1px;
     float:left;
     padding:1px;
-    background:url(/mservemedia/images/content_img_4.png) top no-repeat;
+    background:url(/mservemedia/images/content_img.png) top no-repeat;
 
 }
 
@@ -449,6 +460,15 @@ li.fluid a {
 .service_preview_td{
     height:60px;
     width:104px;
+    background-position: center;
+    background-size:100%;
+    background-repeat: no-repeat;
+    background-color: black;
+}
+
+.container_preview_td{
+    height:30px;
+    width:52px;
     background-position: center;
     background-size:100%;
     background-repeat: no-repeat;

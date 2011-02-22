@@ -16,7 +16,10 @@ joboutput_handler = Resource(JobOutputContentsHandler)
 
 urlpatterns = patterns('',
 
-    # Job Methods
+    # Generic Job Methods
+    url(r'^jobapi/$', job_handler),
+
+    # Job
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/(?P<start>[^/]+)/(?P<end>[^/]+)/$', render_handler),
     url(r'^jobapi/(?P<id>[^/]+)/$', job_handler),

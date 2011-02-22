@@ -2,7 +2,6 @@
 
 {% load mservetags %}
 
-<h3>Methods</h3>
 <div id="methodscontent">
 {% if container %}
     {% for method in methods %}
@@ -25,19 +24,15 @@
 
 {% if mfile %}
 
+    <h3>Actions</h3>
+    <button id="service-{{method}}-button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_task('{{mfile.id}}');">
+            <span class="ui-button-text" >New Task</span></button>
+
+    <h3>Methods</h3>
     {% for method in methods %}
         <button id="service-{{method}}-button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_{{method}}('{{mfile.id}}');">
             <span class="ui-button-text" >{{method}}</span></button>
     {% endfor %}
-
-    <h3>Special Methods</h3>
-    <button id="button1" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_file_corrupt('{{mfile.id}}');">
-        <span class="ui-button-text" >Corrupt File</span>
-    </button>
-
-    <button id="button2" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="javascript:mfile_backup_corrupt('{{mfile.id}}');">
-        <span class="ui-button-text">Corrupt Backup</span>
-    </button>
 
 {% endif %}
 </div>

@@ -1,10 +1,59 @@
 
+<script id="containerTemplate" type="text/x-jquery-tmpl">
+
+<div class="infoholder">
+    <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
+        {%templatetag openvariable%}each(servicei,val) [0,1,2,3]   {%templatetag closevariable%}
+        <tr>
+              {%templatetag openvariable%}each(mfilei,val) [0,1,2,3]   {%templatetag closevariable%}
+                 {%templatetag openvariable%}if dataservice_set[servicei] && dataservice_set[servicei].mfile_set[mfilei]   {%templatetag closevariable%}
+                    <td class="container_preview_td" style="background-image: url(${dataservice_set[servicei].mfile_set[mfilei].thumburl});">i=${i}</td>
+                 {%templatetag openvariable%}else{%templatetag closevariable%}
+                    <td class="container_preview_td"></td>
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+             {%templatetag openvariable%}/each{%templatetag closevariable%}
+        </tr>
+        {%templatetag openvariable%}/each{%templatetag closevariable%}
+    </table>
+
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
+         onmouseout="$('#id-${id}').hide();" style="position: relative; top: -130px">
+
+        <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr><td>
+                    <div class='title'>
+                        <a href='/browse/${id}/'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                        </a></div></td></tr>
+            <tr><td>
+                    <a href='/browse/${id}/'>
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                          <div>${dataservice_set.length} files </div>
+                          <div style="font-weight: bold">Latest Services :</div>
+
+                          {%templatetag openvariable%}each dataservice_set{%templatetag closevariable%}
+                                <!-- Show Last 4 files -->
+                              {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
+                                <div>${getShort($value.name,30)}</div>
+                              {%templatetag openvariable%}/if{%templatetag closevariable%}
+                          {%templatetag openvariable%}/each{%templatetag closevariable%}
+                      </div>
+                    </a>
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</script>
+
 <script id="serviceTemplate" type="text/x-jquery-tmpl">
     
 <div class="infoholder">
-
-
-
     <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
         <tr>
              {%templatetag openvariable%}if mfile_set[0] {%templatetag closevariable%}
@@ -152,13 +201,13 @@
 </script>
 
 <script id="jobTemplate" type="text/x-jquery-tmpl">
-    <h5 id='jobheader-${job.id}' >Template ${job.name}, ${job.created}, ${job.id}</h5>
+    <h5 id='jobheader-${job.id}' >${job.name}, ${job.created}, ${job.id}</h5>
     
     <div id='job-${job.id}' class='job'  >
         <table style='width:100%;'>
         <tr>
             <td width="2%"><span id='jobicon-${job.id}' class='ui-icon ui-icon-circle-check' ></span></td>
-            <td width="25%"><div id='jobinfo-${job.id}' class='jobinfo' ><b>${completed_count}</b> frames of <b>${total}</b> complete : ${percent}&#37; </div></td>
+            <td width="25%"><div id='jobinfo-${job.id}' class='jobinfo' ><b>${completed_count}</b> task of <b>${total}</b> complete : ${percent}&#37; </div></td>
             <td width='*' ><div style='height:10px;' id='jobprogressbar-${job.id}'></div></td>
             <td width='5%' ><button id='jobdeletebutton-${job.id}'></button></td>
         <tr>
@@ -199,6 +248,15 @@
         </table>
     </div>
 </div>
+</script>
+
+<script id="jobOutputTemplate" type="text/x-jquery-tmpl">
+    {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
+        <a target='_blank' href='/jobapi/contents/${id}/' ><img src='${thumburl}' /></a>
+    {%templatetag openvariable%}else{%templatetag closevariable%}
+        <div id="text-${id}" style="width:100%;height:200px;overflow: scroll;border: 1px inset silver;padding: 0px;margin: 5px;" ></div>
+    {%templatetag openvariable%}/if  {%templatetag closevariable%}
+
 </script>
 
 <div style="display:none">

@@ -1,6 +1,8 @@
 Prerequisites for Ubuntu 10.10 desktop
 ======================================
 
+## Django Version must be 1.2+
+
 sudo apt-get install lighttpd
 sudo apt-get install python-django
 sudo-apt-get install python-setuptools
@@ -131,12 +133,13 @@ Run this file to stop/start django
 
 Rabbit MQ Setup
 ===============
+http://www.rabbitmq.com/debian.html#apt
 
 Follow this guide
 http://celeryq.org/docs/getting-started/broker-installation.html
 
 Or Quick start, paste:
-sudo abbitmqctl add_user myuser mypassword
+sudo rabbitmqctl add_user myuser mypassword
 sudo rabbitmqctl add_vhost myvhost
 sudo rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
 

@@ -42,7 +42,7 @@ function load_usagesummary_auth(authid){
 function load_details_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/api/'+authid+'/head/',
+       url: '/api/'+authid+'/info/',
        success: function(msg){
             if(msg.mimetype.startsWith("image")){
                 $("#mfileImageDetailsTemplate" ).tmpl( msg  ).appendTo( "#detailscontent" );

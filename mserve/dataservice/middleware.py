@@ -14,10 +14,12 @@ class AuthMiddleware(object):
     def process_request(self, request):
         if request.META.has_key('REQUEST_URI'):
             uri = request.META['REQUEST_URI']
-            match = re.match("\/api\/(?P<id>[\w]{8}(-[\w]{4}){3}-[\w]{12})\/(?P<method>.*)\/",uri)
+            match = re.match("\/api\/(?P<id>[\w]{8}(-[\w]{4}){3}-[\w]{12})\/(?P<methodstring>.*)\/",uri)
             if match:
                 id   = match.group('id')
-                method = match.group('method')
+                methodstring = match.group('methodstring')
+                method = methodstring.split("/")[0]
+                logging.info("method = %s id = %s" % (method,id))
                 try:
                     auth = Auth.objects.get(id=id)
                     logging.debug("Authority Check for Auth id=%s for method=%s " % (id, method))
@@ -53,7 +55,6 @@ class ResponseMiddleware(object):
                     timetaken = endtime - starttime
                     tt = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
                     usage_store.record(mfileid,metric_responsetime,tt)
-
         return response
 
     def process_request(self, request):

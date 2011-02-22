@@ -36,9 +36,11 @@ function loadContainers(){
                 if(end>containers.length){
                     end=containers.length;
                 }
+
+                $( "#containerTemplate" ).tmpl( containers.slice(start,end) ) .appendTo( "#containerpaginator" );
                 for(var i=start;i<end;i++) {
-                    var c = $("<div>"+containers[i].name+"  <a href='/browse/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
-                    $('#containerpaginator').append(c)
+                    //var c = $("<div>"+containers[i].name+"  <a href='/browse/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
+                    //$('#containerpaginator').append(c)
                 }
                 return false;
             }

@@ -1,4 +1,3 @@
-
 import os
 import os.path
 import string
@@ -10,6 +9,7 @@ from celery.task.sets import TaskSet
 from dataservice.forms import *
 from dataservice.models import *
 from dataservice.tasks import thumbimage
+from django.core.cache import cache
 from django.http import *
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -88,11 +88,72 @@ class JobMFileHandler(BaseHandler):
 
         return HttpResponse(arr,mimetype="application/json")
 
+def get_class( kls ):
+    parts = kls.split('.')
+    module = ".".join(parts[:-1])
+    m = __import__( module )
+    for comp in parts[1:]:
+        m = getattr(m, comp)
+    return m
+
+
+
 class JobHandler(BaseHandler):
     model = Job
     allowed_methods = ('GET','POST','DELETE')
     fields = ('id','name','created','taskset_id','joboutput_set')
     #fields = ('id','name','created','taskset_id','jobmfile_set')
+
+    def create(self, request):
+        
+        jobtype = request.POST['jobtype']
+        mfileid = request.POST['mfileid']
+
+        mfile = MFile.objects.get(pk=mfileid)
+
+        job = Job(name="Job",service=mfile.service)
+        job.save()
+
+        mimetype = "application/octet-stream; charset=binary"
+        try:
+            job_description = cache.get(jobtype)
+            mimetype = job_description["outputmime"]
+        except Exception as e:
+            logging.info("No job description for job type '%s' %s" % (jobtype,e) )
+
+        # TODO How to work out mimetype for job outputs
+        output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=mimetype)
+
+        fname = "%s.%s" % (mfile.name,"output")
+        outputpath = os.path.join( str(job.id) , fname   )
+        output.file = outputpath
+        output.save()
+
+        (head,tail) = os.path.split(output.file.path)
+
+        if not os.path.isdir(head):
+            os.makedirs(head)
+        
+        m = get_class(jobtype)
+        task = m.subtask([mfile.file.path,output.file.path])
+
+        tasks = [task]
+
+        ts = TaskSet(tasks=tasks)
+        tsr = ts.apply_async()
+        tsr.save()
+
+        job.taskset_id=tsr.taskset_id
+        job.save()
+
+        jobmfile = JobMFile(mfile=mfile,job=job,index=0)
+        jobmfile.save()
+
+        logging.info("Creating Job Type %s on file %s" % (jobtype,mfileid))
+
+        logging.info("Created Job  %s" % (m))
+
+        return job
 
     def delete(self, request, id):
         job = Job.objects.get(id=id)
@@ -119,10 +180,9 @@ class JobHandler(BaseHandler):
         dict["waiting"] = tsr.waiting()
         return HttpResponse(dict,mimetype="application/json")
 
-
 class JobOutputHandler(BaseHandler):
     model = JobOutput
-    fields = ('id','job_id','name','thumb','thumburl','file')
+    fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
 
 class RenderResultsHandler(BaseHandler):
     allowed_methods = ('GET','POST')
@@ -170,14 +230,21 @@ class RenderHandler(BaseHandler):
         if not os.path.exists(thumbfolder):
             os.makedirs(thumbfolder)
 
+        jobtype = "jobservice.tasks.render_blender"
+        mimetype = "application/octet-stream; charset=binary"
+        try:
+            job_description = cache.get(jobtype)
+            mimetype = job_description["outputmime"]
+        except Exception as e:
+            logging.info("No job description for job type '%s' %s" % (jobtype,e) )
+
         padding = 4
         for i in range(int(start),int(end)+1):
-            output = JobOutput(name="%s Render"%mfile.name,job=job)
+            output = JobOutput(name="%s Render"%mfile.name,job=job,mimetype=mimetype)
             ss= string.zfill(str(i), padding)
             fname = "%s.%s.png" % (mfile.name,ss)
             #fname = mfile.name
             #hashfname = "%s.%s" % (mfile.name,hashes)
-
 
             outputfile= os.path.join( folder , fname)
             thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))

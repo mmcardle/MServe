@@ -26,3 +26,6 @@ def getdiscstorage():
 
 def getthumbstorage():
     return DiskSystemStorage(location=settings.THUMB_ROOT,base_url="/mservethumbs/")
+
+def getproxystorage():
+    return DiskSystemStorage(location=settings.THUMB_ROOT,base_url="/mserveproxy/")
