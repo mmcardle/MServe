@@ -4,10 +4,26 @@ from dataservice.models import NamedBase
 from dataservice.models import Usage
 from dataservice.models import DataService
 from dataservice.models import HostingContainer
+from dataservice.handlers import ResourcesHandler
 import dataservice.utils as utils
 import logging
 import time
+import datetime
 from django.db.models import Count,Max,Min,Avg,Sum,StdDev,Variance
+
+sleeptime = 10
+
+class PPManagedResourcesHandler(BaseHandler):
+    allowed_methods = ('GET',)
+
+    def read(self, request, id, last=-1):
+        rh = ResourcesHandler()
+
+        ret = rh.read(request, id, last_known=last)
+
+        logging.info(ret)
+
+        return ret
 
 class PPUsageHandler(BaseHandler):
     allowed_methods = ('GET',)
@@ -20,8 +36,7 @@ class PPUsageHandler(BaseHandler):
             base = auth.base
 
         if last is not -1:
-            while last == base.reportnum:
-                logging.debug("Waiting for new usage lastreport=%s" % last)
+            while str(last) == str(base.reportnum):
                 time.sleep(sleeptime)
                 base = NamedBase.objects.get(id=id)
 
@@ -31,6 +46,7 @@ class PPUsageHandler(BaseHandler):
             .annotate(max=Max('total')) \
             .annotate(min=Min('total')) \
             .annotate(sum=Sum('total')) \
+            .annotate(sums=Sum('total')) \
             .annotate(stddev=StdDev('total'))\
             .annotate(variance=Variance('total'))
 
@@ -52,18 +68,22 @@ class PPUsageHandler(BaseHandler):
             .annotate(nRates=Count('total')) \
             .annotate(rateTime=Avg('rateTime')) \
             .annotate(rate=Avg('rate')) \
-            .annotate(rate=Sum('rateCumulative'))
+            .annotate(usageSoFar=Sum('rateCumulative')) \
+            .annotate(count=Count('total'))
 
         inprogressMap = {}
         for inp in inprogress:
+            inp["current"] = datetime.datetime.now()
             inprogressMap[inp["metric"]] = inp
 
         usageSummaryMap = {}
         for us in usageSummary:
-            usageSummaryMap[us["metric"]] = us
+            us["sums"] = us['sum']*us['sum']
+            usageSummaryMap[us["metric"]] =  us
 
         dict = {}
-        dict["inprogressUsage"] = inprogressMap
-        dict["usageSummary"] = usageSummaryMap
+        dict["inprogress"] = inprogressMap
+        dict["summarys"] = usageSummaryMap
+        dict["reportnum"] = base.reportnum
 
         return dict
