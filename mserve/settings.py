@@ -93,7 +93,7 @@ ROOT_URLCONF = 'mserve.urls'
 TEMPLATE_DIRS = (
 
     # Change to where your checkout is
-    "/home/mm/dev/pp-dataservice/mserve/templates",
+    "/opt/mserve/pp-dataservice/mserve/templates",
     # Change to where the admin templates are
     "/usr/lib/pymodules/python2.6/django/contrib/admin/templates/",
     
@@ -104,9 +104,9 @@ TEMPLATE_DIRS = (
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
-BROKER_USER = "mm"
-BROKER_PASSWORD = "pass"
-BROKER_VHOST = "mmhost"
+BROKER_USER = "myuser"
+BROKER_PASSWORD = "mypassword"
+BROKER_VHOST = "myvhost"
 
 CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks", "prestoprime.tasks" )
 
