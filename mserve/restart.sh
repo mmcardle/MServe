@@ -13,7 +13,10 @@ fi
 echo "Killed Previous Process"
 sudo -u www-data ./manage.py runfcgi --pythonpath="/opt/mserve/pp-dataservice/mserve" socket=$SOCKET pidfile=$PIDFILE && sudo chmod 777 $SOCKET
 sudo -u www-data chmod 777 $SOCKET
-sudo chown www-data:www-data /var/mserve/mservedb $SOCKET
+sudo chown www-data:www-data $SOCKET
+if [ -f "/var/mserve/mservedb" ]; then
+	sudo chown www-data:www-data /var/mserve/mservedb 
+fi
 cat $PIDFILE
 echo "Perms"
 echo "Running"
