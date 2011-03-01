@@ -19,6 +19,9 @@ urlpatterns = patterns('',
     # Generic Job Methods
     url(r'^jobapi/$', job_handler),
 
+    # Tasks
+    url(r'^tasks/', 'jobservice.views.list_jobs'),
+
     # Job
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/$', render_handler),
     url(r'^jobapi/render/(?P<mfileid>[^/]+)/(?P<start>[^/]+)/(?P<end>[^/]+)/$', render_handler),

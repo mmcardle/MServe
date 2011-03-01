@@ -138,6 +138,11 @@ class HostingContainer(NamedBase):
             self.id = utils.random_id()
         super(HostingContainer, self).save()
 
+    def _delete_usage_(self):
+        import usage_store as usage_store
+        for usage in self.usages.all():
+            usage_store._stoprecording_(usage)
+
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
     status = models.CharField(max_length=200)
@@ -219,6 +224,8 @@ def pre_delete_handler( sender, instance=False, **kwargs):
     instance._delete_usage_()
 
 pre_delete.connect(pre_delete_handler, sender=MFile, dispatch_uid="dataservice.models")
+pre_delete.connect(pre_delete_handler, sender=DataService, dispatch_uid="dataservice.models")
+pre_delete.connect(pre_delete_handler, sender=HostingContainer, dispatch_uid="dataservice.models")
 
 def post_init_handler( sender, instance=False, **kwargs):
     pass

@@ -21,6 +21,10 @@ hg clone http://bitbucket.org/jespern/django-piston
 cd django-piston
 python setup.py install
 
+git clone https://github.com/ask/django-celery.git
+cd django-celery
+python setup.py install
+
 sudo apt-get install git
 git clone git://soave.it-innovation.soton.ac.uk/git/pp-dataservice
 

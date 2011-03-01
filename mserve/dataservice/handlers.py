@@ -133,31 +133,27 @@ class MFileHandler(BaseHandler):
         r = rc.DELETED
         return r
 
-    def update(self, request, mfileid=None):
+    def update(self, request, id):
         form = UpdateMFileForm(request.POST,request.FILES)
         if form.is_valid(): 
             
             file = request.FILES['file']
-            mfileid = form.cleaned_data['sid']
-            logging.info("Update %s" % mfileid)
-            #service = DataService.objects.get(id=serviceid)
-            mfile = MFile.objects.get(pk=mfileid)
+            mfile = MFile.objects.get(pk=id)
+            logging.info("Update %s with file %s" % (id,file))
             mfile.file = file
             mfile.name = file.name
             mfile.size = file.size
-            
             mfile.save()
-
+            api.mfile_post_process(mfile)
+            
             backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
             backup.save()
-
-            #usage_store.startrecording(mfileid,usage_store.metric_disc,mfile.size)
-            #usage_store.startrecording(mfileid,usage_store.metric_archived,mfile.size)
 
             return mfile
 
         else:
             r = rc.BAD_REQUEST
+            logging.info("Bad Form %s" % (form))
             r.write("Invalid Request!")
             return r
 
@@ -452,9 +448,12 @@ class AuthHandler(BaseHandler):
 class ResourcesHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self, request, id, last_known=-1):
+    def read(self, request, id, last_known=None):
 
-        last = int(last_known)
+        if last_known == None:
+            last = -1
+        else:
+            last = int(last_known)
         try:
             base = NamedBase.objects.get(pk=id)
 

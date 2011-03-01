@@ -1,5 +1,6 @@
 import os.path
 from celery.decorators import task
+from celery.task.sets import subtask
 import logging
 import subprocess
 import urllib
@@ -57,7 +58,15 @@ def md5file(mfilepath):
     return md5string
 
 @task
-def thumbimage(mfilepath,thumbpath,width,height):
+def thumbimage(mfilepath,thumbpath,options={},callback=None):
+
+    logging.info("thumbimage %s to %s with options %s " % (mfilepath,thumbpath,options) )
+
+    widthS = options["width"]
+    heightS = options["height"]
+    height = int(heightS)
+    width  = int(widthS)
+
     logging.info("Creating %sx%s image for %s to %s" % (width,height,mfilepath,thumbpath))
     if not os.path.exists(mfilepath):
         logging.info("Image %s does not exist" % (mfilepath))
@@ -66,16 +75,25 @@ def thumbimage(mfilepath,thumbpath,width,height):
     im = Image.open(mfilepath)
 
     w, h = im.size
-    if float(w)/h < float(width)/height:
+    logging.info("Thumbnail 1 %s %s" % (w,h))
+    if float(w)/h < float(width)/float(height):
+            logging.info("Thumbnail 2 %s %s" % (w,h))
             im = im.resize((width, h*width/w), Image.ANTIALIAS)
     else:
-            im = im.resize((w*height/h, height), Image.ANTIALIAS)
+            logging.info("Thumbnail 3 %s %s" % (w,h))
+            im = im.resize((w*int(height)/h, int(height)), Image.ANTIALIAS)
+            logging.info("Thumbnail 3.5 %s %s" % (w,h))
     w, h = im.size
-    im = im.crop( ((w-width)/2, (h-height)/4, (w-width)/2+width, (h-height)/4+height))
+    logging.info("Thumbnail  4 %s %s" % (w,h))
+
+    im = im.crop(((w-width)/2, (h-height)/4, (w-width)/2+width, (h-height)/4+height))
 
     im.thumbnail((width,height))
-    im.save(thumbpath, "JPEG")
+    im.save(thumbpath, "PNG")
     logging.info("Thumnail created %s" % (thumbpath))
+
+    if callback:
+        subtask(callback).delay()
 
     return True
 

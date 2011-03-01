@@ -41,13 +41,7 @@ class UpdateMFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages']
-        model = MFile
-
-class UpdateMFileFormURL(ModelForm):
-
-    class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy']
         model = MFile
 
 class AuthForm(ModelForm):

@@ -41,8 +41,8 @@ function reloadMFiles(newfileid){
             // First Parameter: number of items
             // Second Parameter: options object
 
-            // Render the template with the movies data and insert
-            // the rendered HTML under the "movieList" element
+            // Render the template with the data and insert
+            // the rendered HTML under the "mfilepaginator" element
             $("#mfilepaginator").pagination(mfiles.length, {
                     items_per_page:12,
                     callback:handlePaginationClick
@@ -61,14 +61,13 @@ function loadJobs(serviceid){
        success: function(msg){
             for (i in msg){
                 create_job_holder(msg[i])
-                create_job_paginator(msg[i].job)
                 if(!msg[i].ready){
                     check_job(msg[i].job,serviceid)
                 }
             }
        },
        error: function(msg){
-            showError("Render",objectToString(msg))
+            showError("Error Loading Jobs",objectToString(msg))
        }
      });
 }
@@ -157,9 +156,7 @@ function load_jobs_mfile(mfileid){
             $("#jobs").empty()
         }
             for (i in msg){
-                
                 create_job_holder(msg[i])
-                create_job_paginator(msg[i].job)
                 if(!msg[i].ready){
                     check_job(msg[i].job,mfileid)
                 }
@@ -172,7 +169,7 @@ function load_jobs_mfile(mfileid){
 }
 
 function create_job_holder(task){
-    job = task.job
+    var job = task.job
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
@@ -197,32 +194,19 @@ function create_job_holder(task){
                 value: percent
         });
 
+
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
-        $('#jobheader-'+id).click(function() {          $('#jobpreviewpaginator-'+id).toggle('blind');      });
-        $('#jobicon-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
-        $('#jobinfo-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
-        $('#jobprogressbar-'+id).click(function() {            $('#jobpreviewpaginator-'+id).toggle('blind')        });
+        $('#jobheader-'+id).click(function() {          create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
+        $('#jobicon-'+id).click(function() {            create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
+        $('#jobinfo-'+id).click(function() {            create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
+        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
+
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
         $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
-    }
-}
 
-function mfile_render(mfileid){
-    mfile_render(mfileid,0,10)
-}
-function mfile_render(mfileid,start,end){
-     $.ajax({
-       type: "POST",
-       url: '/jobapi/render/'+mfileid+"/"+start+"/"+end+"/",
-       success: function(msg){
-            create_job_holder(msg)
-            check_job(msg.job,mfileid)
-       },
-       error: function(msg){
-            showError("Render",objectToString(msg))
-       }
-     });
+
+    }
 }
 
 function check_job(job,mfileid){
@@ -239,9 +223,10 @@ function check_job(job,mfileid){
         var progressbar = $( "#jobprogressbar-"+job.id )
 
         if(msg.waiting){
+            icon.removeClass('ui-icon ui-icon-circle-check')
             icon.addClass('taskrunning')
         }else{
-            icon.addClass('ui-icon-check')
+            icon.addClass('ui-icon ui-icon-circle-check')
             icon.removeClass('taskrunning')
         }
 
@@ -257,7 +242,6 @@ function check_job(job,mfileid){
             if(msg.failed){
                 $('#job-'+job.id).addClass('ui-state-error')
             }else{
-                //load_render_preview_output(job.id)
                 create_job_paginator(job)
                 $("#jobpreviewpaginator-"+job.id).show('slide')
             }
@@ -265,7 +249,7 @@ function check_job(job,mfileid){
 
        },
        error: function(msg){
-            showError("Render",objectToString(msg))
+            showError("Error Checking Job",objectToString(msg))
        }
      });
  }

@@ -18,6 +18,7 @@ from celery.task.sets import subtask
 import logging
 import subprocess
 import string
+import shutil
 
 # Blender Commnad Line API
 #
@@ -32,26 +33,48 @@ import string
 
 
 @task
-def render_blender(scenepath,s,e,outputdir,fname,thumbpath,thumbsize=(210,128),padding=4,format="PNG",callback=None):
-    logging.info("Processing render job %s start %s to end %s" % (scenepath,s,e))
-    if not os.path.exists(scenepath):
-        logging.info("Scene %s does not exist" % (scenepath))
+def render_blender(inputfile,outputfile,options={},callback=None):
+
+    padding = 4
+    frame = options["frame"]
+    if options.has_key("fname"):
+        fname = options["format"]
+    else:
+        fname="image"
+    if options.has_key("format"):
+        format = options["format"]
+    else:
+        format="PNG"
+
+    logging.info("Processing render job %s frame: %s " % (inputfile,frame))
+
+    if not os.path.exists(inputfile):
+        logging.info("Scene %s does not exist" % inputfile)
         return False
+
+    [outputdir,ffff]= os.path.split(outputfile)
+
     hashes = "#" * padding
     outputformat = "%s/%s.%s" % (outputdir,fname,hashes)
-    ss= string.zfill(str(s), padding)
-    ee= string.zfill(str(e), padding)
-    args = ["blender","-b",scenepath,"-x","1","-o",outputformat,"-F",format.upper(),"-s",ss,"-e",ee,"-a"]
+    ss= string.zfill(str(frame), padding)
+    args = ["blender","-b",inputfile,"-x","1","-o",outputformat,"-F",format.upper(),"-s",ss,"-e",ss,"-a"]
     logging.info(args)
-    n = str(s).zfill(padding)
-    ifile = os.path.join(outputdir,"%s.%s.%s"%(fname,n,format.lower()))
+
+    n = str(frame).zfill(padding)
+    resultfile = os.path.join(outputdir,"%s.%s.%s"%(fname,n,format.lower()))
 
     ret = subprocess.call(args)
+
+    if resultfile != outputfile:
+        logging.debug("result file %s is not outputfile %s ... Moving" % (resultfile, outputfile))
+        shutil.move(resultfile, outputfile)
+
     if callback:
         # The callback may have been serialized with JSON,
         # so best practice is to convert the subtask dict back
         # into a subtask object.
 
         #ofile = os.path.join(outputdir,"%s.%s.thumb.png"%(fname,n))
-        subtask(callback).delay( ifile ,thumbpath ,thumbsize[0], thumbsize[1] )
+        #subtask(callback).delay( outputfile ,thumbpath ,thumbsize[0], thumbsize[1] )
+        subtask(callback).delay(  )
     return ret

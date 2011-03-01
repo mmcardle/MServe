@@ -46,6 +46,8 @@ def job_to_dict(job):
         dict["total"] = tsr.total
         dict["waiting"] = tsr.waiting()
         dict["job"] = job
+    else:
+        return None
 
     return dict
 
@@ -59,7 +61,8 @@ class JobServiceHandler(BaseHandler):
         arr = []
         for job in service.job_set.all():
             dict = job_to_dict(job)
-            arr.append(dict)
+            if dict is not None:
+                arr.append(dict)
 
         return HttpResponse(arr,mimetype="application/json")
 
@@ -101,34 +104,55 @@ class JobHandler(BaseHandler):
         jobtype = request.POST['jobtype']
         mfileid = request.POST['mfileid']
 
-        logging.info("Request for job type '%s'" % (jobtype) )
+        options = {}
+        for v in request.POST:
+            options[v]=request.POST[v]
+
+        logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
 
         mfile = MFile.objects.get(pk=mfileid)
 
         job = Job(name="Job",service=mfile.service)
         job.save()
 
-        mimetype = "application/octet-stream; charset=binary"
+        outputmimetype = "application/octet-stream; charset=binary"
         try:
             job_description = cache.get(jobtype)
-            mimetype = job_description["outputmime"]
+            outputmimetype = job_description["outputmime"]
         except Exception as e:
             logging.info("No job description for job type '%s' %s" % (jobtype,e) )
 
-        output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=mimetype)
+        output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=outputmimetype)
 
-        fname = "%s.%s" % (mfile.name,"output")
-        outputpath = os.path.join( str(job.id) , fname   )
-        output.file = outputpath
-        output.save()
+        callback=None
+        if outputmimetype.startswith("image"):
+            fname = "%s.%s" % (mfile.name,"png")
+            outputpath = os.path.join( str(job.id) , fname)
+            output.file = outputpath
+            thumbfolder = os.path.join( settings.THUMB_ROOT, str(job.id))
+            if not os.path.exists(thumbfolder):
+                os.makedirs(thumbfolder)
+                
+            thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))
+            thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
+            output.thumb = thumbpath
+            output.save()
+            thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+            callback = thumbimage.subtask([output.file.path,thumbfile,thumboptions])
+        else:
+            fname = "%s.%s" % (mfile.name,"output")
+            outputpath = os.path.join( str(job.id) , fname)
+            output.file = outputpath
+            output.save()
 
         (head,tail) = os.path.split(output.file.path)
 
         if not os.path.isdir(head):
             os.makedirs(head)
-        
+
+
         m = get_class(jobtype)
-        task = m.subtask([mfile.file.path,output.file.path])
+        task = m.subtask([mfile.file.path,output.file.path,options],callback=callback)
 
         tasks = [task]
 
@@ -219,13 +243,18 @@ class RenderHandler(BaseHandler):
             #    os.makedirs(outputhead)
 
             outputpath = os.path.join( str(job.id) , fname   )
-            thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png") )
+            thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
 
             output.file = outputpath
             output.thumb = thumbpath
             output.save()
+
+            thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+            thumbsubtask = thumbimage.subtask([outputfile,thumbfile,thumboptions])
+
+            renderoptions = {"padding":padding,"fname":fname,"frame":i}
             
-            t = render_blender.subtask([mfile.file.path,i,i,folder,mfile.name,thumbfile],thumbsize=settings.thumbsize,padding=padding,callback=thumbimage)
+            t = render_blender.subtask([mfile.file.path,outputfile,renderoptions],callback=thumbsubtask)
             tasks.append(t)
         
         ts = TaskSet(tasks=tasks)

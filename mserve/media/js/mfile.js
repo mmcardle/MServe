@@ -1,9 +1,9 @@
 
 
-function mfile_task_ajax(mfileid, jobtype){
+function mfile_task_ajax(data){
      $.ajax({
        type: "POST",
-       data: "jobtype="+jobtype+"&mfileid="+mfileid,
+       data: data,
        url: "/jobapi/",
        success: function(msg){
                 create_job_holder(msg)

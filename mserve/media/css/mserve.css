@@ -182,7 +182,12 @@ h3 em {
 }
 
 h5 {
-    color:#78bbe6;
+    color:darkblue;
+    font-size: 1.0em;
+}
+
+h5 em {
+    font-variant: normal
 }
 
 a, a:visited {

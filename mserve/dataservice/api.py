@@ -110,13 +110,25 @@ def create_mfile(request,serviceid,file):
 
     mfileauth_monitor.roles.add(monitor_role)
 
+    mfile.save()
+    mfile_post_process(mfile)
+    
+    logging.debug("Backing up '%s' "%mfile)
+
+    if file is not None:
+        backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
+        backup.save()
+
+    return mfile
+
+def mfile_post_process(mfile):
     if mfile.file:
         # MIME type
         mfile.mimetype = mimetype = mimefile(mfile.file.path)
         # checksum
         mfile.checksum = md5file(mfile.file.path)
         # record size
-        mfile.size = file.size
+        mfile.size = mfile.file.size
 
         thumbpath = os.path.join( str(mfile.file) + ".thumb.jpg")
         posterpath = os.path.join( str(mfile.file) + ".poster.jpg")
@@ -139,7 +151,7 @@ def create_mfile(request,serviceid,file):
         else:
             logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
 
-        if mimetype.startswith('video') or file.name.endswith('mxf'):
+        if mimetype.startswith('video') or mfile.file.name.endswith('mxf'):
             thumbtask = thumbvideo(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
             mfile.thumb = thumbpath
             postertask = thumbvideo(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
@@ -149,29 +161,21 @@ def create_mfile(request,serviceid,file):
 
         elif mimetype.startswith('image'):
             logging.info("Creating thumb inprocess for Image '%s' %s " % (mfile,mimetype))
-            thumbtask = thumbimage(mfile.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
+            thumbtask = thumbimage(mfile.file.path,fullthumbpath,options={"width":settings.thumbsize[0],"height":settings.thumbsize[1]})
             mfile.thumb = thumbpath
-            postertask = thumbimage(mfile.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
+            postertask = thumbimage(mfile.file.path,fullposterpath,options={"width":settings.postersize[0],"height":settings.postersize[1]})
             mfile.poster = posterpath
 
-        elif file.name.endswith('blend'):
+        elif mfile.file.name.endswith('blend'):
             logging.info("Creating Blender thumb '%s' %s " % (mfile,mimetype))
             # TODO : Change to a Preview of a frame of the blend file
-            thumbtask = thumbimage("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
+            thumbtask = thumbimage("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,options={"width":settings.thumbsize[0],"height":settings.thumbsize[1]})
             mfile.thumb = thumbpath
         else:
             logging.info("Not creating thumb for '%s' %s " % (mfile,mimetype))
 
         mfile.save()
-
-
-    logging.debug("Backing up '%s' "%mfile)
-
-    if file is not None:
-        backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
-        backup.save()
-
-    return mfile
+        
 
 def create_container(request,name):
     hostingcontainer = HostingContainer(name=name)
@@ -198,10 +202,10 @@ def delete_container(request,containerid):
     container = HostingContainer.objects.get(id=containerid)
     logging.info("Deleteing service %s %s" % (container.name,containerid))
 
-    usages = Usage.objects.filter(base=container)
-    for usage in usages:
-        usage.base = None
-        usage.save()
+    #usages = Usage.objects.filter(base=container)
+    #for usage in usages:
+    #    usage.base = None
+    #    usage.save()
 
     container.delete()
     logging.info("Container Deleted %s " % containerid)
@@ -210,10 +214,10 @@ def delete_service(request,serviceid):
     service = DataService.objects.get(id=serviceid)
     logging.info("Deleteing service %s %s" % (service.name,serviceid))
 
-    usages = Usage.objects.filter(base=service)
-    for usage in usages:
-        usage.base = service.container
-        usage.save()
+    #usages = Usage.objects.filter(base=service)
+    #for usage in usages:
+      #  usage.base = service.container
+       # usage.save()
 
     service.delete()
     logging.info("Service Deleted %s " % serviceid)
@@ -221,10 +225,10 @@ def delete_service(request,serviceid):
 def delete_mfile(request,mfileid):
     mfile = MFile.objects.get(id=mfileid)
 
-    usages = Usage.objects.filter(base=mfile)
-    for usage in usages:
-        usage.base = mfile.service
-        usage.save()
+   # usages = Usage.objects.filter(base=mfile)
+    #for usage in usages:
+     #   usage.base = mfile.service
+      #  usage.save()
 
     mfile.delete()
     logging.info("MFile Deleted %s " % mfileid)

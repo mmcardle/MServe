@@ -31,10 +31,10 @@ urlpatterns = patterns('',
     url(r'^auth/$', auth_handler),
 
     # REST Methods for individual resources
-    url(r'^container/(?P<id>[^/]+)/', hosting_handler),
-    url(r'^service/(?P<id>[^/]+)/', dataservice_handler),
+    url(r'^container/(?P<id>[^/]+)/$', hosting_handler),
+    url(r'^service/(?P<id>[^/]+)/$', dataservice_handler),
     url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
-    url(r'^auth/(?P<id>[^/]+)/', auth_handler),
+    url(r'^auth/(?P<id>[^/]+)/$', auth_handler),
 
     #Global
     url(r'^api/(?P<id>[^/]+)/info/$', info_handler),
@@ -66,9 +66,6 @@ urlpatterns = patterns('',
 
     # This should be a job
     url(r'^mfileapi/verify/(?P<mfileid>[^/]+)/$', mfile_verify_handler),
-
-    # TODO - TEMP - Needs Sorting
-    url(r'^tasks/', 'djcelery.views.registered_tasks'),
 
     # HTML Views
     url(r'^$',  'dataservice.views.home'),

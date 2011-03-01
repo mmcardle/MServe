@@ -85,7 +85,7 @@
         </div>
 
         <h3>Actions</h3>
-        <button id="newtaskbutton" >New Task</button>
+        <button id="newjobbutton" >New Job</button>
 
         <div id="jobcontent">
 
@@ -98,7 +98,7 @@
             <script type="text/javascript">
                 $(document).ready(function() {
                     load_jobs_mfile('{{mfile.id}}')
-                    create_new_task_ui_dialog('{{mfile.id}}')
+                    create_new_job_ui_dialog('{{mfile.id}}')
                 });
             </script>
 
@@ -133,7 +133,7 @@
 </div>
 
 
-<script>
+<script type="text/javascript">
 $(document).ready(function() {
     $(function() {
         $( "#tabs" ).tabs();
