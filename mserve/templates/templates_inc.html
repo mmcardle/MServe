@@ -200,6 +200,10 @@
     </tr>
 </script>
 
+<script id="jobResultTemplate" type="text/x-jquery-tmpl">
+    <div>RESULT {% templatetag openvariable %} ${JSON.stringify(${})} {% templatetag closevariable %}</div>
+</script>
+
 <script id="jobTemplate" type="text/x-jquery-tmpl">
     <h5 id='jobheader-${job.id}' title="${job.name}, ${job.created}, ${job.id}" >${job.name}, ${job.created}, <em></em></h5>
     
@@ -212,6 +216,8 @@
             <td width='5%' ><button id='jobdeletebutton-${job.id}'></button></td>
         <tr>
         </table>
+        <div  id='joboutputs-${job.id}' >
+        </div>
         <div  id='jobpreviewpaginator-${job.id}' class="jobpaginators" ></div>
     </div>
 </script>
@@ -299,7 +305,8 @@
 
     <div id="dialog-new-job-dialog-form" title="New Job">
         <form id="new-job-form">
-            <input id="job-mfileid" value="" type="hidden" name="mfileid" />
+            <!-- Can only support 1 input -->
+            <input id="job-mfileid" value="" type="hidden" name="input-0" />
 	<fieldset>
 
 		<label for="jobtype">Job</label>

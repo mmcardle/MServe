@@ -62,7 +62,7 @@ function loadJobs(serviceid){
             for (i in msg){
                 create_job_holder(msg[i])
                 if(!msg[i].ready){
-                    check_job(msg[i].job,serviceid)
+                    check_job(msg[i],serviceid)
                 }
             }
        },
@@ -72,17 +72,20 @@ function loadJobs(serviceid){
      });
 }
 
-function create_job_paginator(job){
-        
+function create_job_paginator(task){
+
+        var job = task.job
         var jobid = job.id
         var joboutputs = job.joboutput_set
-
+        var jobresults = task.result
+        
         var jobpaginator = $("#jobpreviewpaginator-"+jobid)
 
         function handlePaginationClick(new_page_index, jobpaginator) {
             // This selects elements from a content array
             start = new_page_index*this.items_per_page
             end   = (new_page_index+1)*this.items_per_page
+
             if(end>joboutputs.length){
                 end=joboutputs.length;
             }
@@ -158,7 +161,7 @@ function load_jobs_mfile(mfileid){
             for (i in msg){
                 create_job_holder(msg[i])
                 if(!msg[i].ready){
-                    check_job(msg[i].job,mfileid)
+                    check_job(msg[i],mfileid)
                 }
             }
        },
@@ -197,19 +200,55 @@ function create_job_holder(task){
 
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
-        $('#jobheader-'+id).click(function() {          create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
-        $('#jobicon-'+id).click(function() {            create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
-        $('#jobinfo-'+id).click(function() {            create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
-        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(job);$('#jobpreviewpaginator-'+id).toggle('blind');        });
+        $("#joboutputs-"+id).hide()
+        $('#jobheader-'+id).click(function() {          create_job_paginator(task);show_job(task);     });
+        $('#jobicon-'+id).click(function() {            create_job_paginator(task);show_job(task);     });
+        $('#jobinfo-'+id).click(function() {            create_job_paginator(task);show_job(task);     });
+        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(task);show_job(task);     });
 
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
         $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
 
+        update_job_outputs(task)
+
+        if(task.failed){
+            $('#job-'+job.id).addClass('ui-state-error')
+        }else{
+            //update_job_outputs(task)
+            //show_job(task)
+        }
 
     }
 }
 
-function check_job(job,mfileid){
+function update_job_outputs(task){
+    id = task.job.id
+    $("#joboutputs-"+id).empty()
+    for(i in task.result){
+        var resultdict = task.result[i]
+        result = ""
+        for(k in resultdict){
+            result += " <span style='color:green' >"+k+"</span> : <span style='color:blue' >"+resultdict[k] + "</span>"
+        }
+        if(result != ""){
+            v = 1 + parseInt(i)
+            $("#joboutputs-"+id).append("<div><b>Result "+v+" :</b> "+result+"</div>")
+        }
+    }
+}
+
+function show_job(task){
+    id = task.job.id
+    if(task.job.joboutput_set.length > 0){
+        $('#jobpreviewpaginator-'+id).toggle('blind');
+    }
+    if(task.result.length > 0){
+        $('#joboutputs-'+id).toggle('slide');
+    }
+}
+
+function check_job(task){
+    var job = task.job
      $.ajax({
        type: "GET",
        url: '/jobapi/'+job.id+"/",
@@ -237,13 +276,15 @@ function check_job(job,mfileid){
         });
 
         if(msg.waiting){
-            window.setTimeout(function(){ check_job(job,mfileid) },3000)
+            window.setTimeout(function(){ check_job(msg) },5000)
         }else{
             if(msg.failed){
                 $('#job-'+job.id).addClass('ui-state-error')
             }else{
-                create_job_paginator(job)
-                $("#jobpreviewpaginator-"+job.id).show('slide')
+                create_job_holder(msg)
+                create_job_paginator(msg)
+                update_job_outputs(msg)
+                show_job(msg)
             }
         }
 

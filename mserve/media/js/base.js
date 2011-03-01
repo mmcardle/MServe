@@ -65,13 +65,11 @@ function objectToStringShallow(ob){
 function objectToString(ob){
     var output = '';
     for (property in ob) {
-        //alert(typeof ob[property])
       if (typeof ob[property] == "object"){
             output += property + ': ' + objectToString(ob[property]) +'';
       }else{
             output += "<b>"+property + '</b>: ' + ob[property]+'<br /><br /><br />';
       }
-      
     }
     return output;
 }

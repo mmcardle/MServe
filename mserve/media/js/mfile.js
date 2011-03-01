@@ -7,9 +7,9 @@ function mfile_task_ajax(data){
        url: "/jobapi/",
        success: function(msg){
                 create_job_holder(msg)
-                create_job_paginator(msg.job)
+                //create_job_paginator(msg)
                 if(!msg.ready){
-                    check_job(msg.job,serviceid)
+                    check_job(msg)
                 }
        },
        error: function(msg){

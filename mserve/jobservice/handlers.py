@@ -19,6 +19,8 @@ from mserve.jobservice.models import *
 from mserve.jobservice.models import Job
 from mserve.jobservice.models import JobMFile
 from mserve.jobservice.models import JobOutput
+import dataservice.models as models
+import dataservice.usage_store as usage_store
 from piston.handler import BaseHandler
 from piston.utils import rc
 import settings as settings
@@ -102,7 +104,6 @@ class JobHandler(BaseHandler):
     def create(self, request):
         
         jobtype = request.POST['jobtype']
-        mfileid = request.POST['mfileid']
 
         options = {}
         for v in request.POST:
@@ -110,49 +111,81 @@ class JobHandler(BaseHandler):
 
         logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
 
-        mfile = MFile.objects.get(pk=mfileid)
 
-        job = Job(name="Job",service=mfile.service)
-        job.save()
-
-        outputmimetype = "application/octet-stream; charset=binary"
+        job_description = None
         try:
             job_description = cache.get(jobtype)
-            outputmimetype = job_description["outputmime"]
         except Exception as e:
             logging.info("No job description for job type '%s' %s" % (jobtype,e) )
 
-        output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=outputmimetype)
+        if job_description == None:
+            r = rc.BAD_REQUEST
+            r.write("\nJob has no description - Creation Failed!")
+            return r
 
-        callback=None
-        if outputmimetype.startswith("image"):
-            fname = "%s.%s" % (mfile.name,"png")
-            outputpath = os.path.join( str(job.id) , fname)
-            output.file = outputpath
-            thumbfolder = os.path.join( settings.THUMB_ROOT, str(job.id))
-            if not os.path.exists(thumbfolder):
-                os.makedirs(thumbfolder)
-                
-            thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))
-            thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
-            output.thumb = thumbpath
+        nbinputs = job_description["nbinputs"]
+        nboutputs= job_description["nboutputs"]
+
+        inputs = []
+        outputs = []
+        callbacks = []
+        job = None
+
+        for i in range(0,nbinputs):
+            mfileid = request.POST['input-%s'%i]
+            mfile = MFile.objects.get(id=mfileid)
+            # Create Job at first input
+            if i == 0:
+                job = Job(name="Job",service=mfile.service)
+                job.save()
+            inputs.append(mfile.file.path)
+            pass
+
+        if job == None:
+            r = rc.BAD_REQUEST
+            r.write("Job Creation failed!")
+            return r
+
+        for i in range(0,nboutputs):
+            outputmimetype = job_description["output-%s"%i]["mimetype"]
+            output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=outputmimetype)
             output.save()
-            thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-            callback = thumbimage.subtask([output.file.path,thumbfile,thumboptions])
-        else:
-            fname = "%s.%s" % (mfile.name,"output")
-            outputpath = os.path.join( str(job.id) , fname)
-            output.file = outputpath
-            output.save()
+            
+            callback=None
+            if outputmimetype.startswith("image"):
+                fname = "%s.%s" % (mfile.name,"png")
+                outputpath = os.path.join( str(job.id) , fname)
+                output.file = outputpath
+                thumbfolder = os.path.join( settings.THUMB_ROOT, str(job.id))
+                if not os.path.exists(thumbfolder):
+                    os.makedirs(thumbfolder)
 
-        (head,tail) = os.path.split(output.file.path)
+                thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))
+                thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
+                output.thumb = thumbpath
+                output.save()
+                thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                callback = thumbimage.subtask([output.file.path,thumbfile,thumboptions])
+            else:
+                fname = "%s.%s" % (mfile.name,"output")
+                outputpath = os.path.join( str(job.id) , fname)
+                output.file = outputpath
+                output.save()
 
-        if not os.path.isdir(head):
-            os.makedirs(head)
+            if callback != None:
+                callback.append(callback)
+
+            outputs.append(output.file.path)
+
+            (head,tail) = os.path.split(output.file.path)
+
+            if not os.path.isdir(head):
+                os.makedirs(head)
 
 
         m = get_class(jobtype)
-        task = m.subtask([mfile.file.path,output.file.path,options],callback=callback)
+
+        task = m.subtask([inputs,outputs,options],callbacks=callbacks)
 
         tasks = [task]
 
@@ -324,11 +357,10 @@ class JobOutputContentsHandler(BaseHandler):
             os.makedirs(fullfilepathfolder)
 
         if not os.path.exists(fullfilepath):
-            logging.info("linking %s to %s" % (mfilefilepath,fullfilepath))
+            logging.info("linking %s (exist=%s) to %s (exists=%s)" % (mfilefilepath,os.path.exists(mfilefilepath),fullfilepath,os.path.exists(fullfilepath)))
             os.link(mfilefilepath,fullfilepath)
 
-        import dataservice.models as models
-        import dataservice.usage_store as usage_store
+
         usage_store.record(joboutput.id,models.metric_access,joboutput.file.size)
 
         return redirect("/%s"%redirecturl)
