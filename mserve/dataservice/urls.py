@@ -55,10 +55,10 @@ urlpatterns = patterns('',
     url(r'^api/(?P<id>[^/]+)/setmanagementproperty/$', managementproperty_handler),
 
     # TING Container Methods
-    url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
+    url(r'^containerapi/(?P<containerid>[^/]+)/makeserviceinstance/$', dataservice_url_handler),
 
     # TING Service Methods
-    url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_handler),
+    url(r'^serviceapi/(?P<serviceid>[^/]+)/create/$', mfile_handler),
 
     # TING MFile Methods
     url(r'^mfileapi/get/(?P<mfileid>[^/]+)/$', mfile_contents_handler),
