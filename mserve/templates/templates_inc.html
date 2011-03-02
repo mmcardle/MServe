@@ -238,8 +238,9 @@
                                 {% endautoescape  %}
                         </a></div></td></tr>
             <tr><td>
-                    <a href='/browse/${id}/'>
+                    
                     <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                        <a href='/browse/${id}/'>
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
                           <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
@@ -247,8 +248,11 @@
                           <div style='font-size: x-small;'>Updated: ${updated}</div>
                           <div style='font-size: xx-small;'>Checksum:</div>
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
-                      </div>
                     </a>
+                        <button id="newjobbutton-${id}" >new</button>
+                      </div>
+                    
+                    
                 </td></tr>
             </tbody>
         </table>
@@ -306,11 +310,19 @@
     <div id="dialog-new-job-dialog-form" title="New Job">
         <form id="new-job-form">
             <!-- Can only support 1 input -->
-            <input id="job-mfileid" value="" type="hidden" name="input-0" />
+            <label for="serviceid">Service</label>
+            <input style="width:300px" id="serviceid" value="" type="text" name="serviceid" />
+            <label for="mfile">MFile</label>
+            <input style="width:300px" id="mfileid" value="" type="text" name="mfileid" />
 	<fieldset>
 
 		<label for="jobtype">Job</label>
                 <select name="jobtype" id="jobtype"></select>
+                <label for="inputs">Inputs</label>
+                <div id="inputsmessage" ></div>
+                <fieldset name="inputs" id="inputs">
+
+                </fieldset>
                 <label for="args">Arguments</label>
                 <div id="argsmessage" ></div>
                 <fieldset name="args" id="args">

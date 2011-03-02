@@ -31,6 +31,20 @@ function reloadMFiles(newfileid){
                 $( "#mfileList" ).empty()
                 $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#mfileList" );
 
+                for(var i=start; i<end; i++){
+                    (function() {
+                        var gid = i;
+                        var gmfileid = mfiles[gid].id;
+                        $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+                        $('#newjobbutton-'+gmfileid).click(function(){
+                            create_new_job_ui_dialog(gmfileid, serviceid)
+                            $("#mfileid").val(gmfileid);
+                            $("#serviceid").val(serviceid);
+                            $("#dialog-new-job-dialog-form").dialog( "open" );
+                        });
+                    })();
+                }
+
                 if(newfileid != null){
                     $("#image-"+newfileid).show('bounce')
                 }
@@ -176,7 +190,7 @@ function create_job_holder(task){
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
-        $( "#jobTemplate" ).tmpl( task ) .appendTo( "#jobs" );
+        $( "#jobTemplate" ).tmpl( task ) .prependTo( "#jobs" );
 
         var allDone = true
 

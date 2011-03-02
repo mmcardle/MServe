@@ -19,6 +19,20 @@ import logging
 import subprocess
 import string
 import shutil
+import urllib2
+
+@task
+def copyfromurl(inputs,outputs,options={},callbacks=[]):
+
+    url = options["url"]
+    output = outputs[0]
+
+    u = urllib2.urlopen(url)
+    localFile = open(output, 'w')
+    localFile.write(u.read())
+    localFile.close()
+
+    return {  }
 
 # Blender Commnad Line API
 #

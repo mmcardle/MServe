@@ -12,7 +12,7 @@ class Job(NamedBase):
     taskset_id = models.CharField(max_length=200)
 
     class Meta:
-        ordering = ('created', 'name')
+        ordering = ('-created', 'name')
 
     def save(self):
         if not self.id:

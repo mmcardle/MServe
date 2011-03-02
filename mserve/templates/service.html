@@ -27,7 +27,7 @@
 <div id="tabs">
 	<ul>
 		<li><a href="#tabs-1">Data</a></li>
-		<li><a href="#tabs-2">Jobs</a></li>
+		<li><a href="#jobs-tab">Jobs</a></li>
 		<li><a href="#tabs-3">Actions</a></li>
 		<li><a href="#tabs-4">Config</a></li>
 		<li><a href="#tabs-5">Usage</a></li>
@@ -42,6 +42,9 @@
 
 <div id="mfileList">
 </div>
+
+<h3>Actions</h3>
+<button id="newjobbutton" >New Job</button>
 
 <h3 style="clear:both">Create New File</h3>
 <table>
@@ -86,13 +89,12 @@
 </tr>
 </table>
         </div>
-             <div id="tabs-2">
+             <div id="jobs-tab">
              <h3>Jobs</h3>
 
             <div id="jobs">
 
             </div>
-
 
             <div id="set-management-property-button-dialog-form" title="Set Management Property">
                 <p class="validateTips">Input management property and value.</p>
@@ -108,12 +110,18 @@
                 </form>
             </div>
 
-
             <script type="text/javascript">
                 $(document).ready(function() {
-                    loadMFiles('{{ service.id }}');
+                    loadMFiles('{{service.id}}');
                     loadJobs('{{service.id}}');
                     service_setmanagementproperty('{{service.id}}');
+                    $('#newjobbutton').button()
+                    $('#newjobbutton').click(function(){
+                        create_new_job_ui_dialog('', '{{service.id}}')
+                        $("#mfileid").val('');
+                        $("#serviceid").val('{{service.id}}');
+                        $("#dialog-new-job-dialog-form").dialog( "open" );
+                    });
                 });
             </script>
 

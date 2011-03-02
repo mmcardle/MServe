@@ -93,8 +93,6 @@ def get_class( kls ):
         m = getattr(m, comp)
     return m
 
-
-
 class JobHandler(BaseHandler):
     model = Job
     allowed_methods = ('GET','POST','DELETE')
@@ -104,13 +102,29 @@ class JobHandler(BaseHandler):
     def create(self, request):
         
         jobtype = request.POST['jobtype']
+        serviceid = request.POST['serviceid']
+        mfileid = request.POST['mfileid']
+
+        name = "newfile"
+
+        if serviceid != "":
+            service = DataService.objects.get(id=serviceid)
+        elif mfileid != "":
+            mfile = MFile.objects.get(id=mfileid)
+            name = mfile.name
+            service = mfile.service
+        else:
+            r = rc.BAD_REQUEST
+            r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
+            return r
+
+        logging.info("Creating job at service %s " % service)
 
         options = {}
         for v in request.POST:
             options[v]=request.POST[v]
 
         logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
-
 
         job_description = None
         try:
@@ -128,18 +142,17 @@ class JobHandler(BaseHandler):
 
         inputs = []
         outputs = []
-        callbacks = []
-        job = None
+        callbacks = [] 
+
+        job = Job(name="Job",service=service)
+        job.save()
 
         for i in range(0,nbinputs):
             mfileid = request.POST['input-%s'%i]
             mfile = MFile.objects.get(id=mfileid)
-            # Create Job at first input
-            if i == 0:
-                job = Job(name="Job",service=mfile.service)
-                job.save()
+            jobmfile = JobMFile(mfile=mfile,job=job,index=0)
+            jobmfile.save()
             inputs.append(mfile.file.path)
-            pass
 
         if job == None:
             r = rc.BAD_REQUEST
@@ -153,7 +166,7 @@ class JobHandler(BaseHandler):
             
             callback=None
             if outputmimetype.startswith("image"):
-                fname = "%s.%s" % (mfile.name,"png")
+                fname = "%s.%s" % (name,"png")
                 outputpath = os.path.join( str(job.id) , fname)
                 output.file = outputpath
                 thumbfolder = os.path.join( settings.THUMB_ROOT, str(job.id))
@@ -167,7 +180,7 @@ class JobHandler(BaseHandler):
                 thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
                 callback = thumbimage.subtask([output.file.path,thumbfile,thumboptions])
             else:
-                fname = "%s.%s" % (mfile.name,"output")
+                fname = "%s.%s" % (name,"output")
                 outputpath = os.path.join( str(job.id) , fname)
                 output.file = outputpath
                 output.save()
@@ -185,6 +198,8 @@ class JobHandler(BaseHandler):
 
         m = get_class(jobtype)
 
+        logging.info("Creating task %s inputs= %s outputs= %s options= %s" % (m,inputs,outputs,options))
+
         task = m.subtask([inputs,outputs,options],callbacks=callbacks)
 
         tasks = [task]
@@ -196,8 +211,7 @@ class JobHandler(BaseHandler):
         job.taskset_id=tsr.taskset_id
         job.save()
 
-        jobmfile = JobMFile(mfile=mfile,job=job,index=0)
-        jobmfile.save()
+
 
         logging.info("Creating Job Type %s on file %s" % (jobtype,mfileid))
 
@@ -333,7 +347,6 @@ class JobOutputContentsHandler(BaseHandler):
         #dlfoldername = "dl%s"%accessspeed
         dlfoldername = "dl"
 
-
         file=joboutput.file
 
         p = str(file)
@@ -363,4 +376,5 @@ class JobOutputContentsHandler(BaseHandler):
 
         usage_store.record(joboutput.id,models.metric_access,joboutput.file.size)
 
+        logging.info("Redirecting  to %s " % redirecturl)
         return redirect("/%s"%redirecturl)

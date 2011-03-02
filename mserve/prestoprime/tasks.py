@@ -37,9 +37,6 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
     args = ["d10sumchecker","-i",inputfile,"-o",outputfile]
     ret = subprocess.call(args)
 
-    f = open(outputfile, 'w')
-    f.close()
-
     for callback in callbacks:
         subtask(callback).delay()
 

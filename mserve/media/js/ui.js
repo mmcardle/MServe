@@ -60,62 +60,81 @@ function create_new_add_auth_ui_dialog(authid) {
                 });
 	}
 
-function create_new_job_ui_dialog(mfileid, jobtypes) {
-  $.ajax({
-   type: "GET",
-   url: "/tasks/",
-   success: function(msg){
-       create_new_task_ui_dialog_internal(mfileid,msg)
-   },
-   error: function(msg){
-     showError("Error", ""+msg.responseText );
-   }
- });
-}
 
-function create_new_task_ui_dialog_internal(mfileid, jobdescriptions) {
+
+function create_new_job_ui_dialog(mfileid, serviceid) {
     // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
     $( "#dialog:ui-dialog" ).dialog( "destroy" );
 
     var job = $( "#jobtype" )
     var args = $( "#args" )
-    allFields = $( [] ).add( job ).add(args)
+    var inputs = $( "#inputs" )
+    allFields = $( [] ).add( job ).add(args).add(inputs)
     tips = $( ".validateTips" );
 
-    $("#job-mfileid").val(mfileid)
+    $("#mfileid").val(mfileid)
+    $("#serviceid").val(serviceid)
     $("#args").empty()
     $("#argsmessage").empty()
+    $("#inputs").empty()
+    $("#inputsmessage").empty()
 
 
-    jobtypes = jobdescriptions['regular']
+    $.ajax({
+       type: "GET",
+       url: "/tasks/",
+       success: function(jobdescriptions){
+            jobtypes = jobdescriptions['regular']
 
-    for( t in jobtypes){
-        $("#jobtype").append("<option value='"+jobtypes[t]+"'>"+jobtypes[t]+"</option>")
-    }
-
-    $("#jobtype").change(function() {
-        selected = job.val()
-
-        $("#args").empty()
-        $("#argsmessage").empty()
-
-        if(jobdescriptions['descriptions'][selected]){
-           var targs = jobdescriptions['descriptions'][selected]['options']
-           if(targs.length == 0){
-                $("#argsmessage").append("<em>No arguments</em>")
+            $("#jobtype").empty()
+            for( t in jobtypes){
+                $("#jobtype").append("<option value='"+jobtypes[t]+"'>"+jobtypes[t]+"</option>")
             }
 
-           for(t in targs){
-                $("#args").append("<label for="+targs[t]+">"+targs[t]+"</label><input type='text' name="+targs[t]+" id="+targs[t]+"  value=''></input>")
-           }
-        }else{
-            $("#argsmessage").append("<em>No arguments</em>")
-        }
+            $("#jobtype").change(function() {
+                selected = job.val()
+
+                $("#args").empty()
+                $("#argsmessage").empty()
+                $("#inputs").empty()
+                $("#inputsmessage").empty()
+
+                if(jobdescriptions['descriptions'][selected]){
+                   var targs = jobdescriptions['descriptions'][selected]['options']
+                   var nbinputs = jobdescriptions['descriptions'][selected]['nbinputs']
+
+                   if(targs.length == 0){
+                        $("#argsmessage").append("<em>No arguments</em>")
+                   }
+
+                   for(t in targs){
+                        $("#args").append("<label for="+targs[t]+">"+targs[t]+"</label><input type='text' name="+targs[t]+" id="+targs[t]+"  value=''></input>")
+                   }
+
+                    if(nbinputs == 0){
+                        $("#inputsmessage").append("<em>No inputs</em>")
+                    }
+
+                    for (i=0;i<nbinputs;i++)
+                    {
+                        inputkey = 'input-'+i
+                        inputlabel = 'input-'+(i+1)
+                        input = jobdescriptions['descriptions'][inputkey]
+                        initialvalue = ""
+                        if(i==0){
+                            value=mfileid
+                        }
+                        $("#inputs").append("<label for='"+inputkey+"'>"+inputlabel+"</label><input type='text' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
+                    }
+                }
+             });
+       },
+       error: function(msg){
+         showError("Error", ""+msg.responseText );
+       }
      });
 
-
-        
-
+  
     function updateTips( t ) {
         tips.text( t ).addClass( "ui-state-highlight" );
         setTimeout(function() {
@@ -134,7 +153,10 @@ function create_new_task_ui_dialog_internal(mfileid, jobdescriptions) {
                             allFields.removeClass( "ui-state-error" );
                             if ( bValid ) {
                                     var data = $("#new-job-form").serialize()
-                                    mfile_task_ajax(data)
+                                    mfile_task_ajax(data);
+                                    if(serviceid){
+                                        $("#tabs").tabs('select',"jobs-tab");
+                                    }
                                     $( this ).dialog( "close" );
                             }
                     },
@@ -144,6 +166,13 @@ function create_new_task_ui_dialog_internal(mfileid, jobdescriptions) {
             },
             close: function() {
                     allFields.val( "" ).removeClass( "ui-state-error" );
+                    $("#args").empty();
+                    $("#argsmessage").empty();
+                    $("#inputs").empty();
+                    $("#inputsmessage").empty();
+                    $("#mfileid").val("")
+                    $("#serviceid").val("")
+
             }
     });
 
