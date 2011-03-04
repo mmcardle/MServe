@@ -3,7 +3,7 @@
 <div id="usagecontent" >
 {% if usagesummary %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Numbers</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
+        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
         {% for summary in usagesummary%}
             <tr>
                 <td style="text-align: left;"><b>{{summary.metric}}</b></td>

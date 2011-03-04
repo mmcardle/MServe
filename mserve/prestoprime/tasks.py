@@ -45,9 +45,8 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
 @task
 def mxfframecount(inputs,outputs,options={},callbacks=[]):
     inputfile = inputs[0]
-    f = tempfile.NamedTemporaryFile()
-    outputfile = f.name
-    logging.info("Processing d10mxfchecksum job on %s" % (inputfile))
+    outputfile = outputs[0]
+    logging.info("Processing mxfframecount job on %s" % (inputfile))
     if not os.path.exists(inputfile):
         logging.info("Inputfile  %s does not exist" % (inputfile))
         return False
@@ -56,6 +55,9 @@ def mxfframecount(inputs,outputs,options={},callbacks=[]):
     lines = 0
     for line in open(outputfile):
         lines += 1
+
+    # TODO: subtract 1 for additional output
+    lines = lines -1
 
     for callback in callbacks:
         subtask(callback).delay()

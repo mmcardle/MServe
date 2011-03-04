@@ -1,10 +1,12 @@
 from piston.handler import BaseHandler
 from piston.utils import rc
+from django.http import HttpResponse
 from dataservice.models import NamedBase
 from dataservice.models import Usage
 from dataservice.models import DataService
 from dataservice.models import HostingContainer
 from dataservice.handlers import ResourcesHandler
+from anyjson import serialize as JSON_dump
 import dataservice.utils as utils
 import logging
 import time
@@ -40,16 +42,6 @@ class PPUsageHandler(BaseHandler):
                 time.sleep(sleeptime)
                 base = NamedBase.objects.get(id=id)
 
-        usageSummary = base.usages.filter(nInProgress=0).values('metric')\
-            .annotate(n=Count('total')) \
-            .annotate(avg=Avg('total')) \
-            .annotate(max=Max('total')) \
-            .annotate(min=Min('total')) \
-            .annotate(sum=Sum('total')) \
-            .annotate(sums=Sum('total')) \
-            .annotate(stddev=StdDev('total'))\
-            .annotate(variance=Variance('total'))
-
         ids = []
         if utils.is_container(base):
             hc = HostingContainer.objects.get(id=id)
@@ -64,7 +56,21 @@ class PPUsageHandler(BaseHandler):
         if utils.is_mfile(base):
             ids=[base.id]
 
-        inprogress = Usage.objects.filter(base__in=ids).filter(nInProgress__gte=1).values('metric')\
+        #usageSummary = base.usages.values('metric').filter(nInProgress=0)\
+        usageSummary = Usage.objects.filter(base__in=ids).values('metric').filter(nInProgress=0)\
+            .annotate(n=Count('total')) \
+            .annotate(avg=Avg('total')) \
+            .annotate(max=Max('total')) \
+            .annotate(min=Min('total')) \
+            .annotate(sum=Sum('total')) \
+            .annotate(sums=Sum('total')) \
+            .annotate(stddev=StdDev('total'))\
+            .annotate(variance=Variance('total'))
+
+        logging.info("Getting usage for metrics %s " %  base.usages.values('metric'))
+        logging.info("Getting usage for metrics %s " %  base.usages.values('metric').filter(nInProgress=0))
+
+        inprogress = Usage.objects.filter(base__in=ids).values('metric').filter(nInProgress__gte=1)\
             .annotate(nRates=Count('total')) \
             .annotate(rateTime=Avg('rateTime')) \
             .annotate(rate=Avg('rate')) \
@@ -73,12 +79,14 @@ class PPUsageHandler(BaseHandler):
 
         inprogressMap = {}
         for inp in inprogress:
+            # TODO : This should be datetime.datetime.now().isoformat() But ting will not accept it currently
             inp["current"] = datetime.datetime.now()
             inprogressMap[inp["metric"]] = inp
 
         usageSummaryMap = {}
         for us in usageSummary:
-            us["sums"] = us['sum']*us['sum']
+            #us["sums"] = float('%.f'% (us['sum']*us['sum']))
+            us["sums"] = int(us['sum']*us['sum'])
             usageSummaryMap[us["metric"]] =  us
 
         dict = {}
@@ -86,4 +94,7 @@ class PPUsageHandler(BaseHandler):
         dict["summarys"] = usageSummaryMap
         dict["reportnum"] = base.reportnum
 
+        # TODO : This should be JSON_dump and dates formatted with isoformat
+        # But ting will not accept it currently (see above)
+        #return HttpResponse(JSON_dump(dict),mimetype="application/json")
         return dict

@@ -45,9 +45,8 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
 # Render a Series
 # blender -b file.blend -x 1 -o //file -F "PNG" -s ss -e ee -a
 
-
 @task
-def render_blender(inputfile,outputfile,options={},callback=None):
+def render_blender(inputs,outputs,options={},callbacks=[]):
 
     padding = 4
     frame = options["frame"]
@@ -59,6 +58,9 @@ def render_blender(inputfile,outputfile,options={},callback=None):
         format = options["format"]
     else:
         format="PNG"
+
+    inputfile = inputs[0]
+    outputfile = outputs[0]
 
     logging.info("Processing render job %s frame: %s " % (inputfile,frame))
 
@@ -83,12 +85,8 @@ def render_blender(inputfile,outputfile,options={},callback=None):
         logging.debug("result file %s is not outputfile %s ... Moving" % (resultfile, outputfile))
         shutil.move(resultfile, outputfile)
 
-    if callback:
-        # The callback may have been serialized with JSON,
-        # so best practice is to convert the subtask dict back
-        # into a subtask object.
 
-        #ofile = os.path.join(outputdir,"%s.%s.thumb.png"%(fname,n))
-        #subtask(callback).delay( outputfile ,thumbpath ,thumbsize[0], thumbsize[1] )
-        subtask(callback).delay(  )
+    for callback in callbacks:
+        subtask(callback).delay()
+
     return ret

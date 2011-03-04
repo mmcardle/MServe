@@ -81,7 +81,8 @@ class JobMFileHandler(BaseHandler):
         arr = []
         for jobmfile in jobmfiles:
             dict = job_to_dict(jobmfile.job)
-            arr.append(dict)
+            if dict is not None:
+                arr.append(dict)
 
         return HttpResponse(arr,mimetype="application/json")
 
@@ -186,7 +187,7 @@ class JobHandler(BaseHandler):
                 output.save()
 
             if callback != None:
-                callback.append(callback)
+                callbacks.append(callback)
 
             outputs.append(output.file.path)
 

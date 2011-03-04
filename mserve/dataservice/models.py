@@ -129,7 +129,7 @@ class HostingContainer(NamedBase):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = container_metrics
 
-    def get_value_for_metric(self, metric):
+    def get_rate_for_metric(self, metric):
         if metric == metric_container:
             return 1
 
@@ -151,7 +151,7 @@ class DataService(NamedBase):
         super(DataService, self).__init__(*args, **kwargs)
         self.metrics = service_metrics
 
-    def get_value_for_metric(self, metric):
+    def get_rate_for_metric(self, metric):
         if metric == metric_service:
             return 1
 
@@ -186,9 +186,11 @@ class MFile(NamedBase):
         super(MFile, self).__init__(*args, **kwargs)
         self.metrics = mfile_metrics
 
-    def get_value_for_metric(self, metric):
+    def get_rate_for_metric(self, metric):
         if metric == metric_mfile:
             return 1
+
+    def get_value_for_metric(self, metric):
         if not self.empty:
             if metric == metric_disc_space:
                 return self.file.size
