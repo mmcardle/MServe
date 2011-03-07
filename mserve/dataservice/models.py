@@ -9,6 +9,10 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
+import django.dispatch
+
+# Declare Signals
+mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
 
 ID_FIELD_LENGTH = 200
 thumbpath = settings.THUMB_PATH

@@ -11,6 +11,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 import settings as settings
+from dataservice.models import mfile_get_signal
 
 import utils as utils
 import api as api
@@ -217,13 +218,16 @@ class MFileContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        #dlfoldername = "dl%s"%accessspeed
         dlfoldername = "dl"
 
         check1 = mfile.checksum
         check2 = utils.md5_for_file(mfile.file)
 
         file=mfile.file
+
+        sigret = mfile_get_signal.send(sender=self, mfile=mfile)
+        for k,v in sigret:
+            logging.info("Signal %s returned %s " % (k,v))
 
         if(check1==check2):
             logging.info("Verification of %s on read ok" % mfile)
@@ -251,12 +255,6 @@ class MFileContentsHandler(BaseHandler):
         fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
         fullfilepathfolder = os.path.dirname(fullfilepath)
         mfilefilepath = file.path
-
-        logging.info("Redirect URL      = %s " % redirecturl)
-        logging.info("fullfilepath      = %s " % fullfilepath)
-        logging.info("fullfilefolder    = %s " % fullfilepathfolder)
-        logging.info("mfilefp      = %s " % mfilefilepath)
-        logging.info("mfilef       = %s " % file)
 
         if not os.path.exists(fullfilepathfolder):
             os.makedirs(fullfilepathfolder)

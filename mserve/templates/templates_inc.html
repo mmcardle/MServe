@@ -7,7 +7,7 @@
         <tr>
               {%templatetag openvariable%}each(mfilei,val) [0,1,2,3]   {%templatetag closevariable%}
                  {%templatetag openvariable%}if dataservice_set[servicei] && dataservice_set[servicei].mfile_set[mfilei]   {%templatetag closevariable%}
-                    <td class="container_preview_td" style="background-image: url(${dataservice_set[servicei].mfile_set[mfilei].thumburl});">i=${i}</td>
+                    <td class="container_preview_td" style="background-image: url(${dataservice_set[servicei].mfile_set[mfilei].thumburl});">${i}</td>
                  {%templatetag openvariable%}else{%templatetag closevariable%}
                     <td class="container_preview_td"></td>
                  {%templatetag openvariable%}/if{%templatetag closevariable%}

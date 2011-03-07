@@ -4,7 +4,7 @@ from celery.decorators import task
 import logging
 import subprocess
 from subprocess import Popen, PIPE
-import tempfile
+from celery.task.sets import subtask
 
 @task
 def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
@@ -63,3 +63,30 @@ def mxfframecount(inputs,outputs,options={},callbacks=[]):
         subtask(callback).delay()
 
     return { "lines": lines }
+
+@task(max_retries=3)
+def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
+    inputfile = str(inputs[0])
+    outputfile = str(outputs[0])
+    frame = str(options['frame'])
+    logging.info("Processing extractd10frame job on %s" % (inputfile))
+    if not os.path.exists(inputfile):
+        logging.info("Inputfile  %s does not exist" % (inputfile))
+        return False
+
+    try:
+        args = ["ffmpeg","-vframes",frame,"-i",inputfile,"-f","image2",outputfile]
+        logging.info("Processing  %s" % (args))
+        ret = subprocess.call(args)
+
+        if ret != 0:
+            raise Exception("error")
+
+        for callback in callbacks:
+            subtask(callback).delay()
+
+        return {}
+    except Exception, e:
+            extractd10frame.retry(args=[inputs,outputs,options,callbacks], exc=e, countdown=20, kwargs=kwargs)
+
+

@@ -212,8 +212,6 @@ class JobHandler(BaseHandler):
         job.taskset_id=tsr.taskset_id
         job.save()
 
-
-
         logging.info("Creating Job Type %s on file %s" % (jobtype,mfileid))
 
         logging.info("Created Job  %s" % (m))
