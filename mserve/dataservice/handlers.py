@@ -218,7 +218,7 @@ class MFileContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        dlfoldername = "dl"
+        
 
         check1 = mfile.checksum
         check2 = utils.md5_for_file(mfile.file)
@@ -246,6 +246,7 @@ class MFileContentsHandler(BaseHandler):
                 return rc.NOT_HERE
 
         p = str(file)
+        dlfoldername = "dl%s" % accessspeed
 
         redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
         redirecturl = redirecturl[1:]
@@ -260,6 +261,9 @@ class MFileContentsHandler(BaseHandler):
             os.makedirs(fullfilepathfolder)
 
         if not os.path.exists(fullfilepath):
+            logging.info("Linking ")
+            logging.info("   %s " % mfilefilepath )
+            logging.info("to %s " % fullfilepath )
             os.link(mfilefilepath,fullfilepath)
 
         import dataservice.models as models
