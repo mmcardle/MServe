@@ -9,7 +9,7 @@ from celery.task.sets import TaskSet
 from dataservice.forms import *
 from dataservice.models import *
 from dataservice.tasks import thumbimage
-from django.core.cache import cache
+
 from django.http import *
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -25,33 +25,51 @@ from piston.handler import BaseHandler
 from piston.utils import rc
 import settings as settings
 from tasks import render_blender
-
 import dataservice.utils as utils
 
+#should be
+#from django.core.cache import cache
+cache = {}
+cache['dataservice.tasks.thumbimage'] = { "inputmime" : "application/octet-stream", "outputmime" : "image/png", "options" : ['width','height']}
+cache['jobservice.tasks.copyfromurl'] = {
+        "nbinputs" : 0,
+        "nboutputs" : 1,
+        "output-0" : { "mimetype" : "application/octet-stream" },
+        "options":['url'],
+        "results" :[]
+    }
+cache['jobservice.tasks.render_blender'] =    {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "application/octet-stream" },
+        "output-0" : { "mimetype" : "image/png"},
+        "options":['frame'],
+        "results" : []
+    }
+cache['prestoprime.tasks.mxftechmdextractor'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "application/octet-stream" },
+        "output-0" : { "mimetype" : "text/plain"},
+        "options":[],
+        "results" : []
+    }
+cache['prestoprime.tasks.d10mxfchecksum'] =    {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "application/octet-stream" },
+        "output-0" : { "mimetype" : "text/plain"},
+        "options":[],
+        "results" : []
+    }
+cache['prestoprime.tasks.mxfframecount'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 0,
+        "input-0" : { "mimetype" : "application/octet-stream" },
+        "options":[],
+        "results" : ["lines"]
+    }
 
-def job_to_dict(job):
-    taskid = job.taskset_id
-    tsr = TaskSetResult.restore(taskid)
-    dict = {}
-    if tsr is not None:
-        dict["taskset_id"] = tsr.taskset_id
-        # Dont return results until job in complete
-        if tsr.successful():
-            dict["result"] = tsr.join()
-        else:
-            dict["result"] = []
-        dict["completed_count"] = tsr.completed_count()
-        dict["failed"] = tsr.failed()
-        dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
-        dict["ready"] = tsr.ready()
-        dict["successful"] = tsr.successful()
-        dict["total"] = tsr.total
-        dict["waiting"] = tsr.waiting()
-        dict["job"] = job
-    else:
-        return None
-
-    return dict
 
 
 class JobServiceHandler(BaseHandler):
@@ -86,13 +104,6 @@ class JobMFileHandler(BaseHandler):
 
         return HttpResponse(arr,mimetype="application/json")
 
-def get_class( kls ):
-    parts = kls.split('.')
-    module = ".".join(parts[:-1])
-    m = __import__( module )
-    for comp in parts[1:]:
-        m = getattr(m, comp)
-    return m
 
 class JobHandler(BaseHandler):
     model = Job
@@ -196,11 +207,11 @@ class JobHandler(BaseHandler):
             if not os.path.isdir(head):
                 os.makedirs(head)
 
-
         m = get_class(jobtype)
 
         logging.info("Creating task %s inputs= %s outputs= %s options= %s" % (m,inputs,outputs,options))
 
+        # TODO : Submit to correct Q options={"queue":"%s"%job.id}
         task = m.subtask([inputs,outputs,options],callbacks=callbacks)
 
         tasks = [task]
@@ -343,8 +354,8 @@ class JobOutputContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        #dlfoldername = "dl%s"%accessspeed
-        dlfoldername = "dl"
+        dlfoldername = "dl%s"%accessspeed
+        #dlfoldername = "dl"
 
         file=joboutput.file
 
@@ -377,3 +388,36 @@ class JobOutputContentsHandler(BaseHandler):
 
         logging.info("Redirecting  to %s " % redirecturl)
         return redirect("/%s"%redirecturl)
+
+
+def job_to_dict(job):
+    taskid = job.taskset_id
+    tsr = TaskSetResult.restore(taskid)
+    dict = {}
+    if tsr is not None:
+        dict["taskset_id"] = tsr.taskset_id
+        # Dont return results until job in complete
+        if tsr.successful():
+            dict["result"] = tsr.join()
+        else:
+            dict["result"] = []
+        dict["completed_count"] = tsr.completed_count()
+        dict["failed"] = tsr.failed()
+        dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
+        dict["ready"] = tsr.ready()
+        dict["successful"] = tsr.successful()
+        dict["total"] = tsr.total
+        dict["waiting"] = tsr.waiting()
+        dict["job"] = job
+    else:
+        return None
+
+    return dict
+
+def get_class( kls ):
+    parts = kls.split('.')
+    module = ".".join(parts[:-1])
+    m = __import__( module )
+    for comp in parts[1:]:
+        m = getattr(m, comp)
+    return m

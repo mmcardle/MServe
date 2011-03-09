@@ -2,6 +2,7 @@ from django.http import HttpResponse
 from anyjson import serialize as JSON_dump
 from celery.registry import tasks
 from django.core.cache import cache
+import jobservice as js
 import logging
 
 def list_jobs(request):
@@ -30,7 +31,8 @@ def list_jobs(request):
     
     for jobtype in regfilter:
         try:
-            desc = cache.get(jobtype)
+            #desc = cache.get(jobtype)
+            desc = js.handlers.cache[jobtype]
             descriptions[jobtype] = desc
         except Exception as e:
             logging.debug("No job description for job type '%s' %s" % (jobtype,e) )
