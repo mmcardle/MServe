@@ -1,19 +1,16 @@
 from django.conf.urls.defaults import *
 
-# Uncomment the next two lines to enable the admin:
 from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    # Example:
+
     (r'^', include('mserve.dataservice.urls')),
     (r'^', include('mserve.jobservice.urls')),
     (r'^', include('mserve.prestoprime.urls')),
 
-    # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
-    # to INSTALLED_APPS to enable admin documentation:
-    # (r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/opt/mserve/pp-dataservice/media/'}),
+    (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/var/mserve/www-root/mservethumbs'}),
 
-    # Uncomment the next line to enable the admin:
     (r'^admin/', include(admin.site.urls)),
 )
