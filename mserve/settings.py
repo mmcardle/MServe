@@ -85,7 +85,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'dataservice.middleware.AuthMiddleware',
-    'dataservice.middleware.ResponseMiddleware'
+    'dataservice.middleware.ResponseMiddleware',
+    'request.middleware.RequestMiddleware'
 )
 
 ROOT_URLCONF = 'mserve.urls'
@@ -122,7 +123,8 @@ INSTALLED_APPS = (
     'dataservice',
     'jobservice',
     'prestoprime',
-    'djcelery'
+    'djcelery',
+    'request'
 )
 
 CACHES = {
@@ -131,6 +133,10 @@ CACHES = {
         'LOCATION': 'unique-snowflake'
     }
 }
+
+REQUEST_IGNORE_PATHS = (
+    r'^admin/',
+)
 
 LOGIN_REDIRECT_URL='/'
 

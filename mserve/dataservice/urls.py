@@ -72,6 +72,7 @@ urlpatterns = patterns('',
     # HTML Views
     url(r'^$',  'dataservice.views.home'),
     url(r'^usage/',  'dataservice.views.usage'),
+    url(r'^stats/$',  'dataservice.views.stats'),
     url(r'^browse/(?P<id>[^/]+)/$', "dataservice.views.render_base"),
     url(r'^form/mfile/', "dataservice.views.create_mfile"),
 

@@ -9,6 +9,15 @@ import api as api
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponse
+from anyjson import serialize as JSON_dump
+from django.db.models import Avg, Max, Min, Count
+from django.utils import simplejson
+from request.models import Request
+from request.traffic import modules
+from datetime import datetime
+from datetime import timedelta
+from datetime import date
 
 def home(request,form=HostingContainerForm()):    
     hostings = HostingContainer.objects.all()
@@ -21,6 +30,12 @@ def home(request,form=HostingContainerForm()):
         dict["usage"] = usage
         dict["usagesummary"] = usagesummary
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
+
+def stats(request):
+    days = [date.today() - timedelta(day) for day in range(10)]
+    days_qs = [(day, Request.objects.day(date=day)) for day in days]
+    js = simplejson.dumps(modules.graph(days_qs))
+    return HttpResponse(js,mimetype="application/json")
 
 def render_base(request,id):
     try:
