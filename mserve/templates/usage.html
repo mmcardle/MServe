@@ -1,5 +1,25 @@
 {% load mservetags %}
 <h3>Usage Summary</h3>
+
+{% if user.is_staff %}
+<h4>Traffic</h4>
+<div id="chart_div" style="width: 80%; height: 200px;margin-top: 16px;"></div>
+<script>
+
+$('#tabs').bind('tabsshow', function(event, ui) {
+  if (ui.panel.id == "tabs-usage") {
+    load_traffic_plot();
+  }
+})
+
+$(document).ready(function() {
+        load_traffic_plot();
+});
+</script>
+
+{% endif %}
+
+<h4>Statistics</h4>
 <div id="usagecontent" >
 {% if usagesummary %}
     <table class="table_usage" cellpadding="5" cellspacing="5">

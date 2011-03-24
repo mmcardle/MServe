@@ -31,6 +31,7 @@ def home(request,form=HostingContainerForm()):
         dict["usagesummary"] = usagesummary
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 
+@staff_member_required
 def stats(request):
     days = [date.today() - timedelta(day) for day in range(10)]
     days_qs = [(day, Request.objects.day(date=day)) for day in days]

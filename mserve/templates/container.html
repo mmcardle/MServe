@@ -25,14 +25,13 @@
 
 {% block content %}
 
-
 <div id="tabs">
 
     <ul>
         <li><a href="#tabs-1">Services</a></li>
         <li><a href="#tabs-2">Actions</a></li>
         <li><a href="#tabs-3">Config</a></li>
-        <li><a href="#tabs-4">Usage</a></li>
+        <li><a href="#tabs-usage">Usage</a></li>
         <li><a href="#tabs-5">Access Control</a></li>
     </ul>
 
@@ -72,22 +71,14 @@
         {% endif %}
 
     </div>
-    <div id="tabs-4">
+    <div id="tabs-usage">
+
         {% include "usage.html" %}
     </div>
     <div id="tabs-5">
         {% include "auths.html" %}
     </div>
 </div>
-
-<script>
-$(document).ready(function() {
-    $(function() {
-        $( "#tabs" ).tabs();
-        load_chart('{{ container.id }}')
-    });
-});
-</script>
 
 {% endblock %}
 
