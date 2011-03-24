@@ -98,36 +98,6 @@ function showError(title,message){
     });
 }
 
-function load_chart(id){
-    google.setOnLoadCallback(
-        function(){
-         $.ajax({
-           type: "GET",
-           url: '/stats/'+id+'/',
-
-           success: function(msg){
-
-
-              // Create our data table.
-                var data = new google.visualization.DataTable();
-                data.addColumn('string', 'Type');
-                data.addColumn('number', 'Amount');
-
-                data.addRows(msg.stats);
-
-                // Instantiate and draw our chart, passing in some options.
-                cd  = document.getElementById('chart_div')
-                var chart = new google.visualization.PieChart(cd);
-                chart.draw(data, {width: 270, height: 168, is3D: true, title: 'Usage'});
-
-           },
-           error: function(msg){
-             showError("Error", ""+msg.responseText );
-           }
-         });}
-    );
-}
-
 var previousPoint = null;
 var date = new Date();
 
