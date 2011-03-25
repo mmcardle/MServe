@@ -22,7 +22,6 @@ function loadServices(containerid){
        success: function(msg){
             services = msg.dataservice_set;
 
-            $(".numservices").html(services.length);
             if(services.length==0){
                  $("#servicemessages").append("<div id='noservices' class='message' >No Services</div>");
                 return;

@@ -6,8 +6,7 @@
 
 {% block usages %}
     {% if user.is_staff %}
-        <span>Number of Services&nbsp;&nbsp;<em class="numservices"></em>&nbsp;&nbsp;&nbsp;</span>
-                    {% if usagesummary %}
+               {% if usagesummary %}
                     {% for usagesummary in usagesummary %}
                         {% if usagesummary.metric == "http://mserve/disc_space" %}
                             <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.max|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
@@ -16,6 +15,12 @@
                         {% endif %}
                         {% if usagesummary.metric == "http://mserve/responsetime" %}
                             <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
+                        {% endif %}
+                        {% if usagesummary.metric == "http://mserve/file" %}
+                            <span>Files&nbsp;&nbsp;<em>{{usagesummary.n}}</em>&nbsp;&nbsp;&nbsp;</span>
+                        {% endif %}
+                        {% if usagesummary.metric == "http://mserve/service" %}
+                            <span>Services&nbsp;&nbsp;<em>{{usagesummary.n}}</em>&nbsp;&nbsp;&nbsp;</span>
                         {% endif %}
                     {% endfor %}
             {% endif %}

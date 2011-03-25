@@ -13,11 +13,23 @@
                             <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.sum|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
                 {% endif %}
                 {% if usagesummary.metric == "http://mserve/responsetime" %}
-                    <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.avg}}s</em>&nbsp;&nbsp;&nbsp;</span>
+                    <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.avg|floatformat}}s</em>&nbsp;&nbsp;&nbsp;</span>
                 {% endif %}
 
             {% endfor %}
     {% endif %}
+{% endblock %}
+
+{% block main_img %}
+<div style="position: relative; top:13px;left:13px;" >
+    <div style="width: 263px; height:77px" id="dropbox" class="dropbox readytoupload">
+        <h4>Drop Files Here</h4>
+    </div>
+    <div style="width: 263px; height:77px" id="progressbox" class="dropbox">
+        <h4>In Progress</h4>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block content %}
@@ -30,7 +42,7 @@
 		<li><a href="#jobs-tab">Jobs</a></li>
 		<li><a href="#tabs-3">Actions</a></li>
 		<li><a href="#tabs-4">Config</a></li>
-		<li><a href="#tabs-5">Usage</a></li>
+		<li><a href="#tabs-usage">Usage</a></li>
 		<li><a href="#tabs-6">Access Control</a></li>
 	</ul>
 
@@ -50,9 +62,7 @@
 <table>
 <tr>
         <td>
-            <div id="dropbox" class="dropbox readytoupload">
-                <h4>Drop Files Here</h4>
-            </div>
+
             <script type="text/javascript">
                 if ($.browser.webkit) {
                     // Do Webkit uploader (chrome)
@@ -64,12 +74,10 @@
             </script>
         </td>
         <td>
-            <div id="progressbox" class="dropbox">
-                <h4>In Progress</h4>
-            </div>
+
         </td>
         <td>
-            <h4>..Or Upload with Form</h4>
+            <h4>Upload with Form</h4>
             <form name="uploadform" action="/form/mfile/" method="post" enctype="multipart/form-data" >
                 {{ form.non_field_errors }}
                 <div class="fieldWrapper">
@@ -143,7 +151,7 @@
 
             
      </div>
-    <div id="tabs-5">
+    <div id="tabs-usage">
             {% include "usage.html" %}
      </div>
     	<div id="tabs-6">

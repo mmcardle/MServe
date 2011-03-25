@@ -21,7 +21,6 @@ function loadContainers(){
        success: function(msg){
             containers = msg;
 
-            $(".numcontainers").html(containers.length);
             if(containers.length==0){
                  $("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
                 return;
