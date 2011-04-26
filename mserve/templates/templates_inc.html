@@ -131,7 +131,7 @@
                 ${$value}
         {%templatetag openvariable%}/each{%templatetag closevariable%}
         </dd>
-        <dd><button class="addmethods">Add Method</button>
+        <!--<dd><button class="addmethods">Add Method</button>-->
     {%templatetag openvariable%}/each{%templatetag closevariable%}
     </dl>
     </div>
@@ -183,9 +183,14 @@
 </script>
 
 <script id="usageTemplate" type="text/x-jquery-tmpl">
-     <tr>
-         <td>Usage of ${metric}</b></td><td>at <b>${rateTime}</b> :</td><td><b>${total}</b></td>
-     </tr>
+
+    {%templatetag openvariable%}if rate == 0 {%templatetag closevariable%}
+        <tr><td>Usage of <a href='/browse/${id}'>${name}</a>&nbsp;</td><td><b>${metric}</b></td><td>at <b>${rateTime}</b> was<td><b>${total}</b></td></tr>
+    {%templatetag openvariable%}else{%templatetag closevariable%}
+
+        <tr><td>Usage of <a href='/browse/${id}'>${base}</a>&nbsp;</td><td><b>${metric}</b></td><td>at <b>${rateTime}</b> was<td><b>${rate} per second</b></td></tr>
+    {%templatetag openvariable%}/if{%templatetag closevariable%}
+
 </script>
 
 <script id="usageSummaryTemplate" type="text/x-jquery-tmpl">

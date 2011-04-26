@@ -5,22 +5,44 @@
 
 {% if "getusagesummary" in methods %}
 
-    {% block usages %}
-                <span>Name:&nbsp;<em class="sm">{{mfile.name|trunc:20}}</em>&nbsp;</span>
-                <span>Mimetype:&nbsp;<em class="sm">{{mfile.mimetype}}</em>&nbsp;</span>
-                <span>Created:&nbsp;<em class="sm">{{mfile.created|date}},&nbsp;{{mfile.created|time}}</em>&nbsp;</span>
-                <span>Updated:&nbsp;<em class="sm">{{mfile.updated|date}},&nbsp;{{mfile.updated|time}}</em>&nbsp;</span>
-                <span>Size:&nbsp;<em class="sm">{{mfile.size|filesizeformat}}</em>&nbsp;</span>
-    {% endblock %}
+{% block usages %}
+    <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
+    <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.job_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
+    {% if usagesummary %}
+            {% for usagesummary in usagesummary %}
+                {% if usagesummary.metric == "http://mserve/disc_space" %}
+                            <span>Largest File:&nbsp;&nbsp;<em>{{usagesummary.max|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Average File Size:&nbsp;&nbsp;<em>{{usagesummary.avg|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
+                            <span>Disc Space Used:&nbsp;&nbsp;<em>{{usagesummary.sum|filesizeformat}}</em>&nbsp;&nbsp;&nbsp;</span>
+                {% endif %}
+                {% if usagesummary.metric == "http://mserve/responsetime" %}
+                    <span>Average Response Time&nbsp;&nbsp;<em>{{usagesummary.avg|floatformat}}s</em>&nbsp;&nbsp;&nbsp;</span>
+                {% endif %}
+                {% if usagesummary.metric == "http://mserve/mfile" %}
+                    <span>Number of Files:&nbsp;&nbsp;<em>{{usagesummary.sum}}</em>&nbsp;&nbsp;&nbsp;</span>
+                {% endif %}
+
+            {% endfor %}
+    {% endif %}
+{% endblock %}
+
 
 
 {% endif %}
 
-{% block content %}
+{% block main_img %}
+<div style="position: relative; top:13px;left:13px;" >
+    <div style="width: 263px; height:77px" id="dropbox" class="dropbox readytoupload">
+        <h4>Drop Files Here</h4>
+    </div>
+    <div style="width: 263px; height:77px" id="progressbox" class="dropbox">
+        <h4>In Progress</h4>
+    </div>
+</div>
 
-        <h2>Auth </h2>
-        <p>{{ auth }}</p>
-        <p>Methods {{ methods}}</p>
+{% endblock %}
+
+{% block content %}
 
 <div id="tabs">
 
@@ -39,6 +61,50 @@
 
         </div>
 
+        <script type="text/javascript">
+            if ($.browser.webkit) {
+                // Do Webkit uploader (chrome)
+                make_drop_upload_webkit("#dropbox",'{{auth.id}}');
+            }else{
+                // Do Non-Webkit uploader (Firefox)
+                make_drop_upload("#dropbox",'{{auth.id}}');
+            }
+        </script>
+
+
+        <h3>Actions</h3>
+        <button id="newjobbutton" >New Job</button>
+
+        <h3 style="clear:both">Create New File</h3>
+        <table>
+        <tr>
+                <td>
+
+                </td>
+                <td>
+
+                </td>
+                <td>
+                    <h4>Upload with Form</h4>
+                    <form name="uploadform" action="/form/mfile/" method="post" enctype="multipart/form-data" >
+                        {{ form.non_field_errors }}
+                        <div class="fieldWrapper">
+                            {{ form.file.errors }}
+                                {% for hidden in form.hidden_fields %}
+                            {{ hidden }}
+                            {% endfor %}
+                            <table>
+                                <tr>
+                                    <td style="vertical-align: middle;text-align: center;">{{ form.file }}</td>
+                                    <td><input type="submit" value="Submit" /></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </form>
+                </td>
+        </tr>
+        </table>
+
         <div style="clear: both;"></div>
         
     {% else %}
@@ -53,7 +119,7 @@
     {% if "getmanagedresources" in methods %}
 
         <div id="managedresourcesjobscontent" >
-
+            <p>No Jobs</p>
         </div>
 
         <div style="clear: both;"></div>
@@ -72,9 +138,11 @@
     </div>
 
     <div id="tabs-3">
+        <h2>Auth </h2>
+
         {% if "getauths" in methods %}
 
-            {% include "auths/auth_auth.html" %}
+                    {% include "auths/auth_auth.html" %}
 
         {% else %}
 
@@ -89,6 +157,20 @@
 
 </div>
 
+<script type="text/javascript">
+    $(document).ready(function() {
+        //load_mfiles_auth('{{auth.id}}');
+        //load_jobs_auth('{{auth.id}}');
+        service_setmanagementproperty('{{auth.id}}');
+        $('#newjobbutton').button()
+        $('#newjobbutton').click(function(){
+            create_new_job_ui_dialog('', '{{auth.id}}')
+            $("#mfileid").val('');
+            $("#serviceid").val('{{auth.id}}');
+            $("#dialog-new-job-dialog-form").dialog( "open" );
+        });
+    });
+</script>
 
 <script>
 $(document).ready(function() {

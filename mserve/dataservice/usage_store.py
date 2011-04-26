@@ -134,7 +134,9 @@ def get_usage(id=None):
             auth = Auth.objects.get(pk=id)
             logging.info("Getting usage for auth %s " % auth)
 
-            return get_usage(id=auth.base.id)
+            base = utils.get_base_for_auth(auth)
+
+            return get_usage(id=base.id)
 
 def get_usage_summary(id=None):
     
@@ -168,7 +170,9 @@ def get_usage_summary(id=None):
             auth = Auth.objects.get(pk=id)
             logging.info("Getting usage summary for auth %s " % auth)
 
-            return get_usage_summary(id=auth.base.id)
+            base = utils.get_base_for_auth(auth)
+
+            return get_usage_summary(id=base.id)
     
     if settings.DATABASE_ENGINE != "sqlite3":
         summary += usages.values('metric') \

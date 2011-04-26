@@ -110,3 +110,15 @@ def is_serviceauth(base):
 
 def is_mfileauth(base):
     return hasattr(base,"mfileauth")
+
+def get_base_for_auth(auth):
+    try:
+        base = auth.base
+        auth = auth
+        while base is None:
+            auth = auth.parent
+            base = auth.base
+
+        return base
+    except Auth.DoesNotExist:
+        return None

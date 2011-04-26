@@ -177,6 +177,7 @@ class MFileHandler(BaseHandler):
                 serviceid = form.cleaned_data['sid']
 
             logging.debug("API call Creating mfile")
+
             mfile = api.create_mfile(request, serviceid, file)
             return mfile
         else:
@@ -332,7 +333,7 @@ class UsageSummaryHandler(BaseHandler):
             base = NamedBase.objects.get(pk=id)
         except NamedBase.DoesNotExist:
             auth = Auth.objects.get(pk=id)
-            base = auth.base
+            base = utils.get_base_for_auth(auth)
 
         if last is not -1:
             while last == base.reportnum:

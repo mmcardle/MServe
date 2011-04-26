@@ -256,6 +256,8 @@ td {
     margin: 2px;
     padding: 3px;
     border:2px outset silver;
+    width:400px;
+    float:left;
 }
 
 dt{

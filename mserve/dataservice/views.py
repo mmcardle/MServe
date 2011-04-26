@@ -192,14 +192,19 @@ def render_service_auth(request,auth):
 
     methodslist = [ pickle.loads(base64.b64decode(method_enc)) for method_enc in roles.all().values_list('methods_encoded',flat=True) ]
     methods = [item for sublist in methodslist for item in sublist]
-
     methods = utils.get_methods_for_auth(auth)
-    logging.info("methods %s" % methods )
+    base = utils.get_base_for_auth(auth)
+    form=MFileForm()
+    form.fields['sid'].initial = base.id
+    
 
     dict = {}
     dict["methods"] = methods
     dict["auth"] = auth
-
+    dict["usagesummary"] = usage_store.get_usage_summary(base.id)
+    dict["service"] = DataService.objects.get(id=base.id)
+    dict["form"] = form
+    
     return render_to_response('auths/service_auth.html', dict, context_instance=RequestContext(request))
 
 def create_auth(request):
@@ -466,6 +471,7 @@ def render_mfile_auth(request, auth):
     dict["fullaccess"] = False
     dict["methods"] = methods
     dict["formtarget"] = "/form/auth/"
+    
     return render_to_response('auths/mfile_auth.html', dict, context_instance=RequestContext(request))
 
 

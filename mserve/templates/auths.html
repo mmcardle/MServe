@@ -13,14 +13,6 @@
                     {{method}}
                 {% endfor %}
         </dd>
-        <dd><button class="addmethods">Add Method</button>
-        </dd>
-        <script type="text/javascript">
-            $(document).ready(function() {
-                // Create new addauth dialog
-                 create_new_add_method_ui_dialog('{{role.id}}')
-            });
-        </script>
         {% endfor %}
     </dl>
     </div>
@@ -28,7 +20,18 @@
 {% endif %}
 </div>
 
+<div style="clear:both">&nbsp;</div>
 
+<!--
+<button id="createauthbutton" >Share</button>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        load_auths('{{ service.id }}');
+        create_new_add_auth_ui_dialog('{{ service.id }}')
+    });
+</script>
+-->
 
 {% if not auths%}
     <div>None</div>

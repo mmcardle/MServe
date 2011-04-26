@@ -12,6 +12,7 @@ import api as api
 import logging
 import os
 import os.path
+from piston.utils import rc
 
 generic_get_methods = ["getauths","getroles"]
 
@@ -73,7 +74,18 @@ def create_data_service(dataservice):
     return dataservice
 
 def create_mfile(request,serviceid,file):
-    service = DataService.objects.get(id=serviceid)
+    service = None
+    try:
+        service = DataService.objects.get(id=serviceid)
+    except DataService.DoesNotExist:
+        try:
+            auth = Auth.objects.get(id=serviceid)
+            base = utils.get_base_for_auth(auth)
+            service = DataService.objects.get(id=base.id)
+        except Auth.DoesNotExist:
+            logging.error("Failed to create mfile")
+            raise Exception()
+
     if file==None:
         mfile = MFile(name="Empty File",service=service,empty=True)
     else:
