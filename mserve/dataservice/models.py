@@ -4,6 +4,7 @@ import base64
 import storage
 import logging
 import datetime
+import os
 import utils as utils
 from django.conf import settings
 from django.db.models.signals import post_save
@@ -60,6 +61,7 @@ class Usage(models.Model):
         return self.rateTime.ctime()
     
     def __unicode__(self):
+        return "usage"
         object = ""
         if self.base:
             object = self.base
@@ -149,7 +151,9 @@ class HostingContainer(NamedBase):
 
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
-    status = models.CharField(max_length=200)
+    status    = models.CharField(max_length=200)
+    starttime = models.DateTimeField(blank=True)
+    endtime   = models.DateTimeField(blank=True)
 
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
@@ -169,10 +173,29 @@ class DataService(NamedBase):
         for usage in self.usages.all():
             usage_store._stoprecording_(usage,obj=self.container)
 
+class MFolder(NamedBase):
+    service  = models.ForeignKey(DataService)
+    parent   = models.ForeignKey('self',null=True)
+
+    def __unicode__(self):
+        return "MFolder: %s " % self.name
+
+    def get_rel_path(self):
+        if self.parent is not None:
+            return os.path.join(self.parent.get_rel_path(),self.name)
+        else:
+            return self.name
+
+    def save(self):
+        if not self.id:
+            self.id = utils.random_id()
+        super(MFolder, self).save()
+
 class MFile(NamedBase):
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     empty    = models.BooleanField(default=False)
     service  = models.ForeignKey(DataService)
+    folder   = models.ForeignKey(MFolder,null=True)
     file     = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
@@ -189,6 +212,12 @@ class MFile(NamedBase):
     def __init__(self, *args, **kwargs):
         super(MFile, self).__init__(*args, **kwargs)
         self.metrics = mfile_metrics
+
+    def get_rel_path(self):
+        if self.folder is not None:
+            return os.path.join(self.folder.get_rel_path(),self.name)
+        else:
+            return self.name
 
     def get_rate_for_metric(self, metric):
         if metric == metric_mfile:

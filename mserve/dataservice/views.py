@@ -103,7 +103,7 @@ def render_container(request,id,form=DataServiceForm()):
             methods  = methods + role.methods()
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
-    form.fields['cid'].initial = id
+    #form.fields['cid'].initial = id
     usage = usage_store.get_usage(id)
     usagesummary = usage_store.get_usage_summary(container.id)
 

@@ -2,6 +2,7 @@
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
+DEFAULT_CHARSET = 'utf-8'
 
 import logging
 logging.basicConfig(
@@ -121,6 +122,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.admin',
     'dataservice',
+    'webdav',
     'jobservice',
     'prestoprime',
     'djcelery',
@@ -148,3 +150,7 @@ postersize = (420,256)
 
 # For FGCI
 FORCE_SCRIPT_NAME = ''
+
+# TODO : Remove
+import os
+STORAGE_DIR = os.path.join('/', 'tmp', 'postmark-storage')

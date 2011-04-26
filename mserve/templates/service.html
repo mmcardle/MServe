@@ -140,6 +140,27 @@
 
        </div>
        <div id="tabs-4">
+            <h3>Properties</h3>
+
+            <dl>
+                <dt>Start Time</dt>
+                <dd>
+                    {% if service.starttime %}
+                        {{service.starttime|date}} {{service.starttime|time}}
+                    {% else %}
+                        <strong>No Start Time</strong>
+                    {% endif %}
+                </dd>
+                <dt>End Time</dt>
+                <dd>
+                    {% if service.endtime %}
+                        {{service.endtime|date}} {{service.endtime|time}}
+                    {% else %}
+                        <strong>No End Time</strong>
+                    {% endif %}
+                </dd>
+            </dl>
+
             <h3>Management Properties</h3>
 
             <table style="table-layout: fixed;width:300px;">

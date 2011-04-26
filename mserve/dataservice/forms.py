@@ -19,29 +19,29 @@ class DataServiceURLForm(ModelForm):
         model = DataService
 
 class DataServiceForm(ModelForm):
-    cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+    #cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     
     class Meta:
-        exclude=['id','status','container','reportnum','initial_usage_recorded','usages']
+        exclude=['id', 'status', 'reportnum', 'initial_usage_recorded', 'usages']#,'starttime','endtime']
         model = DataService
 
 class MFileURLForm(ModelForm):
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','folder']
         model = MFile
 
 class MFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy','folder']
         model = MFile
 
 class UpdateMFileForm(ModelForm):
     sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy','folder']
         model = MFile
 
 class AuthForm(ModelForm):

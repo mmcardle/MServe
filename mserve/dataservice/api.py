@@ -43,10 +43,7 @@ if use_celery:
     thumbimage = thumbimage.delay
     proxyvideo = proxyvideo.delay
 
-def create_data_service(request,containerid,name):
-    container = HostingContainer.objects.get(id=containerid)
-    dataservice = DataService(name=name,container=container)
-    dataservice.save()
+def create_data_service(dataservice):
 
     serviceauth = Auth(base=dataservice,authname="full")
 

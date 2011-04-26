@@ -3,7 +3,7 @@
 function create_service(containerid){
  $.ajax({
    type: "POST",
-   data: "name=Service&cid="+containerid,
+   data: "name=Service&container="+containerid,
    url: '/service/',
    success: function(msg){
             loadServices(containerid)

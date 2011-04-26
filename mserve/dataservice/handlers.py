@@ -64,8 +64,7 @@ class HostingContainerHandler(BaseHandler):
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
-    #fields = ('name', 'id')
-    fields = ('name', 'id','reportnum', 'mfile_set','job_set')
+    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set')
     exclude = ('pk')
 
     def delete(self, request, id):
@@ -75,31 +74,26 @@ class DataServiceHandler(BaseHandler):
         return r
 
     def create(self, request):
+        logging.info(request.POST)
         form = DataServiceForm(request.POST)
 
         if form.is_valid(): 
-            containerid = form.cleaned_data['cid']
-            name = form.cleaned_data['name']
-            dataservice = api.create_data_service(request,containerid,name)
+            dataservice = form.save()
+            dataservice = api.create_data_service(dataservice)
             return dataservice
         else:
             logging.info(form)
             r = rc.BAD_REQUEST
-            resp.write("Invalid Request!")
+            r.write("Invalid Request!")
             return r
 
 class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
-        form = DataServiceURLForm(request.POST)
-        if form.is_valid(): 
-            name = form.cleaned_data['name']
-            dataservice = api.create_data_service(request,containerid,name)
-            return dataservice
-        else:
-            r = rc.BAD_REQUEST
-            resp.write("Invalid Request!")
-            return r
+        # TODO: Fix URL form for creating dataservices (could remove)
+        r = rc.BAD_REQUEST
+        r.write("Invalid Request!")
+        return r
 
 class InfoHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -122,6 +116,13 @@ class InfoHandler(BaseHandler):
             r = rc.BAD_REQUEST
             return r
 
+class MFolderHandler(BaseHandler):
+    allowed_methods = ('GET','POST','PUT','DELETE')
+    model = MFolder
+    fields = ('name','id')
+
+    def read(self, request, id=None):
+        return MFolder.objects.get(id=str(id))
 
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
