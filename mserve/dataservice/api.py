@@ -13,6 +13,7 @@ import logging
 import os
 import os.path
 from piston.utils import rc
+import utils as utils
 
 generic_get_methods = ["getauths","getroles"]
 
