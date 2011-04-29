@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+{% comment %}
+################################################################################
+#
+# (C) University of Southampton IT Innovation Centre, 2011
+#
+# Copyright in this library belongs to the University of Southampton
+# University Road, Highfield, Southampton, UK, SO17 1BJ
+#
+# This software may not be used, sold, licensed, transferred, copied
+# or reproduced in whole or in part in any manner or form or in or
+# on any media by any person other than in accordance with the terms
+# of the Licence Agreement supplied with the software, or otherwise
+# without the prior written consent of the copyright owners.
+#
+# This software is distributed WITHOUT ANY WARRANTY, without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE, except where stated in the Licence Agreement supplied with
+# the software.
+#
+#    Created By :             Richard Lowe
+#    Created Date :           2011-03-28
+#    Created for Project :    Postmark
+#
+################################################################################
+#
+# Dependencies : none
+#
+################################################################################
+{% endcomment %}
+{% spaceless %}
+<D:multistatus xmlns:D="DAV:">
+{% for f in files %}
+<D:response>
+  <D:href>{{f.href|urlencode}}</D:href>
+  {% for status, props in f.properties.items %}
+  <D:propstat>
+    <D:prop>
+      {% for p in props %}
+      {% if p.name == 'resourcetype' %}
+      <{{p.name}} xmlns="{{p.namespace}}">{%autoescape off%}{{p.value}}{%endautoescape%}</{{p.name}}>
+      {% else %}
+      	{% if status == '200 OK' and p.value %}
+      	<{{p.name}} xmlns="{{p.namespace}}">{{p.value}}</{{p.name}}>
+      	{% else %}
+      	<{{p.name}} xmlns="{{p.namespace}}"/>
+      	{% endif %}
+      {% endif %}
+      {% endfor %}
+    </D:prop>
+    <D:status>HTTP/1.1 {{status}}</D:status>
+    {% if f.responsedescription %}
+    <D:responsedescription>{{f.responsedescription}}</D:responsedescription>
+    {% endif %}
+  </D:propstat>
+  {% endfor %}
+</D:response>
+{% endfor %}
+{% endspaceless %}
+</D:multistatus>

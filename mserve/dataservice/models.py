@@ -177,6 +177,22 @@ class MFolder(NamedBase):
     service  = models.ForeignKey(DataService)
     parent   = models.ForeignKey('self',null=True)
 
+    def duplicate(self,name,parent):
+
+        new_mfolder = MFolder(name=name,service=self.service,parent=parent)
+        new_mfolder.save()
+
+        for mfile in self.mfile_set.all():
+            new_mfile = MFile(name=mfile.name, file=mfile.file, folder=new_mfolder, mimetype=mfile.mimetype, empty=False, service=mfile.service )
+            new_mfile.save()
+
+        for submfolder in self.mfolder_set.all():
+            new_submfolder = submfolder.duplicate(submfolder.name,new_mfolder)
+            new_submfolder.save()
+
+        new_mfolder.save()
+        return new_mfolder
+
     def __unicode__(self):
         return "MFolder: %s " % self.name
 
