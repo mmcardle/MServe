@@ -51,8 +51,6 @@ def startrecording(id,metric,rate,report=True):
 
 def _stoprecording_(usage, obj=None):
 
-    logging.info("Stopping Recording %s" % usage)
-
     now = datetime.datetime.now()
     lastRateTime, lastRate, lastUsage = usage.rateTime,usage.rate,usage.rateCumulative
 
