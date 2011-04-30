@@ -27,6 +27,7 @@
 ################################################################################
 
 from mserve.dataservice.models import *
+from mserve.webdav.models import *
 import logging
 import datetime
 import time
@@ -138,6 +139,11 @@ class DavServer(object):
     def _handle_delete(self, request):
         # TODO : Handle Recovery undelete
         logging.info("DELETE on %s" % self.service)
+
+        request_uri = request.META['REQUEST_URI']
+        if request_uri.find('#') != -1:
+            logging.info("Bad Request, URI contains fragment %s " %request.META['REQUEST_URI'])
+            return HttpResponseBadRequest()
 
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
@@ -298,11 +304,6 @@ class DavServer(object):
         files = []
         mfiles = []
 
-        # Check
-        #is_folder,ancestors,filename,foldername = _get_path_info_request(request,service)
-        #file_exists,mfile = self.__mfile_exists(service,ancestors,filename)
-        #ancestors_exists,folder = self.__ancestors_exist(service,ancestors)
-
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
         real_path = request.path_info.split(self.id)[-1:][0]
 
@@ -355,7 +356,82 @@ class DavServer(object):
 
     def _handle_proppatch(self, request):
         logging.info("PROPPATCH on %s" % self.service)
-        return HttpResponseBadRequest()
+
+        props = []
+        if request.raw_post_data != '':
+            try:
+                xmltree = etree.fromstring(request.raw_post_data)
+                set_prop_nodes = xmltree.xpath('*[local-name() = "set" or local-name() = "remove"]/*[local-name() = "prop"]/*')
+                for p in set_prop_nodes:
+                    ns = p.xpath('namespace-uri()')
+                    name = p.xpath('local-name()')
+                    # TODO: Handle other than text in value
+                    value = ''.join(p.xpath('text()'))
+                    action = p.xpath('local-name(../..)')
+                    props.append(DavProperty(name=name, value=value, ns=ns, action=action))
+            except:
+                # Request body not valid XML
+                return HttpResponseBadRequest()
+
+        path = request.path_info
+        # Set/remove properties as requested
+        for p in props:
+            if p.action == 'set':
+                logging.info("PROPPATCH set '%s' on %s" % (p,path))
+                self.__set_property(path=path, property=p)
+            elif p.action == 'remove':
+                logging.info("PROPPATCH remove '%s' on %s" % (p,path))
+                self.__remove_property(path=path, property=p)
+                p.removed = True
+
+
+        files = []
+
+        isFo,isFi,object = _get_resource_for_path(path,self.service,self.id)
+        
+        if isFi:
+            finfo = self.__get_file_info(request, self.service, object, props=props)
+            files.append(finfo)
+
+        response = render_to_response("multistatus.djt.xml", {'files': files, 'props': props},
+            context_instance=RequestContext(request), mimetype='text/xml')
+
+        # Default response is 200 for django
+        if response.status_code == 200:
+            # Needs to be 207 for multistatus response
+            response.status_code = 207
+
+        return response
+
+    def __remove_property(self, path=None, property=None):
+        if path and property:
+
+            isFo,isFi,object = _get_resource_for_path(path,self.service,self.id)
+
+            if isFi or isFo:
+                try:
+                    existing_dav_property = WebDavProperty.objects.get(base=object,name=property.name,ns=property.namespace)
+                    existing_dav_property.delete()
+                    
+                except WebDavProperty.DoesNotExist:
+                    logging.info("PROPPATCH Asked to remove non-existant property '%s' on %s" % (property,path))
+                    pass
+
+    def __set_property(self, path=None, property=None):
+        if path and property:
+
+            isFo,isFi,object = _get_resource_for_path(path,self.service,self.id)
+
+            if isFi or isFo:
+                try:
+                    existing_dav_property = WebDavProperty.objects.get(base=object,name=property.name,ns=property.namespace)
+                    existing_dav_property.set_value(property.value)
+                    existing_dav_property.save()
+
+                except WebDavProperty.DoesNotExist:
+                    new_dav_property = WebDavProperty(base=object,name=property.name,ns=property.namespace)
+                    new_dav_property.set_value(property.value)
+                    new_dav_property.save()
 
     def _handle_put(self, request):
         logging.info("PUT on %s" % self.service)
@@ -638,12 +714,12 @@ class DavServer(object):
             elif p.status == '200 OK' and not p.removed:
                 # TODO: Custom properties
                 # See if we have a value for the custom property
-                #custom_prop = self.__get_property(abs_path, p.name)
-                #if custom_prop:
-                #    p.value = custom_prop.value
-                #else:
+                custom_prop = self.__get_property(folder, p.name, p.namespace)
+                if custom_prop:
+                    p.value = custom_prop
+                else:
                     # No value found for the custom property
-                p.status = '404 Not Found'
+                    p.status = '404 Not Found'
             finfo.add_property(property=p, status=p.status)
 
         return finfo
@@ -665,7 +741,11 @@ class DavServer(object):
                 elif p.name == 'getcontentlength':
                     p.value = fstat.st_size
                 elif p.name == 'getcontenttype':
-                    p.value = mfile.mimetype
+                    if mfile.mimetype != None:
+                        # TODO : backwards compatible for mimetypes
+                        p.value = mfile.mimetype.split(";")[0]
+                    else:
+                        p.value = "application/octet-stream"
                 elif p.name == 'getetag':
                     p.value = "%s-%s" % (hex(int(fstat.st_mtime))[2:], fstat.st_size)
                 elif p.name == 'getlastmodified':
@@ -675,15 +755,23 @@ class DavServer(object):
             elif p.status == '200 OK' and not p.removed:
                 # TODO : Get MFile Properites
                 # See if we have a value for the custom property
-                #custom_prop = self.__get_property(abs_path, p.name)
-                #if custom_prop:
-                #    p.value = custom_prop.value
-                #else:
-                    # No value found for the custom property
-                p.status = '404 Not Found'
+                custom_prop = self.__get_property(mfile, p.name, p.namespace)
+                if custom_prop:
+                    p.value = custom_prop
+                else:
+                     #No value found for the custom property
+                    p.status = '404 Not Found'
             finfo.add_property(property=p, status=p.status)
 
         return finfo
+
+    def __get_property(self, base=None, property_name=None, property_namespace=None):
+        if base and property_name:
+            try:
+                dav_property = WebDavProperty.objects.get(base=base,name=property_name,ns=property_namespace)
+                return dav_property.get_value()
+            except WebDavProperty.DoesNotExist:
+                return None
 
     def __get_localized_datetime(self, timestamp):
         utc = datetime.utcfromtimestamp(timestamp)
