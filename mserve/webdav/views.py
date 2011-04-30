@@ -36,7 +36,7 @@ import os
 
 from copy import deepcopy
 from datetime import datetime,timedelta,tzinfo
-
+from django.core.files.base import ContentFile
 from django.http import *
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -68,15 +68,16 @@ def webdav(request,id):
     except Auth.DoesNotExist:
         pass
 
-    if response == None:
-        return HttpResponseNotFound()
+    #if response == None:
+    #    logging.info("Response NOT FOUND")
+    #    return HttpResponseNotFound()
 
-    logging.info("Reponse for %s : %s " % (request.method,response.status_code))
+    logging.info("Response for %s : %s " % (request.method,response.status_code))
 
-    if response['Content-Type'].startswith('text/xml'):
+    if response['Content-Type'] == 'text/xml':
         logging.info(response.content)
     else:
-        logging.info('<non-xml response data>')
+        logging.info('<non-xml response data> %s ' % (response['Content-Type']))
     return response
 
 class DavServer(object):
@@ -201,6 +202,10 @@ class DavServer(object):
 
         if isFo:
             response['Content-Length'] = "4096"
+
+        if not isFi and not isFo:
+            return HttpResponseNotFound()
+
         return response
 
 
@@ -459,7 +464,7 @@ class DavServer(object):
 
     def _handle_put(self, request):
         logging.info("PUT on %s" % self.service)
-        response = self.__handle_upload_service(self.service, request)
+        response = self.__handle_upload_service(request)
         return response
 
     def __mfile_exists(self, service, ancestors, filename):
@@ -807,29 +812,51 @@ class DavServer(object):
         localized = localized.replace(tzinfo=UTC())
         return localized
 
-    def __handle_upload_service(self, service, request):
+    def __handle_upload_service(self, request):
 
-        # Check Source
-        is_src_folder,src_ancestors,srcfilename,srcfoldername = _get_path_info_request(request,self.id)
-        src_file_exists,mfile = self.__mfile_exists(service,src_ancestors,srcfilename)
-        src_ancestors_exist,src_folder = self.__ancestors_exist(service,src_ancestors)
+        isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
-        if not is_src_folder:
-            new_mfile = MFile(name=srcfilename, folder=src_folder, mimetype="application/octet-stream", empty=False, service=service )
+        if isFo:
+            return HttpResponseBadRequest("File path specified is a directory")
 
-            from django.core.files.base import ContentFile
+        if isFi:
+            mfile = object
+
             content = request.raw_post_data
+            from django.core.files.base import ContentFile
             fid = ContentFile(content)
-            new_mfile.file.save(srcfilename, fid)
+            mfile.file.save(mfile.name, fid)
             fid.close()
 
-            new_mfile.save()
+            mfile.save()
 
             response = HttpResponse()
             response.status_code = 201
             return response
-        else:
-            return HttpResponseBadRequest("File path specified is a directory")
+
+        is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
+        #foldername = ancestors.pop()
+        ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
+
+        if not is_folder and ancestors_exist:
+            mfile = MFile(name=name, folder=parentfolder, mimetype="application/octet-stream", empty=False, service=self.service )
+
+            from django.core.files.base import ContentFile
+            content = request.raw_post_data
+            fid = ContentFile(content)
+            mfile.file.save(name, fid)
+            fid.close()
+
+            mfile.save()
+
+            response = HttpResponse()
+            response.status_code = 201
+            return response
+
+        if is_folder:
+            return HttpResponseBadRequest("Cannot PUT to a folder")
+        
+        return HttpResponseBadRequest()
 
 class DavFileInfo(object):
 
