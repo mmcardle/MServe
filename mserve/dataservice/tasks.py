@@ -37,7 +37,8 @@ def proxyvideo(videopath,proxypath,width="420",height="256"):
 def mimefile(mfilepath):
     m = magic.open(magic.MAGIC_MIME)
     m.load()
-    mimetype = m.file(mfilepath)
+    result = m.file(mfilepath)
+    mimetype = result.split(';')[0]
     logging.info("Mime for file %s is %s" % (mfilepath,mimetype))
     return mimetype
 
