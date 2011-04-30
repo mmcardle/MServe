@@ -32,6 +32,7 @@ import logging
 import datetime
 import time
 import os.path
+import os
 
 from copy import deepcopy
 from datetime import datetime,timedelta,tzinfo
@@ -162,12 +163,27 @@ class DavServer(object):
             isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
             if isFi:
-                f = object.file
-                try:
-                    response.write(f.read())
-                    response.flush()
-                finally:
-                    f.close()
+                response['Content-Disposition'] = 'attachment; filename=%s'%(object.name)
+
+                range_string = "0-"
+                
+                if request.META.has_key("HTTP_RANGE"):
+                    range_header = request.META['HTTP_RANGE']
+                    range_split = range_header.split('=')
+                    if len(range_split)>1:
+                        range_string = range_split[1]
+                    else:
+                        logging.error("Invalid Range Header '%s'" % (range_header))
+
+                response["X-SendFile2"] = " %s %s" % (object.file.path,range_string)
+
+                stat = os.stat(object.file.path)
+                response["ETag"] = " %s-%s" % (object.checksum,stat.st_mtime)
+
+                if object.checksum != None:
+                    b64md5 = base64.b64encode(object.checksum)
+                    response["Content-MD5"] = " %s" % (b64md5)
+
                 return response
 
             return self._handle_propfind(request)
@@ -177,7 +193,15 @@ class DavServer(object):
 
     def _handle_head(self, request):
         # TODO Configure response headers for HEAD request
-        return HttpResponse()
+        isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
+        response = HttpResponse()
+        if isFi:
+            response = HttpResponse(mimetype=object.mimetype)
+            response['Content-Length'] = object.file.size
+
+        if isFo:
+            response['Content-Length'] = "4096"
+        return response
 
 
     def _handle_mkcol(self, request):
