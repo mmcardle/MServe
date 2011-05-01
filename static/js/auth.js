@@ -68,12 +68,58 @@ function load_managedresources_auth(authid){
        type: "GET",
        url: '/api/'+authid+'/getmanagedresources/',
        success: function(msg){
-        for(i in msg.mfile_set){
-            $( "#mfileTemplate" ).tmpl( msg.mfile_set[i] ) .appendTo( "#managedresourcesmfilescontent" );
-        }
-        for(i in msg.job_set){
-            $( "#jobTemplate" ).tmpl( msg.job_set[i] ) .appendTo( "#managedresourcesjobscontent" );
-        }
+
+            for(i in msg.job_set){
+                $( "#jobTemplate" ).tmpl( msg.job_set[i] ) .appendTo( "#managedresourcesjobscontent" );
+            }
+
+            mfiles = msg.mfile_set;
+
+            if(mfiles.length==0){
+                 $("#mfilemessages").append("<div id='nofiles' class='message' >No Files</div>");
+                return;
+            }else{
+                $("#nofiles").remove()
+            }
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>mfiles.length){
+                    end=mfiles.length;
+                }
+
+                $( "#managedresourcesmfilescontent" ).empty()
+                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#managedresourcesmfilescontent" );
+
+                for(var i=start; i<end; i++){
+                    (function() {
+                        var gid = i;
+                        var gmfileid = mfiles[gid].id;
+                        $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+                        $('#newjobbutton-'+gmfileid).click(function(){
+                            create_new_job_ui_dialog(gmfileid, serviceid)
+                            $("#mfileid").val(gmfileid);
+                            $("#serviceid").val(serviceid);
+                            $("#dialog-new-job-dialog-form").dialog( "open" );
+                        });
+                    })();
+                }
+
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+
+            // Render the template with the data and insert
+            // the rendered HTML under the "mfilepaginator" element
+            $("#managedresourcesmfilespaginator").pagination(mfiles.length, {
+                    items_per_page:12,
+                    callback:handlePaginationClick
+            });
+
        },
        error: function(msg){
          showError("Error", ""+msg.responseText );

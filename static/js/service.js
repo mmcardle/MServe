@@ -136,7 +136,7 @@ function service_setmanagementproperty(serviceid) {
     });
 
     $( "#service-setmanagementproperty-button" )
-            .click(function() {
-                    $( "#set-management-property-button-dialog-form" ).dialog( "open" );
-            });
+        .click(function() {
+                $( "#set-management-property-button-dialog-form" ).dialog( "open" );
+        });
 }

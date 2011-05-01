@@ -173,6 +173,29 @@
         </div>
 </script>
 
+<script id="mfileUploadTemplate" type="text/x-jquery-tmpl">
+    <div class="mfileUpload">
+        <table>
+            <tr>
+                <td rowspan="2" class="file_upload_preview"></td>
+                <td colspan="1">${getShort(name,20)}</td>
+                <td class="file_upload_cancel">
+                    <button class="ui-state-default ui-corner-all" title="Cancel">
+                <span class="ui-icon ui-icon-cancel">Cancel</span>
+                </button>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" class="file_upload_progress"><div></div></td>
+            </tr>
+        </table>
+    </div>
+</script>
+
+<script id="mfileUploadCompleteTemplate" type="text/x-jquery-tmpl">
+
+</script>
+
 <script id="mfileVideoDetailsTemplate" type="text/x-jquery-tmpl">
         {% templatetag openvariable %}tmpl "#mfileDetailsTemplate" {% templatetag closevariable %}
         <p id="container1">Please install the Flash Plugin</p>

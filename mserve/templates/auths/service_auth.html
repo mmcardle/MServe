@@ -26,18 +26,26 @@
     {% endif %}
 {% endblock %}
 
-
-
 {% endif %}
 
 {% block main_img %}
-<div style="position: relative; top:13px;left:13px;" >
-    <div style="width: 263px; height:77px" id="dropbox" class="dropbox readytoupload">
-        <h4>Drop Files Here</h4>
+
+<div id="dropbox" style="overflow:hidden;height: 164px;" >
+
+    <div style="width: 266px; height:57px">
+        <form id="file_upload" action="/serviceapi/create/{{auth.id}}/"
+              method="POST" enctype="multipart/form-data"
+              style="width: 100%;height: 100%;" >
+                <input type="file" name="file" multiple>
+                <button>Upload</button>
+                <div class="file_upload_label"><h3>Drop Files Here</h3></div>
+        </form>
     </div>
-    <div style="width: 263px; height:77px" id="progressbox" class="dropbox">
+
+    <div id="files" style="width: 266px; height:97px; overflow: auto; margin-top: 4px;"  >
         <h4>In Progress</h4>
     </div>
+
 </div>
 
 {% endblock %}
@@ -55,55 +63,17 @@
     </ul>
 
     <div id="tabs-1">
+        
     {% if "getmanagedresources" in methods %}
+
+        <div class="paginator" id="managedresourcesmfilespaginator"></div>
 
         <div id="managedresourcesmfilescontent" >
 
         </div>
 
-        <script type="text/javascript">
-            if ($.browser.webkit) {
-                // Do Webkit uploader (chrome)
-                make_drop_upload_webkit("#dropbox",'{{auth.id}}');
-            }else{
-                // Do Non-Webkit uploader (Firefox)
-                make_drop_upload("#dropbox",'{{auth.id}}');
-            }
-        </script>
-
-
         <h3>Actions</h3>
         <button id="newjobbutton" >New Job</button>
-
-        <h3 style="clear:both">Create New File</h3>
-        <table>
-        <tr>
-                <td>
-
-                </td>
-                <td>
-
-                </td>
-                <td>
-                    <h4>Upload with Form</h4>
-                    <form name="uploadform" action="/form/mfile/" method="post" enctype="multipart/form-data" >
-                        {{ form.non_field_errors }}
-                        <div class="fieldWrapper">
-                            {{ form.file.errors }}
-                                {% for hidden in form.hidden_fields %}
-                            {{ hidden }}
-                            {% endfor %}
-                            <table>
-                                <tr>
-                                    <td style="vertical-align: middle;text-align: center;">{{ form.file }}</td>
-                                    <td><input type="submit" value="Submit" /></td>
-                                </tr>
-                            </table>
-                        </div>
-                    </form>
-                </td>
-        </tr>
-        </table>
 
         <div style="clear: both;"></div>
         

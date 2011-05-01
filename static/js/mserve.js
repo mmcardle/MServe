@@ -28,8 +28,8 @@ function reloadMFiles(newfileid){
                     end=mfiles.length;
                 }
 
-                $( "#mfileList" ).empty()
-                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#mfileList" );
+                $( "#managedresourcesmfilescontent" ).empty()
+                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#managedresourcesmfilescontent" );
 
                 for(var i=start; i<end; i++){
                     (function() {
@@ -66,6 +66,24 @@ function reloadMFiles(newfileid){
             showError( "Failure to get files",msg );
        }
      });
+}
+
+function loadMFile(mfile){
+    $( "#mfileTemplate" ).tmpl( mfile ) .prependTo( "#managedresourcesmfilescontent" );
+    $("#image-"+mfile.id).show('bounce');
+
+    (function() {
+        var gid = mfile.id;
+        var gmfileid = mfile.id;
+        $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+        $('#newjobbutton-'+gmfileid).click(function(){
+            create_new_job_ui_dialog(gmfileid, serviceid)
+            $("#mfileid").val(gmfileid);
+            $("#serviceid").val(serviceid);
+            $("#dialog-new-job-dialog-form").dialog( "open" );
+        });
+    })();
+
 }
 
 function loadJobs(serviceid){
