@@ -10,7 +10,6 @@
 
 {% block script %}{% endblock %}
 <script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
-<script type="text/javascript" src="/mservemedia/js/jquery.html5-fileupload.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery-ui-1.8.6.custom.min.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.pagination.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.address-1.3.2.js" ></script>
@@ -26,7 +25,6 @@
 <script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.js"></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.relatize_date.js"></script>
 <script type="text/javascript" src="/mservemedia/js/request.js"></script>
-
 <script type="text/javascript" src="/mservemedia/js/jquery-file-upload/jquery.fileupload.js"></script>
 <script type="text/javascript" src="/mservemedia/js/jquery-file-upload/jquery.fileupload-ui.js"></script>
 <script type="text/javascript" src="/mservemedia/js/uploader.js" ></script>
@@ -75,10 +73,9 @@
 
           <div id="main_img" >
               {% block main_img %}
-                <img src="/mservemedia/images/heart_monitor.gif" height="170" width="280" style="margin-top:13px; margin-left: 13px;" />
+              <img alt="" src="/mservemedia/images/heart_monitor.gif" height="170" width="280" style="margin-top:13px; margin-left: 13px;" />
             {% endblock %}
           </div>
-
 
         <h2>jobs <span>data</span> storage</h2>
         <p>
@@ -93,44 +90,9 @@
     {% block heading %}{% endblock %}
 
     <table id="maintable" >
-        <tr>
-            
-            <th id="sidebar"  rowspan="3" >
-                <!--
-                {% block sidebar %}
-                {% if user.is_staff %}
-                    <div><a href="/">Home</a></div>
-                    <div><a href="/admin/">Admin</a></div>
-                    <div><a href="/usage/">Usage</a></div>
-                    <div><a href="/map/">Map</a></div>
-                    <div><a href="/viz/">Vizualizations</a></div>
-
-                {% endif %}
-
-                {% if user.is_authenticated %}
-                <div><a href="/accounts/profile/">Profile</a></div>
-                <div><a href="/accounts/logout/">Logout</a></div>
-                {% endif %}
-
-                {% if not user.is_authenticated %}
-                    <div><a href="/accounts/login/">Login</a></div>
-                {% endif %}
-
-                {% endblock %}
-                    -->
-            </th>
-            
-            <td >
+        <tr>            
+            <td>
                 {% block content %}{% endblock %}
-            </td >
-
-            </tr><tr>
-
-            <td width="*">
-                {% block rightcontent %}
-
-                {% endblock %}
-
             </td>
         </tr>
         <tr>
@@ -156,16 +118,6 @@
                 <td><img src="/mservemedia/images/icon_message.png" width="32" height="32" alt="" /></td>
                 <td><img src="/mservemedia/images/icon_network.png" width="32" height="32" alt="" /></td>
             </tr>
-            <!--<tr>
-                <th>4</th>
-                <th>5</th>
-                <th>6</th>
-            </tr>
-            <tr>
-                <td><img src="/mservemedia/images/gallery_1.png" width="32" height="32" alt="" /></td>
-                <td><img src="/mservemedia/images/gallery_1.png" width="32" height="32" alt="" /></td>
-                <td><img src="/mservemedia/images/gallery_1.png" width="32" height="32" alt="" /></td>
-            </tr>-->
         </table>
       </div>
       <div class="col c2">
@@ -191,7 +143,7 @@
 
   </div>
 
-<script>
+<script type="text/javascript">
 $(document).ready(function() {
     $(function() {
         $( "#tabs" ).tabs();

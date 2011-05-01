@@ -509,9 +509,6 @@ li.fluid a {
     background-size:100%;
     background-repeat: no-repeat;
 }
-/*
-   *** PAGINATION ***
-*/
 
 /*
  * jQuery File Upload Plugin CSS 4.1
@@ -558,7 +555,7 @@ form.file_upload_large {
 }
 form.file_upload_highlight,
 form.file_upload:hover {
-  background-color:bisque.
+  background-color:bisque;
 }
 
 form.file_upload input {
