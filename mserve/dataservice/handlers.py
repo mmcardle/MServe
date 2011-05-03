@@ -95,10 +95,25 @@ class DataServiceHandler(BaseHandler):
 class DataServiceURLHandler(BaseHandler):
 
     def create(self, request, containerid):
-        # TODO: Fix URL form for creating dataservices (could remove)
-        r = rc.BAD_REQUEST
-        r.write("Invalid Request!")
-        return r
+        logging.info(request.POST)
+        form = DataServiceURLForm(request.POST)
+
+        if form.is_valid():
+
+            logging.info("CREATE DATASERVICE %s" % request.POST)
+
+            name = request.POST['name']
+
+            container = HostingContainer.objects.get(id=containerid)
+
+            dataservice = container.create_data_service(name)
+
+            return dataservice
+        else:
+            logging.info(form)
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
 
 class InfoHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -180,7 +195,10 @@ class MFileHandler(BaseHandler):
 
             try:
                 service = DataService.objects.get(id=serviceid)
-                mfile = service.create_mfile(file,file.name)
+                name = "Empty File"
+                if file is not None:
+                    name = file.name
+                mfile = service.create_mfile(file,name)
                 return mfile
             except DataService.DoesNotExist:
                 r = rc.BAD_REQUEST
