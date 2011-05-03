@@ -33,6 +33,7 @@ import datetime
 import time
 import os.path
 import os
+import urllib2
 
 from copy import deepcopy
 from datetime import datetime,timedelta,tzinfo
@@ -176,7 +177,10 @@ class DavServer(object):
                     else:
                         logging.error("Invalid Range Header '%s'" % (range_header))
 
-                response["X-SendFile2"] = " %s %s" % (object.file.path,range_string)
+                # TODO : Get Throttling working
+                #response["X-LIGHTTPD-KBytes-per-second"] = "50"
+                enc_url = urllib2.quote(object.file.path)
+                response["X-SendFile2"] = " %s %s" % (enc_url,range_string)
 
                 stat = os.stat(object.file.path)
                 response["ETag"] = " %s-%s" % (object.checksum,stat.st_mtime)
@@ -338,7 +342,8 @@ class DavServer(object):
 
         if isFi:
             finfo = self.__get_file_info(request, self.service, object, props=props)
-            files.append(finfo)
+            if finfo:
+                files.append(finfo)
 
         elif isFo :
             finfo = self.__get_folder_info(request, self.service, object, props=props)
@@ -349,7 +354,8 @@ class DavServer(object):
                 mfiles.extend(list(object.mfile_set.all()))
                 for mfile in mfiles:
                     finfo = self.__get_file_info(request, self.service, mfile, props=props)
-                    files.append(finfo)
+                    if finfo:
+                        files.append(finfo)
 
                 folders = list(MFolder.objects.filter(parent=object,service=self.service))
                 for mfolder in folders:
@@ -363,7 +369,8 @@ class DavServer(object):
                 service_mfiles = list(MFile.objects.filter(folder=None,service=self.service))
                 for mfile in service_mfiles:
                     finfo = self.__get_file_info(request, self.service, mfile, props=props)
-                    files.append(finfo)
+                    if finfo:
+                        files.append(finfo)
 
                 folders = list(MFolder.objects.filter(parent=None,service=self.service))
                 for mfolder in folders:
@@ -420,7 +427,8 @@ class DavServer(object):
         
         if isFi:
             finfo = self.__get_file_info(request, self.service, object, props=props)
-            files.append(finfo)
+            if finfo:
+                files.append(finfo)
 
         response = render_to_response("multistatus.djt.xml", {'files': files, 'props': props},
             context_instance=RequestContext(request), mimetype='text/xml')
@@ -672,7 +680,6 @@ class DavServer(object):
         rel_path = "/%s/%s/" % ("webdav",self.id)
 
         finfo = DavFileInfo(href=rel_path)
-        #fstat = os.stat(abs_path)
         f_props = deepcopy(props)
 
         while len(f_props) != 0:
@@ -758,6 +765,9 @@ class DavServer(object):
 
         finfo = DavFileInfo(href=rel_path)
 
+        if not mfile.file:
+            return None
+
         fstat = os.stat(mfile.file.path)
         f_props = deepcopy(props)
         while len(f_props) != 0:
@@ -839,12 +849,14 @@ class DavServer(object):
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
         if not is_folder and ancestors_exist:
-            mfile = MFile(name=name, folder=parentfolder, mimetype="application/octet-stream", empty=False, service=self.service )
 
             from django.core.files.base import ContentFile
             content = request.raw_post_data
             fid = ContentFile(content)
-            mfile.file.save(name, fid)
+            mfile = self.service.create_mfile(fid,name)
+            mfile.folder = parentfolder
+            mfile.name = name
+
             fid.close()
 
             mfile.save()
