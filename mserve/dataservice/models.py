@@ -55,6 +55,15 @@ backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 # Other Metric groups
 byte_metrics = [metric_disc_space]
 
+
+class ClientConsumer(models.Model):
+    session             = models.CharField(max_length=200)
+    url                 = models.CharField(max_length=200)
+    oauth_token         = models.CharField(max_length=200)
+    oauth_token_secret  = models.CharField(max_length=200)
+
+
+
 class Usage(models.Model):
     base            = models.ForeignKey('NamedBase',null=True, blank=True)
     metric          = models.CharField(max_length=4096)

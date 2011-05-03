@@ -74,6 +74,7 @@
 
         <h3>Actions</h3>
         <button id="newjobbutton" >New Job</button>
+        <button id="importbutton" >Import Remote</button>
 
         <div style="clear: both;"></div>
         
@@ -127,6 +128,20 @@
 
 </div>
 
+<div id="import-dialog-form" title="Create new user">
+        <p class="validateTips">All form fields are required.</p>
+
+        <form>
+        <fieldset>
+                <label for="name">Service</label>
+                <input type="text" name="name" id="name" class="text ui-widget-content ui-corner-all" />
+        </fieldset>
+        </form>
+
+        <p id="import-dialog-items"></p>
+</div>
+
+
 <script type="text/javascript">
     $(document).ready(function() {
         //load_mfiles_auth('{{auth.id}}');
@@ -139,6 +154,7 @@
             $("#serviceid").val('{{auth.id}}');
             $("#dialog-new-job-dialog-form").dialog( "open" );
         });
+        create_new_import_ui_dialog('{{auth.id}}')
     });
 </script>
 

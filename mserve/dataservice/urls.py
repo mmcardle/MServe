@@ -22,7 +22,33 @@ role_handler = Resource(RoleHandler)
 resources_handler = Resource(ResourcesHandler)
 info_handler = Resource(InfoHandler)
 
+from piston.resource import Resource
+from piston.authentication import OAuthAuthentication
+from dataservice.handlers import TestAuthHandler
+
+#auth = HttpBasicAuthentication(realm='My sample API')
+auth = OAuthAuthentication(realm="MServe Realm")
+
+oauth_handler = Resource(handler=TestAuthHandler, authentication=auth)
+consumer_handler = Resource(ConsumerHandler)
+receive_handler = Resource(ReceiveHandler)
+
 urlpatterns = patterns('',
+    url(r'^posts', oauth_handler, name='blogposts'),
+    url(r'^consumer', consumer_handler),
+    url(r'^receive', receive_handler),
+    # automated documentation url(r'^$', documentation_view),
+)
+
+urlpatterns += patterns(
+    'piston.authentication',
+    url(r'^api/oauth/request_token/$','oauth_request_token'),
+    url(r'^api/oauth/authorize/$','oauth_user_auth'),
+    url(r'^api/oauth/access_token/$','oauth_access_token'),
+)
+
+
+urlpatterns += patterns('',
 
     # REST Methods 
     url(r'^container/$', hosting_handler),

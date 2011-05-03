@@ -1,3 +1,62 @@
+
+
+function create_new_import_ui_dialog(authid) {
+    	$(function() {
+		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+		$( "#dialog:ui-dialog" ).dialog( "destroy" );
+
+		var name = $( "#name" ),
+
+                allFields = $( [] ).add( name ),
+                tips = $( ".validateTips" );
+
+		function updateTips( t ) {
+			tips
+				.text( t )
+				.addClass( "ui-state-highlight" );
+			setTimeout(function() {
+				tips.removeClass( "ui-state-highlight", 1500 );
+			}, 500 );
+		}
+
+		$( "#import-dialog-form" ).dialog({
+			autoOpen: false,
+			height: 750,
+			width: 650,
+			modal: true,
+			buttons: {
+                                "Import": function() {
+                                     $.ajax({
+                                       type: "POST",
+                                       data: 'url='+name.val(),
+                                       url: '/consumer/',
+                                       success: function(msg){
+                                            $( "#import-dialog-items" ).append( "<pre><a target='blank' href='"+msg.authurl+"'>"+ msg.authurl +"</a></pre>" );
+                                            $( "#import-dialog-items" ).append( "<iframe src="+msg.authurl+" width='100%' height='100%'><p>Your browser does not support iframes.</p></iframe>" );
+                                       },
+                                       error: function(msg){
+                                            showError("Error Loading Jobs",objectToString(msg))
+                                       }
+                                     });
+				},
+				Cancel: function() {
+					$( this ).dialog( "close" );
+				}
+			},
+			close: function() {
+				allFields.val( "" ).removeClass( "ui-state-error" );
+			}
+		});
+
+		$( "#importbutton" )
+                    .button()
+                    .click(function() {
+                            $( "#import-dialog-form" ).dialog( "open" );
+                    });
+	});
+}
+
+
 function create_new_add_auth_ui_dialog(authid) {
 		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
 		$( "#dialog:ui-dialog" ).dialog( "destroy" );

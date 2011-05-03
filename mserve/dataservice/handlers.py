@@ -6,11 +6,13 @@ from django.conf import settings
 from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
+from django.shortcuts import render_to_response
 from django.conf import settings
 from django.http import HttpResponseNotFound
+from django.http import HttpResponse
 import settings as settings
 from dataservice.models import mfile_get_signal
-
+from django.shortcuts import render_to_response
 import utils as utils
 import usage_store as usage_store
 import time
@@ -18,12 +20,146 @@ import logging
 import os
 import os.path
 import shutil
+import os
+import cgi
+import oauth2 as oauth
+import urllib2
 
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 
 metric_corruption = "http://mserve/corruption"
 metric_dataloss = "http://mserve/dataloss"
+
+from piston.handler import AnonymousBaseHandler
+from piston.handler import BaseHandler
+from piston.utils import require_mime
+from piston.utils import require_extended
+
+CONSUMER_KEY = 'mmckey'
+CONSUMER_SECRET = 'mmcsecret'
+
+class TestAuthHandler(BaseHandler):
+
+    def read(self, request):
+
+        logging.info("REQ %s " % request)
+
+        mf = list(MFile.objects.all())[0]
+
+        logging.info("Returning %s "% mf)
+
+        enc_url = urllib2.quote(mf.file.path)
+
+        response = HttpResponse(mimetype=mf.mimetype)
+        response['Content-Length'] = mf.file.size
+        response['Content-Disposition'] = 'attachment; filename=%s'%(mf.name)
+        response["X-SendFile2"] = " %s %s" % (enc_url,"0-")
+        
+        #dict = {"name": "somedata" , "url" : mf.thumburl()}
+        logging.info("Returning %s "% response)
+
+        return response
+
+class ReceiveHandler(BaseHandler):
+
+    def read(self,request):
+
+        logging.info("ReceiveHandler REQ %s " % request)
+
+        received_token = dict(cgi.parse_qsl(request.META['QUERY_STRING']))
+        oauth_verifier = received_token['oauth_verifier']
+        oauth_token = received_token['oauth_token']
+        oauth_callback_confirmed = received_token['oauth_callback_confirmed']
+
+        cc = ClientConsumer.objects.get(session=request.COOKIES['sessionid'],oauth_token=oauth_token)
+        oauth_token_secret=cc.oauth_token_secret
+        consumer = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+
+        token = oauth.Token(oauth_token, oauth_token_secret)
+        token.set_verifier(oauth_verifier)
+        client = oauth.Client(consumer, token)
+
+        ACCESS_TOKEN_URL = 'http://%s/api/oauth/access_token/' % (cc.url)
+
+        resp, content = client.request(ACCESS_TOKEN_URL, "POST")
+        access_token = dict(cgi.parse_qsl(content))
+
+        logging.info("Access Token:")
+        logging.info("    - oauth_token        = %s" % access_token['oauth_token'])
+        logging.info("    - oauth_token_secret = %s" % access_token['oauth_token_secret'])
+        logging.info("You may now access protected resources using the access tokens above.")
+
+        RESOURCE_URL = 'http://%s/posts/' % (cc.url)
+
+        mconsumer = oauth.Consumer(CONSUMER_KEY,CONSUMER_SECRET)
+        mtoken = oauth.Token(access_token['oauth_token'],access_token['oauth_token_secret'])
+        mclient = oauth.Client(mconsumer, mtoken)
+
+        mresponse,content = mclient.request(RESOURCE_URL)
+
+        logging.info("Content %s "% len(content))
+
+        return {"receive":"ok"}
+
+class ConsumerHandler(BaseHandler):
+
+    def read(self, request):
+
+        logging.info("REQ %s " % request)
+
+        return {"name": "somedata"}
+
+    def create(self, request):
+
+        logging.info("ConsumerHandler REQ %s " % request)
+
+        # settings for the local test consumer
+        CONSUMER_SERVER = request.POST['url']
+        #CONSUMER_PORT = os.environ.get("CONSUMER_PORT") or '80'
+
+        logging.info("CONSUMER_SERVER %s"%CONSUMER_SERVER)
+
+        # fake urls for the test server (matches ones in server.py)
+        REQUEST_TOKEN_URL = 'http://%s/api/oauth/request_token/' % (CONSUMER_SERVER)
+
+        AUTHORIZE_URL = 'http://%s/api/oauth/authorize/' % (CONSUMER_SERVER)
+
+        logging.info("REQUEST_TOKEN_URL %s"%REQUEST_TOKEN_URL)
+
+        # key and secret granted by the service provider for this consumer application - same as the MockOAuthDataStore
+
+
+        consumer = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+        client = oauth.Client(consumer)
+
+        # Step 1: Get a request token. This is a temporary token that is used for
+        # having the user authorize an access token and to sign the request to obtain
+        # said access token.
+
+        resp, content = client.request(REQUEST_TOKEN_URL, "GET")
+        logging.info(content)
+
+        if resp['status'] != '200':
+            raise Exception("Invalid response %s." % resp['status'])
+
+        request_token = dict(cgi.parse_qsl(content))
+
+        logging.info("Request Token:")
+        logging.info("    - oauth_token        = %s" % request_token['oauth_token'])
+        logging.info("    - oauth_token_secret = %s" % request_token['oauth_token_secret'])
+
+        cc = ClientConsumer(session=request.COOKIES['sessionid'],oauth_token=request_token['oauth_token'],oauth_token_secret=request_token['oauth_token_secret'],url=CONSUMER_SERVER)
+        cc.save()
+
+        logging.info("Go to the following link in your browser:")
+        logging.info( "%s?oauth_token=%s" % (AUTHORIZE_URL, request_token['oauth_token']))
+
+        callback = urllib2.quote("http://ogio/receive")
+
+        authurl = "%s?oauth_token=%s&oauth_callback=%s"% (AUTHORIZE_URL, request_token['oauth_token'],callback)
+
+        return { "authurl": authurl }
 
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST','DELETE')
@@ -201,9 +337,25 @@ class MFileHandler(BaseHandler):
                 mfile = service.create_mfile(file,name)
                 return mfile
             except DataService.DoesNotExist:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request! DataService '%s' does not exist " % serviceid)
-                return r
+                try:
+                    auth = Auth.objects.get(id=serviceid)
+
+                    if utils.is_service(auth.base):
+                        service = DataService.objects.get(id=auth.base.id)
+                        name = "Empty File"
+                        if file is not None:
+                            name = file.name
+                        mfile = service.create_mfile(file,name)
+                        return mfile
+
+                    r = rc.BAD_REQUEST
+                    r.write("Invalid Request! Auth '%s' is not a DataService Auth" % serviceid)
+
+                except Auth.DoesNotExist:
+                    logging.info("Auth.DoesNotExist")
+                    r = rc.BAD_REQUEST
+                    r.write("Invalid Request! DataService '%s' does not exist " % serviceid)
+                    return r
 
         else:
             r = rc.BAD_REQUEST
