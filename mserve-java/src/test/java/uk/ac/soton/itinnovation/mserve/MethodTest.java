@@ -98,7 +98,7 @@ public class MethodTest {
             consumer.getServices(containerid);
             String stagerid1 = consumer.makeMFileREST(serviceid1, file);
             String emptystagerid1 = consumer.makeEmptyMFileREST(serviceid1);
-            consumer.putToEmptyMFileREST(emptystagerid1,file);
+            consumer.putToEmptyMFile(emptystagerid1,file);
             consumer.getMFiles(serviceid1);
             String serviceid2 = consumer.makeServiceREST(containerid);
             consumer.getServices(containerid);
@@ -143,29 +143,12 @@ public class MethodTest {
      * Test of putToEmptyMFileURL method, of class APIConsumer.
      */
     @Test
-    public void testPutToEmptyMFileURL() throws Exception {
+    public void testPutToEmptyMFile() throws Exception {
         System.out.println("putToEmptyMFileURL");
         String containerid = consumer.createContainer();
         String serviceid1 = consumer.makeServiceREST(containerid);
         String stagerid1 = consumer.makeMFileREST(serviceid1, file);
-        consumer.putToEmptyMFileURL(stagerid1, file);
-        List<String> stagers = consumer.getMFiles(serviceid1);
-        consumer.deleteMFile(stagerid1);
-        consumer.deleteService(serviceid1);
-        containersToDelete.add(containerid);
-        assertEquals(stagers.size(), 1);
-    }
-
-    /**
-     * Test of putToEmptyMFileREST method, of class APIConsumer.
-     */
-    @Test
-    public void testPutToEmptyMFileREST() throws Exception {
-        System.out.println("putToEmptyMFileREST");
-        String containerid = consumer.createContainer();
-        String serviceid1 = consumer.makeServiceREST(containerid);
-        String stagerid1 = consumer.makeMFileREST(serviceid1, file);
-        consumer.putToEmptyMFileREST(stagerid1, file);
+        consumer.putToEmptyMFile(stagerid1, file);
         List<String> stagers = consumer.getMFiles(serviceid1);
         consumer.deleteMFile(stagerid1);
         consumer.deleteService(serviceid1);
@@ -206,7 +189,7 @@ public class MethodTest {
         URL url = new URL("http://" + "localhost" + "/service/" );
         APIConsumer instance = new APIConsumer();
         String id = instance.createContainer();
-        String content = "name=ServiceFromJava&cid="+id;
+        String content = "name=ServiceFromJava&container="+id;
         instance.makeService(url, content);
         containersToDelete.add(id);
     }
@@ -524,7 +507,21 @@ public class MethodTest {
         String mid = consumer.makeMFileREST(sid, file);
         consumer.getContainerManagementProperty(cid);
         consumer.getServiceManagementProperty(sid);
-        consumer.getMFileManagementProperty(mid);
+        containersToDelete.add(cid);
+    }
+
+        /**
+     * Test of setManagementProperty Info method, of class APIConsumer.
+     */
+    @Test
+    public void testGetAuths() throws Exception {
+        System.out.println("testGetContainerManagedResources");
+        String cid = consumer.createContainer();
+        String sid = consumer.makeServiceREST(cid);
+        String mid = consumer.makeMFileREST(sid, file);
+        consumer.getContainerAuths(cid);
+        consumer.getServiceAuths(sid);
+        consumer.getMFileAuths(mid);
         containersToDelete.add(cid);
     }
 }

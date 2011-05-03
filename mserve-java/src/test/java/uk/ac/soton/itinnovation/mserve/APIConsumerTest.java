@@ -71,9 +71,9 @@ public class APIConsumerTest {
             System.out.println("testAPI makeEmptyMFileRest");
             String emptystagerid1 = consumer.makeEmptyMFileREST(serviceid1);
             System.out.println("testAPI putToEmptyMFileREST");
-            consumer.putToEmptyMFileREST(emptystagerid1,file);
-            System.out.println("testAPI putToEmptyMFileURL");
-            consumer.putToEmptyMFileURL(emptystagerid1, file2);
+            consumer.putToEmptyMFile(stagerid1, file);
+            //System.out.println("testAPI putToEmptyMFileURL");
+            //consumer.putToEmptyMFile(emptystagerid1, file2);
             System.out.println("testAPI getMFiles");
             consumer.getMFiles(serviceid1);
             System.out.println("testAPI makeServiceREST 2");

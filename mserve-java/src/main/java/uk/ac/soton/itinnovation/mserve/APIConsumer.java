@@ -41,12 +41,18 @@ public class APIConsumer {
         try {
             APIConsumer consumer = new APIConsumer();
             String cid = consumer.createContainer();
-            String sid = consumer.makeServiceREST(cid);
-            String mid = consumer.makeMFileURL(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-            consumer.getUsage(cid);
-            consumer.getUsage(sid);
-            consumer.getUsage(mid);
-            consumer.deleteContainer(cid);
+
+
+            System.out.println("makeServiceURL");
+            String sid = consumer.makeServiceURL(cid);
+            //String sid = consumer.makeServiceREST(cid);
+            String mid = consumer.makeEmptyMFileREST(sid);
+            consumer.putToEmptyMFile(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+            
+            //consumer.getUsage(cid);
+            //consumer.getUsage(sid);
+            //consumer.getUsage(mid);
+            //consumer.deleteContainer(cid);
 
             //String mid1 = consumer.makeMFileURL(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
             //String mid2 = consumer.makeMFileREST(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
@@ -67,9 +73,9 @@ public class APIConsumer {
         this.host = host;
     }
 
-    public String putToEmptyMFileURL(String id, File file) throws MalformedURLException {
+    public String putToEmptyMFile(String id, File file) throws MalformedURLException {
         try {
-            URL url = new URL(protocol + host + "/mfileapi/update/" + id  +"/");
+            URL url = new URL(protocol + host + "/mfile/" + id  +"/");
             String json = doFilePutToURL(url.toString(), id, file);
             System.out.println("putToEmptyMFileURL " + json);
             JSONObject ob = new JSONObject(json);
@@ -79,17 +85,6 @@ public class APIConsumer {
         }
     }
 
-    public String putToEmptyMFileREST(String id, File file) throws MalformedURLException {
-        try {
-            URL url = new URL(protocol + host + "/mfile/");
-            String json = doFilePutToURL(url.toString(), id, file);
-            System.out.println(""+json);
-            JSONObject ob = new JSONObject(json);
-            return ob.getString("id");
-        } catch (JSONException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
 
     public String makeServiceURL(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/containerapi/makeserviceinstance/" + id  +"/");
@@ -99,7 +94,7 @@ public class APIConsumer {
 
     public String  makeServiceREST(String id) throws MalformedURLException {
         URL url = new URL(protocol + host + "/service/" );
-        String content = "name=ServiceFromJava&cid="+id;
+        String content = "name=ServiceFromJava&container="+id;
         return makeService(url,content);
     }
 
@@ -303,7 +298,7 @@ public class APIConsumer {
 
     public List<String> getServices(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/resources/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/getmanagedresources/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -421,7 +416,7 @@ public class APIConsumer {
 
     public List<String> getMFiles(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/resources/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/getmanagedresources/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -483,6 +478,7 @@ public class APIConsumer {
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         } catch (IOException ex) {
+            ex.printStackTrace();
             throw new RuntimeException(ex);
         }
     }
@@ -622,7 +618,7 @@ public class APIConsumer {
 
     public void getManagedResources(String id) {
       try {
-            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/resources/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/getmanagedresources/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -652,7 +648,7 @@ public class APIConsumer {
 
     public JSONArray getUsageSummary(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/usagesummary/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/getusagesummary/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -728,7 +724,7 @@ public class APIConsumer {
 
     public JSONArray getRoleInfo(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/roleinfo/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/getroles/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -755,18 +751,15 @@ public class APIConsumer {
     }
 
     public JSONArray getContainerManagementProperty(String id) {
-      return getRoleInfo(id);
+      return getManagementProperty(id);
     }
     public JSONArray getServiceManagementProperty(String id) {
-      return getRoleInfo(id);
-    }
-    public JSONArray getMFileManagementProperty(String id) {
-      return getRoleInfo(id);
+      return getManagementProperty(id);
     }
 
     public JSONArray getManagementProperty(String id) {
         try {
-            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/managementproperty/");
+            URL getresourcesurl = new URL(protocol + host + "/api/" + id +"/getmanagementproperties/");
 
             String output = getOutputFromURL(getresourcesurl);
 
@@ -790,5 +783,40 @@ public class APIConsumer {
         }
     }
 
+    public JSONArray getContainerAuths(String id) {
+      return getAuths(id);
+    }
+    public JSONArray getServiceAuths(String id) {
+      return getAuths(id);
+    }
+    public JSONArray getMFileAuths(String id) {
+      return getAuths(id);
+    }
+
+    public JSONArray getAuths(String id) {
+        try {
+            URL getresourcesurl = new URL(protocol + host + "/auth/" + id +"/");
+
+            String output = getOutputFromURL(getresourcesurl);
+
+            JSONArray auth_array  = new JSONArray(output);
+
+            if(auth_array.length()>0){
+                for (int i = 0; i < auth_array.length(); i++) {
+                    JSONObject jsonob = auth_array.getJSONObject(i);
+                    System.out.println("Auth "+jsonob);
+                }
+            }
+
+            return auth_array;
+
+        } catch (JSONException ex) {
+            throw new RuntimeException(ex);
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException(ex);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
 
 }
