@@ -74,7 +74,6 @@ urlpatterns = patterns('',
     url(r'^usage/',  'dataservice.views.usage'),
     url(r'^stats/$',  'dataservice.views.stats'),
     url(r'^browse/(?P<id>[^/]+)/$', "dataservice.views.render_base"),
-    url(r'^form/mfile/', "dataservice.views.create_mfile"),
 
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),

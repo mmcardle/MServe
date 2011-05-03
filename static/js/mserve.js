@@ -69,7 +69,8 @@ function reloadMFiles(newfileid){
 }
 
 function loadMFile(mfile){
-    $( "#mfileTemplate" ).tmpl( mfile ) .prependTo( "#managedresourcesmfilescontent" );
+    $("#nofiles").remove()
+    $("#mfileTemplate" ).tmpl( mfile ) .prependTo( "#managedresourcesmfilescontent" );
     $("#image-"+mfile.id).show('bounce');
 
     (function() {

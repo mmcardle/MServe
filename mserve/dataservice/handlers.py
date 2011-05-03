@@ -6,15 +6,12 @@ from django.conf import settings
 from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
-from django.shortcuts import render_to_response
 from django.conf import settings
-from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 import settings as settings
 from dataservice.models import mfile_get_signal
 
 import utils as utils
-import api as api
 import usage_store as usage_store
 import time
 import logging
@@ -46,7 +43,7 @@ class HostingContainerHandler(BaseHandler):
 
     def delete(self, request, id):
         logging.info("Deleting Container %s " % id)
-        api.delete_container(request,id)
+        HostingContainer.objects.get(id=str(id)).delete()
         r = rc.DELETED
         return r
 
@@ -54,7 +51,7 @@ class HostingContainerHandler(BaseHandler):
         form = HostingContainerForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
-            hostingcontainer = api.create_container(request,name)
+            hostingcontainer = HostingContainer.create_container(name)
             return hostingcontainer
         else:
             r = rc.BAD_REQUEST
@@ -69,7 +66,7 @@ class DataServiceHandler(BaseHandler):
 
     def delete(self, request, id):
         logging.info("Deleting Service %s " % id)
-        api.delete_service(request,id)
+        DataService.objects.get(id=id).delete()
         r = rc.DELETED
         return r
 
@@ -78,8 +75,16 @@ class DataServiceHandler(BaseHandler):
         form = DataServiceForm(request.POST)
 
         if form.is_valid(): 
-            dataservice = form.save()
-            dataservice = api.create_data_service(dataservice)
+
+            logging.info("CREATE DATASERVICE %s" % request.POST)
+
+            name = request.POST['name']
+            containerid = request.POST['container']
+
+            container = HostingContainer.objects.get(id=containerid)
+
+            dataservice = container.create_data_service(name)
+            
             return dataservice
         else:
             logging.info(form)
@@ -131,7 +136,7 @@ class MFileHandler(BaseHandler):
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
-        api.delete_mfile(request,id)
+        MFile.objects.get(id=id).delete()
         r = rc.DELETED
         return r
 
@@ -146,7 +151,7 @@ class MFileHandler(BaseHandler):
             mfile.name = file.name
             mfile.size = file.size
             mfile.save()
-            api.mfile_post_process(mfile)
+            mfile.post_process()
             
             backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
             backup.save()
@@ -161,7 +166,6 @@ class MFileHandler(BaseHandler):
 
     def create(self, request, serviceid=None):
         logging.debug("Create MFile")
-        logging.debug("Create MFile len(request.raw_post_data)=%s "% (len(request.raw_post_data)))
 
         form = MFileForm(request.POST,request.FILES)
         if form.is_valid():
@@ -171,19 +175,21 @@ class MFileHandler(BaseHandler):
             else:
                 file = None
 
-            logging.debug("API call Creating mfile %s" % serviceid)
-
             if serviceid == None:
                 serviceid = form.cleaned_data['sid']
 
-            logging.debug("API call Creating mfile")
+            try:
+                service = DataService.objects.get(id=serviceid)
+                mfile = service.create_mfile(file,file.name)
+                return mfile
+            except DataService.DoesNotExist:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! DataService '%s' does not exist " % serviceid)
+                return r
 
-            mfile = api.create_mfile(request, serviceid, file)
-            return mfile
         else:
             r = rc.BAD_REQUEST
-            logging.debug("API call Creating mfile %s " % form)
-            r.write("Invalid Request!")
+            r.write("Invalid Request! Submitted Form Invalid %s"% form)
             return r
 
 class MFileVerifyHandler(BaseHandler):

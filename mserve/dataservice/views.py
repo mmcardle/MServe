@@ -248,57 +248,6 @@ def create_auth(request):
 
     else:
         return render_error(request,form)
-'''
-def create_mfileauth(request):
-    form = MFileAuthForm(request.POST)
-    if form.is_valid():
-        authname = form.cleaned_data['authname']
-        roles_csv = form.cleaned_data['roles']
-        mfileid = form.cleaned_data['dsid']
-        mfile = MFile.objects.get(pk=mfileid)
-
-        mfileauth = MFileAuth(mfile=mfile,authname=authname)
-        mfileauth.save()
-
-        auths = MFileAuth.objects.filter(mfile=mfile)
-
-        rolenames = roles_csv.split(',')
-        rolestoadd = rolenames
-        allowedroles = []
-
-        for auth in auths:
-            roles  = Role.objects.filter(auth=auth)
-            for role in roles:
-                allowedroles.append(role.rolename)
-                if role.rolename in rolenames:
-                    rolestoadd.remove(role.rolename)
-                    mfileauth.roles.add(role)
-
-        if len(rolestoadd) != 0:
-            mfileauth.delete()
-            return render_error(request,"Could not add methods '%s'. Allowed = %s" % (','.join(rolestoadd),','.join(set(allowedroles))))
-
-        return render_mfileauth(request, mfileauth.mfile, mfileauth)
-
-    else:
-        return render_error(request,form)
-'''
-def create_mfile(request):
-    form = MFileForm(request.POST,request.FILES)
-    if form.is_valid():
-
-        if request.FILES.has_key('file'):
-            file = request.FILES['file']
-        else:
-            file = None
-        serviceid = form.cleaned_data['sid']
-        #service = DataService.objects.get(id=serviceid)
-        mfile = api.create_mfile(request, serviceid, file)
-
-        return redirect('/browse/'+str(mfile.id)+"/")
-    else:
-        serviceid = form.data['sid']
-        return render_service(request,serviceid,form=form)
 
 def render_mfile(request, id, form=AuthForm(), show=False):
     mfile = MFile.objects.get(pk=id)

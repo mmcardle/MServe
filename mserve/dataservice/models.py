@@ -6,12 +6,25 @@ import logging
 import datetime
 import os
 import utils as utils
-from django.conf import settings
+import settings
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
 import django.dispatch
 
+from dataservice.tasks import thumbvideo
+from dataservice.tasks import proxyvideo
+from dataservice.tasks import thumbimage
+from dataservice.tasks import mimefile
+from dataservice.tasks import md5file
+
+use_celery = settings.USE_CELERY
+
+if use_celery:
+    thumbvideo = thumbvideo.delay
+    thumbimage = thumbimage.delay
+    proxyvideo = proxyvideo.delay
+    
 # Declare Signals
 mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
 
@@ -128,12 +141,69 @@ class NamedBase(Base):
     def __unicode__(self):
         return self.name;
 
+
+
 class HostingContainer(NamedBase):
     status = models.CharField(max_length=200)
     
     def __init__(self, *args, **kwargs):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = container_metrics
+
+    @staticmethod
+    def create_container(name):
+        import api
+        hostingcontainer = HostingContainer(name=name)
+        hostingcontainer.save()
+
+        hostingcontainerauth = Auth(base=hostingcontainer,authname="full")
+
+        hostingcontainerauth.save()
+
+        owner_role = Role(rolename="admin")
+        owner_role.setmethods(api.all_container_methods)
+        owner_role.description = "Full access to the container"
+        owner_role.save()
+
+        hostingcontainerauth.roles.add(owner_role)
+
+        managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=settings.DEFAULT_ACCESS_SPEED)
+        managementproperty.save()
+
+        return hostingcontainer
+
+    def create_data_service(self,name):
+        import api
+
+        dataservice = DataService(name=name,container=self)
+        dataservice.save()
+
+        serviceauth = Auth(base=dataservice,authname="full")
+
+        serviceauth.save()
+
+        owner_role = Role(rolename="serviceadmin")
+        owner_role.setmethods(api.service_admin_methods)
+        owner_role.description = "Full control of the service"
+        owner_role.save()
+
+        customer_role = Role(rolename="customer")
+        customer_role.setmethods(api.service_customer_methods)
+        customer_role.description = "Customer Access to the service"
+        customer_role.save()
+
+        serviceauth.roles.add(owner_role)
+        serviceauth.roles.add(customer_role)
+
+        customerauth = Auth(base=dataservice,authname="customer")
+        customerauth.save()
+
+        customerauth.roles.add(customer_role)
+
+        managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
+        managementproperty.save()
+
+        return dataservice
 
     def get_rate_for_metric(self, metric):
         if metric == metric_container:
@@ -172,6 +242,63 @@ class DataService(NamedBase):
         import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage,obj=self.container)
+
+    def create_mfile(self,file,name,fid=None):
+        import api
+        service = self
+
+        if file==None:
+            mfile = MFile(name="Empty File",service=service,empty=True)
+        else:
+            if type(file) == django.core.files.base.ContentFile:
+                mfile = MFile(name=name,service=service)
+                mfile.file.save(name, file)
+            else:
+                mfile = MFile(name=name,service=service,file=file,empty=False)
+        mfile.save()
+
+        logging.debug("MFile creation started '%s' "%mfile)
+        logging.debug("Creating roles for '%s' "%mfile)
+
+        mfileauth_owner = Auth(base=mfile,authname="owner")
+        mfileauth_owner.save()
+
+        owner_role = Role(rolename="owner")
+        methods = api.mfile_owner_methods
+        owner_role.setmethods(methods)
+        owner_role.description = "Owner of the data"
+        owner_role.save()
+
+        mfileauth_owner.roles.add(owner_role)
+
+        monitor_role = Role(rolename="monitor")
+        methods = api.mfile_monitor_methods
+        monitor_role.setmethods(methods)
+        monitor_role.description = "Collect usage reports"
+        monitor_role.save()
+
+        mfileauth_owner.roles.add(monitor_role)
+
+        mfileauth_monitor = Auth(base=mfile,authname="monitor")
+        mfileauth_monitor.save()
+
+        mfileauth_monitor.roles.add(monitor_role)
+
+        mfile.save()
+        mfile.post_process()
+
+        logging.debug("Backing up '%s' "%mfile)
+
+        if file is not None:
+            if type(file) == django.core.files.base.ContentFile:
+                backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum)
+                backup.file.save(name, file)
+                backup.save()
+            else:
+                backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
+                backup.save()
+
+        return mfile
 
 class MFolder(NamedBase):
     service  = models.ForeignKey(DataService)
@@ -229,6 +356,66 @@ class MFile(NamedBase):
         super(MFile, self).__init__(*args, **kwargs)
         self.metrics = mfile_metrics
 
+    def duplicate(self):
+        new_mfile = self.service.create_mfile(self.file)
+        new_mfile.save()
+        return new_mfile
+
+    def post_process(self):
+        if self.file:
+            # MIME type
+            self.mimetype = mimetype = mimefile(self.file.path)
+            # checksum
+            self.checksum = md5file(self.file.path)
+            # record size
+            self.size = self.file.size
+
+            thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
+            posterpath = os.path.join( str(self.file) + ".poster.jpg")
+            proxypath = os.path.join( str(self.file) + ".proxy.ogg")
+            fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
+            fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
+            fullproxypath = os.path.join(settings.THUMB_ROOT , proxypath)
+            (thumbhead,tail) = os.path.split(fullthumbpath)
+            (posterhead,tail) = os.path.split(fullposterpath)
+            (proxyhead,tail) = os.path.split(fullproxypath)
+
+            if not os.path.isdir(thumbhead):
+                os.makedirs(thumbhead)
+
+            if not os.path.isdir(posterhead):
+                os.makedirs(posterhead)
+
+            if use_celery:
+                logging.info("Using CELERY for processing ")
+            else:
+                logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
+
+            if mimetype.startswith('video') or self.file.name.endswith('mxf'):
+                thumbtask = thumbvideo(self.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
+                self.thumb = thumbpath
+                postertask = thumbvideo(self.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
+                self.poster = posterpath
+                proxytask = proxyvideo(self.file.path,fullproxypath,width=settings.postersize[0],height=settings.postersize[1])
+                self.proxy = proxypath
+
+            elif mimetype.startswith('image'):
+                logging.info("Creating thumb inprocess for Image '%s' %s " % (self,mimetype))
+                thumbtask = thumbimage(self.file.path,fullthumbpath,options={"width":settings.thumbsize[0],"height":settings.thumbsize[1]})
+                self.thumb = thumbpath
+                postertask = thumbimage(self.file.path,fullposterpath,options={"width":settings.postersize[0],"height":settings.postersize[1]})
+                self.poster = posterpath
+
+            elif self.file.name.endswith('blend'):
+                logging.info("Creating Blender thumb '%s' %s " % (self,mimetype))
+                # TODO : Change to a Preview of a frame of the blend file
+                thumbtask = thumbimage("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,options={"width":settings.thumbsize[0],"height":settings.thumbsize[1]})
+                self.thumb = thumbpath
+            else:
+                logging.info("Not creating thumb for '%s' %s " % (self,mimetype))
+
+            self.save()
+        
     def get_rel_path(self):
         if self.folder is not None:
             return os.path.join(self.folder.get_rel_path(),self.name)
