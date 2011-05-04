@@ -207,8 +207,8 @@ class DavServer(object):
         if isFo:
             response['Content-Length'] = "4096"
 
-        if not isFi and not isFo:
-            return HttpResponseNotFound()
+        #if not isFi and not isFo:
+         #   return HttpResponse()
 
         return response
 
