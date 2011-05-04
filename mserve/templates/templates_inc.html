@@ -52,7 +52,7 @@
 </script>
 
 <script id="serviceTemplate" type="text/x-jquery-tmpl">
-    
+
 <div class="infoholder">
     <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
         <tr>
@@ -114,6 +114,73 @@
                 </td></tr>
             </tbody>
         </table>
+    </div>
+</div>
+</script>
+
+<script id="serviceOAuthTemplate" type="text/x-jquery-tmpl">
+    
+<div class="infoholder">
+    <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
+        <tr>
+             {%templatetag openvariable%}if mfile_set[0] {%templatetag closevariable%}
+                          <td class="service_preview_td" style="background-image: url(${mfile_set[0].thumburl});"></td>
+             {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+             {%templatetag openvariable%}if mfile_set[1] {%templatetag closevariable%}
+                          <td class="service_preview_td" style="background-image: url(${mfile_set[1].thumburl});"></td>
+              {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </tr>
+        <tr>
+             {%templatetag openvariable%}if mfile_set[2] {%templatetag closevariable%}
+                          <td style="background-image: url(${mfile_set[2].thumburl});"></td>
+             {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+             {%templatetag openvariable%}if mfile_set[3] {%templatetag closevariable%}
+                           <td class="service_preview_td" style="background-image: url(${mfile_set[3].thumburl});"></td>
+             {%templatetag openvariable%}else{%templatetag closevariable%}
+                          <td class="service_preview_td"></td>
+             {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </tr>
+    </table>
+
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
+         onmouseout="$('#id-${id}').hide();" style="position: relative; top: -130px">
+
+        <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr><td>
+                    <div class='title'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                    </div></td></tr>
+            <tr><td>
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                          <div>${mfile_set.length} files </div>
+                          <div style="font-weight: bold">Latest Files :</div>
+
+                          {%templatetag openvariable%}each mfile_set{%templatetag closevariable%}
+                                <!-- Show Last 4 files -->
+                              {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
+                                <div>${getShort($value.name,30)}</div>
+                              {%templatetag openvariable%}/if{%templatetag closevariable%}
+                          {%templatetag openvariable%}/each{%templatetag closevariable%}
+                      </div>
+                </td></tr>
+            </tbody>
+        </table>
+        <form>
+        <input type="checkbox" id="${id}" /><label for="${id}">Select</label>
+        </form>
     </div>
 </div>
 </script>
@@ -250,6 +317,75 @@
     </div>
 </script>
 
+<script id="mfolderOAuthTemplate" type="text/x-jquery-tmpl">
+<div class="infoholder">
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
+                                         onmouseout="$('#id-${id}').hide();" >
+            <table cellpadding='0' cellspacing='0' style='background-image:url("");' class='thumb'>
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr><td>
+                    <div class='title'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                       </div></td></tr>
+            <tr><td>
+
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+
+                    </div>
+
+              </td></tr>
+            <tr><td></td></tr>
+            </tbody>
+        </table>
+        <form action="POST" target="/auth/">
+        <input type="checkbox" id="${id}" /><label for="${id}">Select</label>
+        </form>
+    </div>
+</div>
+</script>
+
+<script id="mfileOAuthTemplate" type="text/x-jquery-tmpl">
+<div class="infoholder">
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
+                                         onmouseout="$('#id-${id}').hide();" >
+            <table cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr><td>
+                    <div class='title'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                       </div></td></tr>
+            <tr><td>
+
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                      <div>Size: ${size}</div>
+                      <div style='font-size: x-small;'>Type</div>
+                      <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
+                      <div style='font-size: x-small;'>Created: ${created}</div>
+                      <div style='font-size: x-small;'>Updated: ${updated}</div>
+                      <div style='font-size: xx-small;'>Checksum:</div>
+                      <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
+                    </div>
+
+              </td></tr>
+            <tr><td></td></tr>
+            </tbody>
+        </table>
+        <form>
+        <input type="checkbox" id="${id}" /><label for="${id}">Select</label>
+        </form>
+
+    </div>
+</div>
+</script>
+
 <script id="mfileTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder">
     <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
@@ -277,7 +413,7 @@
                           <div style='font-size: xx-small;'>Checksum:</div>
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
                     </a>
-                        <button id="newjobbutton-${id}" >new</button>
+                        <button id="newjobbutton-${id}" ></button>
                       </div>
                     
                     

@@ -32,6 +32,7 @@ auth = OAuthAuthentication(realm="MServe Realm")
 oauth_handler = Resource(handler=TestAuthHandler, authentication=auth)
 consumer_handler = Resource(ConsumerHandler)
 receive_handler = Resource(ReceiveHandler)
+profile_handler = Resource(ProfileHandler)
 
 urlpatterns = patterns('',
     url(r'^posts', oauth_handler, name='blogposts'),
@@ -55,6 +56,7 @@ urlpatterns += patterns('',
     url(r'^service/$', dataservice_handler),
     url(r'^mfile/$', mfile_handler),
     url(r'^auth/$', auth_handler),
+    url(r'^users/$', profile_handler),
 
     # REST Methods for individual resources
     url(r'^container/(?P<id>[^/]+)/$', hosting_handler),

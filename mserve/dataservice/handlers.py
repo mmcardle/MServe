@@ -6,7 +6,9 @@ from django.conf import settings
 from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render_to_response
+from django.contrib.auth.models import User
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from django.http import HttpResponse
@@ -39,33 +41,72 @@ from piston.utils import require_extended
 CONSUMER_KEY = 'mmckey'
 CONSUMER_SECRET = 'mmcsecret'
 
+class ProfileHandler(BaseHandler):
+    allowed_methods = ('GET', 'PUT')
+    model = MServeProfile
+    fields = (('user', () ),'mfiles','mfolders',('dataservices', ('id', 'name','mfile_set')), ('containers', ('id', 'name'))  )
+
+    def read(self, request):
+        if not request.user.is_authenticated():
+            return {}
+        try:
+            profile = MServeProfile.objects.get(user=request.user)           
+            return  profile
+
+        except MServeProfile.DoesNotExist:
+            logging.info("PortalProfile Does not exist for this user!")
+            pp = MServeProfile(user=request.user)
+            pp.save()
+            return pp
+
 class TestAuthHandler(BaseHandler):
 
     def read(self, request):
 
-        logging.info("REQ %s " % request)
+        logging.info("TestAuthHandler %s " % request.META['REQUEST_URI'])
 
-        mf = list(MFile.objects.all())[0]
+        received_token = dict(cgi.parse_qsl(request.META['QUERY_STRING']))
+        #oauth_verifier = received_token['oauth_verifier']
+        oauth_token = received_token['oauth_token']
+        #oauth_callback_confirmed = received_token['oauth_callback_confirmed']
 
-        logging.info("Returning %s "% mf)
+        #token = Token.objects.get(key=oauth_token,verifier=oauth_verifier)
+        token = Token.objects.get(key=oauth_token)
 
-        enc_url = urllib2.quote(mf.file.path)
+        try:
+            logging.info("Returning ")
+            mfile_token_auth = MFileOAuthToken.objects.get(token=token)
+            mf = mfile_token_auth.mfile
+            logging.info("Returning %s "% mf)
 
-        response = HttpResponse(mimetype=mf.mimetype)
-        response['Content-Length'] = mf.file.size
-        response['Content-Disposition'] = 'attachment; filename=%s'%(mf.name)
-        response["X-SendFile2"] = " %s %s" % (enc_url,"0-")
+            enc_url = urllib2.quote(mf.file.path)
+
+            response = HttpResponse(mimetype=mf.mimetype)
+            response['Content-Length'] = mf.file.size
+            response['Content-Disposition'] = 'attachment; filename=%s'%(mf.name)
+            response["X-SendFile2"] = " %s %s" % (enc_url,"0-")
+
+            #dict = {"name": "somedata" , "url" : mf.thumburl()}
+            logging.info("Returning %s "% response)
+
+            return response
+
+        except MFileOAuthToken.DoesNotExist:
+            logging.info("Named Base does not exist")
+
+        #oauth_token_secret=cc.oauth_token_secret
+        #consumer = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+        r = rc.BAD_REQUEST
+        r.write("Invalid Request!")
+        return r
+
         
-        #dict = {"name": "somedata" , "url" : mf.thumburl()}
-        logging.info("Returning %s "% response)
-
-        return response
 
 class ReceiveHandler(BaseHandler):
 
     def read(self,request):
 
-        logging.info("ReceiveHandler REQ %s " % request)
+        logging.info("ReceiveHandler REQ %s " % request.META['REQUEST_URI'])
 
         received_token = dict(cgi.parse_qsl(request.META['QUERY_STRING']))
         oauth_verifier = received_token['oauth_verifier']
@@ -98,21 +139,49 @@ class ReceiveHandler(BaseHandler):
 
         mresponse,content = mclient.request(RESOURCE_URL)
 
+        logging.info("mresponse %s "% mresponse)
         logging.info("Content %s "% len(content))
+        logging.info("Content %s "% content)
 
         return {"receive":"ok"}
 
 class ConsumerHandler(BaseHandler):
+    allowed_methods = ('GET', 'PUT', 'POST')
 
     def read(self, request):
 
-        logging.info("REQ %s " % request)
+        logging.info("REQ %s " % request.META['REQUEST_URI'])
 
         return {"name": "somedata"}
 
+
+    def update(self, request):
+
+        logging.info("ConsumerHandler %s"%request.META['REQUEST_URI'])
+
+        oauth_token = request.POST['oauthtoken']
+        id    = request.POST['id']
+
+        token = Token.objects.get(key=oauth_token)
+
+        try:
+            mfile = MFile.objects.get(id=id)
+            logging.info("Mfile %s" % mfile)
+
+            mfile_token_auth = MFileOAuthToken(token=token,mfile=mfile)
+
+            logging.info("mfile_token_auth %s" % mfile_token_auth)
+            mfile_token_auth.save()
+
+        except MFile.DoesNotExist:
+            logging.info("Named Base does not exist")
+
+        return {}
+
+
     def create(self, request):
 
-        logging.info("ConsumerHandler REQ %s " % request)
+        logging.info("ConsumerHandler REQ %s " % request.META['REQUEST_URI'])
 
         # settings for the local test consumer
         CONSUMER_SERVER = request.POST['url']

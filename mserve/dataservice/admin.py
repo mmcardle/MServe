@@ -10,6 +10,7 @@ admin.site.register(Auth)
 admin.site.register(Role)
 admin.site.register(BackupFile)
 admin.site.register(ClientConsumer)
+admin.site.register(MServeProfile)
 
 from piston.models import Token
 from piston.models import Consumer

@@ -1,5 +1,54 @@
 
 
+function load_user(){
+
+     $.ajax({
+       type: "GET",
+       url: '/users/',
+       success: function(msg){
+            $( "#mfileOAuthTemplate" ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
+            $( "#mfolderOAuthTemplate" ).tmpl( msg.mfolders ).appendTo( "#user_mfileholder" );
+            $( "#serviceOAuthTemplate" ).tmpl( msg.dataservices ).appendTo( "#user_mfileholder" );
+
+            oauth_token = getParameterByName("oauth_token")
+
+            $(".infoholder input[type='checkbox']").each(function(index){
+                $(this).button().click(
+                function(){
+                    var id = $(this).attr('id')
+                    ajax_update_consumer_oauth(id,oauth_token)
+                });
+            } );
+
+       },
+       error: function(msg){
+            showError("Error Loading Jobs",objectToString(msg))
+       }
+     });
+}
+
+function ajax_update_consumer_oauth(id,oauth_token){
+
+    var dataArr = {
+        "oauthtoken" : ""+oauth_token+"",
+        "id" : ""+id+""
+    }
+
+    var data = $.param(dataArr)
+
+     $.ajax({
+       type: "PUT",
+       url: '/consumer/',
+       data: data,
+       success: function(msg){
+            showMessage("Success",objectToString(msg))
+       },
+       error: function(msg){
+            showError("Error Loading Jobs",objectToString(msg))
+       }
+     });
+}
+
 var serviceid = ""
 function loadMFiles(sid){
     serviceid = sid

@@ -102,6 +102,9 @@ def is_service(base):
 def is_mfile(base):
     return hasattr(base,"mfile")
 
+def is_mfolder(base):
+    return hasattr(base,"mfolder")
+
 def is_containerauth(base):
     return hasattr(base,"hostingcontainerauth")
 

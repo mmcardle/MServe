@@ -5,6 +5,17 @@
   </head>
   <body>
     <h1>Authorize Token</h1>
+    <span>User: {{user}}</span>
+    <span>Profile: {{user.get_profile}}</span>
+
+
+            {% if user.is_authenticated %}
+            {{user}}
+            {% endif %}
+
+            {% if not user.is_authenticated %}
+            Not Logged
+            {% endif %}
 
     <form action="{% url piston.authentication.oauth_user_auth %}" method="POST">
       {{ form.as_table }}

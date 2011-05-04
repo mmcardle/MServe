@@ -141,6 +141,8 @@ REQUEST_IGNORE_PATHS = (
     r'^admin/',
 )
 
+AUTH_PROFILE_MODULE = "dataservice.mserveprofile"
+
 LOGIN_REDIRECT_URL='/'
 
 # JOB CONFIG

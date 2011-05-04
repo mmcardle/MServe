@@ -7,10 +7,12 @@ import datetime
 import os
 import utils as utils
 import settings
+from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
 import django.dispatch
+from piston.models import Token
 
 from dataservice.tasks import thumbvideo
 from dataservice.tasks import proxyvideo
@@ -62,7 +64,41 @@ class ClientConsumer(models.Model):
     oauth_token         = models.CharField(max_length=200)
     oauth_token_secret  = models.CharField(max_length=200)
 
+class MFileOAuthToken(models.Model):
+    mfile = models.ForeignKey('MFile')
+    token = models.ForeignKey(Token)
 
+class MServeProfile(models.Model):
+    user = models.ForeignKey(User, unique=True)
+    bases = models.ManyToManyField('NamedBase', related_name='bases')
+
+    def mfiles(self):
+        ret = []
+        for base in self.bases.all():
+            if utils.is_mfile(base):
+                ret.append(MFile.objects.get(id=base.id))
+        return ret
+
+    def dataservices(self):
+        ret = []
+        for base in self.bases.all():
+            if utils.is_service(base):
+                ret.append(DataService.objects.get(id=base.id))
+        return ret
+
+    def mfolders(self):
+        ret = []
+        for base in self.bases.all():
+            if utils.is_mfolder(base):
+                ret.append(MFolder.objects.get(id=base.id))
+        return ret
+
+    def containers(self):
+        ret = []
+        for base in self.bases.all():
+            if utils.is_container(base):
+                ret.append(HostingContainer.objects.get(id=base.id))
+        return ret
 
 class Usage(models.Model):
     base            = models.ForeignKey('NamedBase',null=True, blank=True)

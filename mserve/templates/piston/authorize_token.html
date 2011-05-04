@@ -3,15 +3,43 @@
 
 {% block content %}
 
+    <h1>Choose Resources</h1>
+
+        {% if user.is_authenticated %}
+
+            <div id="user_mfileholder">
+
+
+            </div>
+
+        <div class="clr"></div>
+
+        {% endif %}
+
+        {% if not user.is_authenticated %}
+            <span class="error">Not Logged</span>
+        {% endif %}
+
     <h1>Authorize Token</h1>
 
-        <form action="{% url piston.authentication.oauth_user_auth %}" method="POST">
-            {{ form.as_p }}
-              <button type="submit">Confirm</button>
-        </form>
+    <form action="{% url piston.authentication.oauth_user_auth %}" method="POST">
+        {{ form.as_p }}
+          <button type="submit">Confirm</button>
+    </form>
+
+
 
 {% endblock %}
 
 {% block auths %}
 
+{% endblock %}
+
+{% block bottomscript %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+                $('button').button();
+                load_user();
+        });
+    </script>
 {% endblock %}

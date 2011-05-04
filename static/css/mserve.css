@@ -774,3 +774,10 @@ ol li {
 	display:block;
 	clear:both;
 }
+
+
+.infoholder .ui-state-active {
+    background-color: red;
+    border: 1px outset brown;
+    font-weight: bold;
+}
