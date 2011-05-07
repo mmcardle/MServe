@@ -21,37 +21,10 @@ usage_handler = Resource(UsageHandler)
 role_handler = Resource(RoleHandler)
 resources_handler = Resource(ResourcesHandler)
 info_handler = Resource(InfoHandler)
-
-from piston.resource import Resource
-from piston.authentication import OAuthAuthentication
-from dataservice.handlers import TestAuthHandler
-
-#auth = HttpBasicAuthentication(realm='My sample API')
-auth = OAuthAuthentication(realm="MServe Realm")
-
-oauth_handler = Resource(handler=TestAuthHandler, authentication=auth)
-consumer_handler = Resource(ConsumerHandler)
-receive_handler = Resource(ReceiveHandler)
 profile_handler = Resource(ProfileHandler)
-remote_service_handler = Resource(RemoteServiceHandler)
+auth_contents_handler = Resource(AuthContentsHandler)
 
 urlpatterns = patterns('',
-    url(r'^api/protected/', oauth_handler, name='protected'),
-    url(r'^api/consumers/', consumer_handler , name='consumer'),
-    url(r'^api/receive/', receive_handler, name='receive'),
-    url(r'^api/remoteservices/', remote_service_handler, name='remoteservice'),
-    url(r'^api/oauth/access_token/$','dataservice.handlers.oauth_access_token', name='oauth_access_token'),
-)
-
-urlpatterns += patterns(
-    'piston.authentication',
-    url(r'^api/oauth/request_token/$','oauth_request_token' , name='oauth_request_token'),
-    url(r'^api/oauth/authorize/$','oauth_user_auth', name='oauth_user_auth'),
-    #url(r'^api/oauth/access_token/$','oauth_access_token' , name='oauth_access_token'),
-)
-
-
-urlpatterns += patterns('',
 
     # REST Methods 
     url(r'^container/$', hosting_handler),
@@ -72,6 +45,7 @@ urlpatterns += patterns('',
     url(r'^api/(?P<id>[^/]+)/usage/$', usage_handler),
     #url(r'^api/(?P<id>[^/]+)/property/$', property_handler),
 
+    url(r'^auth/(?P<id>[^/]+)/getcontents/$', auth_contents_handler),
     #url(r'^api/(?P<id>[^/]+)/role/$', role_handler),
 
     # TING specific

@@ -15,9 +15,11 @@ function load_user(userurl,consumerurl){
             $(".infoholder input[type='checkbox']").each(function(index){
                 $(this).button().click(
                 function(){
+                    var id = $(this).attr('id')
                     if($(this).is(':checked')){
-                        var id = $(this).attr('id')
                         ajax_update_consumer_oauth(id,oauth_token,consumerurl)
+                    }else{
+                        ajax_delete_consumer_oauth(id,oauth_token,consumerurl)
                     }
                 });
             } );
@@ -44,6 +46,20 @@ function ajax_update_consumer_oauth(id,oauth_token,consumerurl){
        data: data,
        success: function(msg){
             
+       },
+       error: function(msg){
+            showError("Error Loading Jobs",objectToString(msg))
+       }
+     });
+}
+
+function ajax_delete_consumer_oauth(id,oauth_token,consumerurl){
+
+     $.ajax({
+       type: "DELETE",
+       url: consumerurl+"/"+id+"/"+oauth_token+"/",
+       success: function(msg){
+
        },
        error: function(msg){
             showError("Error Loading Jobs",objectToString(msg))

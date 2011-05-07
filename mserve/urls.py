@@ -8,6 +8,7 @@ urlpatterns = patterns('',
     (r'^', include('mserve.dataservice.urls')),
     (r'^', include('mserve.jobservice.urls')),
     (r'^', include('mserve.webdav.urls')),
+    (r'^', include('mserve.mserveoauth.urls')),
     (r'^', include('mserve.prestoprime.urls')),
 
     (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/opt/mserve/pp-dataservice/media/'}),

@@ -32,6 +32,15 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
     localFile.write(u.read())
     localFile.close()
 
+    if options["mfile"]:
+        mfile = options['mfile']
+        mfile.name= "Imported File"
+        mfile.save()
+        mfile.post_process() 
+
+    for callback in callbacks:
+        subtask(callback).delay()
+        
     return {  }
 
 # Blender Commnad Line API

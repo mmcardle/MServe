@@ -35,13 +35,17 @@ function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
 
                                $( "#import-dialog-items" ).empty()
 
+                               if(msg.length==0){
+                                    $( "#import-dialog-items" ).append("<div class='ui-widget-content ui-corner-all ui-state-error'>No known Remote Services</div>")
+                               }
+
                                $.each(msg, function(i,remoteservice){
                                     service = $("<div><button id='remoteservicebutton-"+remoteservice.id+"' >Load "+remoteservice.url+"</button></div>")
                                     service.appendTo($( "#import-dialog-items" ))
                                     $("#remoteservicebutton-"+remoteservice.id).button().click(
                                         function() {
                                                 $( "#import-dialog-form" ).dialog( "close" );
-                                                load_service_iframe(remoteservice.url,consumerurl)
+                                                load_service_iframe(authid,remoteservice.url,consumerurl)
                                             }
                                     );
                                });
@@ -59,10 +63,18 @@ function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
 	});
 }
 
-function load_service_iframe(url,consumerurl) {
+function load_service_iframe(authid,url,consumerurl) {
+
+    var dataArr = {
+        "url" : ""+url+"",
+        "authid" : ""+authid+""
+    }
+
+    var data = $.param(dataArr)
+
      $.ajax({
        type: "POST",
-       data: 'url='+url,
+       data: data,
        url: consumerurl,
        success: function(msg){
            m = $("<div style='padding:2px;align:left'><button id='aiClose'>Close</button></div><iframe src="+msg.authurl+" width='100%' height='100%'><p>Your browser does not support iframes.</p></iframe>" );

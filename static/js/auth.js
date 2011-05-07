@@ -69,10 +69,6 @@ function load_managedresources_auth(authid){
        url: '/api/'+authid+'/getmanagedresources/',
        success: function(msg){
 
-            for(i in msg.job_set){
-                $( "#jobTemplate" ).tmpl( msg.job_set[i] ) .appendTo( "#managedresourcesjobscontent" );
-            }
-
             mfiles = msg.mfile_set;
 
             if(mfiles.length==0){

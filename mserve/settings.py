@@ -122,6 +122,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.admin',
     'dataservice',
+    'mserveoauth',
     'piston',
     'webdav',
     'jobservice',

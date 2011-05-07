@@ -1,0 +1,23 @@
+
+{% extends "minibase.html" %}
+
+{% block content %}
+
+    <h1>Complete</h1>
+
+    <div>{{ message }}</div>
+
+{% endblock %}
+
+{% block auths %}
+
+{% endblock %}
+
+{% block bottomscript %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+                $('button').button();
+                load_user("{% url user %}","{% url consumer %}");
+        });
+    </script>
+{% endblock %}
