@@ -1,45 +1,22 @@
 
 
-function create_new_import_ui_dialog(authid) {
+function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
     	$(function() {
 		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
 		$( "#dialog:ui-dialog" ).dialog( "destroy" );
 
-		var name = $( "#name" ),
+		var name = $( "#name" )
 
-                allFields = $( [] ).add( name ),
+                allFields = $( [] ).add( name )
                 tips = $( ".validateTips" );
-
-		function updateTips( t ) {
-			tips
-				.text( t )
-				.addClass( "ui-state-highlight" );
-			setTimeout(function() {
-				tips.removeClass( "ui-state-highlight", 1500 );
-			}, 500 );
-		}
 
 		$( "#import-dialog-form" ).dialog({
 			autoOpen: false,
-			height: 750,
-			width: 650,
+			height: 250,
+			width: 550,
 			modal: true,
 			buttons: {
-                                "Import": function() {
-                                     $.ajax({
-                                       type: "POST",
-                                       data: 'url='+name.val(),
-                                       url: '/consumer/',
-                                       success: function(msg){
-                                            $( "#import-dialog-items" ).append( "<pre><a target='blank' href='"+msg.authurl+"'>"+ msg.authurl +"</a></pre>" );
-                                            $( "#import-dialog-items" ).append( "<iframe src="+msg.authurl+" width='100%' height='100%'><p>Your browser does not support iframes.</p></iframe>" );
-                                       },
-                                       error: function(msg){
-                                            showError("Error Loading Jobs",objectToString(msg))
-                                       }
-                                     });
-				},
-				Cancel: function() {
+				Close: function() {
 					$( this ).dialog( "close" );
 				}
 			},
@@ -51,9 +28,58 @@ function create_new_import_ui_dialog(authid) {
 		$( "#importbutton" )
                     .button()
                     .click(function() {
-                            $( "#import-dialog-form" ).dialog( "open" );
+                         $.ajax({
+                           type: "GET",
+                           url: remoteserviceurl,
+                           success: function(msg){
+
+                               $( "#import-dialog-items" ).empty()
+
+                               $.each(msg, function(i,remoteservice){
+                                    service = $("<div><button id='remoteservicebutton-"+remoteservice.id+"' >Load "+remoteservice.url+"</button></div>")
+                                    service.appendTo($( "#import-dialog-items" ))
+                                    $("#remoteservicebutton-"+remoteservice.id).button().click(
+                                        function() {
+                                                $( "#import-dialog-form" ).dialog( "close" );
+                                                load_service_iframe(remoteservice.url,consumerurl)
+                                            }
+                                    );
+                               });
+
+                                
+                               $( "#import-dialog-form" ).dialog( "open" );
+
+                           },
+                           error: function(msg){
+                                showError("Error Loading Jobs",objectToString(msg))
+                           }
+                         });
+
                     });
 	});
+}
+
+function load_service_iframe(url,consumerurl) {
+     $.ajax({
+       type: "POST",
+       data: 'url='+url,
+       url: consumerurl,
+       success: function(msg){
+           m = $("<div style='padding:2px;align:left'><button id='aiClose'>Close</button></div><iframe src="+msg.authurl+" width='100%' height='100%'><p>Your browser does not support iframes.</p></iframe>" );
+            $.blockUI({ message: m, css: {
+                top:  '50px',
+                left:  '50px',
+                width: ($(window).width() - 100) + 'px',
+                height: ($(window).height() - 100) + 'px',
+            }});
+            $("#aiClose").button().click(function() {
+                $.unblockUI();
+            });
+       },
+       error: function(msg){
+            showError("Error Loading Jobs",objectToString(msg))
+       }
+     });
 }
 
 

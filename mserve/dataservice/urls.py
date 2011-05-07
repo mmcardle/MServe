@@ -33,19 +33,21 @@ oauth_handler = Resource(handler=TestAuthHandler, authentication=auth)
 consumer_handler = Resource(ConsumerHandler)
 receive_handler = Resource(ReceiveHandler)
 profile_handler = Resource(ProfileHandler)
+remote_service_handler = Resource(RemoteServiceHandler)
 
 urlpatterns = patterns('',
-    url(r'^posts', oauth_handler, name='blogposts'),
-    url(r'^consumer', consumer_handler),
-    url(r'^receive', receive_handler),
-    # automated documentation url(r'^$', documentation_view),
+    url(r'^api/protected/', oauth_handler, name='protected'),
+    url(r'^api/consumers/', consumer_handler , name='consumer'),
+    url(r'^api/receive/', receive_handler, name='receive'),
+    url(r'^api/remoteservices/', remote_service_handler, name='remoteservice'),
+    url(r'^api/oauth/access_token/$','dataservice.handlers.oauth_access_token', name='oauth_access_token'),
 )
 
 urlpatterns += patterns(
     'piston.authentication',
-    url(r'^api/oauth/request_token/$','oauth_request_token'),
-    url(r'^api/oauth/authorize/$','oauth_user_auth'),
-    url(r'^api/oauth/access_token/$','oauth_access_token'),
+    url(r'^api/oauth/request_token/$','oauth_request_token' , name='oauth_request_token'),
+    url(r'^api/oauth/authorize/$','oauth_user_auth', name='oauth_user_auth'),
+    #url(r'^api/oauth/access_token/$','oauth_access_token' , name='oauth_access_token'),
 )
 
 
@@ -56,7 +58,7 @@ urlpatterns += patterns('',
     url(r'^service/$', dataservice_handler),
     url(r'^mfile/$', mfile_handler),
     url(r'^auth/$', auth_handler),
-    url(r'^users/$', profile_handler),
+    url(r'^users/$', profile_handler,name='user'),
 
     # REST Methods for individual resources
     url(r'^container/(?P<id>[^/]+)/$', hosting_handler),

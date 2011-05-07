@@ -31,62 +31,44 @@
 
 <!--<link rel="stylesheet" href="style.css" />-->
 <title>{% block title %}MServe{% endblock %}</title>
-</head>
-
-<body id="wrapper">
 
 <script type="text/javascript">
 
 </script>
 
+<style type="text/css">
+
+html, .main {
+	padding:0;
+	margin:0;
+	background:#f1f1f1 url(/mservemedia/images/main_bg.gif) top repeat-x;
+        background-position: 0px -200px;
+}
+.header_img {
+	width:200px;
+	padding:0px 10px 10px 10px;
+}
+</style>
+
+</head>
+
+<body id="wrapper">
   {% include "templates_inc.html" %}
 
   <div class="main">
   <div class="header">
     <div class="header_resize">
-      <div class="logo">
+      <div class="logo" >
         <h1><a href="/"><span>M</span>Serve</a><small> serving your needs</small></h1>
       </div>
-      <div class="menu_nav">
-        <ul>
-            {% if user.is_staff %}
-            <li><a href="/">Home</a></li>
-            <li><a href="/admin/">Admin</a></li>
-            <li><a href="/usage/">Usage</a></li>
 
-            {% endif %}
-
-            {% if user.is_authenticated %}
-            <li><a href="/accounts/profile/">Profile</a></li>
-            <li><a href="/accounts/logout/">Logout</a></li>
-            {% endif %}
-
-            {% if not user.is_authenticated %}
-            <li><a href="/accounts/login/">Login</a></li>
-            {% endif %}
-
-        </ul>
-        <div class="clr"></div>
-      </div>
       <div class="clr"></div>
-      <div class="header_img">
 
-          <div id="main_img" >
-              {% block main_img %}
-              <img alt="" src="/mservemedia/images/heart_monitor.gif" height="170" width="280" style="margin-top:13px; margin-left: 13px;" />
-            {% endblock %}
-          </div>
-
-        <h2>jobs <span>data</span> storage</h2>
-        <p>
-
-        {% block usages %}{% endblock %}
-
-        </p>
-        <div class="clr"></div>
-      </div>
     </div>
   </div>
+
+
+
     {% block heading %}{% endblock %}
 
     <table id="maintable" >
@@ -103,43 +85,6 @@
         </tr>
 
     </table>
-    
-    <div class="fbg">
-    <div class="fbg_resize">
-      <div class="col c1">
-        <table class="icontable">
-            <tr>
-                <th>Usage</th>
-                <th>Messages</th>
-                <th>Network</th>
-            </tr>
-            <tr>
-                <td><img src="/mservemedia/images/icon_usage.png" width="32" height="32" alt="" /></td>
-                <td><img src="/mservemedia/images/icon_message.png" width="32" height="32" alt="" /></td>
-                <td><img src="/mservemedia/images/icon_network.png" width="32" height="32" alt="" /></td>
-            </tr>
-        </table>
-      </div>
-      <div class="col c2">
-        <h2><span>Mserve Systems</span></h2>
-        <p>Mserve is written in <a href="http://python.org">python.</a> using the <a href="http://www.djangoproject.com/">django.</a> framework.
-          Fronted by <a href="http://www.lighttpd.net/">lighttpd.</a>,
-          Using <a href="http://celeryproject.org/">celery.</a> and <a href="http://www.rabbitmq.com/">rabbitmq</a> for job submission.
-          Client side GUI is <a href="http://jquery.com/">jquery</a> and <a href="http://jqueryui.com/">jquery ui</a> </p>
-      </div>
-      <div class="col c3">
-        <h2><span>Contact</span></h2>
-        <p>For more information on mserve contact.<a href="#">mm@it-innovation.soton.ac.uk</a><br />
-        </p>
-      </div>
-      <div class="clr"></div>
-    </div>
-    <div class="footer">
-      <p class="lf">&copy; Copyright <a href="http://www.it-innovation.soton.ac.uk">IT Innovation</a>.</p>
-      <p class="rf">Layout by Free <a href="http://www.freewebsitetemplatez.com/">Website Templates</a></p>
-      <div class="clr"></div>
-    </div>
-  </div>
 
   </div>
 

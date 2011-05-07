@@ -1,5 +1,5 @@
 
-{% extends "base.html" %}
+{% extends "minibase.html" %}
 
 {% block content %}
 
@@ -8,7 +8,6 @@
         {% if user.is_authenticated %}
 
             <div id="user_mfileholder">
-
 
             </div>
 
@@ -24,6 +23,7 @@
 
     <form action="{% url piston.authentication.oauth_user_auth %}" method="POST">
         {{ form.as_p }}
+        <input type="hidden" name="stuff" value="additionalstuffhere" />
           <button type="submit">Confirm</button>
     </form>
 
@@ -39,7 +39,7 @@
     <script type="text/javascript">
         $(document).ready(function() {
                 $('button').button();
-                load_user();
+                load_user("{% url user %}","{% url consumer %}");
         });
     </script>
 {% endblock %}

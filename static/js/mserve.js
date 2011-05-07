@@ -1,22 +1,24 @@
 
 
-function load_user(){
+function load_user(userurl,consumerurl){
 
      $.ajax({
        type: "GET",
-       url: '/users/',
+       url: userurl,
        success: function(msg){
             $( "#mfileOAuthTemplate" ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
-            $( "#mfolderOAuthTemplate" ).tmpl( msg.mfolders ).appendTo( "#user_mfileholder" );
-            $( "#serviceOAuthTemplate" ).tmpl( msg.dataservices ).appendTo( "#user_mfileholder" );
+            //$( "#mfolderOAuthTemplate" ).tmpl( msg.mfolders ).appendTo( "#user_mfileholder" );
+            //$( "#serviceOAuthTemplate" ).tmpl( msg.dataservices ).appendTo( "#user_mfileholder" );
 
             oauth_token = getParameterByName("oauth_token")
 
             $(".infoholder input[type='checkbox']").each(function(index){
                 $(this).button().click(
                 function(){
-                    var id = $(this).attr('id')
-                    ajax_update_consumer_oauth(id,oauth_token)
+                    if($(this).is(':checked')){
+                        var id = $(this).attr('id')
+                        ajax_update_consumer_oauth(id,oauth_token,consumerurl)
+                    }
                 });
             } );
 
@@ -27,7 +29,7 @@ function load_user(){
      });
 }
 
-function ajax_update_consumer_oauth(id,oauth_token){
+function ajax_update_consumer_oauth(id,oauth_token,consumerurl){
 
     var dataArr = {
         "oauthtoken" : ""+oauth_token+"",
@@ -38,10 +40,10 @@ function ajax_update_consumer_oauth(id,oauth_token){
 
      $.ajax({
        type: "PUT",
-       url: '/consumer/',
+       url: consumerurl,
        data: data,
        success: function(msg){
-            showMessage("Success",objectToString(msg))
+            
        },
        error: function(msg){
             showError("Error Loading Jobs",objectToString(msg))

@@ -129,14 +129,6 @@
 </div>
 
 <div id="import-dialog-form" title="Import Data">
-
-        <form>
-        <fieldset>
-                <label for="name">Service</label>
-                <input type="text" name="name" id="name" class="text ui-widget-content ui-corner-all" />
-        </fieldset>
-        </form>
-
         <p id="import-dialog-items"></p>
 </div>
 
@@ -153,7 +145,7 @@
             $("#serviceid").val('{{auth.id}}');
             $("#dialog-new-job-dialog-form").dialog( "open" );
         });
-        create_new_import_ui_dialog('{{auth.id}}')
+        create_new_import_ui_dialog('{{auth.id}}',"{% url remoteservice %}","{% url consumer %}" )
     });
 </script>
 

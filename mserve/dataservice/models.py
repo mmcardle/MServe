@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
+from django.core.urlresolvers import reverse
 import django.dispatch
 from piston.models import Token
 
@@ -57,16 +58,35 @@ backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 # Other Metric groups
 byte_metrics = [metric_disc_space]
 
+class RemoteService(models.Model):
+    url             = models.URLField()
+    consumer_key    = models.CharField(max_length=200)
+    consumer_secret = models.CharField(max_length=200)
+
+    def get_access_token_url(self):
+        return "%s%s" % (self._get_url(),reverse('oauth_access_token'))
+
+    def get_protected_resource_url(self):
+        return "%s%s" % (self._get_url(),reverse('protected'))
+
+    def get_request_token_url(self):
+        return "%s%s" % (self._get_url(),reverse('oauth_request_token'))
+
+    def _get_url(self):
+        url = self.url
+        if url[-1:] == "/":
+            url = url[0:-1]
+        return url
 
 class ClientConsumer(models.Model):
-    session             = models.CharField(max_length=200)
-    url                 = models.CharField(max_length=200)
+    remote_service      = models.ForeignKey('RemoteService')
     oauth_token         = models.CharField(max_length=200)
     oauth_token_secret  = models.CharField(max_length=200)
 
 class MFileOAuthToken(models.Model):
     mfile = models.ForeignKey('MFile')
-    token = models.ForeignKey(Token)
+    request_token = models.ForeignKey(Token,related_name='request_token')
+    access_token = models.ForeignKey(Token,null=True,blank=True,related_name='access_token')
 
 class MServeProfile(models.Model):
     user = models.ForeignKey(User, unique=True)

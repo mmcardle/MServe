@@ -9,6 +9,10 @@ String.prototype.endsWith = function(str)
     return (lastIndex != -1) && (lastIndex + str.length == this.length);
 }
 
+function getLocation( ){
+    return window.location.pathname;
+}
+
 function getParameterByName( name )
 {
   name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
@@ -99,8 +103,13 @@ function showMessage(title,message){
 }
 
 function showError(title,message){
-    var html =  "<div id='dialog-message-mfile-delete' title='"+title+"' style='width: 400px;'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span> <strong>Alert:</strong>"+message+"</p><div></div>"
+    var html =  "<div id='dialog-message-mfile-delete' title='"+title+"' style='width: 300px;'>"+
+            "<div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p>"+
+            "<span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span>"+
+            "<strong>Alert:</strong><div style='height:300px;overflow:auto'>"+message+"</div></p><div></div>"
      $( html ).dialog({
+            width: 600,
+            height:500,
             modal: true,
             buttons: {
                     Ok: function() {

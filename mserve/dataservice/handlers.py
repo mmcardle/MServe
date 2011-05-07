@@ -13,6 +13,7 @@ from django.conf import settings
 from django.http import HttpResponseNotFound
 from django.http import HttpResponse
 import settings as settings
+from django.shortcuts import get_object_or_404
 from dataservice.models import mfile_get_signal
 from django.shortcuts import render_to_response
 import utils as utils
@@ -24,7 +25,8 @@ import os.path
 import shutil
 import os
 import cgi
-import oauth2 as oauth
+import oauth2 as oauth2
+import oauth
 import urllib2
 
 sleeptime = 10
@@ -33,13 +35,13 @@ DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 metric_corruption = "http://mserve/corruption"
 metric_dataloss = "http://mserve/dataloss"
 
-from piston.handler import AnonymousBaseHandler
 from piston.handler import BaseHandler
-from piston.utils import require_mime
-from piston.utils import require_extended
 
-CONSUMER_KEY = 'mmckey'
-CONSUMER_SECRET = 'mmcsecret'
+class RemoteServiceHandler(BaseHandler):
+    allowed_methods = ('GET')
+    model = RemoteService
+    fields = ( 'id','url')
+    exclude = ()
 
 class ProfileHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT')
@@ -75,7 +77,7 @@ class TestAuthHandler(BaseHandler):
 
         try:
             logging.info("Returning ")
-            mfile_token_auth = MFileOAuthToken.objects.get(token=token)
+            mfile_token_auth = MFileOAuthToken.objects.get(access_token=token)
             mf = mfile_token_auth.mfile
             logging.info("Returning %s "% mf)
 
@@ -95,12 +97,41 @@ class TestAuthHandler(BaseHandler):
             logging.info("Named Base does not exist")
 
         #oauth_token_secret=cc.oauth_token_secret
-        #consumer = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
         r = rc.BAD_REQUEST
         r.write("Invalid Request!")
         return r
 
-        
+def oauth_access_token(request):
+    logging.info("Custom %s %s " % ("oauth_access_token",request))
+    import piston.authentication as pauth
+    import piston.oauth as poauth
+    import piston.forms as pforms
+
+    oauth_server, oauth_request = pauth.initialize_server_request(request)
+
+    if oauth_request is None:
+        return INVALID_PARAMS_RESPONSE
+
+    try:
+        access_token = oauth_server.fetch_access_token(oauth_request)
+        logging.info("ACCESS TOKEN %s" % access_token)
+
+        #received_token = dict(cgi.parse_qsl(request.META['QUERY_STRING']))
+        oauth_token = request.POST['oauth_token']
+        #oauth_verifier = received_token['oauth_verifier']
+        #oauth_token = received_token['oauth_token']
+        request_token = Token.objects.get(key=oauth_token)
+
+        #LOOK UP 'oauth_token':  from POST
+        #LINK THE TOKENS together
+
+        mfile_token_auth = MFileOAuthToken.objects.get(request_token=request_token)
+        mfile_token_auth.access_token = access_token
+        mfile_token_auth.save()
+
+        return HttpResponse(access_token.to_string())
+    except poauth.OAuthError, err:
+        return poauth.send_oauth_error(err)
 
 class ReceiveHandler(BaseHandler):
 
@@ -109,41 +140,57 @@ class ReceiveHandler(BaseHandler):
         logging.info("ReceiveHandler REQ %s " % request.META['REQUEST_URI'])
 
         received_token = dict(cgi.parse_qsl(request.META['QUERY_STRING']))
-        oauth_verifier = received_token['oauth_verifier']
-        oauth_token = received_token['oauth_token']
-        oauth_callback_confirmed = received_token['oauth_callback_confirmed']
 
-        cc = ClientConsumer.objects.get(session=request.COOKIES['sessionid'],oauth_token=oauth_token)
-        oauth_token_secret=cc.oauth_token_secret
-        consumer = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+        if received_token.has_key('oauth_token'):
 
-        token = oauth.Token(oauth_token, oauth_token_secret)
-        token.set_verifier(oauth_verifier)
-        client = oauth.Client(consumer, token)
+            oauth_verifier = received_token['oauth_verifier']
+            oauth_token = received_token['oauth_token']
+            oauth_callback_confirmed = received_token['oauth_callback_confirmed']
 
-        ACCESS_TOKEN_URL = 'http://%s/api/oauth/access_token/' % (cc.url)
+            cc = ClientConsumer.objects.get(oauth_token=oauth_token)
+            remote_service = cc.remote_service
+            oauth_token_secret=cc.oauth_token_secret
+            consumer = oauth2.Consumer(remote_service.consumer_key, remote_service.consumer_secret)
 
-        resp, content = client.request(ACCESS_TOKEN_URL, "POST")
-        access_token = dict(cgi.parse_qsl(content))
+            token = oauth2.Token(oauth_token, oauth_token_secret)
+            token.set_verifier(oauth_verifier)
+            client = oauth2.Client(consumer, token)
 
-        logging.info("Access Token:")
-        logging.info("    - oauth_token        = %s" % access_token['oauth_token'])
-        logging.info("    - oauth_token_secret = %s" % access_token['oauth_token_secret'])
-        logging.info("You may now access protected resources using the access tokens above.")
+            ACCESS_TOKEN_URL = cc.remote_service.get_access_token_url()
 
-        RESOURCE_URL = 'http://%s/posts/' % (cc.url)
+            resp, content = client.request(ACCESS_TOKEN_URL, "POST")
+            
+            logging.info("ACCESS_TOKEN_URL  %s " % ACCESS_TOKEN_URL)
+            logging.info("ReceiveHandler content %s " % resp)
+            logging.info("ReceiveHandler content %s " % content)
+            access_token = dict(cgi.parse_qsl(content))
 
-        mconsumer = oauth.Consumer(CONSUMER_KEY,CONSUMER_SECRET)
-        mtoken = oauth.Token(access_token['oauth_token'],access_token['oauth_token_secret'])
-        mclient = oauth.Client(mconsumer, mtoken)
 
-        mresponse,content = mclient.request(RESOURCE_URL)
+            logging.info("Access Token:")
+            logging.info("    - oauth_token        = %s" % access_token['oauth_token'])
+            logging.info("    - oauth_token_secret = %s" % access_token['oauth_token_secret'])
+            logging.info("You may now access protected resources using the access tokens above.")
 
-        logging.info("mresponse %s "% mresponse)
-        logging.info("Content %s "% len(content))
-        logging.info("Content %s "% content)
+            RESOURCE_URL = remote_service.get_protected_resource_url()
+            logging.info("RESOURCE_URL %s "% RESOURCE_URL)
 
-        return {"receive":"ok"}
+            mconsumer = oauth2.Consumer(remote_service.consumer_key, remote_service.consumer_secret)
+            mtoken = oauth2.Token(access_token['oauth_token'],access_token['oauth_token_secret'])
+            mclient = oauth2.Client(mconsumer, mtoken)
+
+            mresponse,content = mclient.request(RESOURCE_URL)
+
+            logging.info("mresponse %s "% mresponse)
+            logging.info("Content %s "% len(content))
+
+            return {"receive":"ok"}
+        else:
+            rdict = {}
+            if received_token.has_key('error'):
+                rdict["error"] = received_token['error']
+            else:
+                rdict["error"] = "An error occured"
+            return rdict     
 
 class ConsumerHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
@@ -168,7 +215,7 @@ class ConsumerHandler(BaseHandler):
             mfile = MFile.objects.get(id=id)
             logging.info("Mfile %s" % mfile)
 
-            mfile_token_auth = MFileOAuthToken(token=token,mfile=mfile)
+            mfile_token_auth = MFileOAuthToken(request_token=token,mfile=mfile)
 
             logging.info("mfile_token_auth %s" % mfile_token_auth)
             mfile_token_auth.save()
@@ -187,20 +234,22 @@ class ConsumerHandler(BaseHandler):
         CONSUMER_SERVER = request.POST['url']
         #CONSUMER_PORT = os.environ.get("CONSUMER_PORT") or '80'
 
-        logging.info("CONSUMER_SERVER %s"%CONSUMER_SERVER)
+        remote_service = get_object_or_404(RemoteService, url=CONSUMER_SERVER)
+
+        logging.info("CONSUMER_SERVER %s"%remote_service.url)
 
         # fake urls for the test server (matches ones in server.py)
-        REQUEST_TOKEN_URL = 'http://%s/api/oauth/request_token/' % (CONSUMER_SERVER)
+        REQUEST_TOKEN_URL = remote_service.get_request_token_url()
+        #REQUEST_TOKEN_URL = '%sapi/oauth/request_token/' % (remote_service.url)
 
-        AUTHORIZE_URL = 'http://%s/api/oauth/authorize/' % (CONSUMER_SERVER)
+        AUTHORIZE_URL = '%sapi/oauth/authorize/' % (remote_service.url)
 
         logging.info("REQUEST_TOKEN_URL %s"%REQUEST_TOKEN_URL)
 
         # key and secret granted by the service provider for this consumer application - same as the MockOAuthDataStore
 
-
-        consumer = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-        client = oauth.Client(consumer)
+        consumer = oauth2.Consumer(remote_service.consumer_key, remote_service.consumer_secret)
+        client = oauth2.Client(consumer)
 
         # Step 1: Get a request token. This is a temporary token that is used for
         # having the user authorize an access token and to sign the request to obtain
@@ -218,13 +267,13 @@ class ConsumerHandler(BaseHandler):
         logging.info("    - oauth_token        = %s" % request_token['oauth_token'])
         logging.info("    - oauth_token_secret = %s" % request_token['oauth_token_secret'])
 
-        cc = ClientConsumer(session=request.COOKIES['sessionid'],oauth_token=request_token['oauth_token'],oauth_token_secret=request_token['oauth_token_secret'],url=CONSUMER_SERVER)
+        cc = ClientConsumer(oauth_token=request_token['oauth_token'],oauth_token_secret=request_token['oauth_token_secret'],remote_service=remote_service)
         cc.save()
 
         logging.info("Go to the following link in your browser:")
         logging.info( "%s?oauth_token=%s" % (AUTHORIZE_URL, request_token['oauth_token']))
 
-        callback = urllib2.quote("http://ogio/receive")
+        callback = urllib2.quote("http://ogio/api/receive")
 
         authurl = "%s?oauth_token=%s&oauth_callback=%s"% (AUTHORIZE_URL, request_token['oauth_token'],callback)
 
