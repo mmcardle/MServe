@@ -27,6 +27,8 @@ python setup.py install
 
 sudo apt-get install git
 git clone git://soave.it-innovation.soton.ac.uk/git/pp-dataservice
+git submodule init
+git submodule update
 
 
 MServe
