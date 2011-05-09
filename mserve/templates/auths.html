@@ -4,17 +4,6 @@
     {% for auth in auths %}
     <div class="auth"><h3>Access : {{auth.authname}}</h3>
     <div><a href="/browse/{{auth.id}}" >View Auth </a> </div>
-    <dl>
-        {%  for role in auth.roles.all %}
-        <dt >Role: {{role.rolename}}</dt>
-        <dd ><strong>{{role.description}}</strong></dd>
-        <dd class="methods{{role.id}}">
-                {% for method in role.methods %}
-                    {{method}}
-                {% endfor %}
-        </dd>
-        {% endfor %}
-    </dl>
     </div>
     {% endfor %}
 {% endif %}

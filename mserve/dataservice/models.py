@@ -104,6 +104,7 @@ roles["mfileowner"] = {
         "properties":["GET"],\
         "usages":["GET"],\
         "file":["GET","PUT","POST","DELETE"],\
+        "base":["GET","PUT","POST","DELETE"],\
         }
     }
 
@@ -247,9 +248,9 @@ class Base(models.Model):
 
         if not passed:
             if url:
-                logging.info("Exception: %s Cannot do %s: on /%s/ urls are %s" % (error.status_code,method,url,self.geturls()))
+                logging.info("Exception: %s Cannot do %s: /%s/ on %s urls are %s" % (error.status_code,method,url,self,self.geturls()))
             else:
-                logging.info("Exception: %s Cannot do %s: on /%s/ methods are %s" % (error.status_code,method,url,self.getmethods()))
+                logging.info("Exception: %s Cannot do %s: /%s/ on %s methods are %s" % (error.status_code,method,url,self,self.getmethods()))
             return error
 
         if method=="GET" and url==None:
@@ -278,7 +279,6 @@ class Base(models.Model):
             return self.get_real_base().managementproperty_set.all()
 
         if method=="PUT" and url=="auths":
-            logging.info("PUT AUTHS %s %s %s " % (url, args, kwargs))
             if url == "auths":
                 for authname in kwargs.keys():
                     try:
@@ -296,7 +296,6 @@ class Base(models.Model):
             return HttpResponseNotFound()
 
         if method=="POST" and url=="auths":
-            logging.info("POST AUTH %s %s %s" % (self,args , kwargs))
 
             if not kwargs.has_key('name') or not kwargs.has_key('roles'):
                 return HttpResponseBadRequest()
@@ -308,7 +307,6 @@ class Base(models.Model):
                 self.auth_set.add(auth)
                 return auth
             else:
-                logging.info("POST AUTH %s %s %s" % (self,args , kwargs))
                 auth = Auth(authname=kwargs['name'],base=self)
                 auth.setroles(kwargs['roles'])
                 auth.save()
@@ -438,7 +436,6 @@ class HostingContainer(NamedBase):
 
     @staticmethod
     def create_container(name):
-        import api
         hostingcontainer = HostingContainer(name=name)
         hostingcontainer.save()
         
@@ -448,17 +445,10 @@ class HostingContainer(NamedBase):
         hostingcontainerauth = Auth(base=hostingcontainer,authname="full")
         hostingcontainerauth.setroles(['containeradmin'])
         hostingcontainerauth.save()
-        #owner_role = Role(rolename="admin")
-        #owner_role.setmethods(api.all_container_methods)
-        #owner_role.description = "Full access to the container"
-        #owner_role.save()
-
-        #hostingcontainerauth.roles.add(owner_role)
 
         return hostingcontainer
 
     def create_data_service(self,name):
-        import api
 
         dataservice = DataService(name=name,container=self)
         dataservice.save()
@@ -467,23 +457,9 @@ class HostingContainer(NamedBase):
         serviceauth.setroles(["serviceadmin"])
         serviceauth.save()
 
-        #owner_role = Role(rolename="serviceadmin")
-        #owner_role.setmethods(api.service_admin_methods)
-        #owner_role.description = "Full control of the service"
-        #owner_role.save()
-
-        #customer_role = Role(rolename="customer")
-        #customer_role.setmethods(api.service_customer_methods)
-        #customer_role.description = "Customer Access to the service"
-        #customer_role.save()
-
-        #serviceauth.roles.add(owner_role)
-        #serviceauth.roles.add(customer_role)
-
         customerauth = Auth(base=dataservice,authname="customer")
         customerauth.setroles(["servicecustomer"])
         customerauth.save()
-        #customerauth.roles.add(customer_role)
 
         managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
@@ -591,7 +567,6 @@ class DataService(NamedBase):
             return folder
 
     def create_mfile(self,file,name,fid=None):
-        import api
         service = self
 
         if file==None:
@@ -610,36 +585,6 @@ class DataService(NamedBase):
         mfileauth_owner = Auth(base=mfile,authname="owner")
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
-        
-        #owner_role = Role(rolename="owner")
-        #methods = api.mfile_owner_methods
-        #owner_role.setmethods(methods)
-        #owner_role.description = "Owner of the data"
-        #owner_role.save()
-
-        #mfileauth_owner.roles.add(owner_role)
-
-        '''monitor_role = Role(rolename="monitor")
-        methods = api.mfile_monitor_methods
-        monitor_role.setmethods(methods)
-        
-        monitor_role.description = "Collect usage reports"
-        monitor_role.save()
-
-        mfileauth_owner.roles.add(monitor_role)
-        
-        monitorurls = {
-            "auths":[],
-            "properties":[],
-            "usages":["GET"],
-            "file": [],\
-            "base":[]
-            }
-        mfileauth_monitor = Auth(base=mfile,authname="monitor")
-        mfileauth_monitor.seturls(monitorurls)
-        mfileauth_monitor.save()
-
-        mfileauth_monitor.roles.add(monitor_role)'''
 
         mfile.save()
         mfile.post_process()
@@ -802,20 +747,9 @@ class MFile(NamedBase):
         return new_mfile
 
     def create_read_only_auth(self):
-        kwargs = {"methods": "GET,PUT,POST,DELETE"}
-        mfileauth_ro = Auth(base=self,authname="Read Only Auth")
+        mfileauth_ro = Auth(base=self,authname="%s Read Only"%self)
+        mfileauth_ro.setroles(["mfilereadonly"])
         mfileauth_ro.save()
-
-        ro_role = Role(rolename="ro")
-        methods = ["get"]
-        ro_role.setmethods(methods)
-        ro_role.description = "Read Only"
-        ro_role.save()
-
-        mfileauth_ro.roles.add(ro_role)
-
-        self.save()
-
         return mfileauth_ro
 
     def post_process(self):
@@ -969,8 +903,6 @@ class Auth(Base):
     authname    = models.CharField(max_length=50)
     base        = models.ForeignKey(NamedBase, blank=True, null=True)
     parent      = models.ForeignKey('Auth', blank=True, null=True)
-    #methods_csv = models.CharField(max_length=200)
-    #urls_pickle = models.TextField()
     usages      = models.ManyToManyField("Usage")
     roles_csv   = models.CharField(max_length=200)
 
@@ -1038,10 +970,10 @@ class Auth(Base):
         logging.info("AUTH %s %s " % (self,url) )
         if not url:
             return self
-        #if url == "base":
-        #    if utils.is_mfile(self.base):
-        #        mfile = MFile.objects.get(id=self.base.id)
-        #        return utils.clean_mfile(mfile)
+        if url == "base":
+            if utils.is_mfile(self.base):
+                mfile = MFile.objects.get(id=self.base.id)
+                return utils.clean_mfile(mfile)
         return self.base.get_real_base().do("GET",url)
 
     def put(self,url, *args, **kwargs):
@@ -1065,31 +997,3 @@ class Auth(Base):
             return "Auth: authname=%s parent=%s methods=%s urls=%s" % (self.authname,self.parent.authname,self.getmethods(),self.geturls());
         else:
             return "Auth: authname=%s No Base/Parent methods=%s urls=%s" % (self.authname,self.getmethods(),self.geturls());
-
-class Role(Base):
-    auth = models.ManyToManyField(Auth, related_name='roles')
-    rolename = models.CharField(max_length=50)
-    description= models.CharField(max_length=200)
-    methods_encoded = models.TextField()
-
-    def __unicode__(self):
-        return "Role: rolename=%s methods=%s" % (self.rolename,self.methods());
-
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(Role, self).save()
-
-    def methods(self):
-        currentmethods = pickle.loads(base64.b64decode(self.methods_encoded))
-        if currentmethods == None:
-            return []
-        else:
-            return currentmethods
-
-    def setmethods(self,methods):
-        self.methods_encoded = base64.b64encode(pickle.dumps(methods))
-
-    def addmethods(self,methods):
-        newmethods = list(set(methods + self.methods()))
-        self.methods_encoded = base64.b64encode(pickle.dumps(newmethods))

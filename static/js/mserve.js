@@ -1,12 +1,12 @@
 
 
-function load_user(userurl,consumerurl){
+function load_user(userurl,consumerurl,template){
 
      $.ajax({
        type: "GET",
        url: userurl,
        success: function(msg){
-            $( "#mfileOAuthTemplate" ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
+            $( template ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
             //$( "#mfolderOAuthTemplate" ).tmpl( msg.mfolders ).appendTo( "#user_mfileholder" );
             //$( "#serviceOAuthTemplate" ).tmpl( msg.dataservices ).appendTo( "#user_mfileholder" );
 

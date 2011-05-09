@@ -428,7 +428,7 @@ class APITest(TestCase):
         auths = mfile.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),4)
+        self.failUnlessEqual(len(auths[0].geturls()),5)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = mfile.do("PUT","auths",**kwargs_2)

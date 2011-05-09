@@ -152,3 +152,11 @@ sudo rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
 Celery Startup
 =============
 sudo -u www-data ./manage.py celeryd --verbosity=2 --loglevel=DEBUG
+
+
+Oauth Setup (optional)
+==========
+Get the remote service providers service to setup a Consumer objects with a key and secret
+Add a RemoteService object with the same client and consumer key
+This allows this service to pull from data on the remote service via OAuth
+

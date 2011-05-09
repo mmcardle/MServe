@@ -17,9 +17,8 @@
 
 {% block content %}
 
-        <h2>Auth </h2>
-        <p>{{ auth }}</p>
-        <p>Methods {{ methods}}</p>
+<h2>Auth </h2>
+<p>{{ auth }}</p>
 
 <div id="tabs">
 
@@ -31,24 +30,15 @@
     </ul>
 
     <div id="tabs-1">
-    {% if "info" in methods %}
 
-        {% include "auths/details_auth.html" %}
+    {% include "auths/details_auth.html" %}
 
-    {% else %}
-
-            <p>No Access to the details</p>
-            
-    {% endif %}
 
     </div>
 
     <div id="tabs-2">
-        {% if "getorcreateauth" in methods %}
 
-            {% include "auths/auth_auth.html" %}
-
-        {% endif %}
+       {% include "auths/auth_auth.html" %}
 
     </div>
 

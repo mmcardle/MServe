@@ -52,6 +52,9 @@
 
 {% block content %}
 
+<h2>Auth </h2>
+<p>{{ auth }}</p>
+
 <div id="tabs">
 
     <ul>
@@ -64,7 +67,7 @@
 
     <div id="tabs-1">
         
-    {% if "getmanagedresources" in methods %}
+
 
         <div class="paginator" id="managedresourcesmfilespaginator"></div>
 
@@ -77,17 +80,11 @@
         <button id="importbutton" >Import Remote</button>
 
         <div style="clear: both;"></div>
-        
-    {% else %}
 
-            <p>No Access to the details</p>
-            
-    {% endif %}
 
     </div>
 
     <div id="tabs-2">
-    {% if "getmanagedresources" in methods %}
 
         <div id="managedresourcesjobscontent" >
             <p>No Jobs</p>
@@ -100,11 +97,7 @@
                 load_mfiles_auth('{{auth.id}}');
             });
         </script>
-    {% else %}
 
-            <p>No Access to the details</p>
-            
-    {% endif %}
 
     </div>
 

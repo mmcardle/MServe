@@ -106,7 +106,7 @@ class ReceiveHandler(BaseHandler):
                 mfile = service.create_mfile(None,"Import File")
 
                 options = {}
-                options['url'] = "%s/auth/%s/getcontents/" % (remote_service.url,auth['id'])
+                options['url'] = remote_service.get_auth_url(auth['id'])
                 options['mfile'] = mfile
 
                 outputpath = os.path.join( str(mfile.id) , "content-%s"%auth['id'])
@@ -201,7 +201,7 @@ class ConsumerHandler(BaseHandler):
         # said access token.
         resp, content = client.request(REQUEST_TOKEN_URL, "GET")
         if resp['status'] != '200':
-            raise Exception("Invalid response %s." % resp['status'])
+            raise Exception("Invalid response %s, on %s from  %s." % (resp, resp['status'],REQUEST_TOKEN_URL))
 
         request_token = dict(cgi.parse_qsl(content))
 
