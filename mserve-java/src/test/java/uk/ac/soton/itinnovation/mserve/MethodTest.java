@@ -164,7 +164,7 @@ public class MethodTest {
         System.out.println("makeServiceURL");
         APIConsumer instance = new APIConsumer();
         String id = instance.createContainer();
-        instance.makeServiceURL(id);
+        instance.makeServiceREST(id);
         containersToDelete.add(id);
     }
 
@@ -186,7 +186,7 @@ public class MethodTest {
     @Test
     public void testMakeService() throws Exception {
         System.out.println("makeService");
-        URL url = new URL("http://" + "localhost" + "/service/" );
+        URL url = new URL("http://" + "localhost" + "/services/" );
         APIConsumer instance = new APIConsumer();
         String id = instance.createContainer();
         String content = "name=ServiceFromJava&container="+id;
@@ -203,7 +203,7 @@ public class MethodTest {
         APIConsumer instance = new APIConsumer();
         String cid = instance.createContainer();
         String sid = instance.makeServiceREST(cid);
-        instance.makeMFileURL(sid, file);
+        instance.makeMFileREST(sid, file);
         containersToDelete.add(cid);
     }
 
@@ -282,7 +282,7 @@ public class MethodTest {
     public void testDoPostToURL_String_String() throws Exception {
         System.out.println("doPostToURL");
         String name = "ContainerFromJava ";
-        String url = "http://" + "localhost" + "/container/";
+        String url = "http://" + "localhost" + "/containers/";
         APIConsumer instance = new APIConsumer();
         String output = instance.doPostToURL(url, name);
         JSONObject ob = new JSONObject(output);
@@ -313,7 +313,7 @@ public class MethodTest {
         APIConsumer instance = new APIConsumer();
         String cid = instance.createContainer();
         String sid = instance.makeServiceREST(cid);
-        String mid = instance.makeMFileURL(sid, file);
+        String mid = instance.makeMFileREST(sid, file);
         JSONObject result = instance.getMFileInfo(mid);
         assertEquals(result.getString("name"), file.getName());
         assertEquals(result.getLong("size"), file.length());
@@ -375,9 +375,9 @@ public class MethodTest {
         System.out.println("getMFiles");
         String cid = consumer.createContainer();
         String sid = consumer.makeServiceREST(cid);
-        String mid1 = consumer.makeMFileURL(sid, file);
-        String mid2 = consumer.makeMFileURL(sid, file);
-        String mid3 = consumer.makeMFileURL(sid, file);
+        String mid1 = consumer.makeMFileREST(sid, file);
+        String mid2 = consumer.makeMFileREST(sid, file);
+        String mid3 = consumer.makeMFileREST(sid, file);
 
         List result = consumer.getMFiles(sid);
 
@@ -395,7 +395,7 @@ public class MethodTest {
     @Test
     public void testDoPostToURL_3args() throws Exception {
         System.out.println("doPostToURL");
-        URL url = new URL("http://" + "localhost" + "/container/");
+        URL url = new URL("http://" + "localhost" + "/containers/");
         String content = "name=ContainerFromJavaTest";
         String output = consumer.doPostToURL(url, content);
         JSONObject ob = new JSONObject(output);

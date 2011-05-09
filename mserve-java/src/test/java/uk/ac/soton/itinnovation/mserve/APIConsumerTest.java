@@ -81,7 +81,7 @@ public class APIConsumerTest {
             System.out.println("testAPI getServices 2");
             consumer.getServices(containerid);
             System.out.println("testAPI makeMFileURL");
-            String stagerid2 = consumer.makeMFileURL(serviceid2,file);
+            String stagerid2 = consumer.makeMFileREST(serviceid2,file);
             System.out.println("testAPI getMFiles2");
             consumer.getMFiles(serviceid2);
             System.out.println("testAPI deleteMFile");
