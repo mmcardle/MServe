@@ -25,9 +25,10 @@
 <div id="dropbox" style="overflow:hidden;height: 164px;" >
 
     <div style="width: 266px; height:57px">
-        <form id="file_upload" action="/serviceapi/create/{{service.id}}/"
+        <form id="file_upload" action="/mfiles/"
               method="POST" enctype="multipart/form-data"
               style="width: 100%;height: 100%;" >
+            <input type="hidden" value="{{service.id}}" name="sid" />
                 <input type="file" name="file" multiple>
                 <button>Upload</button>
                 <div class="file_upload_label"><h4>Drop Files Here</h4></div>

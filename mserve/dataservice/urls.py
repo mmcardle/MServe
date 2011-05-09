@@ -13,6 +13,7 @@ managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 mfile_handler = Resource(MFileHandler)
+mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
 mfile_verify_handler = Resource(MFileVerifyHandler)
 auth_handler = Resource(AuthHandler)
@@ -26,21 +27,57 @@ auth_contents_handler = Resource(AuthContentsHandler)
 
 urlpatterns = patterns('',
 
+    # API v2
+    url(r'^containers/$', hosting_handler),
+    url(r'^containers/(?P<id>[^/]+)/$', hosting_handler ),
+    url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler ),
+    url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler),
+    url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler),
+    url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler),
+
+    url(r'^services/$', dataservice_handler ),
+    url(r'^services/(?P<id>[^/]+)/$', dataservice_handler ),
+    url(r'^services/(?P<serviceid>[^/]+)/properties/$', managementproperty_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/usages/$', usage_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/auths/$', auth_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/mfiles/$', mfile_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler),
+
+    url(r'^mfiles/$', mfile_handler  ),
+    url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler  ),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/properties/$', managementproperty_handler),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/usages/$', usage_handler),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/auths/$', auth_handler),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler),
+
+    url(r'^auths/$', auth_handler  ),
+    url(r'^auths/(?P<id>[^/]+)/$', auth_handler  ),
+    url(r'^auths/(?P<authid>[^/]+)/properties/$', managementproperty_handler),
+    url(r'^auths/(?P<authid>[^/]+)/usages/$', usage_handler),
+    url(r'^auths/(?P<authid>[^/]+)/auths/$', auth_handler, {"murl":"auths"}),
+    url(r'^auths/(?P<authid>[^/]+)/base/$', auth_handler, {"murl":"base"}),
+    url(r'^auths/(?P<authid>[^/]+)/services/$', dataservice_handler),
+    url(r'^auths/(?P<authid>[^/]+)/mfiles/$', mfile_handler),
+    url(r'^auths/(?P<authid>[^/]+)/mfolders/$', mfolder_handler),
+    url(r'^auths/(?P<authid>[^/]+)/file/$', mfile_contents_handler),
+    
+    # API V1
+
     # REST Methods 
-    url(r'^container/$', hosting_handler),
-    url(r'^service/$', dataservice_handler),
-    url(r'^mfile/$', mfile_handler),
-    url(r'^auth/$', auth_handler),
+    #url(r'^container/$', hosting_handler),
+    #url(r'^service/$', dataservice_handler),
+    #url(r'^mfile/$', mfile_handler),
+    #url(r'^auth/$', auth_handler),
     url(r'^users/$', profile_handler,name='user'),
 
     # REST Methods for individual resources
-    url(r'^container/(?P<id>[^/]+)/$', hosting_handler),
-    url(r'^service/(?P<id>[^/]+)/$', dataservice_handler),
-    url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
-    url(r'^auth/(?P<id>[^/]+)/$', auth_handler),
+    #url(r'^container/(?P<id>[^/]+)/$', hosting_handler),
+    #url(r'^service/(?P<id>[^/]+)/$', dataservice_handler),
+    #url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
+    #url(r'^auth/(?P<id>[^/]+)/$', auth_handler),
 
     #Global
-    url(r'^api/(?P<id>[^/]+)/info/$', info_handler),
+    #url(r'^api/(?P<id>[^/]+)/info/$', info_handler),
     url(r'^api/(?P<id>[^/]+)/resources/$', resources_handler),
     url(r'^api/(?P<id>[^/]+)/usage/$', usage_handler),
     #url(r'^api/(?P<id>[^/]+)/property/$', property_handler),
@@ -60,11 +97,9 @@ urlpatterns = patterns('',
 
     # TING Container Methods
     url(r'^containerapi/(?P<containerid>[^/]+)/makeserviceinstance/$', dataservice_url_handler),
-    url(r'^containerapi/makeserviceinstance/(?P<containerid>[^/]+)/$', dataservice_url_handler),
 
     # TING Service Methods
     url(r'^serviceapi/(?P<serviceid>[^/]+)/create/$', mfile_handler),
-    url(r'^serviceapi/create/(?P<serviceid>[^/]+)/$', mfile_handler),
 
     # TING MFile Methods
     url(r'^mfileapi/get/(?P<mfileid>[^/]+)/$', mfile_contents_handler),

@@ -76,9 +76,9 @@ function loadMFiles(sid){
 function reloadMFiles(newfileid){
     $.ajax({
        type: "GET",
-       url: "/service/"+serviceid+"/",
+       url: "/services/"+serviceid+"/mfiles/",
        success: function(msg){
-            mfiles = msg[0].mfile_set;
+            mfiles = msg;
 
             if(mfiles.length==0){
                  $("#mfilemessages").append("<div id='nofiles' class='message' >No Files</div>");

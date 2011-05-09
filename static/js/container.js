@@ -3,7 +3,7 @@ function create_container(){
  $.ajax({
    type: "POST",
    data: "name=Container",
-   url: '/container/',
+   url: '/containers/',
    success: function(msg){
 
             loadContainers()
@@ -17,7 +17,7 @@ function create_container(){
 function loadContainers(){
     $.ajax({
        type: "GET",
-       url: "/container/",
+       url: "/containers/",
        success: function(msg){
             containers = msg;
 

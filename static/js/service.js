@@ -4,7 +4,7 @@ function create_service(containerid){
  $.ajax({
    type: "POST",
    data: "name=Service&container="+containerid,
-   url: '/service/',
+   url: '/services/',
    success: function(msg){
             loadServices(containerid)
    },
@@ -18,7 +18,7 @@ function create_service(containerid){
 function loadServices(containerid){
     $.ajax({
        type: "GET",
-       url: "/container/"+containerid+"/",
+       url: "/containers/"+containerid+"/",
        success: function(msg){
             services = msg.dataservice_set;
 

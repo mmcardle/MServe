@@ -7,12 +7,16 @@ import datetime
 import os
 import utils as utils
 import settings
+from piston.utils import rc
+import django.dispatch
+from django.shortcuts import redirect
+from django.http import HttpResponseNotFound
+from django.http import HttpResponseForbidden
+from django.http import HttpResponseBadRequest
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
-import django.dispatch
-
 from dataservice.tasks import thumbvideo
 from dataservice.tasks import proxyvideo
 from dataservice.tasks import thumbimage
@@ -55,6 +59,74 @@ backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 
 # Other Metric groups
 byte_metrics = [metric_disc_space]
+
+DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
+
+roles = {}
+roles["containeradmin"] = {
+    "methods" : ["GET","PUT","POST","DELETE"],\
+    "urls" : {\
+        "auths":["GET","PUT","POST","DELETE"],\
+        "properties":["GET","PUT"],\
+        "usages":["GET"],\
+        "services":["GET","POST"],\
+        }
+    }
+
+roles["serviceadmin"] = {
+    "methods" : ["GET","PUT","POST","DELETE"],\
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],\
+        "properties":["GET","PUT"],\
+        "usages":["GET"],\
+        "mfiles":["GET","POST","PUT","DELETE"],\
+        "jobs":["GET","POST","PUT","DELETE"],\
+        "mfolders":["GET","POST","PUT","DELETE"]\
+        }
+    }
+
+roles["servicecustomer"] = {
+    "methods" : ["GET"],\
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],\
+        "properties":["GET"],\
+        "usages":["GET"],\
+        "mfiles":["GET","POST","PUT","DELETE"],\
+        "jobs":["GET","POST","PUT","DELETE"],\
+        "mfolders":["GET","POST","PUT","DELETE"]\
+        }
+    }
+        
+roles["mfileowner"] = {
+    "methods" : ["GET","PUT","POST","DELETE"],\
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],\
+        "properties":["GET"],\
+        "usages":["GET"],\
+        "file":["GET","PUT","POST","DELETE"],\
+        }
+    }
+
+roles["mfilereadwrite"] = {
+    "methods" : ["GET","PUT","POST","DELETE"],\
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],\
+        "properties":["GET"],\
+        "usages":["GET"],\
+        "file":["GET","PUT","POST","DELETE"],\
+        "base":["GET"],\
+        }
+    }
+
+roles["mfilereadonly"] = {
+    "methods" : ["GET"],\
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],\
+        "properties":["GET"],\
+        "usages":["GET"],\
+        "file":["GET"],\
+        }
+    }
 
 
 class MServeProfile(models.Model):
@@ -118,14 +190,161 @@ class Usage(models.Model):
 class Base(models.Model):
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
 
+    methods = []
+    urls = {
+        "auths":[],
+        "properties":[],
+        "usages":[]
+        }
+
+    def getmethods(self):
+        return self.methods
+
+    def geturls(self):
+        return self.urls
+
+    def get_real_base(self):
+        if utils.is_container(self):
+            return HostingContainer.objects.get(id=self.id)
+        if utils.is_service(self):
+            return DataService.objects.get(id=self.id)
+        if utils.is_mfile(self):
+            return MFile.objects.get(id=self.id)
+        if utils.is_mfolder(self):
+            return MFolder.objects.get(id=self.id)
+        if self.base:
+            return self.base.get_real_base()
+        if self.parent:
+            return self.parent.get_real_base()
+
+        raise Exception("Dont know how to get real base for %s" % (self) )
+
+    def check(self, url , method):
+        if url==None:
+            if method in self.methods:
+                return True,None
+            else:
+                return False,HttpResponseForbidden()
+        else:
+            if self.urls.has_key(url):
+                if method in self.urls[url]:
+                    return True,None
+                else:
+                    return False,HttpResponseForbidden()
+            else:
+                return False,HttpResponseNotFound()
+
+    def do(self, method, url=None, *args , **kwargs):
+
+        if url==None:
+            logging.info("%s : on %s args=%s kwargs=%s" % (method,self,args,kwargs))
+            if method not in ["GET","PUT","POST","DELETE"]:
+                return HttpResponseForbidden()
+        else:
+            logging.info("%s : /%s/ on %s args=%s kwargs=%s" % (method,url,self,args,kwargs))
+
+        passed,error = self.check(url,method)
+
+        if not passed:
+            if url:
+                logging.info("Exception: %s Cannot do %s: on /%s/ urls are %s" % (error.status_code,method,url,self.geturls()))
+            else:
+                logging.info("Exception: %s Cannot do %s: on /%s/ methods are %s" % (error.status_code,method,url,self.getmethods()))
+            return error
+
+        if method=="GET" and url==None:
+            return self.get(url)
+
+        if method=="GET" and url=="auths":
+            return self.auth_set.all()
+
+        if method=="GET" and url=="usages":
+            return self.usages.all()
+
+        if method=="GET" and url=="properties":
+            if type(self) == Auth:
+                return self.get_real_base().managementproperty_set.all()
+            else:
+                return self.managementproperty_set.filter(base=self)
+
+        if method=="PUT" and url=="properties":
+            for k in kwargs.keys():
+                try:
+                    mp = self.get_real_base().managementproperty_set.get(base=self, property=k)
+                    mp.value = kwargs[k]
+                    mp.save()
+                except ManagementProperty.DoesNotExist:
+                    return HttpResponseNotFound()
+            return self.get_real_base().managementproperty_set.all()
+
+        if method=="PUT" and url=="auths":
+            logging.info("PUT AUTHS %s %s %s " % (url, args, kwargs))
+            if url == "auths":
+                for authname in kwargs.keys():
+                    try:
+
+                        auth = self.auth_set.get(authname=authname)
+                        auth.setroles(kwargs[authname]['roles'])
+                        auth.save()
+                        logging.info("PUT AUTHS updated auth %s " % (auth))
+                        return self.auth_set.all()
+
+                    except Auth.DoesNotExist:
+                        logging.info("PUT AUTHS Auth '%s' does not exist "% (authname))
+                        return HttpResponseBadRequest()
+
+            return HttpResponseNotFound()
+
+        if method=="POST" and url=="auths":
+            logging.info("POST AUTH %s %s %s" % (self,args , kwargs))
+
+            if not kwargs.has_key('name') or not kwargs.has_key('roles'):
+                return HttpResponseBadRequest()
+
+            if type(self) == Auth:
+                auth = Auth(authname=kwargs['name'],parent=self)
+                auth.setroles(kwargs['roles'])
+                auth.save()
+                self.auth_set.add(auth)
+                return auth
+            else:
+                logging.info("POST AUTH %s %s %s" % (self,args , kwargs))
+                auth = Auth(authname=kwargs['name'],base=self)
+                auth.setroles(kwargs['roles'])
+                auth.save()
+                self.auth_set.add(auth)
+                return auth
+
+        if method=="GET":
+            return self.get(url,*args,**kwargs)
+        if method=="POST":
+            return self.post(url,*args,**kwargs)
+        if method=="PUT":
+            return self.put(url,*args,**kwargs)
+        if method=="DELETE":
+            if url == None:
+                r = self.delete()
+                logging.info("DELETE %s" % r)
+                return r
+            if url == "auths":
+                if kwargs.has_key('name'):
+                    auth = self.auth_set.get(authname=kwargs['name'])
+                    logging.info("DELETE AUTH %s" % auth)
+                    auth.delete()
+                    r = rc.DELETED
+                    r.write("Deleted '%s'"%kwargs['name'])
+                    return r
+                else:
+                    return HttpResponseBadRequest()
+            return HttpResponseNotFound()
+
+
+        logging.info("ERROR: 404 Pattern not matched for %s on %s" % (method,url))
+
+        return rc.NOT_FOUND
+
     class Meta:
         abstract = True
-
-#class NamedBase(Base):
-#    name = models.CharField(max_length=200)
-
-    #def __unicode__(self):
-     #   return self.name;
 
 class NamedBase(Base):
     metrics = []
@@ -175,34 +394,66 @@ class NamedBase(Base):
     def __unicode__(self):
         return self.name;
 
-
-
 class HostingContainer(NamedBase):
-    status = models.CharField(max_length=200)
-    
+    status      = models.CharField(max_length=200)
+
+    methods = ["GET","POST","PUT","DELETE"]
+    urls = {
+        "auths":["GET","PUT","POST","DELETE"],
+        "properties":["GET","PUT"],
+        "usages":["GET"],
+        "services":["GET","POST"],
+        }
+
     def __init__(self, *args, **kwargs):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = container_metrics
+
+    def get(self,url, *args, **kwargs):
+        if url == "services":
+            return self.dataservice_set.all()
+        if not url:
+            return self
+
+    def post(self,url, *args, **kwargs):
+        if url == "services":
+            return self.create_data_service(kwargs['name'])
+        else:
+            return None
+
+    def put(self,url, *args, **kwargs):
+        logging.info("PUT CONTAINER %s %s %s " % (url, args, kwargs))
+        if url == "auths":
+            for authname in kwargs.keys():
+                try:
+                    auth = self.auth_set.get(authname=authname)
+                    auth.setmethods(kwargs[authname])
+                    auth.save()
+                    logging.info("PUT CONTAINER updated auth %s " % (auth))
+                    return self.auth_set.all()
+                except Auth.DoesNotExist:
+                    logging.info("PUT CONTAINER Auth '%s' does not exist "% (authname))
+                    return HttpResponseBadRequest()
+        return HttpResponseNotFound()
 
     @staticmethod
     def create_container(name):
         import api
         hostingcontainer = HostingContainer(name=name)
         hostingcontainer.save()
-
-        hostingcontainerauth = Auth(base=hostingcontainer,authname="full")
-
-        hostingcontainerauth.save()
-
-        owner_role = Role(rolename="admin")
-        owner_role.setmethods(api.all_container_methods)
-        owner_role.description = "Full access to the container"
-        owner_role.save()
-
-        hostingcontainerauth.roles.add(owner_role)
-
+        
         managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
+
+        hostingcontainerauth = Auth(base=hostingcontainer,authname="full")
+        hostingcontainerauth.setroles(['containeradmin'])
+        hostingcontainerauth.save()
+        #owner_role = Role(rolename="admin")
+        #owner_role.setmethods(api.all_container_methods)
+        #owner_role.description = "Full access to the container"
+        #owner_role.save()
+
+        #hostingcontainerauth.roles.add(owner_role)
 
         return hostingcontainer
 
@@ -213,26 +464,26 @@ class HostingContainer(NamedBase):
         dataservice.save()
 
         serviceauth = Auth(base=dataservice,authname="full")
-
+        serviceauth.setroles(["serviceadmin"])
         serviceauth.save()
 
-        owner_role = Role(rolename="serviceadmin")
-        owner_role.setmethods(api.service_admin_methods)
-        owner_role.description = "Full control of the service"
-        owner_role.save()
+        #owner_role = Role(rolename="serviceadmin")
+        #owner_role.setmethods(api.service_admin_methods)
+        #owner_role.description = "Full control of the service"
+        #owner_role.save()
 
-        customer_role = Role(rolename="customer")
-        customer_role.setmethods(api.service_customer_methods)
-        customer_role.description = "Customer Access to the service"
-        customer_role.save()
+        #customer_role = Role(rolename="customer")
+        #customer_role.setmethods(api.service_customer_methods)
+        #customer_role.description = "Customer Access to the service"
+        #customer_role.save()
 
-        serviceauth.roles.add(owner_role)
-        serviceauth.roles.add(customer_role)
+        #serviceauth.roles.add(owner_role)
+        #serviceauth.roles.add(customer_role)
 
         customerauth = Auth(base=dataservice,authname="customer")
+        customerauth.setroles(["servicecustomer"])
         customerauth.save()
-
-        customerauth.roles.add(customer_role)
+        #customerauth.roles.add(customer_role)
 
         managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
@@ -256,12 +507,58 @@ class HostingContainer(NamedBase):
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
     status    = models.CharField(max_length=200)
-    starttime = models.DateTimeField(blank=True)
-    endtime   = models.DateTimeField(blank=True)
+    starttime = models.DateTimeField(blank=True,null=True)
+    endtime   = models.DateTimeField(blank=True,null=True)
+    
+    methods = ["GET","POST","PUT","DELETE"]
+    urls = {
+        "auths":["GET","PUT","POST","DELETE"],
+        "properties":["GET","PUT"],
+        "usages":["GET"],
+        "mfiles":["GET","POST"],
+        "jobs":["GET","POST"],
+        "mfolders":["GET","POST"],
+        }
 
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
         self.metrics = service_metrics
+
+    def get(self,url, *args, **kwargs):
+        if url == "mfiles":
+            return self.mfile_set.all()
+        if url == "mfolders":
+            return self.mfolder_set.all()
+        if url == "jobs":
+            return self.job_set.all()
+        if not url:
+            return self
+
+    def post(self,url, *args, **kwargs):
+        # TODO : Folders and Jobs
+        logging.info("%s %s " % (args, kwargs))
+        if url == "mfiles":
+            return self.create_mfile(kwargs['file'],kwargs['name'])
+        if url == "mfolders":
+            return self.create_mfolder(kwargs['name'])
+        if url == "jobs":
+            return self.create_job(kwargs['name'])
+        return HttpResponseNotFound()
+
+    def put(self,url, *args, **kwargs):
+        logging.info("PUT SERVICE %s %s %s " % (url, args, kwargs))
+        if url == "auths":
+            for authname in kwargs.keys():
+                try:
+                    auth = self.auth_set.get(authname=authname)
+                    auth.setmethods(kwargs[authname])
+                    auth.save()
+                    logging.info("PUT SERVICE updated auth %s " % (auth))
+                    return self.auth_set.all()
+                except Auth.DoesNotExist:
+                    logging.info("PUT SERVICE Auth '%s' does not exist "% (authname))
+                    return HttpResponseBadRequest()
+        return HttpResponseNotFound()
 
     def get_rate_for_metric(self, metric):
         if metric == metric_service:
@@ -276,6 +573,22 @@ class DataService(NamedBase):
         import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage,obj=self.container)
+
+    def create_job(self,name):
+        from jobservice.models import Job
+        job = Job(name=name,service=self)
+        job.save()
+        return job
+
+    def create_mfolder(self,name,parent=None):
+        try :
+            MFolder.objects.get(name=name,service=self,parent=parent)
+            r = rc.DUPLICATE_ENTRY
+            return r
+        except MFolder.DoesNotExist:
+            folder = MFolder(name=name,service=self,parent=parent)
+            folder.save()
+            return folder
 
     def create_mfile(self,file,name,fid=None):
         import api
@@ -295,28 +608,38 @@ class DataService(NamedBase):
         logging.debug("Creating roles for '%s' "%mfile)
 
         mfileauth_owner = Auth(base=mfile,authname="owner")
+        mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
+        
+        #owner_role = Role(rolename="owner")
+        #methods = api.mfile_owner_methods
+        #owner_role.setmethods(methods)
+        #owner_role.description = "Owner of the data"
+        #owner_role.save()
 
-        owner_role = Role(rolename="owner")
-        methods = api.mfile_owner_methods
-        owner_role.setmethods(methods)
-        owner_role.description = "Owner of the data"
-        owner_role.save()
+        #mfileauth_owner.roles.add(owner_role)
 
-        mfileauth_owner.roles.add(owner_role)
-
-        monitor_role = Role(rolename="monitor")
+        '''monitor_role = Role(rolename="monitor")
         methods = api.mfile_monitor_methods
         monitor_role.setmethods(methods)
+        
         monitor_role.description = "Collect usage reports"
         monitor_role.save()
 
         mfileauth_owner.roles.add(monitor_role)
-
+        
+        monitorurls = {
+            "auths":[],
+            "properties":[],
+            "usages":["GET"],
+            "file": [],\
+            "base":[]
+            }
         mfileauth_monitor = Auth(base=mfile,authname="monitor")
+        mfileauth_monitor.seturls(monitorurls)
         mfileauth_monitor.save()
 
-        mfileauth_monitor.roles.add(monitor_role)
+        mfileauth_monitor.roles.add(monitor_role)'''
 
         mfile.save()
         mfile.post_process()
@@ -383,6 +706,14 @@ class MFile(NamedBase):
     created  = models.DateTimeField(auto_now_add=True)
     updated  = models.DateTimeField(auto_now=True)
 
+    methods = ["GET","POST","PUT","DELETE"]
+    urls = {
+            "auths":["GET","PUT","POST","DELETE"],
+            "properties":[],
+            "usages":["GET"],
+            "file": ["GET","PUT","DELETE"]
+            }
+
     class Meta:
         ordering = ('-created','name')
 
@@ -390,12 +721,88 @@ class MFile(NamedBase):
         super(MFile, self).__init__(*args, **kwargs)
         self.metrics = mfile_metrics
 
+    def get(self,url, *args, **kwargs):
+        if url == "file":
+            # TODO Add Usage here
+            #self.usage["disc_access"] = self.usage["disc_access"] + 100
+            if self.file:
+                return self.__get_file()
+            else:
+                return HttpResponseNotFound()
+        elif url == "":
+            return self
+
+        return None
+
+    def post(self,url, *args, **kwargs):
+        return None
+
+    def put(self,url, *args, **kwargs):
+        if url == "auths":
+            for authname in kwargs.keys():
+                try:
+                    auth = self.auth_set.get(authname=authname)
+                    auth.setmethods(kwargs[authname])
+                    auth.save()
+                    return self.auth_set.all()
+                except Auth.DoesNotExist:
+                    return HttpResponseBadRequest()
+        if url == None:
+            if kwargs.has_key('file'):
+                file = kwargs['file']
+                if type(file) == django.core.files.base.ContentFile:
+                    self.file.save(self.name, file)
+                else:
+                    mfile.file=file
+                self.save()
+                self.post_process()
+                return self
+            return HttpResponseBadRequest()
+        return HttpResponseNotFound()
+
+    def __get_file(self):
+        mfile = self
+
+        accessspeed = "50"
+
+        file=mfile.file
+
+        sigret = mfile_get_signal.send(sender=self, mfile=mfile)
+
+        p = str(file)
+        dlfoldername = "dl%s" % accessspeed
+
+        redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
+        redirecturl = redirecturl[1:]
+
+        SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
+
+        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
+        fullfilepathfolder = os.path.dirname(fullfilepath)
+        mfilefilepath = file.path
+
+        if not os.path.exists(fullfilepathfolder):
+            os.makedirs(fullfilepathfolder)
+
+        if not os.path.exists(fullfilepath):
+            logging.info("Linking ")
+            logging.info("   %s " % mfilefilepath )
+            logging.info("to %s " % fullfilepath )
+            os.link(mfilefilepath,fullfilepath)
+
+        import dataservice.models as models
+        import usage_store as usage_store
+        usage_store.record(mfile.id,models.metric_access,mfile.size)
+
+        return redirect("/%s"%redirecturl)
+
     def duplicate(self):
         new_mfile = self.service.create_mfile(self.file)
         new_mfile.save()
         return new_mfile
 
     def create_read_only_auth(self):
+        kwargs = {"methods": "GET,PUT,POST,DELETE"}
         mfileauth_ro = Auth(base=self,authname="Read Only Auth")
         mfileauth_ro.save()
 
@@ -557,19 +964,107 @@ class ManagementProperty(models.Model):
     property    = models.CharField(max_length=200)
     value       = models.CharField(max_length=200)
 
+
 class Auth(Base):
-    authname = models.CharField(max_length=50)
-    base     = models.ForeignKey(NamedBase, blank=True, null=True)
-    parent   = models.ForeignKey('Auth', blank=True, null=True)
+    authname    = models.CharField(max_length=50)
+    base        = models.ForeignKey(NamedBase, blank=True, null=True)
+    parent      = models.ForeignKey('Auth', blank=True, null=True)
+    #methods_csv = models.CharField(max_length=200)
+    #urls_pickle = models.TextField()
+    usages      = models.ManyToManyField("Usage")
+    roles_csv   = models.CharField(max_length=200)
+
+    def __init__(self, *args, **kwargs):
+        super(Auth, self).__init__(*args, **kwargs)
+
+    def geturls(self):
+        urls = {}
+        for rolename in self.getroles():
+            urls.update(roles[rolename]['urls'])
+        return urls
+
+    def getroles(self):
+        return self.roles_csv.split(",")
+
+    def setroles(self,new_roles):
+        for rolename in new_roles:
+            if rolename not in roles.keys():
+                raise Exception("Rolename '%s' not valid " %rolename)
+        self.roles_csv = ",".join(new_roles)
+
+    def getmethods(self):
+        methods = []
+        for rolename in self.getroles():
+            methods = methods + roles[rolename]['methods']
+        return methods
+
+    def check(self, url, method):
+        if url==None:
+            if self.base:
+                if method in self.getmethods() and self.base.get_real_base().check(url,method):
+                    return True,None
+                else:
+                    return False,HttpResponseForbidden()
+            else:
+                if method in self.getmethods() and self.parent.get_real_base().check(url,method):
+                    return True,None
+                else:
+                    return False,HttpResponseForbidden()
+        else:
+            if self.base:
+                passed=False
+                if url != "base":
+                    passed,error = self.base.get_real_base().check(url,method)
+                else:
+                    passed = True
+
+                if self.geturls().has_key(url)\
+                and method in self.geturls()[url]\
+                and passed:
+                    return True,None
+                else:
+                    return False,HttpResponseForbidden()
+            else:
+                passed,error = self.parent.get_real_base().check(url,method)
+
+                if self.geturls().has_key(url)\
+                and method in self.geturls()[url]\
+                and passed:
+                    return True,None
+                else:
+                    return False,HttpResponseForbidden()
+
+    def get(self,url, *args, **kwargs):
+        logging.info("AUTH %s %s " % (self,url) )
+        if not url:
+            return self
+        #if url == "base":
+        #    if utils.is_mfile(self.base):
+        #        mfile = MFile.objects.get(id=self.base.id)
+        #        return utils.clean_mfile(mfile)
+        return self.base.get_real_base().do("GET",url)
+
+    def put(self,url, *args, **kwargs):
+        return self.get_real_base().do("PUT",url, *args, **kwargs)
+
+    def post(self,url, *args, **kwargs):
+        return self.get_real_base().do("POST",url, *args, **kwargs)
 
     def save(self):
         if not self.id:
             self.id = utils.random_id()
+        if not self.roles_csv:
+            self.roles_csv = ""
         super(Auth, self).save()
 
     def __unicode__(self):
-        return "Auth: authname=%s base=%s parent=%s" % (self.authname,self.base,self.parent);
-
+        return "Auth: authname=%s base=%s roles=%s " % (self.authname,self.base,self.getroles());
+        if self.base:
+            return "Auth: authname=%s base=%s methods=%s urls=%s" % (self.authname,self.base,self.getmethods(),self.geturls());
+        elif self.parent:
+            return "Auth: authname=%s parent=%s methods=%s urls=%s" % (self.authname,self.parent.authname,self.getmethods(),self.geturls());
+        else:
+            return "Auth: authname=%s No Base/Parent methods=%s urls=%s" % (self.authname,self.getmethods(),self.geturls());
 
 class Role(Base):
     auth = models.ManyToManyField(Auth, related_name='roles')

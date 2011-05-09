@@ -1,3 +1,5 @@
+from django.http import Http404
+from django.http import HttpResponseForbidden
 from piston.handler import BaseHandler
 from piston.utils import rc
 from dataservice.models import *
@@ -44,12 +46,21 @@ class ProfileHandler(BaseHandler):
             return pp
 
 class HostingContainerHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST','DELETE')
+    allowed_methods = ('GET', 'POST', 'DELETE',)
     model = HostingContainer
-    fields = ('name', 'id','dataservice_set',"reportnum")
-    exclude = ('pk')
+    fields = ('name', 'id', 'dataservice_set','reportnum', ('properties', ('id','value','property', ), ), )
+    exclude = ()
 
-    def read(self, request, id=None):
+    def read(self, request, id=None, murl=None):
+
+        if id == None and request.user.is_staff:
+            return super(HostingContainerHandler, self).read(request)
+
+        hc =  HostingContainer.objects.get(id=str(id))
+        if murl:
+            r = hc.do(request.method,murl)
+            return r
+
         if id == None and request.user.is_staff:
             return super(HostingContainerHandler, self).read(request)
         else:
@@ -57,24 +68,25 @@ class HostingContainerHandler(BaseHandler):
                 r = rc.FORBIDDEN
                 return r
             else:
-                return HostingContainer.objects.get(id=str(id))
+                return HostingContainer.objects.get(id=str(id)).do("GET")
 
     def delete(self, request, id):
         logging.info("Deleting Container %s " % id)
-        HostingContainer.objects.get(id=str(id)).delete()
-        r = rc.DELETED
-        return r
+        return HostingContainer.objects.get(id=str(id)).do("DELETE")
 
     def create(self, request):
-        form = HostingContainerForm(request.POST)
-        if form.is_valid():
-            name = form.cleaned_data['name']
-            hostingcontainer = HostingContainer.create_container(name)
-            return hostingcontainer
+        if request.user.is_staff:
+            form = HostingContainerForm(request.POST)
+            if form.is_valid():
+                name = form.cleaned_data['name']
+                hostingcontainer = HostingContainer.create_container(name)
+                return hostingcontainer
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! %s " %s)
+                return r
         else:
-            r = rc.BAD_REQUEST
-            resp.write("Invalid Request!")
-            return r
+            return HttpResponseForbidden()
 
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
@@ -82,11 +94,16 @@ class DataServiceHandler(BaseHandler):
     fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set')
     exclude = ('pk')
 
+    def read(self,request, id=None, containerid=None):
+        if containerid:
+            return HostingContainer.objects.get(pk=containerid).do("GET","services")
+        if id:
+            return self.model.objects.get(id=id).do("GET")
+        return Http404()
+
     def delete(self, request, id):
         logging.info("Deleting Service %s " % id)
-        DataService.objects.get(id=id).delete()
-        r = rc.DELETED
-        return r
+        return DataService.objects.get(id=id).do("DELETE")
 
     def create(self, request):
         logging.info(request.POST)
@@ -159,13 +176,33 @@ class MFolderHandler(BaseHandler):
     model = MFolder
     fields = ('name','id')
 
-    def read(self, request, id=None):
-        return MFolder.objects.get(id=str(id))
+    def read(self,request, id=None, serviceid=None, authid=None):
+        if id:
+            return self.model.objects.get(id=id).do("GET")
+        if serviceid:
+            service = DataService.objects.get(pk=serviceid)
+            return service.do("GET","mfolders")
+        if authid:
+            auth = Auth.objects.get(pk=authid)
+            return auth.do("GET","mfolders")
+        return []
 
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
     fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'proxy', 'created' , 'updated', 'thumburl', 'posterurl', 'proxyurl', 'reportnum')
+
+    def read(self,request, id=None, serviceid=None, authid=None):
+        logging.info(id)
+        if id :
+            return self.model.objects.get(id=id).do("GET")
+        if serviceid:
+            service = DataService.objects.get(pk=serviceid)
+            return service.do("GET","mfiles")
+        if authid:
+            auth = Auth.objects.get(pk=authid)
+            return auth.do("GET","mfiles")
+        return []
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
@@ -282,8 +319,6 @@ class AuthContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-
-
         check1 = mfile.checksum
         check2 = utils.md5_for_file(mfile.file)
 
@@ -356,8 +391,6 @@ class MFileContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        
-
         check1 = mfile.checksum
         check2 = utils.md5_for_file(mfile.file)
 
@@ -409,7 +442,6 @@ class MFileContentsHandler(BaseHandler):
 
         return redirect("/%s"%redirecturl)
 
-
 class RoleHandler(BaseHandler):
     def read(self,request, id):
         base = NamedBase.objects.get(pk=id)
@@ -457,13 +489,24 @@ class UsageHandler(BaseHandler):
     model = Usage
     fields = ('squares','total','nInProgress','metric','rate','reports','time,','rateCumulative','total','rateTime')
 
-    def read(self,request, id):
-        return usage_store.get_usage(id)
+    def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):
+        if containerid:
+            container = HostingContainer.objects.get(pk=containerid)
+            return container.do("GET","usages")
+        if serviceid:
+            service = DataService.objects.get(pk=serviceid)
+            return service.do("GET","usages")
+        if mfileid:
+            mfile = MFile.objects.get(pk=mfileid)
+            return mfile.do("GET","usages")
+        if authid:
+            auth = Auth.objects.get(pk=authid)
+            return auth.do("GET","usages")
 
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self,request, id, last_report=-1):
+    def read(self,request, cid, last_report=-1):
         last = int(last_report)
         try:
             base = NamedBase.objects.get(pk=id)
@@ -487,10 +530,29 @@ class UsageSummaryHandler(BaseHandler):
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
-    fields = ("value","property","id")
+    model = ManagementProperty
+    fields = ("value","property","id",)
+    exclude = ()
+    
+    def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):
+        if containerid:
+            container = HostingContainer.objects.get(pk=containerid)
+            return container.do("GET","properties")
+        if serviceid:
+            service = DataService.objects.get(pk=serviceid)
+            return service.do("GET","properties")
+        if mfileid:
+            mfile = MFile.objects.get(pk=mfileid)
+            return mfile.do("GET","properties")
+        if authid:
+            auth = Auth.objects.get(pk=authid)
+            return auth.do("GET","properties")
 
-    def read(self,request, id):
+        return []
+
         base = NamedBase.objects.get(id=id)
+        return base.do("GET","properties")
+    
         properties = ManagementProperty.objects.filter(base=base)
         properties_json = []
         for prop in properties:
@@ -529,10 +591,28 @@ class ManagementPropertyHandler(BaseHandler):
 class AuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = Auth
-    fields = ('authname','id','auth_set',('roles' ,('id','rolename','description','methods') ) )
+    fields = ('authname','id','auth_set','urls','methods',('roles' ,('id','rolename','description','methods') ) )
 
+    def read(self,request, id=None, containerid=None,serviceid=None,mfileid=None,authid=None,murl=None):
+        if id:
+            return self.model.objects.get(id=id).do("GET")
+        if containerid:
+            container = HostingContainer.objects.get(pk=containerid)
+            return container.do("GET","auths")
+        if serviceid:
+            service = DataService.objects.get(pk=serviceid)
+            return service.do("GET","auths")
+        if mfileid:
+            mfile = MFile.objects.get(pk=mfileid)
+            return mfile.do("GET","auths")
+        if authid:
+            auth = Auth.objects.get(pk=authid)
+            logging.info("AUTH GET %s"%murl)
+            return auth.do("GET",murl)
 
-    def read(self, request, id):
+        return []
+
+    def read2(self, request, id):
         try:
             auth = Auth.objects.get(id=id)
             return auth
@@ -610,15 +690,27 @@ class ResourcesHandler(BaseHandler):
 
             if utils.is_container(base):
                 container = HostingContainer.objects.get(id=id)
-                return container
+                ret = {}
+                ret["resources"] = container.dataservice_set.all()
+                ret["reportnum"] = container.reportnum
+                return ret
 
             if utils.is_service(base):
                 service = DataService.objects.get(id=id)
-                return service
+                resources = []
+                resources.append(list(service.mfile_set.all()))
+                resources.append(list(service.mfolder_set.all()))
+                ret = {}
+                ret["resources"] = resources
+                ret["reportnum"] = service.reportnum
+                return ret
 
             if utils.is_mfile(base):
                 mfile = MFile.objects.get(id=id)
-                return mfile
+                ret = {}
+                ret["resources"] = list(mfile)
+                ret["reportnum"] = mfile.reportnum
+                return ret
         except NamedBase.DoesNotExist:
             pass
 
@@ -634,17 +726,28 @@ class ResourcesHandler(BaseHandler):
 
             if utils.is_container(base):
                 container = HostingContainer.objects.get(id=base.id)
-                return container
+                ret = {}
+                ret["resources"] = container.dataservice_set.all()
+                ret["reportnum"] = container.reportnum
+                return ret
 
             if utils.is_service(base):
                 service = DataService.objects.get(id=base.id)
-                logging.info("Returning Mfile %s " % service)
-                return service
+                resources = []
+                resources.append(list(service.mfile_set.all()))
+                resources.append(list(service.mfolder_set.all()))
+                ret = {}
+                ret["resources"] = resources
+                ret["reportnum"] = service.reportnum
+                logging.info("RET %s" % ret)
+                return ret
 
             if utils.is_mfile(base):
                 mfile = MFile.objects.get(id=base.id)
-
-                return mfile
+                ret = {}
+                ret["resources"] = list(mfile)
+                ret["reportnum"] = mfile.reportnum
+                return ret
 
         except Auth.DoesNotExist:
             pass

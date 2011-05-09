@@ -2,7 +2,7 @@
 function load_auths(authid){
      $.ajax({
        type: "GET",
-       url: '/auth/'+authid+'/',
+       url: '/auths/'+authid+'/',
        success: function(msg){
            $( "#authTemplate" ).tmpl( msg.auth_set  ).appendTo( "#authcontent" );
             
@@ -16,7 +16,7 @@ function load_auths(authid){
 function load_usage_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/api/'+authid+'/usage/',
+       url: '/auths/'+authid+'/usages/',
        success: function(msg){
            $( "#usageTemplate" ).tmpl( msg  ).appendTo( "#usagecontent" );
        },
@@ -28,7 +28,7 @@ function load_usage_auth(authid){
 function load_usagesummary_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/api/'+authid+'/getusagesummary/',
+       url: '/auths/'+authid+'/usagesummary/',
        success: function(msg){
            $( "#usageSummaryTemplate" ).tmpl( msg.usages  ).appendTo( "#usagesummarycontent" );
        },
@@ -42,7 +42,7 @@ function load_usagesummary_auth(authid){
 function load_details_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/api/'+authid+'/info/',
+       url: '/auths/'+authid+'/base/',
        success: function(msg){
             if(msg.mimetype.startsWith("image")){
                 $("#mfileImageDetailsTemplate" ).tmpl( msg  ).appendTo( "#detailscontent" );
@@ -63,13 +63,13 @@ function load_details_auth(authid){
      });
  }
 
-function load_managedresources_auth(authid){
+function load_mfiles_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/api/'+authid+'/getmanagedresources/',
+       url: '/auths/'+authid+'/mfiles/',
        success: function(msg){
 
-            mfiles = msg.mfile_set;
+            mfiles = msg;
 
             if(mfiles.length==0){
                  $("#mfilemessages").append("<div id='nofiles' class='message' >No Files</div>");

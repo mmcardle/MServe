@@ -1,11 +1,10 @@
 from django import forms
 from dataservice.models import *
 from django.forms import ModelForm
-from django.forms import MultipleChoiceField
 
 class HostingContainerForm(ModelForm):
     class Meta:
-        exclude=['id','status','reportnum','initial_usage_recorded','usages']
+        exclude=['id','status','reportnum','initial_usage_recorded','usages','properties']
         model = HostingContainer
 
 class ManagementPropertyForm(ModelForm):
