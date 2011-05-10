@@ -6,6 +6,13 @@ function load_user(userurl,consumerurl,template){
        type: "GET",
        url: userurl,
        success: function(msg){
+            
+            if(msg.mfiles.length==0){
+                $("#user_mfilemessages" ).append("No Resources")
+            }else{
+                $("#user_mfilemessages").empty()
+            }
+
             $( template ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
             //$( "#mfolderOAuthTemplate" ).tmpl( msg.mfolders ).appendTo( "#user_mfileholder" );
             //$( "#serviceOAuthTemplate" ).tmpl( msg.dataservices ).appendTo( "#user_mfileholder" );

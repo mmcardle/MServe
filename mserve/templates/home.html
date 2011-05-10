@@ -43,9 +43,6 @@
 
             <button id="createcontainerbutton" >New Container</button>
 
-            
-
-
             <script type="text/javascript">
                 $(document).ready(function() {
                     loadContainers();
@@ -67,6 +64,9 @@
         {% if user.is_authenticated %}
         <h1>Resources</h1>
 
+            <div id="user_mfilemessages">
+
+            </div>
 
             <div id="user_mfileholder">
 

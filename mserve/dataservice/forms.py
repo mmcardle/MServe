@@ -2,6 +2,8 @@ from django import forms
 from dataservice.models import *
 from django.forms import ModelForm
 
+ID_FIELD_LENGTH  = 200
+
 class HostingContainerForm(ModelForm):
     class Meta:
         exclude=['id','status','reportnum','initial_usage_recorded','usages','properties']
@@ -30,21 +32,21 @@ class MFileURLForm(ModelForm):
         model = MFile
 
 class MFileForm(ModelForm):
-    sid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
+    sid = forms.CharField(max_length=ID_FIELD_LENGTH,widget=forms.HiddenInput,required=False)
 
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy','folder']
         model = MFile
 
 class UpdateMFileForm(ModelForm):
-    sid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+    sid = forms.CharField(max_length=ID_FIELD_LENGTH,widget=forms.HiddenInput)
 
     class Meta:
         exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy','folder']
         model = MFile
 
 class AuthForm(ModelForm):
-    dsid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+    dsid = forms.CharField(max_length=ID_FIELD_LENGTH,widget=forms.HiddenInput)
     roles = forms.CharField(max_length=200,label='Roles (comma separated)')
 
     class Meta:

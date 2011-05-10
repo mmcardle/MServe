@@ -6,6 +6,15 @@ import os
 import pickle
 import base64
 import logging
+from Crypto.Cipher import AES
+import base64
+import urllib
+import random
+import os
+import sys
+
+
+
 
 fmt = "%3.2f"
 
@@ -70,7 +79,26 @@ def create_filename(instance, filename):
     return os.path.join(timeformat , random_id() ,filename)
 
 def random_id():
-    return str(uuid.uuid4())
+    mode = AES.MODE_CBC
+    short_key1 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    short_key2 = base64.b64encode(str(random.randint(0,sys.maxint)))
+
+    aeskey = (short_key1 + short_key2)[:32]
+
+    short_key3 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    short_key4 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    key = (short_key3 + short_key4)[:32]
+
+    aes = AES.new(aeskey, mode)
+    padded_key = key
+    encrypted_key = aes.encrypt(padded_key)
+    encoded_key = encrypted_key
+    encoded_key = base64.b64encode(encrypted_key)
+
+    encoded_key = encoded_key.translate(None,"//\\+=")
+
+    return encoded_key
+
 
 def gen_sec_link_orig(rel_path,prefix):
       if not rel_path.startswith("/"):
