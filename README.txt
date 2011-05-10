@@ -25,6 +25,11 @@ git clone https://github.com/ask/django-celery.git
 cd django-celery
 python setup.py install
 
+## Install django-openid-auth
+hg clone https://bitbucket.org/sramana/django-openid-auth
+cd django-openid-auth
+sudo python setup.py install
+
 sudo apt-get install git
 git clone git://soave.it-innovation.soton.ac.uk/git/pp-dataservice
 git submodule init

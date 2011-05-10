@@ -11,6 +11,8 @@ urlpatterns = patterns('',
     (r'^', include('mserve.mserveoauth.urls')),
     (r'^', include('mserve.prestoprime.urls')),
 
+    (r'^openid/', include('django_openid_auth.urls')),
+
     (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/opt/mserve/pp-dataservice/media/'}),
     (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/var/mserve/www-root/mservethumbs'}),
 

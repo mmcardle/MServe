@@ -90,6 +90,17 @@ MIDDLEWARE_CLASSES = (
     'request.middleware.RequestMiddleware'
 )
 
+## OPEN ID ###
+
+AUTHENTICATION_BACKENDS = (
+    'django_openid_auth.auth.OpenIDBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+OPENID_CREATE_USERS = True
+OPENID_UPDATE_DETAILS_FROM_SREG = True
+
+
+
 ROOT_URLCONF = 'mserve.urls'
 
 TEMPLATE_DIRS = (
@@ -121,6 +132,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.admin',
+    'django_openid_auth',
     'dataservice',
     'mserveoauth',
     'piston',
@@ -144,6 +156,7 @@ REQUEST_IGNORE_PATHS = (
 
 AUTH_PROFILE_MODULE = "dataservice.mserveprofile"
 
+LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL='/'
 
 # JOB CONFIG

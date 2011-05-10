@@ -203,6 +203,7 @@ h5 em {
 a, a:visited {
     text-decoration: none;
     border:none;
+    color: black;
 }
 a img {
     border:none;
@@ -218,9 +219,30 @@ a img {
 .ilink {
     cursor: pointer;
 }
-
+table.login {
+	border-width: 0px;
+	border-spacing: 2px;
+	border-collapse: separate;
+}
+table.login .loginth {
+	border-width: 0px;
+	padding: 5px;
+	border-style: outset;
+	border-color: gray;
+}
+table.login .logintd {
+	border-width: 0px;
+	padding: 5px;
+	border-style: outset;
+	border-color: gray;
+        vertical-align: middle;
+}
 td {
     vertical-align: top;
+}
+
+.vspacer {
+    height: 100px;
 }
 
 .icontable{
