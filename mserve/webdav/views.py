@@ -203,12 +203,12 @@ class DavServer(object):
         if isFi:
             response = HttpResponse(mimetype=object.mimetype)
             response['Content-Length'] = object.file.size
-
-        if isFo:
+            return response
+        elif isFo:
             response['Content-Length'] = "4096"
-
-        return response
-
+            return response
+        else:
+            return HttpResponseNotFound()
 
     def _handle_mkcol(self, request):
         logging.info("MKCOL on %s" % self.service)

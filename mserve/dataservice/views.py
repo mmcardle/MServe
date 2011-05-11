@@ -1,3 +1,4 @@
+from django.http import Http404
 from mserve.dataservice.models import *
 from mserve.dataservice.forms import *
 from django.core.exceptions import ObjectDoesNotExist
@@ -85,7 +86,7 @@ def render_base(request,id):
         logging.info("Request to browse '%s' , ID does not relate to a auth object." % (id))
 
 
-    return
+    return Http404()
 
 @login_required
 def profile(request):
