@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.core.urlresolvers import reverse
 import logging
 import cgi
 import oauth2 as oauth2
@@ -213,6 +214,8 @@ class ConsumerHandler(BaseHandler):
                 remote_service=remote_service)
         cc.save()
 
-        authurl = remote_service.get_full_authcallback_url(request_token['oauth_token'])
+        callback = request.build_absolute_uri(reverse('receive'))
+
+        authurl = remote_service.get_full_authcallback_url(request_token['oauth_token'],callback)
 
         return { "authurl": authurl }
