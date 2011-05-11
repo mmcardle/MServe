@@ -14,8 +14,6 @@ import os
 import sys
 
 
-
-
 fmt = "%3.2f"
 
 def get_methods_for_auth(auth):
@@ -77,6 +75,9 @@ def clean_mfile(mfile):
 def create_filename(instance, filename):
     timeformat = time.strftime("%Y/%m/%d/")
     return os.path.join(timeformat , random_id() ,filename)
+
+def unique_id():
+    return str(uuid.uuid4())
 
 def random_id():
     mode = AES.MODE_CBC

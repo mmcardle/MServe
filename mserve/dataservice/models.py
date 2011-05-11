@@ -162,6 +162,9 @@ class MServeProfile(models.Model):
                 ret.append(HostingContainer.objects.get(id=base.id))
         return ret
 
+    def __unicode__(self):
+        return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(),self.user.username)
+
 class Usage(models.Model):
     base            = models.ForeignKey('NamedBase',null=True, blank=True)
     metric          = models.CharField(max_length=4096)

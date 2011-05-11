@@ -5,6 +5,7 @@ import piston.oauth as poauth
 from dataservice.models import *
 from jobservice.models import *
 from mserveoauth.models import *
+import dataservice.utils as utils
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
@@ -109,7 +110,8 @@ class ReceiveHandler(BaseHandler):
                 options['url'] = remote_service.get_auth_url(auth['id'])
                 options['mfile'] = mfile
 
-                outputpath = os.path.join( str(mfile.id) , "content-%s"%auth['id'])
+                un = utils.unique_id()
+                outputpath = os.path.join( "imported" , "content-%s"%un)
                 mfile.file = outputpath
                 mfile.save()
 

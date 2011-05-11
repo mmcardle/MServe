@@ -37,6 +37,9 @@ class RemoteService(models.Model):
             url = url[0:-1]
         return url
 
+    def __unicode__(self):
+        return "Remote Service '%s' " % (self.url)
+
 class ClientConsumer(models.Model):
     remote_service      = models.ForeignKey(RemoteService)
     service_auth        = models.ForeignKey(Auth)
