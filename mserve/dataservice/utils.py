@@ -82,12 +82,16 @@ def random_id():
     mode = AES.MODE_CBC
     short_key1 = base64.b64encode(str(random.randint(0,sys.maxint)))
     short_key2 = base64.b64encode(str(random.randint(0,sys.maxint)))
-
-    aeskey = (short_key1 + short_key2)[:32]
-
     short_key3 = base64.b64encode(str(random.randint(0,sys.maxint)))
     short_key4 = base64.b64encode(str(random.randint(0,sys.maxint)))
-    key = (short_key3 + short_key4)[:32]
+
+    aeskey = (short_key1 + short_key2 + short_key3 + short_key4)[:32]
+
+    short_key5 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    short_key6 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    short_key7 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    short_key8 = base64.b64encode(str(random.randint(0,sys.maxint)))
+    key = (short_key5 + short_key6 + short_key7 + short_key8)[:32]
 
     aes = AES.new(aeskey, mode)
     padded_key = key
