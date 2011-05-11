@@ -350,11 +350,17 @@ class AuthContentsHandler(BaseHandler):
         redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
         redirecturl = redirecturl[1:]
 
+        logging.info("Redirect %s " % redirecturl)
+
         SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
 
         fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
         fullfilepathfolder = os.path.dirname(fullfilepath)
         mfilefilepath = file.path
+
+        logging.info("fullfilepath %s " % fullfilepath)
+        logging.info("fullfilepathfolder %s " % fullfilepathfolder)
+        logging.info("mfilefilepath %s " % mfilefilepath)
 
         if not os.path.exists(fullfilepathfolder):
             os.makedirs(fullfilepathfolder)
@@ -364,6 +370,8 @@ class AuthContentsHandler(BaseHandler):
             logging.info("   %s " % mfilefilepath )
             logging.info("to %s " % fullfilepath )
             os.link(mfilefilepath,fullfilepath)
+        else:
+            logging.info("fullfilepath Exists %s  " % fullfilepath)
 
         import dataservice.models as models
         usage_store.record(mfile.id,models.metric_access,mfile.size)
