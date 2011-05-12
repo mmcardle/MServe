@@ -28,58 +28,72 @@
 
 from mserve.dataservice.models import *
 from mserve.webdav.models import *
+from dataservice.tasks import create_mfile_task
+from dataservice.tasks import update_mfile_task
 import logging
 import datetime
 import time
 import os.path
 import os
 import urllib2
-
+from celery.task.sets import TaskSet
 from copy import deepcopy
 from datetime import datetime,timedelta,tzinfo
-from django.core.files.base import ContentFile
+from django.core.files import File
+from django.core.files.temp import NamedTemporaryFile
 from django.http import *
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-
 from lxml import etree
 
 def webdav(request,id):
 
-    logging.info("%s id:%s %s" % (request.method, id, request.path_info));
-
-    response = None
     try:
-        dataservice = DataService.objects.get(id=id)
-        dav_server = DavServer(dataservice,id)
-        response = dav_server.handle(request)
-    except DataService.DoesNotExist:
-        logging.info("%s Data Service %s doesnt exists" % (request.method, id));
-        pass
+        logging.info("%s id:%s %s" % (request.method, id, request.path_info));
 
-    try:
-        auth = Auth.objects.get(id=id)
-        import dataservice.utils as utils
-        base = utils.get_base_for_auth(auth)
-        if utils.is_service(base):
-            dataservice = DataService.objects.get(id=auth.base.id)
+        response = None
+        try:
+            dataservice = DataService.objects.get(id=id)
             dav_server = DavServer(dataservice,id)
-            logging.info("%s Auth:%s %s" % (request.method, dataservice, request.path_info));
             response = dav_server.handle(request)
-    except Auth.DoesNotExist:
-        pass
+        except DataService.DoesNotExist:
+            logging.info("%s Data Service %s doesnt exists" % (request.method, id));
+            pass
 
-    #if response == None:
-    #    logging.info("Response NOT FOUND")
-    #    return HttpResponseNotFound()
+        try:
+            auth = Auth.objects.get(id=id)
+            import dataservice.utils as utils
+            base = utils.get_base_for_auth(auth)
+            if utils.is_service(base):
+                dataservice = DataService.objects.get(id=auth.base.id)
+                dav_server = DavServer(dataservice,id)
+                logging.info("%s Auth:%s %s" % (request.method, dataservice, request.path_info));
+                response = dav_server.handle(request)
+        except Auth.DoesNotExist:
+            pass
 
-    logging.info("Response for %s : %s " % (request.method,response.status_code))
+        #if response == None:
+        #    logging.info("Response NOT FOUND")
+        #    return HttpResponseNotFound()
 
-    if response['Content-Type'] == 'text/xml':
-        logging.info(response.content)
-    else:
-        logging.info('<non-xml response data> %s ' % (response['Content-Type']))
-    return response
+        logging.info("Response for %s : %s " % (request.method,response.status_code))
+
+        if response['Content-Type'] == 'text/xml':
+            logging.info(response.content)
+        else:
+            logging.info('<non-xml response data> %s ' % (response['Content-Type']))
+        return response
+    except Exception as e:
+        logging.exception(e)
+
+
+chunk_size=1024*1024
+
+def fbuffer(f, chunk_size=chunk_size):
+    while True:
+        chunk = f.read(chunk_size)
+        if not chunk: break
+        yield chunk
 
 class DavServer(object):
 
@@ -829,16 +843,43 @@ class DavServer(object):
         if isFi:
             mfile = object
 
-            content = request.raw_post_data
-            from django.core.files.base import ContentFile
-            fid = ContentFile(content)
-            mfile.file.save(mfile.name, fid)
-            fid.close()
+            input = request.META['wsgi.input']
+            tf = NamedTemporaryFile(delete=False)
+            f = open(tf.name, 'wb' ,chunk_size)
+            content_length = request.META['HTTP_CONTENT_LENGTH']
+            
+            def do_work(resp):
+                i = 0
+                for chunk in fbuffer(input):
+                    if i%100 == 0:
+                        logging.info("%s/%s complete" % ((i*chunk_size),content_length))
+                        resp.write("%s/%s complete" % ((i*chunk_size),content_length))
+                    i = i+1
+                    f.write(chunk)
 
-            mfile.save()
+                resp.write("%s/%s complete" % (content_length,content_length))
+                logging.info("%s/%s complete" % (content_length,content_length))
+
+                inputs = []
+                inputs.append(tf.name)
+
+                options = {}
+                options['name'] = mfile.name
+                options['mfile'] = mfile
+
+                task = update_mfile_task.subtask([inputs,[],options])
+
+                logging.info("Created update task %s" % task)
+
+                tasks = [task]
+
+                ts = TaskSet(tasks=tasks)
+                tsr = ts.apply_async()
+                tsr.save()
 
             response = HttpResponse()
             response.status_code = 201
+            do_work(response)
             return response
 
         is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
@@ -846,21 +887,45 @@ class DavServer(object):
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
         if not is_folder and ancestors_exist:
+            try:
+                input = request.META['wsgi.input']
+                tf = NamedTemporaryFile(delete=False)
+                f = open(tf.name, 'wb' ,chunk_size)
+                content_length = request.META['HTTP_CONTENT_LENGTH']
 
-            from django.core.files.base import ContentFile
-            content = request.raw_post_data
-            fid = ContentFile(content)
-            mfile = self.service.create_mfile(fid,name)
-            mfile.folder = parentfolder
-            mfile.name = name
+                def do_work():
+                    i = 0
+                    for chunk in fbuffer(input):
+                        if i%100 == 0:
+                            logging.info("%s/%s complete" % ((i*chunk_size),content_length))
+                            yield "%s/%s complete" % ((i*chunk_size),content_length)
+                        i = i+1
+                        f.write(chunk)
 
-            fid.close()
+                    yield "%s/%s complete" % (content_length,content_length)
+                    logging.info("%s/%s complete" % (content_length,content_length))
+                    
+                    inputs = []
+                    inputs.append(tf.name)
 
-            mfile.save()
+                    options = {}
+                    options['name'] = name
+                    options['service'] = self.service
 
-            response = HttpResponse()
-            response.status_code = 201
-            return response
+                    task = create_mfile_task.subtask([inputs,[],options])
+
+                    logging.info("Created new MFile task %s" % task)
+
+                    tasks = [task]
+
+                    ts = TaskSet(tasks=tasks)
+                    tsr = ts.apply_async()
+                    tsr.save()
+
+                return HttpResponse(do_work())
+
+            except Exception as e:
+                logging.info("Exception %s" % e)
 
         if is_folder:
             return HttpResponseBadRequest("Cannot PUT to a folder")

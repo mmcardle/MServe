@@ -105,7 +105,7 @@ class ReceiveHandler(BaseHandler):
             tasks = []
             for auth in result['auths']:
 
-                mfile = service.create_mfile(None,"Import File")
+                mfile = service.create_mfile("Import File")
 
                 options = {}
                 options['url'] = remote_service.get_auth_url(auth['id'])

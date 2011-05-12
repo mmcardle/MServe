@@ -517,7 +517,7 @@ class DataService(NamedBase):
         # TODO : Folders and Jobs
         logging.info("%s %s " % (args, kwargs))
         if url == "mfiles":
-            return self.create_mfile(kwargs['file'],kwargs['name'])
+            return self.create_mfile(kwargs['name'],file=kwargs['file'])
         if url == "mfolders":
             return self.create_mfolder(kwargs['name'])
         if url == "jobs":
@@ -569,11 +569,11 @@ class DataService(NamedBase):
             folder.save()
             return folder
 
-    def create_mfile(self,file,name,fid=None):
+    def create_mfile(self,name,file=None,post_process=True):
         service = self
 
         if file==None:
-            mfile = MFile(name="Empty File",service=service,empty=True)
+            mfile = MFile(name=name,service=service,empty=True)
         else:
             if type(file) == django.core.files.base.ContentFile:
                 mfile = MFile(name=name,service=service)
@@ -590,7 +590,6 @@ class DataService(NamedBase):
         mfileauth_owner.save()
 
         mfile.save()
-        mfile.post_process()
 
         logging.debug("Backing up '%s' "%mfile)
 
@@ -602,6 +601,9 @@ class DataService(NamedBase):
             else:
                 backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
                 backup.save()
+
+        if post_process:
+            mfile.post_process()
 
         return mfile
 
@@ -647,7 +649,7 @@ class MFile(NamedBase):
     file     = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
-    size     = models.IntegerField(default=0)
+    size     = models.BigIntegerField(default=0)
     thumb    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
     poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
     proxy    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getproxystorage())
@@ -745,7 +747,7 @@ class MFile(NamedBase):
         return redirect("/%s"%redirecturl)
 
     def duplicate(self):
-        new_mfile = self.service.create_mfile(self.file)
+        new_mfile = self.service.create_mfile(self.name,file=self.file)
         new_mfile.save()
         return new_mfile
 

@@ -9,6 +9,66 @@ import Image
 import pycurl
 import tempfile
 import magic
+from django.core.files.temp import NamedTemporaryFile
+from django.core.files import File
+
+chunk_size=1024*1024
+
+def fbuffer(f, chunk_size=chunk_size):
+    while True:
+        chunk = f.read(chunk_size)
+        if not chunk: break
+        yield chunk
+
+@task
+def create_mfile_task(inputs,outputs,options={},callbacks=[]):
+
+    input = inputs[0]
+    service = options["service"]
+    name = options["name"]
+
+    mfile = service.create_mfile(name,post_process=False)
+
+    f = open(input, 'r' ,chunk_size)
+
+
+    mfile.file.save(name, File(open(f.name,'r')))
+
+    mfile.save()
+
+    f.close()
+
+    mfile.post_process()
+
+    for callback in callbacks:
+        subtask(callback).delay()
+
+    return {  }
+
+@task
+def update_mfile_task(inputs,outputs,options={},callbacks=[]):
+
+    logging.info("updating Mfile")
+    input = inputs[0]
+    name = options["name"]
+    mfile = options['mfile']
+
+    logging.info("updating Mfile '%s'")
+
+    f = open(input, 'r' ,chunk_size)
+
+    mfile.file.save(name, File(open(f.name,'r')))
+
+    mfile.save()
+
+    f.close()
+
+    mfile.post_process()
+
+    for callback in callbacks:
+        subtask(callback).delay()
+
+    return {  }
 
 @task
 def thumbvideo(videopath,thumbpath,width,height):

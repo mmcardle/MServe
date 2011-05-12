@@ -234,47 +234,31 @@ class MFileHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
-    def create(self, request, serviceid=None):
+    def create(self, request, serviceid=None, authid=None):
         logging.debug("Create MFile")
 
         form = MFileForm(request.POST,request.FILES)
         if form.is_valid():
 
+            kwargs = {}
             if request.FILES.has_key('file'):
                 file = request.FILES['file']
+                kwargs = {"name":file.name,"file":file}
             else:
                 file = None
+                kwargs = {"name":"Empty File","file":None}
 
-            if serviceid == None:
-                serviceid = form.cleaned_data['sid']
 
-            try:
-                service = DataService.objects.get(id=serviceid)
-                name = "Empty File"
-                if file is not None:
-                    name = file.name
-                mfile = service.create_mfile(file,name)
-                return mfile
-            except DataService.DoesNotExist:
-                try:
-                    auth = Auth.objects.get(id=serviceid)
-
-                    if utils.is_service(auth.base):
-                        service = DataService.objects.get(id=auth.base.id)
-                        name = "Empty File"
-                        if file is not None:
-                            name = file.name
-                        mfile = service.create_mfile(file,name)
-                        return mfile
-
-                    r = rc.BAD_REQUEST
-                    r.write("Invalid Request! Auth '%s' is not a DataService Auth" % serviceid)
-
-                except Auth.DoesNotExist:
-                    logging.info("Auth.DoesNotExist")
-                    r = rc.BAD_REQUEST
-                    r.write("Invalid Request! DataService '%s' does not exist " % serviceid)
-                    return r
+            if serviceid:
+                service = DataService.objects.get(pk=serviceid)
+                return service.do("POST","mfiles",**kwargs)
+            if authid:
+                auth = Auth.objects.get(pk=authid)
+                return auth.do("POST","mfiles",**kwargs)
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request when submitting creating mfile")
+                return r
 
         else:
             r = rc.BAD_REQUEST
