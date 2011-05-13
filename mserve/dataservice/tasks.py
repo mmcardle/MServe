@@ -29,6 +29,13 @@ def create_mfile_task(inputs,outputs,options={},callbacks=[]):
 
     mfile = service.create_mfile(name,post_process=False)
 
+    if not os.path.exists(input):
+        logging.info("Input for Mfile %s does not exist" % (input))
+        dir = os.path.dirname(path)
+        if os.path.exists(dir):
+            logging.info("Dir %s",os.path.listdir(dir))
+        return False
+
     f = open(input, 'r' ,chunk_size)
 
 
