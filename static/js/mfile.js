@@ -49,14 +49,12 @@ function mfile_task(mfileid){
 }
 
 
-
 function load_mfile_text(mfileid){
-
  $.ajax({
    type: "GET",
-   url: "/mfileapi/get/"+mfileid+"/",
+   url: "/mfiles/"+mfileid+"/file/",
    success: function(msg){
-                $("#mfiletext-"+mfileid).append("<pre>"+msg+"</pre>");
+       $("#mfiletext-"+mfileid).text(msg);
    },
    error: function(msg){
      showError("Error", ""+msg.responseText );

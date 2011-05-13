@@ -277,7 +277,7 @@ td {
 .auth {
     margin: 2px;
     padding: 3px;
-    border:2px outset silver;
+    border:1px outset silver;
     width:400px;
     float:left;
 }
@@ -517,19 +517,25 @@ li.fluid a {
 }
 
 .service_preview_td{
-    height:60px;
-    width:104px;
+    height:59px;
+    width:103px;
     background-position: center;
     background-size:100%;
+    background-color:whitesmoke;
     background-repeat: no-repeat;
+    border-top:1px inset whitesmoke;
+    border-left:1px inset whitesmoke;
 }
 
 .container_preview_td{
-    height:30px;
-    width:52px;
+    height:29px;
+    width:51px;
     background-position: center;
+    background-color:whitesmoke;
     background-size:100%;
     background-repeat: no-repeat;
+    border-top: 1px inset whitesmoke;
+    border-left: 1px inset whitesmoke;
 }
 
 /*

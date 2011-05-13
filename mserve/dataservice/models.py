@@ -35,6 +35,7 @@ mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
 
 ID_FIELD_LENGTH = 200
 thumbpath = settings.THUMB_PATH
+mediapath = settings.MEDIA_URL
 
 # Metrics for objects
 metric_mfile = "http://mserve/file"
@@ -835,7 +836,15 @@ class MFile(NamedBase):
                 return self.file.size
 
     def thumburl(self):
-        return "%s%s" % (thumbpath,self.thumb)
+        if self.thumb and self.thumb != "":
+            return "%s%s" % (thumbpath,self.thumb)
+        else:
+            if self.mimetype:
+                if self.mimetype.startswith("image"):
+                    return os.path.join(mediapath,"images","image-x-generic.png")
+                if self.mimetype.startswith("text"):
+                    return os.path.join(mediapath,"images","text-x-generic.png")
+        return os.path.join(mediapath,"images","package-x-generic.png")
 
     def posterurl(self):
         return "%s%s" % (thumbpath,self.poster)

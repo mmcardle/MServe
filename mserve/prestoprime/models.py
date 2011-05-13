@@ -141,7 +141,7 @@ def post_save_handler( sender, instance=False, **kwargs):
         logging.info("Prestoprime POST save handler %s %s" % (instance, instance.file))
 
         # Record Additional Usage
-        if not instance.initial_usage_recorded and instance.file.name.endswith(".mxf"):
+        if instance.name is not None and not instance.initial_usage_recorded and instance.name.endswith(".mxf"):
             logging.info("Prestoprime POST save handler %s id:'%s' " % (instance,instance.id))
             tmpfile = tempfile.NamedTemporaryFile(mode="w")
             result = mxfframecount([instance.file.path],[tmpfile.name])
