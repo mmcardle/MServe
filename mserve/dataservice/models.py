@@ -13,6 +13,7 @@ from django.shortcuts import redirect
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
+from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
@@ -573,8 +574,22 @@ class DataService(NamedBase):
     def create_mfile(self,name,file=None,post_process=True):
         service = self
 
+        # Check for duplicates
+        done =False
+        n=0
+        fn,ext = os.path.splitext(name)
+        while not done:
+            existing_files = MFile.objects.filter(name=name,folder=None,service=service)
+            if len(existing_files) == 0:
+                done = True
+            else:
+                n=n+1
+                name = "%s-%s%s" % (fn,str(n),ext)
+
         if file==None:
+            emptyfile = ContentFile('')
             mfile = MFile(name=name,service=service,empty=True)
+            mfile.file.save(name, emptyfile)
         else:
             if type(file) == django.core.files.base.ContentFile:
                 mfile = MFile(name=name,service=service)

@@ -40,6 +40,7 @@ from celery.task.sets import TaskSet
 from copy import deepcopy
 from datetime import datetime,timedelta,tzinfo
 from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.files.temp import NamedTemporaryFile
 from django.http import *
 from django.shortcuts import render_to_response
@@ -85,7 +86,6 @@ def webdav(request,id):
         return response
     except Exception as e:
         logging.exception(e)
-
 
 chunk_size=1024*1024
 
@@ -840,97 +840,109 @@ class DavServer(object):
         if isFo:
             return HttpResponseBadRequest("File path specified is a directory")
 
-        if isFi:
-            mfile = object
+        length = 0
+        start = 0
+        chunked = False
+        rangestart = -1
+        rangeend = -1
+        created = False
 
-            input = request.META['wsgi.input']
-            tf = NamedTemporaryFile(delete=False)
-            f = open(tf.name, 'wb' ,chunk_size)
-            content_length = request.META['HTTP_CONTENT_LENGTH']
-            
-            def do_work(resp):
-                i = 0
-                for chunk in fbuffer(input):
-                    if i%100 == 0:
-                        logging.info("%s/%s complete" % ((i*chunk_size),content_length))
-                        resp.write("%s/%s complete" % ((i*chunk_size),content_length))
-                    i = i+1
-                    f.write(chunk)
+        if request.META.has_key('HTTP_CONTENT_LENGTH'):
+            length = request.META['HTTP_CONTENT_LENGTH']
+            start = 0
+        if request.META.has_key('HTTP_RANGE'):
+            range_header = request.META['HTTP_RANGE']
+            byte,range=range_header.split('=')
+            ranges = range.split('-')
 
-                resp.write("%s/%s complete" % (content_length,content_length))
-                logging.info("%s/%s complete" % (content_length,content_length))
+            if len(ranges) != 2:
+                return HttpResponseBadRequest("Do not support range '%s' "% range_header)
 
-                inputs = []
-                inputs.append(tf.name)
+            rangestart = int(ranges[0])
+            rangeend = int(ranges[1])
+            length = rangeend - rangestart
 
-                options = {}
-                options['name'] = mfile.name
-                options['mfile'] = mfile
-
-                task = update_mfile_task.subtask([inputs,[],options])
-
-                logging.info("Created update task %s" % task)
-
-                tasks = [task]
-
-                ts = TaskSet(tasks=tasks)
-                tsr = ts.apply_async()
-                tsr.save()
-
-            response = HttpResponse()
-            response.status_code = 201
-            do_work(response)
-            return response
+        if request.META.has_key('HTTP_TRANSFER_ENCODING'):
+            encoding_header = request.META['HTTP_TRANSFER_ENCODING']
+            if encoding_header == 'chunked':
+                chunked = True
 
         is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
         #foldername = ancestors.pop()
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
-        if not is_folder and ancestors_exist:
-            try:
-                input = request.META['wsgi.input']
-                tf = NamedTemporaryFile(delete=False)
-                f = open(tf.name, 'wb' ,chunk_size)
-                content_length = request.META['HTTP_CONTENT_LENGTH']
+        mfile = None
 
-                def do_work():
-                    i = 0
-                    for chunk in fbuffer(input):
-                        if i%100 == 0:
-                            logging.info("%s/%s complete" % ((i*chunk_size),content_length))
-                            yield "%s/%s complete" % ((i*chunk_size),content_length)
-                        i = i+1
-                        f.write(chunk)
+        if isFi:
+            mfile = object
+        elif not is_folder and ancestors_exist:
+            created = True
+            mfile = self.service.create_mfile(name,post_process=False)
+        else:
+            return HttpResponseBadRequest("Error creating file")
 
-                    yield "%s/%s complete" % (content_length,content_length)
-                    logging.info("%s/%s complete" % (content_length,content_length))
-                    
-                    inputs = []
-                    inputs.append(tf.name)
+        input = request.META['wsgi.input']
 
-                    options = {}
-                    options['name'] = name
-                    options['service'] = self.service
+        if chunked:
+            chunktf = NamedTemporaryFile(delete=False)
+            cf = open(chunktf.name, 'wb')
 
-                    task = create_mfile_task.subtask([inputs,[],options])
+            len_b_hex = input.readline()
+            len_b=int('0x%s'%len_b_hex,16)
 
-                    logging.info("Created new MFile task %s" % task)
+            while len_b!=0:
+                bytes = input.read(len_b)
+                cf.write(bytes)
+                skip = input.readline()
+                len_b_hex = input.readline()
+                try:
+                    len_b=int('0x%s'%len_b_hex,16)
+                except ValueError as e:
+                    logging.info("ValueError %s leaving %s" % (e,input.read()))
+                    break
 
-                    tasks = [task]
+            if request.META.has_key('HTTP_TRAILER'):
+                trailer = input.readline()
+                trailersplit= trailer.split(':')
+                if len(trailersplit)>1:
+                    header = trailersplit[0]
+                    md5value = trailersplit[1]
+                    logging.info("Found Trailer header %s with value %s " % (header,md5value))
 
-                    ts = TaskSet(tasks=tasks)
-                    tsr = ts.apply_async()
-                    tsr.save()
+            cf.close()
 
-                return HttpResponse(do_work())
+            readf = open(cf.name, 'rb')
 
-            except Exception as e:
-                logging.info("Exception %s" % e)
+            mfile.file.save(name, File(readf))
+            readf.close()
 
-        if is_folder:
-            return HttpResponseBadRequest("Cannot PUT to a folder")
-        
-        return HttpResponseBadRequest()
+        else:
+            tf = NamedTemporaryFile(delete=False)
+            f = open(tf.name, 'wb')
+
+            i = 0
+            logging.info(request)
+            for chunk in fbuffer(input):
+                if i%100 == 0:
+                    logging.info("%s/%s complete" % ((i*chunk_size),length))
+                    #resp.write("%s/%s complete" % ((i*chunk_size),content_length))
+                i = i+1
+                f.write(chunk)
+            readf = open(tf.name, 'rb')
+
+            f.close()
+
+            mfile.file.save(name, File(readf))
+            readf.close()
+
+        mfile.save()
+
+        mfile.post_process()
+
+        if created:
+            return HttpResponse(status=201)
+        else:
+            return HttpResponse(status=204)
 
 class DavFileInfo(object):
 

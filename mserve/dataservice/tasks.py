@@ -28,6 +28,9 @@ def create_mfile_task(inputs,outputs,options={},callbacks=[]):
     name = options["name"]
 
     mfile = service.create_mfile(name,post_process=False)
+    
+    logging.info("input to Mfile '%s' " % input)
+    logging.info("created Mfile '%s' " % mfile)
 
     if not os.path.exists(input):
         logging.info("Input for Mfile %s does not exist" % (input))
@@ -36,10 +39,10 @@ def create_mfile_task(inputs,outputs,options={},callbacks=[]):
             logging.info("Dir %s",os.path.listdir(dir))
         return False
 
-    f = open(input, 'r' ,chunk_size)
+    f = open(input, 'rb' ,chunk_size)
 
 
-    mfile.file.save(name, File(open(f.name,'r')))
+    mfile.file.save(name, File(f))
 
     mfile.save()
 
@@ -54,17 +57,16 @@ def create_mfile_task(inputs,outputs,options={},callbacks=[]):
 
 @task
 def update_mfile_task(inputs,outputs,options={},callbacks=[]):
-
-    logging.info("updating Mfile")
     input = inputs[0]
     name = options["name"]
     mfile = options['mfile']
 
-    logging.info("updating Mfile '%s'")
+    logging.info("input to Mfile '%s' " % input)
+    logging.info("updating Mfile '%s' " % mfile)
 
-    f = open(input, 'r' ,chunk_size)
+    f = open(input, 'rb' ,chunk_size)
 
-    mfile.file.save(name, File(open(f.name,'r')))
+    mfile.file.save(name, File(f))
 
     mfile.save()
 
