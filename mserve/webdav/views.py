@@ -880,6 +880,7 @@ class DavServer(object):
         elif not is_folder and ancestors_exist:
             created = True
             mfile = self.service.create_mfile(name,post_process=False)
+            mfile.folder=parentfolder
         else:
             return HttpResponseBadRequest("Error creating file")
 
