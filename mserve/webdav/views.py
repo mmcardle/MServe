@@ -28,20 +28,14 @@
 
 from mserve.dataservice.models import *
 from mserve.webdav.models import *
-from dataservice.tasks import create_mfile_task
-from dataservice.tasks import update_mfile_task
 import logging
 import datetime
 import time
 import os.path
 import os
 import urllib2
-from celery.task.sets import TaskSet
 from copy import deepcopy
 from datetime import datetime,timedelta,tzinfo
-from django.core.files import File
-from django.core.files.base import ContentFile
-from django.core.files.temp import NamedTemporaryFile
 from django.http import *
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -80,7 +74,7 @@ def webdav(request,id):
         logging.info("Response for %s : %s " % (request.method,response.status_code))
 
         if response['Content-Type'] == 'text/xml':
-            logging.info(response.content)
+            pass#logging.info(response.content)
         else:
             logging.info('<non-xml response data> %s ' % (response['Content-Type']))
         return response
@@ -217,9 +211,14 @@ class DavServer(object):
         if isFi:
             response = HttpResponse(mimetype=object.mimetype)
             response['Content-Length'] = object.file.size
+            fstat = os.stat(object.file.path)
+            response['Last-Modified'] = self.__get_localized_datetime(fstat.st_mtime).strftime("%a, %d %b %Y %H:%M:%S %Z")
+            response['ETag'] = "%s-%s" % (hex(int(fstat.st_mtime))[2:], fstat.st_size)
             return response
         elif isFo:
             response['Content-Length'] = "4096"
+            return response
+        elif _get_path(request,self.id) == '/' :
             return response
         else:
             return HttpResponseNotFound()
@@ -840,8 +839,9 @@ class DavServer(object):
         if isFo:
             return HttpResponseBadRequest("File path specified is a directory")
 
+        logging.info(request)
+
         length = 0
-        start = 0
         chunked = False
         rangestart = -1
         rangeend = -1
@@ -849,7 +849,7 @@ class DavServer(object):
 
         if request.META.has_key('HTTP_CONTENT_LENGTH'):
             length = request.META['HTTP_CONTENT_LENGTH']
-            start = 0
+
         if request.META.has_key('HTTP_RANGE'):
             range_header = request.META['HTTP_RANGE']
             byte,range=range_header.split('=')
@@ -864,11 +864,13 @@ class DavServer(object):
 
         if request.META.has_key('HTTP_TRANSFER_ENCODING'):
             encoding_header = request.META['HTTP_TRANSFER_ENCODING']
-            if encoding_header == 'chunked':
+            if encoding_header.find('chunked') != -1:
                 chunked = True
 
+        if chunked:
+            return HttpResponseBadRequest("Chunking Not Supported")
+
         is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
-        #foldername = ancestors.pop()
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
         mfile = None
@@ -883,24 +885,29 @@ class DavServer(object):
 
         input = request.META['wsgi.input']
 
-        if chunked:
-            chunktf = NamedTemporaryFile(delete=False)
-            cf = open(chunktf.name, 'wb')
-
-            len_b_hex = input.readline()
-            len_b=int('0x%s'%len_b_hex,16)
-
-            while len_b!=0:
-                bytes = input.read(len_b)
-                cf.write(bytes)
-                skip = input.readline()
-                len_b_hex = input.readline()
+        if rangestart != -1:
+            try:
+                mf = open(mfile.file.path,'r+b')
                 try:
-                    len_b=int('0x%s'%len_b_hex,16)
-                except ValueError as e:
-                    logging.info("ValueError %s leaving %s" % (e,input.read()))
-                    break
+                    mf.seek(rangestart)
+                    mf.write(input.read(length))
+                finally:
+                    mf.close()
+            except IOError:
+                logging.error("Error writing partial content to MFile '%s'" % mfile)
+                pass
+        else:
+            try:
+                mf = open(mfile.file.path,'wb')
+                try:
+                    mf.write(input.read(length))
+                finally:
+                    mf.close()
+            except IOError:
+                logging.error("Error writing content to MFile '%s'" % mfile)
+                pass
 
+        if chunked:
             if request.META.has_key('HTTP_TRAILER'):
                 trailer = input.readline()
                 trailersplit= trailer.split(':')
@@ -909,35 +916,16 @@ class DavServer(object):
                     md5value = trailersplit[1]
                     logging.info("Found Trailer header %s with value %s " % (header,md5value))
 
-            cf.close()
-
-            readf = open(cf.name, 'rb')
-
-            mfile.file.save(name, File(readf))
-            readf.close()
-
-        else:
-            tf = NamedTemporaryFile(delete=False)
-            f = open(tf.name, 'wb')
-
-            i = 0
-            logging.info(request)
-            for chunk in fbuffer(input):
-                if i%100 == 0:
-                    logging.info("%s/%s complete" % ((i*chunk_size),length))
-                    #resp.write("%s/%s complete" % ((i*chunk_size),content_length))
-                i = i+1
-                f.write(chunk)
-            readf = open(tf.name, 'rb')
-
-            f.close()
-
-            mfile.file.save(name, File(readf))
-            readf.close()
-
         mfile.save()
 
-        mfile.post_process()
+        # TODO : Need to check if file is done?
+        # How? perhaps a special header is needed
+        # X-MServe-Process
+        if request.META.has_key('HTTP_X_MSERVE'):
+            encoding_header = request.META['HTTP_X_MSERVE']
+            if encoding_header.find('post-process') != -1:
+                logging.info("X-MServe header found - post processing content")
+                mfile.post_process()
 
         if created:
             return HttpResponse(status=201)
@@ -1075,6 +1063,12 @@ class UTC(tzinfo):
         return timedelta(0)
     def tzname(self,dt):
         return "UTC"
+
+def _get_path(request,id):
+    # format : /webdav/{id}/{ancestors}/{folder or file}/
+    # Remove /webdav/{id}/
+    pathlist = request.path_info.split(id)[-1:]
+    return pathlist[-1]
 
 def _get_path_info_request(request,id):
     return _get_path_info(request.path_info,id)
