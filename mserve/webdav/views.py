@@ -52,7 +52,7 @@ def webdav(request,id):
             dav_server = DavServer(dataservice,id)
             response = dav_server.handle(request)
         except DataService.DoesNotExist:
-            logging.info("%s Data Service %s doesnt exists" % (request.method, id));
+            #logging.info("%s Data Service %s doesnt exists" % (request.method, id));
             pass
 
         try:
@@ -62,7 +62,7 @@ def webdav(request,id):
             if utils.is_service(base):
                 dataservice = DataService.objects.get(id=auth.base.id)
                 dav_server = DavServer(dataservice,id)
-                logging.info("%s Auth:%s %s" % (request.method, dataservice, request.path_info));
+                #logging.info("%s Auth:%s %s" % (request.method, dataservice, request.path_info));
                 response = dav_server.handle(request)
         except Auth.DoesNotExist:
             pass
@@ -71,12 +71,12 @@ def webdav(request,id):
         #    logging.info("Response NOT FOUND")
         #    return HttpResponseNotFound()
 
-        logging.info("Response for %s : %s " % (request.method,response.status_code))
+        #logging.info("Response for %s : %s " % (request.method,response.status_code))
 
         if response['Content-Type'] == 'text/xml':
             pass#logging.info(response.content)
         else:
-            logging.info('<non-xml response data> %s ' % (response['Content-Type']))
+            pass#logging.info('<non-xml response data> %s ' % (response['Content-Type']))
         return response
     except Exception as e:
         logging.exception(e)
@@ -838,8 +838,6 @@ class DavServer(object):
 
         if isFo:
             return HttpResponseBadRequest("File path specified is a directory")
-
-        logging.info(request)
 
         length = 0
         chunked = False
