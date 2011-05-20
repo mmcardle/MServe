@@ -81,16 +81,18 @@ def webdav(request,id):
     except Exception as e:
         logging.exception(e)
 
-chunk_size=1024*1024
+# Chunk Size - 50Mb
+chunk_size=1024*1024*50
 
 def fbuffer(f, length , chunk_size=chunk_size):
 
-    logging.info("reading %s in chunks of  %s "% (length,chunk_size))
+    #logging.info("reading %s in chunks of  %s "% (length,chunk_size))
 
     to_read = int(length)
     while to_read > 0 :
         chunk = f.read(chunk_size)
         to_read = to_read - chunk_size
+        #logging.info("read chunk - %s to go "% (to_read))
         if not chunk:
             break
         yield chunk
