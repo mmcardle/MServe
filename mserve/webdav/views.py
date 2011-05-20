@@ -81,20 +81,12 @@ def webdav(request,id):
     except Exception as e:
         logging.exception(e)
 
-# Chunk Size - 50Mb
-chunk_size=1024*1024*50
+chunk_size=1024*1024
 
-def fbuffer(f, length , chunk_size=chunk_size):
-
-    #logging.info("reading %s in chunks of  %s "% (length,chunk_size))
-
-    to_read = int(length)
-    while to_read > 0 :
+def fbuffer(f, chunk_size=chunk_size):
+    while True:
         chunk = f.read(chunk_size)
-        to_read = to_read - chunk_size
-        #logging.info("read chunk - %s to go "% (to_read))
-        if not chunk:
-            break
+        if not chunk: break
         yield chunk
 
 class DavServer(object):
@@ -849,7 +841,6 @@ class DavServer(object):
 
         length = 0
         chunked = False
-        ranged = False
         rangestart = -1
         rangeend = -1
         created = False
@@ -868,7 +859,6 @@ class DavServer(object):
             rangestart = int(ranges[0])
             rangeend = int(ranges[1])
             length = rangeend - rangestart
-            ranged = true
 
         if request.META.has_key('HTTP_TRANSFER_ENCODING'):
             encoding_header = request.META['HTTP_TRANSFER_ENCODING']
@@ -899,8 +889,7 @@ class DavServer(object):
                 mf = open(mfile.file.path,'r+b')
                 try:
                     mf.seek(rangestart)
-                    for chunk in fbuffer(input,length):
-                        mf.write(chunk)
+                    mf.write(input.read(length))
                 finally:
                     mf.close()
             except IOError:
@@ -910,8 +899,7 @@ class DavServer(object):
             try:
                 mf = open(mfile.file.path,'wb')
                 try:
-                    for chunk in fbuffer(input,length):
-                        mf.write(chunk)
+                    mf.write(input.read(length))
                 finally:
                     mf.close()
             except IOError:
@@ -932,8 +920,6 @@ class DavServer(object):
         # TODO : Need to check if file is done?
         # How? perhaps a special header is needed
         # X-MServe-Process
-        if not ranged:
-            mfile.post_process()
         if request.META.has_key('HTTP_X_MSERVE'):
             encoding_header = request.META['HTTP_X_MSERVE']
             if encoding_header.find('post-process') != -1:
