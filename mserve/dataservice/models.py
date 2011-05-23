@@ -1,3 +1,26 @@
+########################################################################
+#
+# University of Southampton IT Innovation Centre, 2011
+#
+# Copyright in this library belongs to the University of Southampton
+# University Road, Highfield, Southampton, UK, SO17 1BJ
+#
+# This software may not be used, sold, licensed, transferred, copied
+# or reproduced in whole or in part in any manner or form or in or
+# on any media by any person other than in accordance with the terms
+# of the Licence Agreement supplied with the software, or otherwise
+# without the prior written consent of the copyright owners.
+#
+# This software is distributed WITHOUT ANY WARRANTY, without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE, except where stated in the Licence Agreement supplied with
+# the software.
+#
+#	Created By :			Mark McArdle
+#	Created Date :			2011-03-25
+#	Created for Project :		PrestoPrime
+#
+########################################################################
 from django.db import models
 import pickle
 import base64
@@ -607,7 +630,7 @@ class DataService(NamedBase):
 
         mfile.save()
 
-        logging.debug("Backing up '%s' "%mfile)
+        logging.debug("Backing up '%s' " % mfile)
 
         if file is not None:
             if type(file) == django.core.files.base.ContentFile:
@@ -778,7 +801,7 @@ class MFile(NamedBase):
             # MIME type
             self.mimetype = mimetype = mimefile(self.file.path)
             # checksum
-            self.checksum = md5file(self.file.path)
+            md5file.delay([self],[])
             # record size
             self.size = self.file.size
 
