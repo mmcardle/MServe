@@ -67,13 +67,75 @@ function check_service_method(method){
     }
 }
 
+function service_loadmanagementproperties(serviceid){
+     $.ajax({
+       type: "GET",
+       url: '/services/'+serviceid+'/properties/',
+       success: function(properties){
+
+           $.each(properties, function(i,property){
+
+              
+                if(property.values.type == "step"){
+                    $( "#managementpropertyTemplate-steps" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
+                    $("#service-setmanagementproperty-button-"+property.id ).button().click(
+                        function() {
+                            service_setmanagementproperty_ajax(serviceid,property.property, $( "#slider-"+property.id ).slider( "value" ) )
+                        }
+                    )
+                    $( "#slider-"+property.id ).slider({
+                            value: property.value ,
+                            range: "min",
+                            min: property.values.min,
+                            max: property.values.max,
+                            step: property.values.step,
+                            slide: function( event, ui ) {
+                                    $( "#val-"+property.id ).val( ui.value );
+                            }
+                    });
+                    $( "#val-"+property.id ).val(  $( "#slider-"+property.id ).slider( "value" ) );
+
+                }else if(property.values.type == "enum"){
+                    $( "#managementpropertyTemplate-choices" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
+
+                     var mr = $( "#managementradio-"+property.id )
+
+                     $.each(property.values.choices, function(i,choice){
+                        if(choice == property.value){
+                            mr.append( $("<input type='radio' id='radio-"+property.id+"-"+i+"' name='radio"+property.id+"' checked='checked'   /><label for='radio-"+property.id+"-"+i+"'>"+choice+"</label>"))
+                        }else{
+                            mr.append( $("<input type='radio' id='radio-"+property.id+"-"+i+"' name='radio"+property.id+"'  /><label for='radio-"+property.id+"-"+i+"'>"+choice+"</label>"))
+                        }
+                     })
+
+                     mr.buttonset()
+                     
+                     $("#service-setmanagementproperty-button-"+property.id ).button().click(
+                        function() {
+                            var value = $("input:radio[name=radio"+property.id+"]:checked")
+                            var id = value.attr("id")
+                            var label = $("label[for='"+id+"']")
+                            service_setmanagementproperty_ajax(serviceid,property.property, label.text() )
+                        }
+                     )
+                }
+
+           });
+
+       },
+       error: function(msg){
+         showError("Error", ""+msg.responseText );
+       }
+     });
+}
+
 function service_setmanagementproperty_ajax(service,prop,val){
      $.ajax({
        type: "PUT",
        data: "property="+prop+"&value="+val,
        url: '/api/'+service+'/setmanagementproperty/',
        success: function(msg){
-         showMessage("Property Set", "Property '"+prop+"' set to "+val);
+         //showMessage("Property Set", "Property '"+prop+"' set to "+val);
          $("."+prop).html(val)
        },
        error: function(msg){

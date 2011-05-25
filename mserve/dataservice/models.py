@@ -752,11 +752,56 @@ class MFile(NamedBase):
     def __get_file(self):
         mfile = self
 
-        accessspeed = "50"
+        # Access Speed default is unlimited
+        accessspeed = ""
+
+        service = mfile.service
+        container = service.container
+        logging.info("Finding limit for %s " % (mfile.name))
+        accessspeed = DEFAULT_ACCESS_SPEED
+        try:
+            prop = ManagementProperty.objects.get(base=service,property="accessspeed")
+            accessspeed = prop.value
+            logging.info("Limit set from service property to %s for %s " % (accessspeed,mfile.name))
+        except ObjectDoesNotExist:
+            try:
+                prop = ManagementProperty.objects.get(base=container,property="accessspeed")
+                accessspeed = prop.value
+                logging.info("Limit set from container property to %s for %s " % (accessspeed,mfile.name))
+            except ObjectDoesNotExist:
+                pass
+            
+
+        check1 = mfile.checksum
+        check2 = utils.md5_for_file(mfile.file)
 
         file=mfile.file
 
         sigret = mfile_get_signal.send(sender=self, mfile=mfile)
+
+        for k,v in sigret:
+            logging.info("Signal %s returned %s " % (k,v))
+
+        import usage_store as usage_store
+        if(check1==check2):
+            logging.info("Verification of %s on read ok" % mfile)
+        else:
+            logging.info("Verification of %s on read FAILED" % mfile)
+            usage_store.record(mfile.id,metric_corruption,1)
+            backup = BackupFile.objects.get(mfile=mfile)
+            check3 = mfile.checksum
+            check4 = utils.md5_for_file(backup.file)
+            if(check3==check4):
+                shutil.copy(backup.file.path, mfile.file.path)
+                file = backup.file
+            else:
+                logging.info("The file %s has been lost" % mfile)
+                usage_store.record(mfile.id,metric_dataloss,mfile.size)
+                return rc.NOT_HERE
+
+        file=mfile.file
+
+        mfile_get_signal.send(sender=self, mfile=mfile)
 
         p = str(file)
         dlfoldername = "dl%s" % accessspeed
@@ -779,11 +824,13 @@ class MFile(NamedBase):
             logging.info("to %s " % fullfilepath )
             os.link(mfilefilepath,fullfilepath)
 
+
         import dataservice.models as models
-        import usage_store as usage_store
+        
         usage_store.record(mfile.id,models.metric_access,mfile.size)
 
-        return redirect("/%s"%redirecturl)
+        response = redirect("/%s"%redirecturl)
+        return response
 
     def duplicate(self):
         new_mfile = self.service.create_mfile(self.name,file=self.file)
@@ -800,10 +847,14 @@ class MFile(NamedBase):
         if self.file:
             # MIME type
             self.mimetype = mimetype = mimefile(self.file.path)
+
             # checksum
-            md5file.delay([self],[])
+            self.checksum = md5file([self],[])
+
             # record size
-            self.size = self.file.size
+            self.size = self.file.size            
+            self.save()
+
 
             thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
             posterpath = os.path.join( str(self.file) + ".poster.jpg")
@@ -950,6 +1001,13 @@ class ManagementProperty(models.Model):
     property    = models.CharField(max_length=200)
     value       = models.CharField(max_length=200)
 
+    def values(self):
+        if self.property == "accessspeed":
+            return {"type" : "step", "min":50 , "max" : 5000, "step" : 50}
+        elif self.property == "anotherprop":
+            return {"type" : "enum", "choices" : ["This","That"] }
+        else:
+            return {}
 
 class Auth(Base):
     authname    = models.CharField(max_length=50)

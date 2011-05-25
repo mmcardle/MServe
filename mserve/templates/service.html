@@ -95,7 +95,6 @@
                 $(document).ready(function() {
                     loadMFiles('{{service.id}}');
                     loadJobs('{{service.id}}');
-                    service_setmanagementproperty('{{service.id}}');
                     $('#newjobbutton').button()
                     $('#newjobbutton').click(function(){
                         create_new_job_ui_dialog('', '{{service.id}}')
@@ -136,12 +135,17 @@
 
             <h3>Management Properties</h3>
 
-            <table style="table-layout: fixed;width:300px;">
-                <tr><th>Name</th><th>Value</th><th><!--Actions--></th></tr>
-                {% for property in properties%}
-                <tr><td>{{ property.property }}</td><td class="{{ property.property }}">{{property.value }}</td></tr>
-                {% endfor %}
+            <table id="managementpropertyholder" style="vertical-align: middle;" >
+                <tr><th>Name</th><th>Current Value</th><th></th><th>New Value</th><th></th></tr>
+
             </table>
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    service_loadmanagementproperties('{{service.id}}');
+                    service_setmanagementproperty('{{service.id}}');
+                });
+            </script>
 
             
      </div>

@@ -24,7 +24,9 @@
     <div id="tabs-1">
 
         <div id="content" style="min-height: 500px;">
+        <table>
 
+            <tr><td>
         {% if verify %}
             {% if not verifystate %}
                 <div class="failed">Error: Verification has failed</div>
@@ -83,9 +85,14 @@
         {% endif %}
 
         </div>
-
-        <h3>Actions</h3>
-        <button id="newjobbutton" >New Job</button>
+        </td>
+        <td>
+                <h3>Actions</h3>
+                <button id="mfile_download_button" >Download</button>
+                <button id="newjobbutton" >New Job</button>
+                </td>
+        </tr>
+        </table>
 
         <div id="jobcontent">
 
@@ -97,6 +104,9 @@
 
             <script type="text/javascript">
                 $(document).ready(function() {
+                    $("#mfile_download_button").button().click(function mfile_get(mfileid){
+                           window.open("/mfiles/{{mfile.id}}/file/")
+                    })
                     load_jobs_mfile('{{mfile.id}}')
                     create_new_job_ui_dialog('{{mfile.id}}','')
                 });
@@ -104,7 +114,7 @@
 
         </div>
 
-</div>
+    </div>
 
     </div>
 

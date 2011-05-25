@@ -31,8 +31,14 @@
 
     <div id="tabs-1">
 
-    {% include "auths/details_auth.html" %}
+        <table>
 
+            <tr><td>{% include "auths/details_auth.html" %}</td><td>
+                    <h3>Actions</h3>
+
+                    <button id="mfile_download_button" >Download</button>
+                </td></tr>
+        </table>
 
     </div>
 
@@ -51,6 +57,9 @@
 <script>
 $(document).ready(function() {
     $(function() {
+        $("#mfile_download_button").button().click(function mfile_get(mfileid){
+            window.open("/auths/{{auth.id}}/file/")
+        })
         $( "#tabs" ).tabs();
     });
 });

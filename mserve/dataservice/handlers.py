@@ -388,74 +388,19 @@ class AuthContentsHandler(BaseHandler):
 class MFileContentsHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self, request, mfileid):
-        mfile = MFile.objects.get(pk=mfileid)
-        service = mfile.service
-        container = service.container
-        logging.info("Finding limit for %s " % (mfile.name))
-        accessspeed = DEFAULT_ACCESS_SPEED
-        try:
-            prop = ManagementProperty.objects.get(base=service,property="accessspeed")
-            accessspeed = prop.value
-            logging.info("Limit set from service property to %s for %s " % (accessspeed,mfile.name))
-        except ObjectDoesNotExist:
-            try:
-                prop = ManagementProperty.objects.get(base=container,property="accessspeed")
-                accessspeed = prop.value
-                logging.info("Limit set from container property to %s for %s " % (accessspeed,mfile.name))
-            except ObjectDoesNotExist:
-                pass
+    def read(self, request, mfileid=None, authid=None):
 
-        check1 = mfile.checksum
-        check2 = utils.md5_for_file(mfile.file)
-
-        file=mfile.file
-
-        sigret = mfile_get_signal.send(sender=self, mfile=mfile)
-        for k,v in sigret:
-            logging.info("Signal %s returned %s " % (k,v))
-
-        if(check1==check2):
-            logging.info("Verification of %s on read ok" % mfile)
+        if mfileid:
+            logging.info("MFileContentsHandler return mfile")
+            return MFile.objects.get(pk=mfileid).do("GET","file")
+        elif authid:
+            logging.info("MFileContentsHandler return auth")
+            return Auth.objects.get(pk=authid).do("GET","file")
         else:
-            logging.info("Verification of %s on read FAILED" % mfile)
-            usage_store.record(mfile.id,metric_corruption,1)
-            backup = BackupFile.objects.get(mfile=mfile)
-            check3 = mfile.checksum
-            check4 = utils.md5_for_file(backup.file)
-            if(check3==check4):
-                shutil.copy(backup.file.path, mfile.file.path)
-                file = backup.file
-            else:
-                logging.info("The file %s has been lost" % mfile)
-                usage_store.record(mfile.id,metric_dataloss,mfile.size)
-                return rc.NOT_HERE
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
 
-        p = str(file)
-        dlfoldername = "dl%s" % accessspeed
-
-        redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
-        redirecturl = redirecturl[1:]
-
-        SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
-
-        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
-        fullfilepathfolder = os.path.dirname(fullfilepath)
-        mfilefilepath = file.path
-
-        if not os.path.exists(fullfilepathfolder):
-            os.makedirs(fullfilepathfolder)
-
-        if not os.path.exists(fullfilepath):
-            logging.info("Linking ")
-            logging.info("   %s " % mfilefilepath )
-            logging.info("to %s " % fullfilepath )
-            os.link(mfilefilepath,fullfilepath)
-
-        import dataservice.models as models
-        usage_store.record(mfile.id,models.metric_access,mfile.size)
-
-        return redirect("/%s"%redirecturl)
 
 class RoleHandler(BaseHandler):
     def read(self,request, id):
@@ -546,7 +491,7 @@ class UsageSummaryHandler(BaseHandler):
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
     model = ManagementProperty
-    fields = ("value","property","id",)
+    fields = ("value","property","id","values")
     exclude = ()
     
     def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):

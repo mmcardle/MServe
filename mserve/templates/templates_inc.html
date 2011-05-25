@@ -118,6 +118,41 @@
 </div>
 </script>
 
+<script id="managementpropertyTemplate-steps" type="text/x-jquery-tmpl">
+    <tr>
+        <th>${ property}</th>
+        <td class="${ property }" style="text-align: center;vertical-align: middle;">${ value }</td>
+
+        <td style="vertical-align: middle;width:400px"><div style="" id="slider-${ id }"></div></td>
+
+        <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
+
+        <td style="vertical-align: middle;">
+            <button id="service-setmanagementproperty-button-${ id }" >Set</button>
+
+        </td>
+    </tr>
+</script>
+
+<script id="managementpropertyTemplate-choices" type="text/x-jquery-tmpl">
+    <tr>
+        <th>${ property}</th>
+        <td class="${ property }" style="text-align: center;vertical-align: middle;">${ value }</td>
+
+        <td style="vertical-align: middle;width:400px">
+            <div id="managementradio-${id}" class="servicetyperadio">
+            </div>
+        </td>
+
+        <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
+
+        <td style="vertical-align: middle;">
+            <button id="service-setmanagementproperty-button-${ id }" >Set</button>
+
+        </td>
+    </tr>
+</script>
+
 <script id="serviceOAuthTemplate" type="text/x-jquery-tmpl">
     
 <div class="infoholder">

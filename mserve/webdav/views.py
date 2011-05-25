@@ -181,33 +181,7 @@ class DavServer(object):
             isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
             if isFi:
-                response['Content-Disposition'] = 'attachment; filename=%s'%(object.name)
-
-                range_string = "0-"
-                
-                if request.META.has_key("HTTP_RANGE"):
-                    range_header = request.META['HTTP_RANGE']
-                    range_split = range_header.split('=')
-                    if len(range_split)>1:
-                        range_string = range_split[1]
-                    else:
-                        logging.error("Invalid Range Header '%s'" % (range_header))
-
-                # TODO : Get Throttling working
-                #response["X-LIGHTTPD-KBytes-per-second"] = "50"
-                enc_url = urllib2.quote(object.file.path)
-                response["X-SendFile2"] = " %s %s" % (enc_url,range_string)
-
-                stat = os.stat(object.file.path)
-                response["ETag"] = " %s-%s" % (object.checksum,stat.st_mtime)
-
-                if object.checksum != None:
-                    b64md5 = base64.b64encode(object.checksum)
-                    response["Content-MD5"] = " %s" % (b64md5)
-
-                return response
-
-            return self._handle_propfind(request)
+                return object.do("GET","file")
 
         else:
             return HttpResponseNotFound()

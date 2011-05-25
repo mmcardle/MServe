@@ -32,16 +32,7 @@ import Image
 import pycurl
 import tempfile
 import magic
-from django.core.files.temp import NamedTemporaryFile
 from django.core.files import File
-
-chunk_size=1024*1024
-
-def fbuffer(f, chunk_size=chunk_size):
-    while True:
-        chunk = f.read(chunk_size)
-        if not chunk: break
-        yield chunk
 
 @task
 def create_mfile_task(inputs,outputs,options={},callbacks=[]):
