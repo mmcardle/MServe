@@ -1,6 +1,6 @@
 
 
-function mfile_task_ajax(data){
+function mfile_job_ajax(data){
      $.ajax({
        type: "POST",
        data: data,
@@ -35,7 +35,7 @@ function mfile_task(mfileid){
                         text: "Create",
                         click: function() {
                             var selected= $( "#selecttask" ).val()
-                            mfile_task_ajax(mfileid,selected)
+                            mfile_job_ajax(mfileid,selected)
                             $(this).dialog("close");
                         }
                     }

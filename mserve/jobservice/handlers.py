@@ -53,7 +53,14 @@ import dataservice.utils as utils
 #should be
 #from django.core.cache import cache
 cache = {}
-cache['dataservice.tasks.thumbimage'] = { "inputmime" : "application/octet-stream", "outputmime" : "image/png", "options" : ['width','height']}
+cache['dataservice.tasks.thumbimage'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "image/png" },
+        "output-0" : { "mimetype" : "image/png" },
+        "options" : ['width','height'],
+        "results" :[]
+    }
 cache['jobservice.tasks.copyfromurl'] = {
         "nbinputs" : 0,
         "nboutputs" : 1,
@@ -92,7 +99,14 @@ cache['prestoprime.tasks.mxfframecount'] = {
         "options":[],
         "results" : ["lines"]
     }
-
+cache['prestoprime.tasks.extractd10frame'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "application/octet-stream" },
+        "output-0" : { "mimetype" : "image/png" },
+        "options":['frame'],
+        "results" : []
+    }
 
 
 class JobServiceHandler(BaseHandler):
@@ -100,13 +114,7 @@ class JobServiceHandler(BaseHandler):
 
     def read(self, request, serviceid):
         service = DataService.objects.get(pk=serviceid)
-
-        arr = []
-        for job in service.job_set.all():
-            dict = job_to_dict(job)
-            if dict is not None:
-                arr.append(dict)
-
+        arr = Job.objects.filter(mfile__in=MFile.objects.filter(service=service).all())
         return HttpResponse(arr,mimetype="application/json")
 
 class JobMFileHandler(BaseHandler):
@@ -131,8 +139,7 @@ class JobMFileHandler(BaseHandler):
 class JobHandler(BaseHandler):
     model = Job
     allowed_methods = ('GET','POST','DELETE')
-    fields = ('id','name','created','taskset_id','joboutput_set')
-    #fields = ('id','name','created','taskset_id','jobmfile_set')
+    fields = ('id','name','created','taskset_id','joboutput_set','tasks')
 
     def create(self, request):
         
@@ -153,7 +160,7 @@ class JobHandler(BaseHandler):
             r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
             return r
 
-        logging.info("Creating job at service %s " % service)
+        #logging.info("Creating job at service %s " % service)
 
         options = {}
         for v in request.POST:
@@ -179,7 +186,7 @@ class JobHandler(BaseHandler):
         outputs = []
         callbacks = [] 
 
-        job = Job(name="Job",service=service)
+        job = Job(name="Job",mfile=mfile)
         job.save()
 
         for i in range(0,nbinputs):
@@ -210,10 +217,16 @@ class JobHandler(BaseHandler):
 
                 thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))
                 thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
+
+                logging.info("THUMBFILE %s" % thumbfile)
+
                 output.thumb = thumbpath
                 output.save()
                 thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                callback = thumbimage.subtask([output.file.path,thumbfile,thumboptions])
+                callback = thumbimage.subtask([[output.file.path],[thumbfile],thumboptions])
+
+                logging.info("THUMBFILE callback %s" % callback)
+
             else:
                 fname = "%s.%s" % (name,"output")
                 outputpath = os.path.join( str(job.id) , fname)
@@ -250,7 +263,7 @@ class JobHandler(BaseHandler):
 
         logging.info("Created Job  %s" % (m))
 
-        return job_to_dict(job)
+        return job
 
     def delete(self, request, id):
         job = Job.objects.get(id=id)
@@ -258,10 +271,15 @@ class JobHandler(BaseHandler):
         r = rc.DELETED
         return r
     
-    def read(self, request, id):
-        job = Job.objects.get(id=id)
-        dict = job_to_dict(job)
-        return HttpResponse(dict,mimetype="application/json")
+    def read(self, request, jobid=None, mfileid=None):
+        if jobid:
+            job = Job.objects.get(id=jobid)
+            return job
+            dict = job_to_dict(job)
+            return HttpResponse(dict,mimetype="application/json")
+        elif mfileid:
+            jobs = Job.objects.filter(mfile=mfileid)
+            return jobs
 
 class JobOutputHandler(BaseHandler):
     model = JobOutput
@@ -361,10 +379,11 @@ class JobOutputContentsHandler(BaseHandler):
         logging.info(joboutput)
         job = joboutput.job
         logging.info(job)
-        service = job.service
+        accessspeed = settings.DEFAULT_ACCESS_SPEED
+        '''service = job.service
         container = service.container
         logging.info("Finding limit for %s " % (job))
-        accessspeed = settings.DEFAULT_ACCESS_SPEED
+        
         try:
             prop = ManagementProperty.objects.get(base=service,property="accessspeed")
             accessspeed = prop.value
@@ -376,6 +395,7 @@ class JobOutputContentsHandler(BaseHandler):
                 logging.info("Limit set from container property to %s for %s " % (accessspeed,job.name))
             except ObjectDoesNotExist:
                 pass
+        '''
 
         dlfoldername = "dl%s"%accessspeed
         #dlfoldername = "dl"

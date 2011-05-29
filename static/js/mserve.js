@@ -164,14 +164,14 @@ function loadMFile(mfile){
 function loadJobs(serviceid){
      $.ajax({
        type: "GET",
-       url: '/serviceapi/getjobs/'+serviceid+"/",
+       url: '/services/'+serviceid+"/jobs/",
        success: function(msg){
-            for (i in msg){
-                create_job_holder(msg[i])
-                if(!msg[i].ready){
-                    check_job(msg[i],serviceid)
+        $(msg).each(function(index,job){
+            create_job_holder(job)
+                if(!job.tasks.ready){
+                    check_job(job,serviceid)
                 }
-            }
+        });
        },
        error: function(msg){
             showError("Error Loading Jobs",objectToString(msg))
@@ -179,12 +179,12 @@ function loadJobs(serviceid){
      });
 }
 
-function create_job_paginator(task){
+function create_job_paginator(job){
 
-        var job = task.job
+        var tasks = job.tasks
         var jobid = job.id
         var joboutputs = job.joboutput_set
-        var jobresults = task.result
+        var jobresults = tasks.result
         
         var jobpaginator = $("#jobpreviewpaginator-"+jobid)
 
@@ -233,17 +233,20 @@ function load_render_preview(mfileid){
 
  $.ajax({
    type: "GET",
-   url: "/jobapi/getjobs/"+mfileid+"/",
+   url: "/mfiles/"+mfileid+"/jobs/",
    success: function(msg){
       var thumbs = []
-      for(i in msg){
-            task = msg[i]
-            job = task.job
-            job.joboutput_set[0].thumburl
-            
+
+      $(msg).each(function(index,job){
+            tasks = job.tasks
+
             if(job.joboutput_set.length > 0){
                 thumbs.push(job.joboutput_set[0].thumburl)
             }
+        });
+
+      for(i in msg){
+            
       }
         $("#previewcontent").append("<div style='clear:both' ></div>")
       for(i in thumbs){
@@ -260,17 +263,20 @@ function load_render_preview(mfileid){
 function load_jobs_mfile(mfileid){
      $.ajax({
        type: "GET",
-       url: '/jobapi/getjobs/'+mfileid+"/",
+       url: '/mfiles/'+mfileid+"/jobs/",
        success: function(msg){
-        if(msg.length > 0){
-            $("#jobs").empty()
-        }
-            for (i in msg){
-                create_job_holder(msg[i])
-                if(!msg[i].ready){
-                    check_job(msg[i],mfileid)
-                }
+            if(msg.length > 0){
+                $("#jobs").empty()
             }
+
+            $(msg).each(function(index,job){
+                create_job_holder(job)
+                if(!job.tasks.ready){
+                    check_job(job,mfileid)
+                }
+
+            });
+
        },
        error: function(msg){
             showError("Render",objectToString(msg))
@@ -278,22 +284,22 @@ function load_jobs_mfile(mfileid){
      });
 }
 
-function create_job_holder(task){
-    var job = task.job
+function create_job_holder(job){
+    var tasks = job.tasks
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
-        $( "#jobTemplate" ).tmpl( task ) .prependTo( "#jobs" );
+        $( "#jobTemplate" ).tmpl( job ) .prependTo( "#jobs" );
 
         var allDone = true
 
         var jobs = $("#job-"+job.id)
-        var percent = (task.completed_count/task.total)*100
+        var percent = (job.tasks.completed_count/job.tasks.total)*100
         var info = $( "#jobinfo-"+job.id )
         var icon = $( "#jobicon-"+job.id )
         var progressbar = $( "#jobprogressbar-"+job.id )
 
-        if(job.waiting){
+        if(job.tasks.waiting){
             icon.addClass('taskrunning')
         }else{
             icon.addClass('ui-icon-check')
@@ -308,17 +314,17 @@ function create_job_holder(task){
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
         $("#joboutputs-"+id).hide()
-        $('#jobheader-'+id).click(function() {          create_job_paginator(task);show_job(task);     });
-        $('#jobicon-'+id).click(function() {            create_job_paginator(task);show_job(task);     });
-        $('#jobinfo-'+id).click(function() {            create_job_paginator(task);show_job(task);     });
-        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(task);show_job(task);     });
+        $('#jobheader-'+id).click(function() {          create_job_paginator(job);show_job(job);     });
+        $('#jobicon-'+id).click(function() {            create_job_paginator(job);show_job(job);     });
+        $('#jobinfo-'+id).click(function() {            create_job_paginator(job);show_job(job);     });
+        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(job);show_job(job);     });
 
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
         $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
 
-        update_job_outputs(task)
+        update_job_outputs(job)
 
-        if(task.failed){
+        if(job.tasks.failed){
             $('#job-'+job.id).addClass('ui-state-error')
         }else{
             //update_job_outputs(task)
@@ -328,11 +334,11 @@ function create_job_holder(task){
     }
 }
 
-function update_job_outputs(task){
-    id = task.job.id
+function update_job_outputs(job){
+    id = job.id
     $("#joboutputs-"+id).empty()
-    for(i in task.result){
-        var resultdict = task.result[i]
+    for(i in job.tasks.result){
+        var resultdict = job.tasks.result[i]
         result = ""
         for(k in resultdict){
             result += " <span style='color:green' >"+k+"</span> : <span style='color:blue' >"+resultdict[k] + "</span>"
@@ -344,31 +350,31 @@ function update_job_outputs(task){
     }
 }
 
-function show_job(task){
-    id = task.job.id
-    if(task.job.joboutput_set.length > 0){
+function show_job(job){
+    id = job.id
+    if(job.joboutput_set.length > 0){
         $('#jobpreviewpaginator-'+id).toggle('blind');
     }
-    if(task.result.length > 0){
+    if(job.tasks.result.length > 0){
         $('#joboutputs-'+id).toggle('slide');
     }
 }
 
-function check_job(task){
-    var job = task.job
+function check_job(job){
+    var tasks = job.tasks
      $.ajax({
        type: "GET",
-       url: '/jobapi/'+job.id+"/",
+       url: '/jobs/'+job.id+"/",
        success: function(msg){
         var allDone = true
 
         var jobs = $("#job-"+job.id)
-        var percent = (msg.completed_count/msg.total)*100
+        var percent = (msg.tasks.completed_count/msg.tasks.total)*100
         var info = $( "#jobinfo-"+job.id )
         var icon = $( "#jobicon-"+job.id )
         var progressbar = $( "#jobprogressbar-"+job.id )
 
-        if(msg.waiting){
+        if(msg.tasks.waiting){
             icon.removeClass('ui-icon ui-icon-circle-check')
             icon.addClass('taskrunning')
         }else{
@@ -376,16 +382,16 @@ function check_job(task){
             icon.removeClass('taskrunning')
         }
 
-        info.html("<b>"+msg.completed_count+"</b> frames of <b>"+msg.total+"</b> complete : "+Math.round(percent)+"%" )
+        info.html("<b>"+msg.tasks.completed_count+"</b> tasks of <b>"+msg.tasks.total+"</b> complete : "+Math.round(percent)+"%" )
 
         progressbar.progressbar({
                 value: percent
         });
 
-        if(msg.waiting){
+        if(msg.tasks.waiting){
             window.setTimeout(function(){ check_job(msg) },5000)
         }else{
-            if(msg.failed){
+            if(msg.tasks.failed){
                 $('#job-'+job.id).addClass('ui-state-error')
             }else{
                 create_job_holder(msg)

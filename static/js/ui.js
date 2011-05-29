@@ -250,7 +250,7 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
                             allFields.removeClass( "ui-state-error" );
                             if ( bValid ) {
                                     var data = $("#new-job-form").serialize()
-                                    mfile_task_ajax(data);
+                                    mfile_job_ajax(data);
                                     if(serviceid){
                                         $("#tabs").tabs('select',"jobs-tab");
                                     }
@@ -267,8 +267,8 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
                     $("#argsmessage").empty();
                     $("#inputs").empty();
                     $("#inputsmessage").empty();
-                    $("#mfileid").val("")
-                    $("#serviceid").val("")
+                    //$("#mfileid").val("")
+                    //$("#serviceid").val("")
 
             }
     });

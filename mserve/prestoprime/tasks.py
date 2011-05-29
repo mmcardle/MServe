@@ -26,6 +26,7 @@ import os.path
 from celery.decorators import task
 import logging
 import subprocess
+import tempfile
 from subprocess import Popen, PIPE
 from celery.task.sets import subtask
 
@@ -68,15 +69,16 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
 @task
 def mxfframecount(inputs,outputs,options={},callbacks=[]):
     inputfile = inputs[0]
-    outputfile = outputs[0]
+    outputfile = tempfile.NamedTemporaryFile()
     logging.info("Processing mxfframecount job on %s" % (inputfile))
     if not os.path.exists(inputfile):
         logging.info("Inputfile  %s does not exist" % (inputfile))
         return False
-    args = ["d10sumchecker","-i",inputfile,"-o",outputfile]
+    args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
+    logging.info(args)
     subprocess.call(args)
     lines = 0
-    for line in open(outputfile):
+    for line in open(outputfile.name):
         lines += 1
 
     # TODO: subtract 1 for additional output
@@ -97,9 +99,20 @@ def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
         logging.info("Inputfile  %s does not exist" % (inputfile))
         return False
 
-    try:
+    import pyffmpeg
+
+    stream = pyffmpeg.VideoStream()
+    stream.open(inputfile)
+    image = stream.GetFrameNo(frame)
+    image.save(outputfile)
+
+    for callback in callbacks:
+            subtask(callback).delay()
+
+
+    '''try:
         args = ["ffmpeg","-vframes",frame,"-i",inputfile,"-f","image2",outputfile]
-        logging.info("Processing  %s" % (args))
+        logging.info("Processing  %s" % (" ".join(args)))
         ret = subprocess.call(args)
 
         if ret != 0:
@@ -110,6 +123,6 @@ def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
 
         return {}
     except Exception, e:
-            extractd10frame.retry(args=[inputs,outputs,options,callbacks], exc=e, countdown=20, kwargs=kwargs)
+            extractd10frame.retry(args=[inputs,outputs,options,callbacks], exc=e, countdown=20, kwargs=kwargs)'''
 
 

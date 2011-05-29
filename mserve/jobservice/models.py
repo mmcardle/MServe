@@ -25,12 +25,14 @@ from django.db import models
 from dataservice.models import *
 from dataservice import utils
 from dataservice import storage
+from celery.result import TaskSetResult
 # Create your models here.
 
 thumbpath = settings.THUMB_PATH
 
 class Job(NamedBase):
-    service  = models.ForeignKey(DataService)
+    #service  = models.ForeignKey(DataService)
+    mfile  = models.ForeignKey(MFile)
     created  = models.DateTimeField(auto_now_add=True)
     taskset_id = models.CharField(max_length=200)
 
@@ -44,6 +46,38 @@ class Job(NamedBase):
 
     def __unicode__(self):
         return "%s" % (self.name);
+
+    def tasks(self):
+        tsr = TaskSetResult.restore(self.taskset_id)
+        dict = {}
+        if tsr is not None:
+            
+            dict["taskset_id"] = tsr.taskset_id
+            # Dont return results until job in complete
+            if tsr.successful():
+                dict["result"] = tsr.join()
+            else:
+                dict["result"] = []
+            dict["completed_count"] = tsr.completed_count()
+            dict["failed"] = tsr.failed()
+            dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
+            dict["ready"] = tsr.ready()
+            dict["successful"] = tsr.successful()
+            dict["total"] = tsr.total
+            dict["waiting"] = tsr.waiting()
+            return dict
+        else:
+            dict["taskset_id"] = ""
+            dict["completed_count"] = 0
+            dict["failed"] = 0
+            dict["percent"] = 0
+            dict["ready"] = True
+            dict["successful"] = False
+            dict["total"] = 0
+            dict["waiting"] = False
+            return dict
+
+        return dict
 
 class JobMFile(Base):
     job  = models.ForeignKey(Job)

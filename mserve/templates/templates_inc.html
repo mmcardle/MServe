@@ -335,20 +335,20 @@
 </script>
 
 <script id="jobTemplate" type="text/x-jquery-tmpl">
-    <h5 id='jobheader-${job.id}' title="${job.name}, ${job.created}, ${job.id}" >${job.name}, ${job.created}, <em></em></h5>
+    <h5 id='jobheader-${id}' title="${name}, ${created}, ${id}" >${name}, ${created}, <em></em></h5>
     
-    <div id='job-${job.id}' class='job'  >
+    <div id='job-${id}' class='job'  >
         <table style='width:100%;'>
         <tr>
-            <td width="2%"><span id='jobicon-${job.id}' class='ui-icon ui-icon-circle-check' ></span></td>
-            <td width="25%"><div id='jobinfo-${job.id}' class='jobinfo' ><b>${completed_count}</b> task of <b>${total}</b> complete : ${percent}&#37; </div></td>
-            <td width='*' ><div style='height:10px;' id='jobprogressbar-${job.id}'></div></td>
-            <td width='5%' ><button id='jobdeletebutton-${job.id}'></button></td>
+            <td width="2%"><span id='jobicon-${id}' class='ui-icon ui-icon-circle-check' ></span></td>
+            <td width="25%"><div id='jobinfo-${id}' class='jobinfo' ><b>${tasks.completed_count}</b> task of <b>${tasks.total}</b> complete : ${tasks.percent}&#37; </div></td>
+            <td width='*' ><div style='height:10px;' id='jobprogressbar-${id}'></div></td>
+            <td width='5%' ><button id='jobdeletebutton-${id}'></button></td>
         <tr>
         </table>
-        <div  id='joboutputs-${job.id}' >
+        <div  id='joboutputs-${id}' >
         </div>
-        <div  id='jobpreviewpaginator-${job.id}' class="jobpaginators" ></div>
+        <div  id='jobpreviewpaginator-${id}' class="jobpaginators" ></div>
     </div>
 </script>
 

@@ -32,6 +32,7 @@ import utils as utils
 import settings
 from piston.utils import rc
 import django.dispatch
+from celery.task.sets import TaskSet
 from django.shortcuts import redirect
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseForbidden
@@ -49,10 +50,10 @@ from dataservice.tasks import md5file
 
 use_celery = settings.USE_CELERY
 
-if use_celery:
-    thumbvideo = thumbvideo.delay
-    thumbimage = thumbimage.delay
-    proxyvideo = proxyvideo.delay
+#if use_celery:
+#    thumbvideo = thumbvideo.delay
+#    thumbimage = thumbimage.delay
+#    proxyvideo = proxyvideo.delay
     
 # Declare Signals
 mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
@@ -845,11 +846,21 @@ class MFile(NamedBase):
 
     def post_process(self):
         if self.file:
+
+            from jobservice.models import Job
+            from jobservice.models import JobMFile
+
+            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
+            job.save()
+
+            #jobmfile = JobMFile(mfile=self,job=job,index=0)
+            #jobmfile.save()
+
             # MIME type
-            self.mimetype = mimetype = mimefile(self.file.path)
+            self.mimetype = mimetype = mimefile([self.file.path],[],{})
 
             # checksum
-            self.checksum = md5file([self],[])
+            self.checksum = md5file([self],[],{})
 
             # record size
             self.size = self.file.size            
@@ -876,28 +887,49 @@ class MFile(NamedBase):
             else:
                 logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
 
+            tasks = []
+
             if mimetype.startswith('video') or self.file.name.endswith('mxf'):
-                thumbtask = thumbvideo(self.file.path,fullthumbpath,settings.thumbsize[0],settings.thumbsize[1])
+
+                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumbtask = thumbvideo.subtask([[self.file.path],[fullthumbpath],th_options ])
                 self.thumb = thumbpath
-                postertask = thumbvideo(self.file.path,fullposterpath,settings.postersize[0],settings.postersize[1])
+
+                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
+                postertask = thumbvideo.subtask([[self.file.path],[fullposterpath],po_options])
                 self.poster = posterpath
-                proxytask = proxyvideo(self.file.path,fullproxypath,width=settings.postersize[0],height=settings.postersize[1])
+
+                proxytask = proxyvideo.subtask([[self.file.path],[fullproxypath],po_options])
                 self.proxy = proxypath
+                tasks.extend([thumbtask,postertask,proxytask])
 
             elif mimetype.startswith('image'):
                 logging.info("Creating thumb inprocess for Image '%s' %s " % (self,mimetype))
-                thumbtask = thumbimage(self.file.path,fullthumbpath,options={"width":settings.thumbsize[0],"height":settings.thumbsize[1]})
+                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumbtask = thumbimage.subtask([[self.file.path],[fullthumbpath],th_options])
                 self.thumb = thumbpath
-                postertask = thumbimage(self.file.path,fullposterpath,options={"width":settings.postersize[0],"height":settings.postersize[1]})
+
+                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
+                postertask = thumbimage.subtask([[self.file.path],[fullposterpath],po_options])
                 self.poster = posterpath
+                tasks.extend([thumbtask,postertask])
 
             elif self.file.name.endswith('blend'):
                 logging.info("Creating Blender thumb '%s' %s " % (self,mimetype))
                 # TODO : Change to a Preview of a frame of the blend file
-                thumbtask = thumbimage("/var/mserve/www-root/mservemedia/images/blender.png",fullthumbpath,options={"width":settings.thumbsize[0],"height":settings.thumbsize[1]})
+                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumbtask = thumbimage.subtask([["/var/mserve/www-root/mservemedia/images/blender.png"],[fullthumbpath],th_options])
                 self.thumb = thumbpath
+                tasks.extend([thumbtask])
             else:
                 logging.info("Not creating thumb for '%s' %s " % (self,mimetype))
+
+            ts = TaskSet(tasks=tasks)
+            tsr = ts.apply_async()
+            tsr.save()
+
+            job.taskset_id=tsr.taskset_id
+            job.save()
 
             self.save()
         

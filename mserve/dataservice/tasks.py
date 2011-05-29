@@ -23,7 +23,6 @@
 ########################################################################
 from celery.decorators import task
 from celery.task.sets import subtask
-from django.core.files import File
 from subprocess import Popen, PIPE
 import logging
 import subprocess
@@ -37,66 +36,11 @@ import os
 import os.path
 
 @task
-def create_mfile_task(inputs,outputs,options={},callbacks=[]):
-
-    input = inputs[0]
-    service = options["service"]
-    name = options["name"]
-
-    mfile = service.create_mfile(name,post_process=False)
-    
-    logging.info("input to Mfile '%s' " % input)
-    logging.info("created Mfile '%s' " % mfile)
-
-    if not os.path.exists(input):
-        logging.info("Input for Mfile %s does not exist" % (input))
-        dir = os.path.dirname(path)
-        if os.path.exists(dir):
-            logging.info("Dir %s",os.path.listdir(dir))
-        return False
-
-    f = open(input, 'rb' ,chunk_size)
-
-
-    mfile.file.save(name, File(f))
-
-    mfile.save()
-
-    f.close()
-
-    mfile.post_process()
-
-    for callback in callbacks:
-        subtask(callback).delay()
-
-    return {  }
-
-@task
-def update_mfile_task(inputs,outputs,options={},callbacks=[]):
-    input = inputs[0]
-    name = options["name"]
-    mfile = options['mfile']
-
-    logging.info("input to Mfile '%s' " % input)
-    logging.info("updating Mfile '%s' " % mfile)
-
-    f = open(input, 'rb' ,chunk_size)
-
-    mfile.file.save(name, File(f))
-
-    mfile.save()
-
-    f.close()
-
-    mfile.post_process()
-
-    for callback in callbacks:
-        subtask(callback).delay()
-
-    return {  }
-
-@task
-def thumbvideo(videopath,thumbpath,width,height):
+def thumbvideo(inputs,outputs,options={},callbacks=[]):
+    videopath = inputs[0]
+    thumbpath = outputs[0]
+    width=options["width"]
+    height=options["height"]
     logging.info("Processing video thumb %sx%s for %s to %s" % (width,height,videopath,thumbpath))
     if not os.path.exists(videopath):
         logging.info("Video %s does not exist" % (videopath))
@@ -108,7 +52,12 @@ def thumbvideo(videopath,thumbpath,width,height):
     return ret
 
 @task
-def proxyvideo(infile,proxypath,width="420",height="256"):
+def proxyvideo(inputs,outputs,options={},callbacks=[]):
+
+        infile = inputs[0]
+        proxypath = outputs[0]
+        width=options["width"]
+        height=options["height"]
 
         logfile = open('/var/mserve/mserve.log','a')
 	errfile = open('/var/mserve/mserve.log','a')
@@ -120,8 +69,6 @@ def proxyvideo(infile,proxypath,width="420",height="256"):
             vidfifo="stream.yuv"
             audfifo="stream.wav"
             outfile=proxypath
-
-            options= ["-vcodec","libx264","-vpre","lossless_max"]
 
             tmpdir = tempfile.mkdtemp()
             vidfilename = os.path.join(tmpdir, vidfifo)
@@ -142,9 +89,13 @@ def proxyvideo(infile,proxypath,width="420",height="256"):
             Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
             Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
 
-            ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename,"-acodec","libfaac","-ac","2","-ab","64","-ar","44100","-vf","scale=480:272"]
+            vid_options= ["-vcodec","libx264","-vpre","baseline"]
+            aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100","-vf","scale=%s:%s"%(width,height)]
 
-            ffmpeg_args.extend(options)
+            ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
+
+            ffmpeg_args.extend(aud_options)
+            ffmpeg_args.extend(vid_options)
             ffmpeg_args.append(tmpfile)
 
             logging.info(" ".join(ffmpeg_args))
@@ -164,24 +115,21 @@ def proxyvideo(infile,proxypath,width="420",height="256"):
             os.unlink(tmpfile)
             tfile.close()
 
-@task
-def proxyvideo2(videopath,proxypath,width="420",height="256"):
-    logging.info("Processing video proxy for %s to %s" % (videopath,proxypath))
-    if not os.path.exists(videopath):
-        logging.info("Video %s does not exist" % (videopath))
-        return False
-    args = ["ffmpeg","-s","%sx%s"%(width,height),"-i",videopath,"-f","ogg","-vcodec","libtheora","-b","800k","-g","300","-acodec","libvorbis","-ab","128k",proxypath]
-    logging.info(args)
-    ret = subprocess.call(args)
-    return ret
+            for callback in callbacks:
+                subtask(callback).delay()
 
 @task
-def mimefile(mfilepath):
+def mimefile(inputs,outputs,options={},callbacks=[]):
+    mfilepath = inputs[0]
     m = magic.open(magic.MAGIC_MIME)
     m.load()
     result = m.file(mfilepath)
     mimetype = result.split(';')[0]
     logging.info("Mime for file %s is %s" % (mfilepath,mimetype))
+
+    for callback in callbacks:
+        subtask(callback).delay()
+
     return mimetype
 
 @task
@@ -200,10 +148,17 @@ def md5file(inputs,outputs,options={},callbacks=[]):
     logging.info("MD5 calclated %s" % (md5string ))
     mfile.checksum = md5string
     mfile.save()
+
+    for callback in callbacks:
+        subtask(callback).delay()
+
     return md5string
 
 @task
-def thumbimage(mfilepath,thumbpath,options={},callback=None):
+def thumbimage(inputs,outputs,options={},callbacks=[]):
+
+    mfilepath = inputs[0]
+    thumbpath = outputs[0]
 
     logging.info("thumbimage %s to %s with options %s " % (mfilepath,thumbpath,options) )
 
@@ -237,7 +192,7 @@ def thumbimage(mfilepath,thumbpath,options={},callback=None):
     im.save(thumbpath, "PNG")
     logging.info("Thumnail created %s" % (thumbpath))
 
-    if callback:
+    for callback in callbacks:
         subtask(callback).delay()
 
     return True

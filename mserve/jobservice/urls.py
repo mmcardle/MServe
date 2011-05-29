@@ -39,6 +39,13 @@ joboutput_handler = Resource(JobOutputContentsHandler)
 
 urlpatterns = patterns('',
 
+    url(r'^mfiles/(?P<mfileid>[^/]+)/jobs/$', job_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/jobs/$', jobservice_handler),
+
+    url(r'^jobs/(?P<jobid>[^/]+)/$', job_handler),
+
+
+
     # Generic Job Methods
     url(r'^jobapi/$', job_handler),
 
@@ -52,6 +59,5 @@ urlpatterns = patterns('',
     url(r'^jobapi/getpreview/(?P<jobid>[^/]+)/$', render_results_handler),
     url(r'^jobapi/contents/(?P<outputid>[^/]+)/$', joboutput_handler),
 
-    url(r'^serviceapi/getjobs/(?P<serviceid>[^/]+)/$', jobservice_handler),
     url(r'^jobapi/getjobs/(?P<mfileid>[^/]+)/$', jobmfile_handler),
 )
