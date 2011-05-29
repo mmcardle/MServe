@@ -21,9 +21,10 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-import os.path
 from celery.decorators import task
 from celery.task.sets import subtask
+from django.core.files import File
+from subprocess import Popen, PIPE
 import logging
 import subprocess
 import urllib
@@ -32,7 +33,8 @@ import Image
 import pycurl
 import tempfile
 import magic
-from django.core.files import File
+import os
+import os.path
 
 @task
 def create_mfile_task(inputs,outputs,options={},callbacks=[]):
@@ -106,7 +108,64 @@ def thumbvideo(videopath,thumbpath,width,height):
     return ret
 
 @task
-def proxyvideo(videopath,proxypath,width="420",height="256"):
+def proxyvideo(infile,proxypath,width="420",height="256"):
+
+        logfile = open('/var/mserve/mserve.log','a')
+	errfile = open('/var/mserve/mserve.log','a')
+
+	tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+
+	try:
+            tmpfile=tfile.name
+            vidfifo="stream.yuv"
+            audfifo="stream.wav"
+            outfile=proxypath
+
+            options= ["-vcodec","libx264","-vpre","lossless_max"]
+
+            tmpdir = tempfile.mkdtemp()
+            vidfilename = os.path.join(tmpdir, vidfifo)
+            try:
+                os.mkfifo(vidfilename)
+            except OSError, e:
+                logging.info("Failed to create Video FIFO: %s" % e)
+
+            audfilename = os.path.join(tmpdir, audfifo)
+            try:
+                os.mkfifo(audfilename)
+            except OSError, e:
+                logging.info("Failed to create Audio FIFO: %s" % e)
+
+            ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
+            ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
+
+            Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
+            Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
+
+            ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename,"-acodec","libfaac","-ac","2","-ab","64","-ar","44100","-vf","scale=480:272"]
+
+            ffmpeg_args.extend(options)
+            ffmpeg_args.append(tmpfile)
+
+            logging.info(" ".join(ffmpeg_args))
+            p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
+            p.communicate()
+
+            qt_args = ["qt-faststart", tmpfile, outfile]
+            qt = Popen(qt_args, stdin=PIPE, close_fds=True)
+            qt.communicate()
+
+        except Exception as e:
+            logging.info("Error encoding video %s" % e)
+            os.unlink(tmpfile)
+            tfile.close()
+        else:
+            logging.info("Proxy Video '%s' Done"% infile)
+            os.unlink(tmpfile)
+            tfile.close()
+
+@task
+def proxyvideo2(videopath,proxypath,width="420",height="256"):
     logging.info("Processing video proxy for %s to %s" % (videopath,proxypath))
     if not os.path.exists(videopath):
         logging.info("Video %s does not exist" % (videopath))

@@ -158,6 +158,9 @@ Celery Startup
 =============
 sudo -u www-data ./manage.py celeryd --verbosity=2 --loglevel=DEBUG
 
+h264 on chrome
+=============
+sudo apt-get install chromium-codecs-ffmpeg-nonfree
 
 Oauth Setup (optional)
 ==========

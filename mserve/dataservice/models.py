@@ -855,10 +855,9 @@ class MFile(NamedBase):
             self.size = self.file.size            
             self.save()
 
-
             thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
             posterpath = os.path.join( str(self.file) + ".poster.jpg")
-            proxypath = os.path.join( str(self.file) + ".proxy.ogg")
+            proxypath = os.path.join( str(self.file) + ".proxy.m4v")
             fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
             fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
             fullproxypath = os.path.join(settings.THUMB_ROOT , proxypath)
