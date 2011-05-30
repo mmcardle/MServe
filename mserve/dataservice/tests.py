@@ -177,9 +177,6 @@ class APITest(TestCase):
         files = service.do("GET","mfiles")
         self.failUnlessEqual(len(files), 2)
 
-        efile = emptymfile.do("GET","file")
-        self.failUnlessEqual(type(efile), HttpResponseNotFound)
-
         ffile = fullfile.do("GET","file")
         self.failUnlessEqual(type(ffile), HttpResponseRedirect)
 
@@ -195,12 +192,6 @@ class APITest(TestCase):
 
         folders = service.do("GET","mfolders")
         self.failUnlessEqual(len(folders), 2)
-
-        job = service.do("POST","jobs",name="folder1")
-        self.failUnlessEqual(type(job), Job)
-
-        jobs = service.do("GET","jobs")
-        self.failUnlessEqual(len(jobs), 1)
 
     def test_serviceauth(self):
         container = HostingContainer.create_container("HostingContainer1")
@@ -285,9 +276,6 @@ class APITest(TestCase):
         files = service_auth.do("GET","mfiles")
         self.failUnlessEqual(len(files), 2)
 
-        efile = emptymfile.do("GET","file")
-        self.failUnlessEqual(type(efile), HttpResponseNotFound)
-
         ffile = fullfile.do("GET","file")
         self.failUnlessEqual(type(ffile), HttpResponseRedirect)
 
@@ -304,11 +292,8 @@ class APITest(TestCase):
         folders = service_auth.do("GET","mfolders")
         self.failUnlessEqual(len(folders), 2)
 
-        job = service_auth.do("POST","jobs",name="folder1")
-        self.failUnlessEqual(type(job), Job)
-
         jobs = service_auth.do("GET","jobs")
-        self.failUnlessEqual(len(jobs), 1)
+        self.failUnlessEqual(len(jobs), 2)
 
     def test_serviceauth_customer(self):
         container = HostingContainer.create_container("HostingContainer1")
@@ -419,11 +404,8 @@ class APITest(TestCase):
         folders = service_auth.do("GET","mfolders")
         self.failUnlessEqual(len(folders), 1)
 
-        shouldbe_job = service_auth.do("POST","jobs",name="folder1")
-        self.failUnlessEqual(type(shouldbe_job), Job)
-
         jobs = service_auth.do("GET","jobs")
-        self.failUnlessEqual(len(jobs), 1)
+        self.failUnlessEqual(len(jobs), 4)
 
     def test_mfile(self):
         service = HostingContainer.create_container("HostingContainer1").create_data_service("Service1")
@@ -493,6 +475,12 @@ class APITest(TestCase):
         kwargs = {"file":ContentFile('four')}
         updatedmfile = mfile.do("PUT",**kwargs)
         self.failUnlessEqual(updatedmfile.size, 4)
+
+        job = mfile.do("POST","jobs",name="job1")
+        self.failUnlessEqual(type(job), Job)
+
+        jobs = mfile.do("GET","jobs")
+        self.failUnlessEqual(len(jobs), 3)
         
     def test_mfile_readonly(self):
         service = HostingContainer.create_container("HostingContainer1").create_data_service("Service1")

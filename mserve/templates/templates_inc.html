@@ -461,11 +461,11 @@
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
     {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
-        <a target='_blank' href='/jobapi/contents/${id}/' ><img src='${thumburl}' /></a>
+        <a target='_blank' href='/joboutputs/${id}/contents' ><img src='${thumburl}' /></a>
     {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
         <div id="text-${id}" style="width:100%;height:200px;overflow: scroll;border: 1px inset silver;padding: 0px;margin: 5px;" ></div>
     {%templatetag openvariable%}else{%templatetag closevariable%}
-        <a target='_blank' href='/jobapi/contents/${id}/' >Download</a>
+        <a target='_blank' href='/joboutputs/${id}/contents' >Download</a>
     {%templatetag openvariable%}/if  {%templatetag closevariable%}
 </script>
 

@@ -4,7 +4,7 @@ function mfile_job_ajax(data){
      $.ajax({
        type: "POST",
        data: data,
-       url: "/jobapi/",
+       url: "/jobs/",
        success: function(msg){
                 create_job_holder(msg)
                 //create_job_paginator(msg)

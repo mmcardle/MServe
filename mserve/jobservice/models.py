@@ -79,20 +79,6 @@ class Job(NamedBase):
 
         return dict
 
-class JobMFile(Base):
-    job  = models.ForeignKey(Job)
-    mfile = models.ForeignKey(MFile)
-    index = models.IntegerField(default=0)
-    created  = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ('created', 'job')
-
-    def save(self):
-        if not self.id:
-            self.id = utils.random_id()
-        super(JobMFile, self).save()
-
 class JobOutput(NamedBase):
     job   = models.ForeignKey(Job)
     mimetype = models.CharField(max_length=200,blank=True,null=True)

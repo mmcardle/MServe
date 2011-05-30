@@ -24,7 +24,6 @@
 from dataservice.models import MFile
 from jobservice.models import Job
 from jobservice.models import JobOutput
-from jobservice.models import JobMFile
 from django.db import models
 from django.db.models.signals import post_save
 from dataservice.tasks import thumbimage
@@ -127,8 +126,6 @@ def mfile_get_handler( sender, mfile=False, **kwargs):
 
                 if len(tasks) > 0:
 
-                    jobmfile = JobMFile(mfile=mfile,job=job,index=0)
-                    jobmfile.save()
 
                     logging.info("tasks to execute created %s" % task)
 

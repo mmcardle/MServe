@@ -110,19 +110,4 @@ def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
             subtask(callback).delay()
 
 
-    '''try:
-        args = ["ffmpeg","-vframes",frame,"-i",inputfile,"-f","image2",outputfile]
-        logging.info("Processing  %s" % (" ".join(args)))
-        ret = subprocess.call(args)
-
-        if ret != 0:
-            raise Exception("error")
-
-        for callback in callbacks:
-            subtask(callback).delay()
-
-        return {}
-    except Exception, e:
-            extractd10frame.retry(args=[inputs,outputs,options,callbacks], exc=e, countdown=20, kwargs=kwargs)'''
-
 

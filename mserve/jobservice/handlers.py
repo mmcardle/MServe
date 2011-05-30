@@ -40,7 +40,6 @@ from mserve.dataservice.models import DataService
 from mserve.dataservice.models import MFile
 from mserve.jobservice.models import *
 from mserve.jobservice.models import Job
-from mserve.jobservice.models import JobMFile
 from mserve.jobservice.models import JobOutput
 import dataservice.models as models
 import dataservice.usage_store as usage_store
@@ -117,25 +116,6 @@ class JobServiceHandler(BaseHandler):
         arr = Job.objects.filter(mfile__in=MFile.objects.filter(service=service).all())
         return HttpResponse(arr,mimetype="application/json")
 
-class JobMFileHandler(BaseHandler):
-    model = JobMFile
-    allowed_methods = ('GET','POST','DELETE')
-    #fields = ()
-    #fields = ('id','name','created','taskset_id')
-
-    def read(self, request, mfileid):
-        mfile = MFile.objects.get(pk=mfileid)
-        jobmfiles = JobMFile.objects.filter(mfile=mfile)
-
-        arr = []
-        for jobmfile in jobmfiles:
-            dict = job_to_dict(jobmfile.job)
-            if dict is not None:
-                arr.append(dict)
-
-        return HttpResponse(arr,mimetype="application/json")
-
-
 class JobHandler(BaseHandler):
     model = Job
     allowed_methods = ('GET','POST','DELETE')
@@ -192,8 +172,6 @@ class JobHandler(BaseHandler):
         for i in range(0,nbinputs):
             mfileid = request.POST['input-%s'%i]
             mfile = MFile.objects.get(id=mfileid)
-            jobmfile = JobMFile(mfile=mfile,job=job,index=0)
-            jobmfile.save()
             inputs.append(mfile.file.path)
 
         if job == None:
@@ -284,7 +262,7 @@ class JobHandler(BaseHandler):
 class JobOutputHandler(BaseHandler):
     model = JobOutput
     fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
-
+'''
 class RenderResultsHandler(BaseHandler):
     allowed_methods = ('GET','POST')
 
@@ -362,13 +340,10 @@ class RenderHandler(BaseHandler):
         job.taskset_id=tsr.taskset_id
         job.save()
 
-        jobmfile = JobMFile(mfile=mfile,job=job,index=0)
-        jobmfile.save()
-
         dict = job_to_dict(job)
         return HttpResponse(dict,mimetype="application/json")
 
-
+'''
 class JobOutputContentsHandler(BaseHandler):
     allowed_methods = ('GET')
 

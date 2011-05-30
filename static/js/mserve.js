@@ -219,7 +219,7 @@ function load_joboutput_text(id){
 
  $.ajax({
    type: "GET",
-   url: "/jobapi/contents/"+id+"/",
+   url: "/joboutputs/"+id+"/contents/",
    success: function(msg){
                 $("#text-"+id).append("<pre>"+msg+"</pre>");
    },

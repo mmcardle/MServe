@@ -89,8 +89,12 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
             Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
             Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
 
-            vid_options= ["-vcodec","libx264","-vpre","baseline"]
-            aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100","-vf","scale=%s:%s"%(width,height)]
+            vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(width,height)]
+            aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
+            # TODO: Fix audio for mxf
+            if infile.endswith(".mxf"):
+                aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
 
             ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
 

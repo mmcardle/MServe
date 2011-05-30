@@ -521,8 +521,8 @@ class DataService(NamedBase):
         "properties":["GET","PUT"],
         "usages":["GET"],
         "mfiles":["GET","POST"],
-        "jobs":["GET","POST"],
         "mfolders":["GET","POST"],
+        "jobs":["GET"],
         }
 
     def __init__(self, *args, **kwargs):
@@ -535,7 +535,9 @@ class DataService(NamedBase):
         if url == "mfolders":
             return self.mfolder_set.all()
         if url == "jobs":
-            return self.job_set.all()
+            from jobservice.models import Job
+            jobs = Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
+            return jobs
         if not url:
             return self
 
@@ -578,12 +580,6 @@ class DataService(NamedBase):
         import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage,obj=self.container)
-
-    def create_job(self,name):
-        from jobservice.models import Job
-        job = Job(name=name,service=self)
-        job.save()
-        return job
 
     def create_mfolder(self,name,parent=None):
         try :
@@ -701,7 +697,8 @@ class MFile(NamedBase):
             "auths":["GET","PUT","POST","DELETE"],
             "properties":[],
             "usages":["GET"],
-            "file": ["GET","PUT","DELETE"]
+            "file": ["GET","PUT","DELETE"],
+            "jobs":["GET","POST"],
             }
 
     class Meta:
@@ -712,7 +709,9 @@ class MFile(NamedBase):
         self.metrics = mfile_metrics
 
     def get(self,url, *args, **kwargs):
-        if url == "file":
+        if url == "jobs":
+            return self.job_set.all()
+        elif url == "file":
             # TODO Add Usage here
             #self.usage["disc_access"] = self.usage["disc_access"] + 100
             if self.file:
@@ -725,6 +724,12 @@ class MFile(NamedBase):
         return None
 
     def post(self,url, *args, **kwargs):
+        if url == "jobs":
+            if kwargs.has_key('name'):
+                name = kwargs['name']
+                job = self.create_job(name)
+                return job
+            return HttpResponseBadRequest()
         return None
 
     def put(self,url, *args, **kwargs):
@@ -833,6 +838,12 @@ class MFile(NamedBase):
         response = redirect("/%s"%redirecturl)
         return response
 
+    def create_job(self,name):
+        from jobservice.models import Job
+        job = Job(name=name,mfile=self)
+        job.save()
+        return job
+
     def duplicate(self):
         new_mfile = self.service.create_mfile(self.name,file=self.file)
         new_mfile.save()
@@ -848,13 +859,9 @@ class MFile(NamedBase):
         if self.file:
 
             from jobservice.models import Job
-            from jobservice.models import JobMFile
 
             job = Job(name="%s Ingest Job"%(self.name),mfile=self)
             job.save()
-
-            #jobmfile = JobMFile(mfile=self,job=job,index=0)
-            #jobmfile.save()
 
             # MIME type
             self.mimetype = mimetype = mimefile([self.file.path],[],{})
