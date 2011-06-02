@@ -20,6 +20,7 @@
 <script type="text/javascript" src="/mservemedia/js/service.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/mfile.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/mserve.js" ></script>
+<script type="text/javascript" src="/mservemedia/js/job.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/ui.js" ></script>
 <!--[if IE]><script language="javascript" type="text/javascript" src="/mservemedia/js/flot/excanvas.min.js"></script><![endif]-->
 <script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.js"></script>
@@ -45,7 +46,7 @@
   <div class="header">
     <div class="header_resize">
       <div class="logo">
-        <h1><a href="/"><span>M</span>Serve</a><small> serving your needs</small></h1>
+        <h1><a href="/"><span class="blue">M</span>Serve</a><small> serving your needs</small></h1>
       </div>
       <div class="menu_nav">
         <ul>
@@ -60,7 +61,6 @@
             <li><a href="/accounts/profile/">Profile</a></li>
             <li><a href="/accounts/logout/">Logout</a></li>
             {% endif %}
-
             {% if not user.is_authenticated %}
             <li><a href="/accounts/login/">Login</a></li>
             {% endif %}
@@ -73,11 +73,31 @@
 
           <div id="main_img" >
               {% block main_img %}
-              <img alt="" src="/mservemedia/images/heart_monitor.gif" height="170" width="280" style="margin-top:13px; margin-left: 13px;" />
-            {% endblock %}
+
+              {% if user.is_authenticated %}
+                  <h2 style="top:10px;padding-top:5px;padding-left:30px;">
+                      <span class="red">W</span>elcome <span class="red normal" >{{user.username}}</span></h2>
+                  <table class="ui-corner-all ui-widget-content" style="top:0px;padding:4px;margin-left:auto;margin-right: auto" >
+                      <tr><th>Name</th><td>{{user.get_full_name}}</td></tr>
+                      <tr><th>Mail</th><td>{{user.email}}</td></tr>
+                      {% if user.is_superuser  %}
+                            <tr><th>Rank</th><td class="red">SuperUser </td></tr>
+                      {% else %}
+                        {% if user.is_staff  %}
+                            <tr><th>Rank</th><td class="blue">Staff</td></tr>
+                            {% else %}
+                            <tr><th>Rank</th><td class="green">User</td></tr>
+                            {% endif %}
+                      {% endif %}
+                      <tr><th>Joined</th><td>{{user.date_joined|date}}, {{user.date_joined|time}}</td></tr>
+                  </table>
+  
+              {% endif %}
+
+              {% endblock %}
           </div>
 
-        <h2>jobs <span>data</span> storage</h2>
+          <h2 class="usage_header">jobs <span class="blue">data</span> storage</h2>
         <p>
 
         {% block usages %}{% endblock %}
@@ -156,6 +176,7 @@ $(document).ready(function() {
             window.location.hash = ui.tab.hash;
         })
     });
+    $(".dropshadow").addClass(" ui-corner-all");
 });
 </script>
 {% block bottomscript %}{% endblock %}

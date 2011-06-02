@@ -95,9 +95,8 @@ function load_mfiles_auth(authid){
                         var gmfileid = mfiles[gid].id;
                         $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
                         $('#newjobbutton-'+gmfileid).click(function(){
-                            create_new_job_ui_dialog(gmfileid, serviceid)
+                            create_new_job_ui_dialog(gmfileid,false)
                             $("#mfileid").val(gmfileid);
-                            $("#serviceid").val(serviceid);
                             $("#dialog-new-job-dialog-form").dialog( "open" );
                         });
                     })();

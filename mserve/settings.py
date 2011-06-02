@@ -76,12 +76,12 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = '/var/mserve/mservedata/'
+MEDIA_ROOT = '/var/mserve/www-root/mservemedia/'
 THUMB_ROOT = '/var/mserve/www-root/mservethumbs/'
 THUMB_PATH = "/mservethumbs/"
 
-# MServe Specific Setting
-
+# MServe Specific Settings
+STORAGE_ROOT = '/var/mserve/mservedata/'
 SECDOWNLOAD_ROOT = '/var/mserve/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
@@ -121,8 +121,6 @@ AUTHENTICATION_BACKENDS = (
 )
 OPENID_CREATE_USERS = True
 OPENID_UPDATE_DETAILS_FROM_SREG = True
-
-
 
 ROOT_URLCONF = 'mserve.urls'
 
@@ -190,7 +188,3 @@ postersize = (420,256)
 
 # For FGCI
 FORCE_SCRIPT_NAME = ''
-
-# TODO : Remove
-import os
-STORAGE_DIR = os.path.join('/', 'tmp', 'postmark-storage')

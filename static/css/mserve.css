@@ -45,8 +45,17 @@ html, .main {
 	text-decoration:none;
 	float:left;
 }
-.header h1 span {
+.blue {
 	color:#78bbe6;
+}
+.white {
+	color:white;
+}
+.red {
+    color:#dd4b4b;
+}
+.green {
+    color:#237734;
 }
 .header h1 small {
 	display:block;
@@ -101,7 +110,7 @@ html, .main {
     margin-top: 13px;
     margin-left: 14px;
 }
-.header_img h2 {
+.header_img .usage_header {
     width:500px;
     float:right;
     text-align:left;
@@ -123,10 +132,14 @@ html, .main {
     font-variant: small-caps;
     white-space: nowrap;
 }
-
+.header_img {
+	font-family:Arial, Helvetica, sans-serif;
+}
 .header_img h2 span {
 	font:normal 46px Arial, Helvetica, sans-serif;
-	color:#fff;
+}
+.header_img h2 span.normal {
+	font:normal 24px Arial, Helvetica, sans-serif;
 }
 
 .header_img p {
@@ -444,6 +457,7 @@ li.fluid a {
     color:black;
     text-align:left;
     margin: 1px;
+    height:80px;
 }
 .thumb .info > a{
     text-decoration: none;

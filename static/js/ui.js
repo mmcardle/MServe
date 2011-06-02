@@ -159,7 +159,7 @@ function create_new_add_auth_ui_dialog(authid) {
 
 
 
-function create_new_job_ui_dialog(mfileid, serviceid) {
+function create_new_job_ui_dialog(mfileid, servicepage) {
     // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
     $( "#dialog:ui-dialog" ).dialog( "destroy" );
 
@@ -169,13 +169,21 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
     allFields = $( [] ).add( job ).add(args).add(inputs)
     tips = $( ".validateTips" );
 
-    $("#mfileid").val(mfileid)
-    $("#serviceid").val(serviceid)
     $("#args").empty()
     $("#argsmessage").empty()
     $("#inputs").empty()
     $("#inputsmessage").empty()
 
+    $.ajax({
+       type: "GET",
+       url: "/mfiles/"+mfileid+"/",
+       success: function(mfile){
+            $( "#mfileNoActionTemplate" ).tmpl( mfile ).appendTo("#job-input-preview");
+        },
+        error: function(msg){
+         showError("Error", ""+msg.responseText );
+       }
+    });
 
     $.ajax({
        type: "GET",
@@ -221,7 +229,7 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
                         if(i==0){
                             value=mfileid
                         }
-                        $("#inputs").append("<label for='"+inputkey+"'>"+inputlabel+"</label><input type='text' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
+                        $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
                     }
                 }
              });
@@ -241,8 +249,8 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
 
     $( "#dialog-new-job-dialog-form" ).dialog({
             autoOpen: false,
-            height: 400,
-            width: 450,
+            height: 500,
+            width: 650,
             modal: true,
             buttons: {
                     "Create Task": function() {
@@ -250,8 +258,8 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
                             allFields.removeClass( "ui-state-error" );
                             if ( bValid ) {
                                     var data = $("#new-job-form").serialize()
-                                    mfile_job_ajax(data);
-                                    if(serviceid){
+                                    mfile_job_ajax(mfileid,data);
+                                    if(servicepage){
                                         $("#tabs").tabs('select',"jobs-tab");
                                     }
                                     $( this ).dialog( "close" );
@@ -267,9 +275,7 @@ function create_new_job_ui_dialog(mfileid, serviceid) {
                     $("#argsmessage").empty();
                     $("#inputs").empty();
                     $("#inputsmessage").empty();
-                    //$("#mfileid").val("")
-                    //$("#serviceid").val("")
-
+                    $("#job-input-preview").empty()
             }
     });
 

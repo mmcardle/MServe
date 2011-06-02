@@ -22,8 +22,6 @@
 #
 ########################################################################
 from django.db import models
-import pickle
-import base64
 import storage
 import logging
 import datetime
@@ -48,13 +46,6 @@ from dataservice.tasks import thumbimage
 from dataservice.tasks import mimefile
 from dataservice.tasks import md5file
 
-use_celery = settings.USE_CELERY
-
-#if use_celery:
-#    thumbvideo = thumbvideo.delay
-#    thumbimage = thumbimage.delay
-#    proxyvideo = proxyvideo.delay
-    
 # Declare Signals
 mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
 
@@ -718,7 +709,7 @@ class MFile(NamedBase):
                 return self.__get_file()
             else:
                 return HttpResponseNotFound()
-        elif url == "":
+        elif url == "" or url == None:
             return self
 
         return None
@@ -830,7 +821,6 @@ class MFile(NamedBase):
             logging.info("to %s " % fullfilepath )
             os.link(mfilefilepath,fullfilepath)
 
-
         import dataservice.models as models
         
         usage_store.record(mfile.id,models.metric_access,mfile.size)
@@ -889,11 +879,6 @@ class MFile(NamedBase):
             if not os.path.isdir(posterhead):
                 os.makedirs(posterhead)
 
-            if use_celery:
-                logging.info("Using CELERY for processing ")
-            else:
-                logging.info("Processing synchronously (change settings.USE_CELERY to 'True' to use celery)" )
-
             tasks = []
 
             if mimetype.startswith('video') or self.file.name.endswith('mxf'):
@@ -925,7 +910,8 @@ class MFile(NamedBase):
                 logging.info("Creating Blender thumb '%s' %s " % (self,mimetype))
                 # TODO : Change to a Preview of a frame of the blend file
                 th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbimage.subtask([["/var/mserve/www-root/mservemedia/images/blender.png"],[fullthumbpath],th_options])
+                blender_path = os.path.join(settings.MEDIA_ROOT,"images/blender.png")
+                thumbtask = thumbimage.subtask([[blender_path],[fullthumbpath],th_options])
                 self.thumb = thumbpath
                 tasks.extend([thumbtask])
             else:

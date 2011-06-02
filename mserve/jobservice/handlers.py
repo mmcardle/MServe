@@ -23,18 +23,13 @@
 ########################################################################
 import os
 import os.path
-import string
 import logging
-
-from anyjson import serialize as JSON_dump
-from celery.result import TaskSetResult
 from celery.task.sets import TaskSet
 from dataservice.forms import *
 from dataservice.models import *
 from dataservice.tasks import thumbimage
 
 from django.http import *
-from django.http import HttpResponse
 from django.shortcuts import redirect
 from mserve.dataservice.models import DataService
 from mserve.dataservice.models import MFile
@@ -46,7 +41,6 @@ import dataservice.usage_store as usage_store
 from piston.handler import BaseHandler
 from piston.utils import rc
 import settings as settings
-from tasks import render_blender
 import dataservice.utils as utils
 
 #should be
@@ -111,38 +105,42 @@ cache['prestoprime.tasks.extractd10frame'] = {
 class JobServiceHandler(BaseHandler):
     allowed_methods = ('GET',)
 
-    def read(self, request, serviceid):
-        service = DataService.objects.get(pk=serviceid)
-        arr = Job.objects.filter(mfile__in=MFile.objects.filter(service=service).all())
-        return HttpResponse(arr,mimetype="application/json")
+    def read(self, request, serviceid=None, authid=None):
+        if serviceid:
+            service = DataService.objects.get(pk=serviceid)
+            return service.do("GET","jobs")
+        elif authid:
+            auth = Auth.objects.get(pk=authid)
+            return auth.do("GET","jobs")
+        else:
+            r = rc.BAD_REQUEST
+            r.write("\nRequest has no serviceid or authid - Creation Failed!")
+            return r
 
 class JobHandler(BaseHandler):
     model = Job
     allowed_methods = ('GET','POST','DELETE')
     fields = ('id','name','created','taskset_id','joboutput_set','tasks')
 
-    def create(self, request):
+    def create(self, request, mfileid=None):
         
         jobtype = request.POST['jobtype']
-        serviceid = request.POST['serviceid']
-        mfileid = request.POST['mfileid']
 
         name = "newfile"
+        inputs = []
+        outputs = []
+        callbacks = []
+        options = {}
 
-        if serviceid != "":
-            service = DataService.objects.get(id=serviceid)
-        elif mfileid != "":
+        if mfileid != "":
             mfile = MFile.objects.get(id=mfileid)
             name = mfile.name
-            service = mfile.service
+            inputs.append(mfile.file.path)
         else:
             r = rc.BAD_REQUEST
             r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
             return r
 
-        #logging.info("Creating job at service %s " % service)
-
-        options = {}
         for v in request.POST:
             options[v]=request.POST[v]
 
@@ -162,14 +160,10 @@ class JobHandler(BaseHandler):
         nbinputs = job_description["nbinputs"]
         nboutputs= job_description["nboutputs"]
 
-        inputs = []
-        outputs = []
-        callbacks = [] 
-
         job = Job(name="Job",mfile=mfile)
         job.save()
 
-        for i in range(0,nbinputs):
+        for i in range(1,nbinputs-1):
             mfileid = request.POST['input-%s'%i]
             mfile = MFile.objects.get(id=mfileid)
             inputs.append(mfile.file.path)
@@ -253,8 +247,6 @@ class JobHandler(BaseHandler):
         if jobid:
             job = Job.objects.get(id=jobid)
             return job
-            dict = job_to_dict(job)
-            return HttpResponse(dict,mimetype="application/json")
         elif mfileid:
             jobs = Job.objects.filter(mfile=mfileid)
             return jobs
@@ -262,88 +254,7 @@ class JobHandler(BaseHandler):
 class JobOutputHandler(BaseHandler):
     model = JobOutput
     fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
-'''
-class RenderResultsHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
 
-    def read(self, request, jobid):
-        job = Job.objects.get(id=jobid)
-        output = job.joboutput_set.all()
-        return output
-
-class RenderHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
-
-    def read(self, request, jobid):
-        job = Job.objects.get(id=jobid)
-        dict = job_to_dict(job)
-        return HttpResponse(JSON_dump(dict),mimetype="application/json")
-
-    def create(self,request,mfileid,start=0, end=10):
-        mfile = MFile.objects.get(pk=mfileid)
-        tasks = []
-
-        job = Job(name="Render",service=mfile.service)
-        job.save()
-
-        folder = os.path.join( settings.MEDIA_ROOT, str(job.id))
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-        thumbfolder = os.path.join( settings.THUMB_ROOT, str(job.id))
-        if not os.path.exists(thumbfolder):
-            os.makedirs(thumbfolder)
-
-        jobtype = "jobservice.tasks.render_blender"
-        mimetype = "application/octet-stream; charset=binary"
-        try:
-            job_description = cache.get(jobtype)
-            mimetype = job_description["outputmime"]
-        except Exception as e:
-            logging.info("No job description for job type '%s' %s" % (jobtype,e) )
-
-        padding = 4
-        for i in range(int(start),int(end)+1):
-            output = JobOutput(name="%s Render"%mfile.name,job=job,mimetype=mimetype)
-            ss= string.zfill(str(i), padding)
-            fname = "%s.%s.png" % (mfile.name,ss)
-            #fname = mfile.name
-            #hashfname = "%s.%s" % (mfile.name,hashes)
-
-            outputfile= os.path.join( folder , fname)
-            thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))
-            #outputfile = outputpath
-
-            #(outputhead,tail) = os.path.split(thumbfile)
-            #if not os.path.isdir(outputhead):
-            #    os.makedirs(outputhead)
-
-            outputpath = os.path.join( str(job.id) , fname   )
-            thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
-
-            output.file = outputpath
-            output.thumb = thumbpath
-            output.save()
-
-            thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-            thumbsubtask = thumbimage.subtask([outputfile,thumbfile,thumboptions])
-
-            renderoptions = {"padding":padding,"fname":fname,"frame":i}
-            
-            t = render_blender.subtask([mfile.file.path,outputfile,renderoptions],callback=thumbsubtask)
-            tasks.append(t)
-        
-        ts = TaskSet(tasks=tasks)
-        tsr = ts.apply_async()
-        tsr.save()
-
-        job.taskset_id=tsr.taskset_id
-        job.save()
-
-        dict = job_to_dict(job)
-        return HttpResponse(dict,mimetype="application/json")
-
-'''
 class JobOutputContentsHandler(BaseHandler):
     allowed_methods = ('GET')
 
@@ -355,7 +266,7 @@ class JobOutputContentsHandler(BaseHandler):
         job = joboutput.job
         logging.info(job)
         accessspeed = settings.DEFAULT_ACCESS_SPEED
-        '''service = job.service
+        service = job.mfile.service
         container = service.container
         logging.info("Finding limit for %s " % (job))
         
@@ -370,7 +281,6 @@ class JobOutputContentsHandler(BaseHandler):
                 logging.info("Limit set from container property to %s for %s " % (accessspeed,job.name))
             except ObjectDoesNotExist:
                 pass
-        '''
 
         dlfoldername = "dl%s"%accessspeed
         #dlfoldername = "dl"
@@ -401,36 +311,10 @@ class JobOutputContentsHandler(BaseHandler):
             logging.info("linking %s (exist=%s) to %s (exists=%s)" % (mfilefilepath,os.path.exists(mfilefilepath),fullfilepath,os.path.exists(fullfilepath)))
             os.link(mfilefilepath,fullfilepath)
 
-
         usage_store.record(joboutput.id,models.metric_access,joboutput.file.size)
 
         logging.info("Redirecting  to %s " % redirecturl)
         return redirect("/%s"%redirecturl)
-
-
-def job_to_dict(job):
-    taskid = job.taskset_id
-    tsr = TaskSetResult.restore(taskid)
-    dict = {}
-    if tsr is not None:
-        dict["taskset_id"] = tsr.taskset_id
-        # Dont return results until job in complete
-        if tsr.successful():
-            dict["result"] = tsr.join()
-        else:
-            dict["result"] = []
-        dict["completed_count"] = tsr.completed_count()
-        dict["failed"] = tsr.failed()
-        dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
-        dict["ready"] = tsr.ready()
-        dict["successful"] = tsr.successful()
-        dict["total"] = tsr.total
-        dict["waiting"] = tsr.waiting()
-        dict["job"] = job
-    else:
-        return None
-
-    return dict
 
 def get_class( kls ):
     parts = kls.split('.')
