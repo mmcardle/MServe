@@ -48,6 +48,12 @@ html, .main {
 	width:200px;
 	padding:0px 10px 10px 10px;
 }
+.logo {
+	padding:10px 0 20px 0;
+	margin:0 auto;
+	width:450px;
+	float:left;
+}
 </style>
 
 </head>
@@ -60,6 +66,7 @@ html, .main {
     <div class="header_resize">
       <div class="logo" >
         <h1><a href="/"><span>M</span>Serve</a><small> serving your needs</small></h1>
+        <h3 class="blue" id="hostname"></h3>
       </div>
 
       <div class="clr"></div>
@@ -101,6 +108,7 @@ $(document).ready(function() {
             window.location.hash = ui.tab.hash;
         })
     });
+    $("#hostname").text(window.location.hostname)
 });
 </script>
 {% block bottomscript %}{% endblock %}

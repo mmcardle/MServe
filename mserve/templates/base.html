@@ -47,6 +47,7 @@
     <div class="header_resize">
       <div class="logo">
         <h1><a href="/"><span class="blue">M</span>Serve</a><small> serving your needs</small></h1>
+        <h3 class="blue" id="hostname"></h3>
       </div>
       <div class="menu_nav">
         <ul>
@@ -92,6 +93,19 @@
                       <tr><th>Joined</th><td>{{user.date_joined|date}}, {{user.date_joined|time}}</td></tr>
                   </table>
   
+              {% else %}
+                  <h2 style="top:10px;padding-top:5px;padding-left:30px;">
+                      <span class="red">W</span>elcome</h2>
+                    
+                  <table class="" style="top:0px;padding:4px;margin-left:auto;margin-right: auto" >
+                      <tr><td><button id="login_button" style="text-align: center">Please Login</button></td></tr>
+                  </table>
+
+                  <script type="text/javascript">
+                    $(document).ready(function() {
+                        $("#login_button").button().click(function(){location.href = '/accounts/login/'});
+                    });
+                  </script>
               {% endif %}
 
               {% endblock %}
@@ -177,6 +191,7 @@ $(document).ready(function() {
         })
     });
     $(".dropshadow").addClass(" ui-corner-all");
+    $("#hostname").text(window.location.hostname)
 });
 </script>
 {% block bottomscript %}{% endblock %}
