@@ -137,6 +137,20 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
     return mimetype
 
 @task
+def backup_mfile(inputs,outputs,options={},callbacks=[]):
+    """Backup MFile """
+
+    mfile = inputs[0]
+    file = mfile.file
+    
+    from dataservice.models import BackupFile
+
+    backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
+    backup.save()
+
+    return {"status":True,"message":"Backup of '%s' successfull"%mfile.name}
+
+@task
 def md5file(inputs,outputs,options={},callbacks=[]):
     """Return hex md5 digest for a Django FieldFile"""
     mfile = inputs[0]

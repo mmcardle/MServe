@@ -45,6 +45,7 @@ from dataservice.tasks import proxyvideo
 from dataservice.tasks import thumbimage
 from dataservice.tasks import mimefile
 from dataservice.tasks import md5file
+from dataservice.tasks import backup_mfile
 
 # Declare Signals
 mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
@@ -618,17 +619,6 @@ class DataService(NamedBase):
 
         mfile.save()
 
-        logging.debug("Backing up '%s' " % mfile)
-
-        if file is not None:
-            if type(file) == django.core.files.base.ContentFile:
-                backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum)
-                backup.file.save(name, file)
-                backup.save()
-            else:
-                backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
-                backup.save()
-
         if post_process:
             mfile.post_process()
 
@@ -916,6 +906,11 @@ class MFile(NamedBase):
                 tasks.extend([thumbtask])
             else:
                 logging.info("Not creating thumb for '%s' %s " % (self,mimetype))
+
+            logging.debug("Backing up '%s' " % self)
+
+            backup_task = backup_mfile.subtask([[self],[]])
+            tasks.extend([backup_task])
 
             ts = TaskSet(tasks=tasks)
             tsr = ts.apply_async()
