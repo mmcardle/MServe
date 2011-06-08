@@ -838,6 +838,9 @@ class MFile(NamedBase):
     def post_process(self):
         if self.file:
 
+            from datetime import datetime
+            logging.info("PUT process mfile 1 %s" % datetime.now())
+
             from jobservice.models import Job
 
             job = Job(name="%s Ingest Job"%(self.name),mfile=self)
@@ -846,8 +849,15 @@ class MFile(NamedBase):
             # MIME type
             self.mimetype = mimetype = mimefile([self.file.path],[],{})
 
+            tasks = []
+
+            logging.info("PUT process mfile 2 %s" % datetime.now())
+
             # checksum
-            self.checksum = md5file([self],[],{})
+            md5task = md5file.subtask([[self],[],{}])
+            tasks.extend([md5task])
+
+            logging.info("PUT process mfile 3 %s" % datetime.now())
 
             # record size
             self.size = self.file.size            
@@ -869,7 +879,7 @@ class MFile(NamedBase):
             if not os.path.isdir(posterhead):
                 os.makedirs(posterhead)
 
-            tasks = []
+            logging.info("PUT process mfile 4 %s" % datetime.now())
 
             if mimetype.startswith('video') or self.file.name.endswith('mxf'):
 
@@ -909,6 +919,8 @@ class MFile(NamedBase):
 
             logging.debug("Backing up '%s' " % self)
 
+            logging.info("PUT process mfile 5 %s" % datetime.now())
+
             backup_task = backup_mfile.subtask([[self],[]])
             tasks.extend([backup_task])
 
@@ -920,6 +932,8 @@ class MFile(NamedBase):
             job.save()
 
             self.save()
+
+            logging.info("PUT process mfile 6 %s" % datetime.now())
         
     def get_rel_path(self):
         if self.folder is not None:
