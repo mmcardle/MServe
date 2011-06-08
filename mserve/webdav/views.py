@@ -464,7 +464,14 @@ class DavServer(object):
 
     def _handle_put(self, request):
         logging.info("PUT on %s" % self.service)
+        now = datetime.datetime.now()
+        logging.info("PUT process started %s" % now)
         response = self.__handle_upload_service(request)
+        then = datetime.datetime.now()
+        logging.info("PUT process finished %s" % then)
+        td = then - now
+        secs = (td.microseconds + (td.seconds + td.days * 24.0 * 3600.0) * 10.0**6.0) / 10.0**6.0
+        logging.info("PUT process took %s" % secs)
         return response
 
     def __mfile_exists(self, service, ancestors, filename):
