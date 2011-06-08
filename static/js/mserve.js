@@ -1,5 +1,4 @@
 
-
 function load_user(userurl,consumerurl,template){
 
      $.ajax({
@@ -109,12 +108,7 @@ function reloadMFiles(newfileid){
                     (function() {
                         var gid = i;
                         var gmfileid = mfiles[gid].id;
-                        $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
-                        $('#newjobbutton-'+gmfileid).click(function(){
-                            create_new_job_ui_dialog(gmfileid,true)
-                            $("#mfileid").val(gmfileid);
-                            $("#dialog-new-job-dialog-form").dialog( "open" );
-                        });
+                        mfile_buttons(gmfileid)
                     })();
                 }
 
@@ -149,15 +143,21 @@ function loadMFile(mfile){
     (function() {
         var gid = mfile.id;
         var gmfileid = mfile.id;
-        $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
-        $('#newjobbutton-'+gmfileid).click(function(){
-            create_new_job_ui_dialog(gmfileid,true)
-            $("#mfileid").val(gmfileid);
-            $("#serviceid").val(serviceid);
-            $("#dialog-new-job-dialog-form").dialog( "open" );
-        });
+        mfile_buttons(gmfileid)
     })();
+}
 
+function mfile_buttons(gmfileid){
+    $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+    $('#newjobbutton-'+gmfileid).click(function(){
+        create_new_job_ui_dialog(gmfileid,true)
+        $("#mfileid").val(gmfileid);
+        $("#dialog-new-job-dialog-form").dialog( "open" );
+    });
+    $("#deletemfilebutton-"+gmfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false });
+    $('#deletemfilebutton-'+gmfileid).click(function(){
+        mfile_delete(gmfileid)
+    });
 }
 
 function mfile_delete(mfileid){
@@ -168,9 +168,9 @@ function mfile_delete(mfileid){
                     "Delete mfile?": function() {
                          $.ajax({
                            type: "DELETE",
-                           url: '/mfile/'+mfileid+"/",
+                           url: '/mfiles/'+mfileid+"/",
                            success: function(msg){
-                                showMessage("File Deleted","The mfile has been deleted.")
+                                $("#mfileholder-"+mfileid).hide('slide')
                            },
                            error: function(msg){
                              alert( "Failure On Delete " + msg );

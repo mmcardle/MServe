@@ -66,8 +66,7 @@
         <div id="managedresourcesmfilescontent">
         </div>
 
-        <h3>Actions</h3>
-        <button id="newjobbutton" >New Job</button>
+        <div class="clr"></div>
 
         </div>
         <div id="jobs-tab">
@@ -95,13 +94,6 @@
                 $(document).ready(function() {
                     loadMFiles('{{service.id}}');
                     loadJobs('{{service.id}}');
-                    $('#newjobbutton').button()
-                    $('#newjobbutton').click(function(){
-                        create_new_job_ui_dialog('', '{{service.id}}')
-                        $("#mfileid").val('');
-                        $("#serviceid").val('{{service.id}}');
-                        $("#dialog-new-job-dialog-form").dialog( "open" );
-                    });
                 });
             </script>
 

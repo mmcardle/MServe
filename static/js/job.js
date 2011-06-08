@@ -147,7 +147,6 @@ function create_job_holder(job){
                 value: percent
         });
 
-
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
         $("#joboutputs-"+id).hide()
@@ -177,12 +176,18 @@ function update_job_outputs(job){
     for(i in job.tasks.result){
         var resultdict = job.tasks.result[i]
         result = ""
-        for(k in resultdict){
-            result += " <span style='color:green' >"+k+"</span> : <span style='color:blue' >"+resultdict[k] + "</span>"
+        if(resultdict["success"]){
+            for(k in resultdict){
+                result += " <span style='color:green' >"+k+"</span> : <span style='color:blue' >"+resultdict[k] + "</span>"
+            }
+        }else{
+            for(k in resultdict){
+                result += " <span style='color:green' >"+k+"</span> : <span style='color:red' >"+resultdict[k] + "</span>"
+            }
         }
         if(result != ""){
             v = 1 + parseInt(i)
-            $("#joboutputs-"+id).append("<div><b>Result "+v+" :</b> "+result+"</div>")
+            $("#joboutputs-"+id).append("<div><b>Task "+v+" :</b> "+result+"</div>")
         }
     }
 }

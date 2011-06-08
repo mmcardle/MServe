@@ -49,78 +49,81 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
     
     logging.info(args)
     ret = subprocess.call(args)
-    return ret
+    return {"success":True,"message":"Thumbnail '%sx%s' of video successful"%(width,height)}
 
 @task
 def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
-        infile = inputs[0]
-        proxypath = outputs[0]
-        width=options["width"]
-        height=options["height"]
+    infile = inputs[0]
+    proxypath = outputs[0]
+    width=options["width"]
+    height=options["height"]
+    _ffmpeg_args=options["ffmpeg_args"]
 
-        logfile = open('/var/mserve/mserve.log','a')
-	errfile = open('/var/mserve/mserve.log','a')
+    logfile = open('/var/mserve/mserve.log','a')
+    errfile = open('/var/mserve/mserve.log','a')
 
-	tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
 
-	try:
-            tmpfile=tfile.name
-            vidfifo="stream.yuv"
-            audfifo="stream.wav"
-            outfile=proxypath
+    try:
+        tmpfile=tfile.name
+        vidfifo="stream.yuv"
+        audfifo="stream.wav"
+        outfile=proxypath
 
-            tmpdir = tempfile.mkdtemp()
-            vidfilename = os.path.join(tmpdir, vidfifo)
-            try:
-                os.mkfifo(vidfilename)
-            except OSError, e:
-                logging.info("Failed to create Video FIFO: %s" % e)
+        tmpdir = tempfile.mkdtemp()
+        vidfilename = os.path.join(tmpdir, vidfifo)
+        try:
+            os.mkfifo(vidfilename)
+        except OSError, e:
+            logging.info("Failed to create Video FIFO: %s" % e)
 
-            audfilename = os.path.join(tmpdir, audfifo)
-            try:
-                os.mkfifo(audfilename)
-            except OSError, e:
-                logging.info("Failed to create Audio FIFO: %s" % e)
+        audfilename = os.path.join(tmpdir, audfifo)
+        try:
+            os.mkfifo(audfilename)
+        except OSError, e:
+            logging.info("Failed to create Audio FIFO: %s" % e)
 
-            ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
-            ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
+        ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
+        ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
 
-            Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
-            Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
+        Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
+        Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
 
-            vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(width,height)]
-            aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+        #vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(width,height)]
+        #aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
 
-            # TODO: Fix audio for mxf
-            if infile.endswith(".mxf"):
-                aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
+        # TODO: Fix audio for mxf
+        #if infile.endswith(".mxf"):
+        #    aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
 
-            ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
+        ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
 
-            ffmpeg_args.extend(aud_options)
-            ffmpeg_args.extend(vid_options)
-            ffmpeg_args.append(tmpfile)
+        #ffmpeg_args.extend(aud_options)
+        ffmpeg_args.extend(_ffmpeg_args)
+        ffmpeg_args.append(tmpfile)
 
-            logging.info(" ".join(ffmpeg_args))
-            p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
-            p.communicate()
+        logging.info(" ".join(ffmpeg_args))
+        p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
+        p.communicate()
 
-            qt_args = ["qt-faststart", tmpfile, outfile]
-            qt = Popen(qt_args, stdin=PIPE, close_fds=True)
-            qt.communicate()
+        qt_args = ["qt-faststart", tmpfile, outfile]
+        qt = Popen(qt_args, stdin=PIPE, close_fds=True)
+        qt.communicate()
 
-        except Exception as e:
-            logging.info("Error encoding video %s" % e)
-            os.unlink(tmpfile)
-            tfile.close()
-        else:
-            logging.info("Proxy Video '%s' Done"% infile)
-            os.unlink(tmpfile)
-            tfile.close()
+    except Exception as e:
+        logging.info("Error encoding video %s" % e)
+        os.unlink(tmpfile)
+        tfile.close()
+    else:
+        logging.info("Proxy Video '%s' Done"% infile)
+        os.unlink(tmpfile)
+        tfile.close()
 
-            for callback in callbacks:
-                subtask(callback).delay()
+        for callback in callbacks:
+            subtask(callback).delay()
+
+    return {"success":True,"message":"Transcode '%sx%s'  successful"%(width,height)}
 
 @task
 def mimefile(inputs,outputs,options={},callbacks=[]):
@@ -134,7 +137,7 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
     for callback in callbacks:
         subtask(callback).delay()
 
-    return mimetype
+    return {"success":True,"message":"Mime detection successful", "mimetype" : mimetype}
 
 @task
 def backup_mfile(inputs,outputs,options={},callbacks=[]):
@@ -148,13 +151,13 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
     backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
     backup.save()
 
-    return {"status":True,"message":"Backup of '%s' successfull"%mfile.name}
+    return {"success":True,"message":"Backup of '%s' successful"%mfile.name}
 
 @task
 def md5file(inputs,outputs,options={},callbacks=[]):
 
     """Return hex md5 digest for a Django FieldFile"""
-    
+
     mfile = inputs[0]
     file = open(mfile.file.path,'r')
     md5 = hashlib.md5()
@@ -172,7 +175,7 @@ def md5file(inputs,outputs,options={},callbacks=[]):
     for callback in callbacks:
         subtask(callback).delay()
 
-    return md5string
+    return {"success":True,"message":"MD5 of '%s' successful"%mfile, "md5" : md5string}
 
 @task
 def thumbimage(inputs,outputs,options={},callbacks=[]):
@@ -215,7 +218,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
     for callback in callbacks:
         subtask(callback).delay()
 
-    return True
+    return {"success":True,"message":"Thumbnail '%sx%s' successful"%(width,height)}
 
 
 @task

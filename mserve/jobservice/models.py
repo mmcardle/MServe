@@ -57,7 +57,14 @@ class Job(NamedBase):
             if tsr.successful():
                 dict["result"] = tsr.join()
             else:
-                dict["result"] = []
+                results = []
+                for subtask in tsr.subtasks:
+                    if subtask.successful():
+                        results.append(subtask.result)
+                    else:
+                        results.append({"message":subtask.result,"success":subtask.successful()})
+                dict["result"] = results
+
             dict["completed_count"] = tsr.completed_count()
             dict["failed"] = tsr.failed()
             if int(tsr.total) != 0:

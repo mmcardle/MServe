@@ -79,6 +79,7 @@ backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 byte_metrics = [metric_disc_space]
 
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
+DEFAULT_PROFILE = "default"
 
 roles = {}
 roles["containeradmin"] = {
@@ -485,6 +486,9 @@ class HostingContainer(NamedBase):
         managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
 
+        managementproperty = ManagementProperty(property="profile",base=dataservice,value=DEFAULT_PROFILE)
+        managementproperty.save()
+
         return dataservice
 
     def get_rate_for_metric(self, metric):
@@ -540,8 +544,6 @@ class DataService(NamedBase):
             return self.create_mfile(kwargs['name'],file=kwargs['file'])
         if url == "mfolders":
             return self.create_mfolder(kwargs['name'])
-        if url == "jobs":
-            return self.create_job(kwargs['name'])
         return HttpResponseNotFound()
 
     def put(self,url, *args, **kwargs):
@@ -563,6 +565,13 @@ class DataService(NamedBase):
         if metric == metric_service:
             return 1
 
+    def get_profile(self):
+        try:
+            mp = self.managementproperty_set.get(property="profile")
+            return mp.value
+        except ManagementProperty.DoesNotExist:
+            return DEFAULT_PROFILE
+        
     def save(self):
         if not self.id:
             self.id = utils.random_id()
@@ -838,29 +847,23 @@ class MFile(NamedBase):
     def post_process(self):
         if self.file:
 
-            from datetime import datetime
-            logging.info("PUT process mfile 1 %s" % datetime.now())
-
             from jobservice.models import Job
+            from jobservice.models import JobOutput
 
             job = Job(name="%s Ingest Job"%(self.name),mfile=self)
             job.save()
 
             # MIME type
-            self.mimetype = mimetype = mimefile([self.file.path],[],{})
+            self.mimetype = mimetype = mimefile([self.file.path],[],{})["mimetype"]
 
             tasks = []
-
-            logging.info("PUT process mfile 2 %s" % datetime.now())
 
             # checksum
             md5task = md5file.subtask([[self],[],{}])
             tasks.extend([md5task])
 
-            logging.info("PUT process mfile 3 %s" % datetime.now())
-
             # record size
-            self.size = self.file.size            
+            self.size = self.file.size
             self.save()
 
             thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
@@ -879,7 +882,156 @@ class MFile(NamedBase):
             if not os.path.isdir(posterhead):
                 os.makedirs(posterhead)
 
-            logging.info("PUT process mfile 4 %s" % datetime.now())
+            if mimetype.startswith('video') or self.file.name.endswith('mxf'):
+
+                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumbtask = thumbvideo.subtask([[self.file.path],[fullthumbpath],th_options ])
+                self.thumb = thumbpath
+
+                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
+                postertask = thumbvideo.subtask([[self.file.path],[fullposterpath],po_options])
+                self.poster = posterpath
+
+                profile = self.service.get_profile()
+
+                # TODO : Make this Profile a Model object that can be set
+                if profile == "hd":
+                    hd_options = {"width":1920,"height":1200}
+
+                    vid_options= ["-s","1920x1080","-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k"]
+                    aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
+                    # TODO: Fix audio for mxf
+                    if self.file.name.endswith('mxf'):
+                        aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
+
+                    hd_ffmpeg_options = []
+                    hd_ffmpeg_options.extend(vid_options)
+                    hd_ffmpeg_options.extend(aud_options)
+
+                    hd_options['ffmpeg_args'] = hd_ffmpeg_options
+
+                    output = JobOutput(name="HD Job Output ",job=job, mimetype="video/quicktime")
+                    output.save()
+                    fname = "%s.%s" % (self.name,"mov")
+                    outputpath = os.path.join( str(job.id) , fname)
+                    output.file = outputpath
+                    output.thumb = thumbpath
+                    output.save()
+
+                    fullhdpath = os.path.join(settings.STORAGE_ROOT , outputpath)
+                    (hdhead,tail) = os.path.split(fullhdpath)
+
+                    if not os.path.isdir(hdhead):
+                        os.makedirs(hdhead)
+
+                    hdtask = proxyvideo.subtask([[self.file.path],[output.file.path],hd_options])
+                    tasks.extend([hdtask])
+
+
+                proxy_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
+
+                vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(settings.postersize[0],settings.postersize[1])]
+                aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
+                # TODO: Fix audio for mxf
+                if self.file.name.endswith('mxf'):
+                    aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
+
+                ffmpeg_options = []
+                ffmpeg_options.extend(vid_options)
+                ffmpeg_options.extend(aud_options)
+
+                proxy_options['ffmpeg_args'] = ffmpeg_options
+
+
+                proxytask = proxyvideo.subtask([[self.file.path],[fullproxypath],proxy_options])
+                self.proxy = proxypath
+                tasks.extend([thumbtask,postertask,proxytask])
+
+            elif mimetype.startswith('image'):
+                logging.info("Creating thumb inprocess for Image '%s' %s " % (self,mimetype))
+                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumbtask = thumbimage.subtask([[self.file.path],[fullthumbpath],th_options])
+                self.thumb = thumbpath
+
+                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
+                postertask = thumbimage.subtask([[self.file.path],[fullposterpath],po_options])
+                self.poster = posterpath
+                tasks.extend([thumbtask,postertask])
+
+            elif self.file.name.endswith('blend'):
+                logging.info("Creating Blender thumb '%s' %s " % (self,mimetype))
+                # TODO : Change to a Preview of a frame of the blend file
+                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                blender_path = os.path.join(settings.MEDIA_ROOT,"images/blender.png")
+                thumbtask = thumbimage.subtask([[blender_path],[fullthumbpath],th_options])
+                self.thumb = thumbpath
+                tasks.extend([thumbtask])
+            else:
+                logging.info("Not creating thumb for '%s' %s " % (self,mimetype))
+
+            logging.debug("Backing up '%s' " % self)
+
+            backup_task = backup_mfile.subtask([[self],[]])
+            tasks.extend([backup_task])
+
+            ts = TaskSet(tasks=tasks)
+            tsr = ts.apply_async()
+            tsr.save()
+
+            job.taskset_id=tsr.taskset_id
+            job.save()
+
+            self.save()
+
+            return job
+        else:
+            # Return a job with no tasks for an empty file
+            job = Job(name="%s Empty Ingest Job"%(self.name),mfile=self)
+            job.save()
+            ts = TaskSet(tasks=[])
+            tsr.save()
+            job.taskset_id=tsr.taskset_id
+            job.save()
+            return job
+
+    def post_process2XXX(self):
+        if self.file:
+
+            from jobservice.models import Job
+
+            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
+            job.save()
+
+            # MIME type
+            self.mimetype = mimetype = mimefile([self.file.path],[],{})["mimetype"]
+
+            tasks = []
+
+            # checksum
+            md5task = md5file.subtask([[self],[],{}])
+            tasks.extend([md5task])
+
+            # record size
+            self.size = self.file.size
+            self.save()
+
+            thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
+            posterpath = os.path.join( str(self.file) + ".poster.jpg")
+            proxypath = os.path.join( str(self.file) + ".proxy.m4v")
+            fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
+            fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
+            fullproxypath = os.path.join(settings.THUMB_ROOT , proxypath)
+            (thumbhead,tail) = os.path.split(fullthumbpath)
+            (posterhead,tail) = os.path.split(fullposterpath)
+            (proxyhead,tail) = os.path.split(fullproxypath)
+
+            if not os.path.isdir(thumbhead):
+                os.makedirs(thumbhead)
+
+            if not os.path.isdir(posterhead):
+                os.makedirs(posterhead)
 
             if mimetype.startswith('video') or self.file.name.endswith('mxf'):
 
@@ -919,8 +1071,6 @@ class MFile(NamedBase):
 
             logging.debug("Backing up '%s' " % self)
 
-            logging.info("PUT process mfile 5 %s" % datetime.now())
-
             backup_task = backup_mfile.subtask([[self],[]])
             tasks.extend([backup_task])
 
@@ -933,7 +1083,11 @@ class MFile(NamedBase):
 
             self.save()
 
-            logging.info("PUT process mfile 6 %s" % datetime.now())
+            return job
+        else:
+            return None
+
+
         
     def get_rel_path(self):
         if self.folder is not None:
@@ -1034,11 +1188,14 @@ class ManagementProperty(models.Model):
     property    = models.CharField(max_length=200)
     value       = models.CharField(max_length=200)
 
+    def __unicode__(self):
+        return "Management Property %s:%s" % (self.property,self.value)
+
     def values(self):
         if self.property == "accessspeed":
             return {"type" : "step", "min":50 , "max" : 5000, "step" : 50}
-        elif self.property == "anotherprop":
-            return {"type" : "enum", "choices" : ["This","That"] }
+        elif self.property == "profile":
+            return {"type" : "enum", "choices" : [DEFAULT_PROFILE,"hd"] }
         else:
             return {}
 

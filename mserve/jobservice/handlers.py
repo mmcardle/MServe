@@ -160,7 +160,7 @@ class JobHandler(BaseHandler):
         nbinputs = job_description["nbinputs"]
         nboutputs= job_description["nboutputs"]
 
-        job = Job(name="Job",mfile=mfile)
+        job = mfile.do("POST","jobs",**{"name":"Job"})
         job.save()
 
         for i in range(1,nbinputs-1):

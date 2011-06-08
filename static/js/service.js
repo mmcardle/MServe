@@ -40,11 +40,6 @@ function loadServices(containerid){
 
                 $( "#serviceTemplate" ).tmpl( services.slice(start,end) ) .appendTo( "#servicepaginator" );
 
-                for(var i=start;i<end;i++) {
-                    
-                    //var c = $("<div>"+services[i].name+"  <a href='/browse/"+services[i].id+"/'>"+services[i].id+"</a>&nbsp;<em>"+services[i].mfile_set.length+" files</em></div>")
-                    //$('#servicepaginator').append(c)
-                }
                 return false;
             }
 

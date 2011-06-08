@@ -423,7 +423,7 @@
 </script>
 
 <script id="mfileTemplate" type="text/x-jquery-tmpl">
-<div class="infoholder">
+<div class="infoholder" id="mfileholder-${id}" >
     <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
                                          onmouseout="$('#id-${id}').hide();" >
             <table cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
@@ -450,6 +450,7 @@
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
                     </a>
                         <button id="newjobbutton-${id}" >New Job</button>
+                        <button id="deletemfilebutton-${id}" >Delete</button>
                       </div>
 
 
