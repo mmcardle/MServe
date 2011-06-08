@@ -152,7 +152,9 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
 
 @task
 def md5file(inputs,outputs,options={},callbacks=[]):
+
     """Return hex md5 digest for a Django FieldFile"""
+    
     mfile = inputs[0]
     file = open(mfile.file.path,'r')
     md5 = hashlib.md5()

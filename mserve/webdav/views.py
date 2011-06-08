@@ -464,14 +464,8 @@ class DavServer(object):
 
     def _handle_put(self, request):
         logging.info("PUT on %s" % self.service)
-        now = datetime.now()
-        logging.info("PUT process started %s" % now)
         response = self.__handle_upload_service(request)
-        then = datetime.now()
-        logging.info("PUT process finished %s" % then)
-        td = then - now
-        secs = (td.microseconds + (td.seconds + td.days * 24.0 * 3600.0) * 10.0**6.0) / 10.0**6.0
-        logging.info("PUT process took %s" % secs)
+        logging.info("PUT process finished")
         return response
 
     def __mfile_exists(self, service, ancestors, filename):
@@ -823,8 +817,6 @@ class DavServer(object):
 
     def __handle_upload_service(self, request):
 
-        logging.info("PUT process interval %s" % datetime.now())
-
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
         if isFo:
@@ -875,8 +867,6 @@ class DavServer(object):
         else:
             return HttpResponseBadRequest("Error creating file")
 
-        logging.info("PUT process interval 1 %s" % datetime.now())
-
         input = request.META['wsgi.input']
 
         if rangestart != -1:
@@ -902,8 +892,6 @@ class DavServer(object):
             except IOError:
                 logging.error("Error writing content to MFile '%s'" % mfile)
                 pass
-        
-        logging.info("PUT process interval 2 %s" % datetime.now())
 
         if chunked:
             if request.META.has_key('HTTP_TRAILER'):
@@ -916,8 +904,6 @@ class DavServer(object):
 
         mfile.save()
 
-        logging.info("PUT process interval 3 %s" % datetime.now())
-
         # TODO : Need to check if file is done?
         # How? perhaps a special header is needed
         # X-MServe-Process
@@ -928,8 +914,6 @@ class DavServer(object):
             if encoding_header.find('post-process') != -1:
                 logging.info("X-MServe header found - post processing content")
                 mfile.post_process()
-
-        logging.info("PUT process interval 4 %s" % datetime.now())
 
         if created:
             return HttpResponse(status=201)
