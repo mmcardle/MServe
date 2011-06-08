@@ -29,6 +29,7 @@ from dataservice.models import *
 from jobservice.models import *
 from mserveoauth.models import *
 import dataservice.utils as utils
+from celery.task.sets import TaskSet
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
@@ -125,10 +126,14 @@ class ReceiveHandler(BaseHandler):
             
             service = DataService.objects.get(id=cc.service_auth.base.id)
 
-            tasks = []
             for auth in result['auths']:
 
-                mfile = service.create_mfile("Import File")
+                #logging.info("AUTH %s" % auth)
+
+                mfile = service.create_mfile("Import File",post_process=False)
+
+                job = Job(name="Import Job",mfile=mfile)
+                job.save()
 
                 options = {}
                 options['url'] = remote_service.get_auth_url(auth['id'])
@@ -146,14 +151,19 @@ class ReceiveHandler(BaseHandler):
                 if not os.path.isdir(head):
                     os.makedirs(head)
 
-                task = copyfromurl.delay([],outputs,options)
-
-                tasks.append(task)
+                task = copyfromurl.subtask([[],outputs,options])
 
                 logging.info("created ouath task %s "% (task))
 
+                ts = TaskSet(tasks=[task])
+                tsr = ts.apply_async()
+                tsr.save()
+
+                job.taskset_id=tsr.taskset_id
+                job.save()
+
             retdict = {}
-            retdict['message'] = "Importing %s Files" % (len(tasks))
+            retdict['message'] = "Importing %s Files" % (len(result['auths']))
 
             return render_to_response('receive.html', retdict, context_instance=RequestContext(request))
 
