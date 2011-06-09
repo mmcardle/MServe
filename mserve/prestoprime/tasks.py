@@ -29,6 +29,9 @@ import subprocess
 import tempfile
 from subprocess import Popen, PIPE
 from celery.task.sets import subtask
+from cStringIO import StringIO
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files import File
 
 @task
 def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
@@ -48,46 +51,69 @@ def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
     for callback in callbacks:
         subtask(callback).delay()
 
-    return {}
+    return {"success":True,"message":"MXFTechMDExtractorPlugin successful"}
 
 @task
 def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
-    inputfile = inputs[0]
-    outputfile = outputs[0]
+
+    mfile = inputs[0]
+    joboutput = outputs[0]
+
+    inputfile = mfile.file.path
+    outputfile = tempfile.NamedTemporaryFile()
+
     logging.info("Processing d10mxfchecksum job on %s" % (inputfile))
+
     if not os.path.exists(inputfile):
         logging.info("Inputfile  %s does not exist" % (inputfile))
         return False
-    args = ["d10sumchecker","-i",inputfile,"-o",outputfile]
-    ret = subprocess.call(args)
+
+    args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
+
+    subprocess.call(args)
+
+    outputfile.seek(0)
+    suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],outputfile.read(), content_type='text/plain')
+
+    from mserve.jobservice.models import JobOutput
+    jo = JobOutput.objects.get(id=joboutput.pk)
+    jo.file.save(suf.name+'_d10mxfchecksum.txt', suf, save=True)
 
     for callback in callbacks:
         subtask(callback).delay()
 
-    return {}
+    return {"success":True,"message":"d10mxfchecksum successful"}
 
 @task
 def mxfframecount(inputs,outputs,options={},callbacks=[]):
-    inputfile = inputs[0]
+
+    mfile = inputs[0]
+    inputfile = mfile.file.path
+
     outputfile = tempfile.NamedTemporaryFile()
     logging.info("Processing mxfframecount job on %s" % (inputfile))
+
     if not os.path.exists(inputfile):
         logging.info("Inputfile  %s does not exist" % (inputfile))
         return False
+
     args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
     logging.info(args)
     subprocess.call(args)
-    lines = 0
+    frames = 0
     for line in open(outputfile.name):
-        lines += 1
+        frames += 1
 
     # TODO: subtract 1 for additional output
-    lines = lines -1
+    frames = frames -1
+    
+    import dataservice.usage_store as usage_store
+    usage_store.record(mfile.id,"http://prestoprime/mxf_frames_ingested",frames)
 
     for callback in callbacks:
         subtask(callback).delay()
 
-    return { "lines": lines }
+    return {"success":True,"message":"mxfframecount successful", "frames": frames }
 
 @task(max_retries=3)
 def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
@@ -108,6 +134,8 @@ def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
 
     for callback in callbacks:
             subtask(callback).delay()
+
+    return {"success":True,"message":"extractd10frame successful"}
 
 
 

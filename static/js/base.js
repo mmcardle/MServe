@@ -9,6 +9,14 @@ String.prototype.endsWith = function(str)
     return (lastIndex != -1) && (lastIndex + str.length == this.length);
 }
 
+function replacer(key, value) {
+    if (key === 'message') {
+        
+    }else{
+        return value;
+    }
+}
+
 function getLocation( ){
     return window.location.pathname;
 }

@@ -58,7 +58,8 @@ def list_jobs(request):
             desc = js.handlers.cache[jobtype]
             descriptions[jobtype] = desc
         except Exception as e:
-            logging.debug("No job description for job type '%s' %s" % (jobtype,e) )
+            pass
+            #logging.debug("No job description for job type '%s' %s" % (jobtype,e) )
     
     response_data = {"regular": regfilter,
                      "periodic": perfilter,

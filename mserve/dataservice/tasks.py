@@ -26,36 +26,102 @@ from celery.task.sets import subtask
 from subprocess import Popen, PIPE
 import logging
 import subprocess
-import urllib
 import hashlib
 import Image
-import pycurl
 import tempfile
 import magic
 import os
 import os.path
+from cStringIO import StringIO
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files import File
+
+def _thumbvideo(videopath,width,height):
+
+    tfile = tempfile.NamedTemporaryFile(suffix=".png")
+    thumbpath = tfile.name
+
+    args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",thumbpath]
+
+    logging.info(args)
+    ret = subprocess.call(args)
+
+    logging.info("Created thumb from video RET = %s" % ret )
+
+    image = Image.open(tfile.name)
+
+    return image
+
 
 @task
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
-    videopath = inputs[0]
-    thumbpath = outputs[0]
-    width=options["width"]
-    height=options["height"]
-    logging.info("Processing video thumb %sx%s for %s to %s" % (width,height,videopath,thumbpath))
-    if not os.path.exists(videopath):
-        logging.info("Video %s does not exist" % (videopath))
-        return False
-    args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",thumbpath]
-    
-    logging.info(args)
-    ret = subprocess.call(args)
-    return {"success":True,"message":"Thumbnail '%sx%s' of video successful"%(width,height)}
+
+    try:
+        mfile = inputs[0]
+        videopath = mfile.file.path
+
+        width=options["width"]
+        height=options["height"]
+        logging.info("Processing video thumb %sx%s for %s" % (width,height,videopath))
+        if not os.path.exists(videopath):
+            logging.info("Video %s does not exist" % (videopath))
+            return False
+
+        image = _thumbvideo(videopath,width,height)
+        temp_handle = StringIO()
+        image.save(temp_handle, 'png')
+        temp_handle.seek(0)
+
+        # Save to the thumbnail field
+        suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],temp_handle.read(), content_type='image/png')
+
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfile.pk)
+        mf.thumb.save(suf.name+'_thumb.png', suf, save=True)
+
+        logging.info("Thumb %s" % (mf.thumb.path))
+
+        return {"success":True,"message":"Thumbnail '%sx%s' of video successful"%(width,height)}
+    except Exception as e:
+        logging.info("Error with thumbvideo %s" % e)
+        raise e
 
 @task
-def proxyvideo(inputs,outputs,options={},callbacks=[]):
+def postervideo(inputs,outputs,options={},callbacks=[]):
 
-    infile = inputs[0]
-    proxypath = outputs[0]
+    try:
+        mfile = inputs[0]
+        videopath = mfile.file.path
+
+        width=options["width"]
+        height=options["height"]
+        logging.info("Processing video thumb %sx%s for %s" % (width,height,videopath))
+        if not os.path.exists(videopath):
+            logging.info("Video %s does not exist" % (videopath))
+            return False
+
+        image = _thumbvideo(videopath,width,height)
+        temp_handle = StringIO()
+        image.save(temp_handle, 'png')
+        temp_handle.seek(0)
+
+        # Save to the thumbnail field
+        suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],temp_handle.read(), content_type='image/png')
+
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfile.pk)
+        mf.poster.save(suf.name+'_poster.png', suf, save=True)
+
+        return {"success":True,"message":"Poster '%sx%s' of video successful"%(width,height)}
+    except Exception as e:
+        logging.info("Error with postervideo %s" % e)
+        raise e
+
+@task
+def transcodevideo(inputs,outputs,options={},callbacks=[]):
+
+    mfile = inputs[0]
+    infile = mfile.file.path
     width=options["width"]
     height=options["height"]
     _ffmpeg_args=options["ffmpeg_args"]
@@ -64,12 +130,103 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
     errfile = open('/var/mserve/mserve.log','a')
 
     tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+    toutfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+    joboutput = outputs[0]
+
+    try:
+        tmpfile=tfile.name
+        tmpoutfile=toutfile.name
+        vidfifo="stream.yuv"
+        audfifo="stream.wav"
+
+        tmpdir = tempfile.mkdtemp()
+        vidfilename = os.path.join(tmpdir, vidfifo)
+        try:
+            os.mkfifo(vidfilename)
+        except OSError, e:
+            logging.info("Failed to create Video FIFO: %s" % e)
+
+        audfilename = os.path.join(tmpdir, audfifo)
+        try:
+            os.mkfifo(audfilename)
+        except OSError, e:
+            logging.info("Failed to create Audio FIFO: %s" % e)
+
+        ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
+        ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
+
+        Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
+        Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
+
+        #vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(width,height)]
+        #aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
+        # TODO: Fix audio for mxf
+        #if infile.endswith(".mxf"):
+        #    aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
+
+        ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
+
+        logging.info("Transcode 0 ")
+
+        #ffmpeg_args.extend(aud_options)
+        ffmpeg_args.extend(_ffmpeg_args)
+        ffmpeg_args.append(tmpfile)
+
+        logging.info("Transcode 1 ")
+
+        logging.info(" ".join(ffmpeg_args))
+        p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
+        p.communicate()
+
+        logging.info("Transcode 2 ")
+        logging.info("Transcode 2 %s"%type(tmpfile))
+        logging.info("Transcode 2 %s"%type(toutfile.name))
+
+        qt_args = ["qt-faststart", tmpfile, tmpoutfile]
+        qt = Popen(qt_args, stdin=PIPE, close_fds=True)
+        qt.communicate()
+
+        from mserve.jobservice.models import JobOutput
+        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo.file.save(mfile.name+'_transcode.mp4', File(toutfile), save=True)
+
+        logging.info("Created file at : %s" % joboutput.file.path)
+
+    except Exception as e:
+        logging.info("Error encoding video %s" % e)
+        os.unlink(tmpfile)
+        tfile.close()
+        raise e
+    else:
+        logging.info("Proxy Video '%s' Done"% infile)
+        os.unlink(tmpfile)
+        tfile.close()
+
+        for callback in callbacks:
+            subtask(callback).delay()
+
+        return {"success":True,"message":"Transcode '%sx%s'  successful"%(width,height)}
+
+@task
+def proxyvideo(inputs,outputs,options={},callbacks=[]):
+
+    mfile = inputs[0]
+    infile = mfile.file.path
+    width=options["width"]
+    height=options["height"]
+    _ffmpeg_args=options["ffmpeg_args"]
+
+    logfile = open('/var/mserve/mserve.log','a')
+    errfile = open('/var/mserve/mserve.log','a')
+
+    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+    outfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
 
     try:
         tmpfile=tfile.name
         vidfifo="stream.yuv"
         audfifo="stream.wav"
-        outfile=proxypath
 
         tmpdir = tempfile.mkdtemp()
         vidfilename = os.path.join(tmpdir, vidfifo)
@@ -107,14 +264,24 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
         p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
         p.communicate()
 
-        qt_args = ["qt-faststart", tmpfile, outfile]
+        qt_args = ["qt-faststart", tmpfile, outfile.name]
         qt = Popen(qt_args, stdin=PIPE, close_fds=True)
         qt.communicate()
+
+        # Save to the thumbnail field
+        outfile.seek(0)
+        suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],
+                outfile.read(), content_type='image/png')
+
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfile.pk)
+        mf.proxy.save(suf.name+'_proxy.mp4', suf, save=True)
 
     except Exception as e:
         logging.info("Error encoding video %s" % e)
         os.unlink(tmpfile)
         tfile.close()
+        raise e
     else:
         logging.info("Proxy Video '%s' Done"% infile)
         os.unlink(tmpfile)
@@ -123,79 +290,163 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
         for callback in callbacks:
             subtask(callback).delay()
 
-    return {"success":True,"message":"Transcode '%sx%s'  successful"%(width,height)}
+        return {"success":True,"message":"Transcode '%sx%s'  successful"%(width,height)}
 
 @task
 def mimefile(inputs,outputs,options={},callbacks=[]):
-    mfilepath = inputs[0]
-    m = magic.open(magic.MAGIC_MIME)
-    m.load()
-    result = m.file(mfilepath)
-    mimetype = result.split(';')[0]
-    logging.info("Mime for file %s is %s" % (mfilepath,mimetype))
+    try:
+        mfile = inputs[0]
+        m = magic.open(magic.MAGIC_MIME)
+        m.load()
+        result = m.file(mfile.file.path)
+        mimetype = result.split(';')[0]
+        logging.info("Mime for file %s is %s" % (mfile,mimetype))
 
-    for callback in callbacks:
-        subtask(callback).delay()
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfile.pk)
+        mf.mimetype = mimetype
+        mf.save()
 
-    return {"success":True,"message":"Mime detection successful", "mimetype" : mimetype}
+        for callback in callbacks:
+            subtask(callback).delay()
 
+        return {"success":True,"message":"Mime detection successful", "mimetype" : mimetype}
+    except Exception as e:
+        logging.info("Error with mime %s" % e)
+        raise e
 @task
 def backup_mfile(inputs,outputs,options={},callbacks=[]):
     """Backup MFile """
+    try:
+        mfile = inputs[0]
+        file = mfile.file
 
-    mfile = inputs[0]
-    file = mfile.file
-    
-    from dataservice.models import BackupFile
+        from dataservice.models import BackupFile
 
-    backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
-    backup.save()
+        backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
+        backup.save()
 
-    return {"success":True,"message":"Backup of '%s' successful"%mfile.name}
+        return {"success":True,"message":"Backup of '%s' successful"%mfile.name}
+    except Exception as e:
+        logging.info("Error with backup_mfile %s" % e)
+        raise e
 
 @task
 def md5file(inputs,outputs,options={},callbacks=[]):
 
     """Return hex md5 digest for a Django FieldFile"""
+    try:
+        mfile = inputs[0]
+        file = open(mfile.file.path,'r')
+        md5 = hashlib.md5()
+        while True:
+            data = file.read(8192)  # multiple of 128 bytes is best
+            if not data:
+                break
+            md5.update(data)
+        file.close()
+        md5string = md5.hexdigest()
+        logging.info("MD5 calclated %s" % (md5string ))
+        mfile.checksum = md5string
+        mfile.save()
 
-    mfile = inputs[0]
-    file = open(mfile.file.path,'r')
-    md5 = hashlib.md5()
-    while True:
-        data = file.read(8192)  # multiple of 128 bytes is best
-        if not data:
-            break
-        md5.update(data)
-    file.close()
-    md5string = md5.hexdigest()
-    logging.info("MD5 calclated %s" % (md5string ))
-    mfile.checksum = md5string
-    mfile.save()
+        for callback in callbacks:
+            subtask(callback).delay()
 
-    for callback in callbacks:
-        subtask(callback).delay()
+        return {"success":True,"message":"MD5 of '%s' successful"%mfile, "md5" : md5string}
+    except Exception as e:
+        logging.info("Error with mime %s" % e)
+        raise e
 
-    return {"success":True,"message":"MD5 of '%s' successful"%mfile, "md5" : md5string}
+@task
+def posterimage(inputs,outputs,options={},callbacks=[]):
+
+    try:
+        mfile = inputs[0]
+        widthS = options["width"]
+        heightS = options["height"]
+        height = int(heightS)
+        width  = int(widthS)
+
+        logging.info("Creating %sx%s image for %s" % (width,height,input))
+
+        image = _thumbimage(mfile.file.path,width,height)
+
+        if image:
+            # Save the thumbnail
+            temp_handle = StringIO()
+            image.save(temp_handle, 'png')
+            temp_handle.seek(0)
+
+            # Save to the poster field
+            suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],
+                    temp_handle.read(), content_type='image/png')
+
+            from mserve.dataservice.models import MFile
+            mf = MFile.objects.get(id=mfile.pk)
+            mf.poster.save(suf.name+'_poster.png', suf, save=True)
+
+            logging.info("Poster created %s" % (image))
+
+            for callback in callbacks:
+                subtask(callback).delay()
+
+            return {"success":True,"message":"Poster '%sx%s' successful"%(width,height)}
+        else:
+            raise Exception("Could not create image")
+    except Exception as e:
+        logging.info("Error with posterimage %s" % e)
+        raise e
+
 
 @task
 def thumbimage(inputs,outputs,options={},callbacks=[]):
 
-    mfilepath = inputs[0]
-    thumbpath = outputs[0]
+    try:
+        mfile = inputs[0]
+        widthS = options["width"]
+        heightS = options["height"]
+        height = int(heightS)
+        width  = int(widthS)
 
-    logging.info("thumbimage %s to %s with options %s " % (mfilepath,thumbpath,options) )
+        logging.info("Creating %sx%s image for %s" % (width,height,input))
 
-    widthS = options["width"]
-    heightS = options["height"]
-    height = int(heightS)
-    width  = int(widthS)
+        image = _thumbimage(mfile.file.path,width,height)
 
-    logging.info("Creating %sx%s image for %s to %s" % (width,height,mfilepath,thumbpath))
-    if not os.path.exists(mfilepath):
-        logging.info("Image %s does not exist" % (mfilepath))
+        if image:
+
+            # Save the thumbnail
+            temp_handle = StringIO()
+            image.save(temp_handle, 'png')
+            temp_handle.seek(0)
+
+            # Save to the thumbnail field
+            suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],
+                    temp_handle.read(), content_type='image/png')
+
+            from mserve.dataservice.models import MFile
+            mf = MFile.objects.get(id=mfile.pk)
+            mf.thumb.save(suf.name+'_thumb.png', suf, save=True)
+
+            logging.info("Thumbnail created %s" % (image))
+
+            for callback in callbacks:
+                subtask(callback).delay()
+
+            return {"success":True,"message":"Thumbnail '%sx%s' successful"%(width,height)}
+        else:
+            raise Exception("Could not create image")
+    except Exception as e:
+        logging.info("Error with thumbimage %s" % e)
+        raise e
+
+def _thumbimage(input,width,height):
+
+    if not os.path.exists(input):
+        logging.info("Image %s does not exist" % input)
         return False
 
-    im = Image.open(mfilepath)
+    im = Image.open(input)
 
     w, h = im.size
     logging.info("Thumbnail 1 %s %s" % (w,h))
@@ -212,44 +463,5 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
     im = im.crop(((w-width)/2, (h-height)/4, (w-width)/2+width, (h-height)/4+height))
 
     im.thumbnail((width,height))
-    im.save(thumbpath, "PNG")
-    logging.info("Thumnail created %s" % (thumbpath))
 
-    for callback in callbacks:
-        subtask(callback).delay()
-
-    return {"success":True,"message":"Thumbnail '%sx%s' successful"%(width,height)}
-
-
-@task
-def thumbimage_async_remote(dataurl,mfileid,thumburl,size):
-
-    tmpfile = tempfile.NamedTemporaryFile()
-    try:
-        #im = Image.fromstring(mode,size,imstring)
-        imageurl = urllib.urlretrieve(dataurl)
-        im = Image.open(imageurl[0])
-        im.thumbnail(size)
-        im.save(tmpfile.name, "JPEG")
-
-        logging.info("Thumnail created uploading to %s" % (thumburl))
-
-        pf = [  ('mfileid', mfileid),
-                ('file', (pycurl.FORM_FILE, tmpfile.name)), ]
-
-        c = pycurl.Curl()
-        c.setopt(c.POST, 1)
-        c.setopt(c.URL, thumburl)
-        #c.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
-        c.setopt(c.HTTPHEADER, [ 'Expect:' ] )
-        c.setopt(c.HTTPPOST, pf)
-        #c.setopt(c.VERBOSE, 1)
-        c.perform()
-        c.close()
-
-        return True
-    
-    except IOError:
-        print "cannot create thumbnail for", mfileid
-        return False
-    return False
+    return im

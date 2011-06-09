@@ -163,34 +163,45 @@ def post_save_handler( sender, instance=False, **kwargs):
         # Record Additional Usage
         if instance.name is not None and not instance.initial_usage_recorded and instance.name.endswith(".mxf"):
             logging.info("Prestoprime POST save handler %s id:'%s' " % (instance,instance.id))
-            tmpfile = tempfile.NamedTemporaryFile(mode="w")
-            result = mxfframecount([instance.file.path],[tmpfile.name])
-            count = result["lines"]
-            logging.info("Recording ingest usage %s " % (count))
-            usage_store.record(instance.id,pp_mxfframe_ingested_metric,count)
+
+            mxfframecounttask = mxfframecount.subtask([[instance],[]])
+
+            #count = result["frames"]
+            #logging.info("Recording ingest usage %s " % (count))
+            #usage_store.record(instance.id,pp_mxfframe_ingested_metric,count)
+
+            job = Job(name="Prestoprime Tasks",mfile=instance)
+            job.save()
+
+            output = JobOutput(name="Job Output",job=job,mimetype="text/plain")
+            output.save()
 
             ## Do Post Processing
             mfiled10check = MFileD10Check(mfile=instance)
-            logging.info("Prestoprime created %s mfiled10check " % mfiled10check  )
-
+            
             temp_handle = StringIO()
             temp_handle.seek(0)
 
-            logging.info("Prestoprime created %s temp_handle " % temp_handle  )
-
             suf = SimpleUploadedFile("checkfile", temp_handle.read())
-
-            logging.info("Prestoprime created SimpleUploadedFile %s " % suf )
-
             mfiled10check.checkfile.save(suf.name+'.txt', suf, save=False)
-
             mfiled10check.save()
-            logging.info("Prestoprime saved %s mfiled10check " % mfiled10check  )
 
+            logging.info("Prestoprime created %s mfiled10check " % mfiled10check  )
+            logging.info("Prestoprime created %s temp_handle " % temp_handle  )
+            logging.info("Prestoprime created SimpleUploadedFile %s " % suf )
+            logging.info("Prestoprime saved %s mfiled10check " % mfiled10check  )
             logging.info("Prestoprime input %s  " %  instance.file  )
             logging.info("Prestoprime output %s  " % mfiled10check.checkfile.file  )
 
-            task = d10mxfchecksum.delay([instance.file.path],[mfiled10check.checkfile.path])
+            d10mxfchecksumtask = d10mxfchecksum.subtask([[instance],[output]])
+
+            ts = TaskSet(tasks=[d10mxfchecksumtask,mxfframecounttask])
+            tsr = ts.apply_async()
+            tsr.save()
+
+            
+            job.taskset_id=tsr.taskset_id
+            job.save()
             
             logging.info("Prestoprime task %s  " % task  )
 

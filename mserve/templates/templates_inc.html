@@ -339,11 +339,14 @@
     
     <div id='job-${id}' class='job'  >
         <table style='width:100%;'>
-        <tr>
-            <td width="2%"><span id='jobicon-${id}' class='ui-icon ui-icon-circle-check' ></span></td>
+        <tr  VALIGN=MIDDLE>
+            {%templatetag openvariable%}if tasks.successful {%templatetag closevariable%}
+                <td width="2%"><span id='jobicon-${id}' class='ui-icon ui-icon-circle-check' ></span></td>
+            {%templatetag openvariable%}else{%templatetag closevariable%}
+                <td width="2%"><span id='jobicon-${id}' class='ui-icon ui-icon-circle-close' ></span></td>
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
             <td width="25%"><div id='jobinfo-${id}' class='jobinfo' ><b>${tasks.completed_count}</b> task of <b>${tasks.total}</b> complete : ${tasks.percent}&#37; </div></td>
-            
-            <td width='*' ><div style='height:10px;' id='jobprogressbar-${id}'></div></td>
+            <th width='*' ><div style='height:10px;' id='jobprogressbar-${id}'></div></th>
             <td width='5%' ><button id='jobdeletebutton-${id}'></button></td>
             <th width="8%"><div id='jobinfo-${id}' class='jobinfo' >${joboutput_set.length} output(s)</div></th>
         <tr>
@@ -352,6 +355,27 @@
         <div  id='jobpreviewpaginator-${id}' class="jobpaginators" ></div>
     </div>
 </script>
+
+<script id="jobTaskResultTemplate" type="text/x-jquery-tmpl">
+    {%templatetag openvariable%}if success {%templatetag closevariable%}
+        <div class="taskholder"><b>Task :</b>  
+            <span style='color:green' >Name</span> - <span style='color:blue' >${name}</span>
+            <span style='color:green' >Message</span> - <span style='color:blue' >
+                    <span>${result.message}</span>
+            </span>
+            <div style="padding-left: 20px;"><b>Result :</b><span style="font-family: Courier">${JSON.stringify($item["data"]["result"],replacer)}</span></div>
+        </div>
+    {%templatetag openvariable%}else{%templatetag closevariable%}
+        <div class="taskholder"><b>Task :</b>
+            <span style='color:green' >Name</span> - <span style='color:blue' >${name}</span>
+            <span style='color:green' >Message</span> - <span style='color:red' >
+                
+            </span>
+            <div style="padding-left: 20px;"><b>Result :</b><span style="font-family: Courier">${JSON.stringify($item["data"]["result"],replacer)}</span></div>
+        </div>
+    {%templatetag openvariable%}/if  {%templatetag closevariable%}
+</script>
+
 
 <script id="mfolderOAuthTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder">

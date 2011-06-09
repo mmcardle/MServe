@@ -54,16 +54,17 @@ class Job(NamedBase):
             
             dict["taskset_id"] = tsr.taskset_id
             # Dont return results until job in complete
-            if tsr.successful():
-                dict["result"] = tsr.join()
-            else:
-                results = []
-                for subtask in tsr.subtasks:
-                    if subtask.successful():
-                        results.append(subtask.result)
-                    else:
-                        results.append({"message":subtask.result,"success":subtask.successful()})
-                dict["result"] = results
+            #if tsr.successful():
+            #    dict["result"] = tsr.join()
+            #else:
+            results = []
+            for subtask in tsr.subtasks:
+                #if subtask.successful():
+                #    results.append(subtask.result)
+                    #results.append({"name":subtask.task_name,"success":subtask.successful()})
+                #else:
+                results.append({"name":subtask.task_name,"result":subtask.result,"success":subtask.successful()})
+            dict["result"] = results
 
             dict["completed_count"] = tsr.completed_count()
             dict["failed"] = tsr.failed()

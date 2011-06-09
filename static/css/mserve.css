@@ -484,8 +484,6 @@ li.fluid a {
     padding:1px 0 1px 4px;
 }
 
-
-
 .readytoupload {
     background-image: url('/mservemedia/images/go-up.png');
 }
@@ -505,6 +503,10 @@ li.fluid a {
     color:red;
 }
 
+.taskholder{
+    padding: 2px;
+}
+
 .spinner{
     text-align: left;
     width: 90%;
@@ -522,6 +524,10 @@ li.fluid a {
 .job {
     margin:.2em;
     padding:.1em;
+    padding-left: 0.5em;
+}
+
+.jobinfo {
     padding-left: 0.5em;
 }
 

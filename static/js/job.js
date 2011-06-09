@@ -161,44 +161,28 @@ function create_job_holder(job){
         update_job_outputs(job)
 
         if(job.tasks.failed){
-            $('#job-'+job.id).addClass('ui-state-error')
-        }else{
-            //update_job_outputs(task)
-            //show_job(task)
+            $('#jobinfo-'+job.id).addClass('ui-state-error ui-corner-all')
         }
-
     }
 }
 
 function update_job_outputs(job){
     id = job.id
     $("#joboutputs-"+id).empty()
-    for(i in job.tasks.result){
-        var resultdict = job.tasks.result[i]
-        result = ""
-        if(resultdict["success"]){
-            for(k in resultdict){
-                result += " <span style='color:green' >"+k+"</span> : <span style='color:blue' >"+resultdict[k] + "</span>"
-            }
-        }else{
-            for(k in resultdict){
-                result += " <span style='color:green' >"+k+"</span> : <span style='color:red' >"+resultdict[k] + "</span>"
-            }
-        }
-        if(result != ""){
-            v = 1 + parseInt(i)
-            $("#joboutputs-"+id).append("<div><b>Task "+v+" :</b> "+result+"</div>")
-        }
-    }
+
+    $( "#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+id)
+
 }
 
 function show_job(job){
     id = job.id
-    if(job.joboutput_set.length > 0){
-        $('#jobpreviewpaginator-'+id).toggle('blind');
-    }
-    if(job.tasks.result.length > 0){
+
+    if( $('#joboutputs-'+id).is(':hidden') ) {
         $('#joboutputs-'+id).toggle('slide');
+    }
+
+    if( $('#jobpreviewpaginator-'+id).is(':hidden') ) {
+        $('#jobpreviewpaginator-'+id).toggle('blind');
     }
 }
 

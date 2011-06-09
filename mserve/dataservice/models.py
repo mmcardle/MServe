@@ -28,6 +28,7 @@ import datetime
 import os
 import utils as utils
 import settings
+import static as static
 from piston.utils import rc
 import django.dispatch
 from celery.task.sets import TaskSet
@@ -40,9 +41,13 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
-from dataservice.tasks import thumbvideo
+
 from dataservice.tasks import proxyvideo
 from dataservice.tasks import thumbimage
+from dataservice.tasks import thumbvideo
+from dataservice.tasks import posterimage
+from dataservice.tasks import postervideo
+from dataservice.tasks import transcodevideo
 from dataservice.tasks import mimefile
 from dataservice.tasks import md5file
 from dataservice.tasks import backup_mfile
@@ -81,73 +86,10 @@ byte_metrics = [metric_disc_space]
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 DEFAULT_PROFILE = "default"
 
-roles = {}
-roles["containeradmin"] = {
-    "methods" : ["GET","PUT","POST","DELETE"],\
-    "urls" : {\
-        "auths":["GET","PUT","POST","DELETE"],\
-        "properties":["GET","PUT"],\
-        "usages":["GET"],\
-        "services":["GET","POST"],\
-        }
-    }
+roles = static.default_roles
+profiles = static.default_profiles
 
-roles["serviceadmin"] = {
-    "methods" : ["GET","PUT","POST","DELETE"],\
-    "urls": {
-        "auths":["GET","PUT","POST","DELETE"],\
-        "properties":["GET","PUT"],\
-        "usages":["GET"],\
-        "mfiles":["GET","POST","PUT","DELETE"],\
-        "jobs":["GET","POST","PUT","DELETE"],\
-        "mfolders":["GET","POST","PUT","DELETE"]\
-        }
-    }
-
-roles["servicecustomer"] = {
-    "methods" : ["GET"],\
-    "urls": {
-        "auths":["GET","PUT","POST","DELETE"],\
-        "properties":["GET"],\
-        "usages":["GET"],\
-        "mfiles":["GET","POST","PUT","DELETE"],\
-        "jobs":["GET","POST","PUT","DELETE"],\
-        "mfolders":["GET","POST","PUT","DELETE"]\
-        }
-    }
-        
-roles["mfileowner"] = {
-    "methods" : ["GET","PUT","POST","DELETE"],\
-    "urls": {
-        "auths":["GET","PUT","POST","DELETE"],\
-        "properties":["GET"],\
-        "usages":["GET"],\
-        "file":["GET","PUT","POST","DELETE"],\
-        "base":["GET","PUT","POST","DELETE"],\
-        }
-    }
-
-roles["mfilereadwrite"] = {
-    "methods" : ["GET","PUT","POST","DELETE"],\
-    "urls": {
-        "auths":["GET","PUT","POST","DELETE"],\
-        "properties":["GET"],\
-        "usages":["GET"],\
-        "file":["GET","PUT","POST","DELETE"],\
-        "base":["GET"],\
-        }
-    }
-
-roles["mfilereadonly"] = {
-    "methods" : ["GET"],\
-    "urls": {
-        "auths":["GET","PUT","POST","DELETE"],\
-        "properties":["GET"],\
-        "usages":["GET"],\
-        "file":["GET"],\
-        }
-    }
-
+logging.info(profiles)
 
 class MServeProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
@@ -854,7 +796,7 @@ class MFile(NamedBase):
             job.save()
 
             # MIME type
-            self.mimetype = mimetype = mimefile([self.file.path],[],{})["mimetype"]
+            self.mimetype = mimetype = mimefile([self],[],{})["mimetype"]
 
             tasks = []
 
@@ -867,35 +809,22 @@ class MFile(NamedBase):
             self.save()
 
             thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
-            posterpath = os.path.join( str(self.file) + ".poster.jpg")
-            proxypath = os.path.join( str(self.file) + ".proxy.m4v")
-            fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
-            fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
-            fullproxypath = os.path.join(settings.THUMB_ROOT , proxypath)
-            (thumbhead,tail) = os.path.split(fullthumbpath)
-            (posterhead,tail) = os.path.split(fullposterpath)
-            (proxyhead,tail) = os.path.split(fullproxypath)
-
-            if not os.path.isdir(thumbhead):
-                os.makedirs(thumbhead)
-
-            if not os.path.isdir(posterhead):
-                os.makedirs(posterhead)
 
             if mimetype.startswith('video') or self.file.name.endswith('mxf'):
 
                 th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbvideo.subtask([[self.file.path],[fullthumbpath],th_options ])
-                self.thumb = thumbpath
+                thumbtask = thumbvideo.subtask([[self],[],th_options ])
 
                 po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = thumbvideo.subtask([[self.file.path],[fullposterpath],po_options])
-                self.poster = posterpath
+                postertask = postervideo.subtask([[self],[],po_options])
 
                 profile = self.service.get_profile()
 
                 # TODO : Make this Profile a Model object that can be set
                 if profile == "hd":
+
+                    logging.info("HD ")
+
                     hd_options = {"width":1920,"height":1200}
 
                     vid_options= ["-s","1920x1080","-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k"]
@@ -919,13 +848,16 @@ class MFile(NamedBase):
                     output.thumb = thumbpath
                     output.save()
 
+                    logging.info("HD outputpath %s"%outputpath)
+                    logging.info("HD output.file.path %s"%output.file.path)
+
                     fullhdpath = os.path.join(settings.STORAGE_ROOT , outputpath)
                     (hdhead,tail) = os.path.split(fullhdpath)
 
                     if not os.path.isdir(hdhead):
                         os.makedirs(hdhead)
 
-                    hdtask = proxyvideo.subtask([[self.file.path],[output.file.path],hd_options])
+                    hdtask = transcodevideo.subtask([[self],[output],hd_options])
                     tasks.extend([hdtask])
 
 
@@ -944,20 +876,17 @@ class MFile(NamedBase):
 
                 proxy_options['ffmpeg_args'] = ffmpeg_options
 
-
-                proxytask = proxyvideo.subtask([[self.file.path],[fullproxypath],proxy_options])
-                self.proxy = proxypath
+                proxytask = proxyvideo.subtask([[self],[],proxy_options])
                 tasks.extend([thumbtask,postertask,proxytask])
 
             elif mimetype.startswith('image'):
-                logging.info("Creating thumb inprocess for Image '%s' %s " % (self,mimetype))
+
                 th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbimage.subtask([[self.file.path],[fullthumbpath],th_options])
-                self.thumb = thumbpath
+                thumbtask = thumbimage.subtask([[self],[],th_options])
 
                 po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = thumbimage.subtask([[self.file.path],[fullposterpath],po_options])
-                self.poster = posterpath
+                postertask = posterimage.subtask([[self],[],po_options])
+
                 tasks.extend([thumbtask,postertask])
 
             elif self.file.name.endswith('blend'):
@@ -983,7 +912,7 @@ class MFile(NamedBase):
             job.taskset_id=tsr.taskset_id
             job.save()
 
-            self.save()
+            #self.save()
 
             return job
         else:
@@ -1005,7 +934,7 @@ class MFile(NamedBase):
             job.save()
 
             # MIME type
-            self.mimetype = mimetype = mimefile([self.file.path],[],{})["mimetype"]
+            self.mimetype = mimetype = mimefile([self],[],{})["mimetype"]
 
             tasks = []
 
