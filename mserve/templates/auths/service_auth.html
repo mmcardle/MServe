@@ -7,7 +7,7 @@
 
 {% block usages %}
     <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
-    <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.job_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
+    <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.jobs|length}}</em>&nbsp;&nbsp;&nbsp;</span>
     {% if usagesummary %}
             {% for usagesummary in usagesummary %}
                 {% if usagesummary.metric == "http://mserve/disc_space" %}
@@ -59,7 +59,7 @@
 
     <ul>
             <li><a href="#tabs-1">Files</a></li>
-            <li><a href="#tabs-2">Jobs</a></li>
+            <li><a href="#jobs-tab">Jobs</a></li>
             <li><a href="#tabs-3">Access Control</a></li>
             <li><a href="#tabs-4">Usage</a></li>
 
@@ -84,10 +84,9 @@
 
     </div>
 
-    <div id="tabs-2">
+    <div id="jobs-tab">
 
-        <div id="managedresourcesjobscontent" >
-            <p>No Jobs</p>
+        <div id="jobs" >
         </div>
 
         <div style="clear: both;"></div>
@@ -129,25 +128,20 @@
 <script type="text/javascript">
     $(document).ready(function() {
         //load_mfiles_auth('{{auth.id}}');
-        //load_jobs_auth('{{auth.id}}');
+        load_jobs_auth('{{auth.id}}')
         service_setmanagementproperty('{{auth.id}}');
         $('#newjobbutton').button()
         $('#newjobbutton').click(function(){
-            create_new_job_ui_dialog('', '{{auth.id}}')
+            //create_new_job_ui_dialog('{{auth.id}}',true)
             $("#mfileid").val('');
             $("#serviceid").val('{{auth.id}}');
             $("#dialog-new-job-dialog-form").dialog( "open" );
         });
         create_new_import_ui_dialog('{{auth.id}}',"{% url remoteservice %}","{% url consumer %}" )
+        $(function() {
+            $( "#tabs" ).tabs();
+        });
     });
-</script>
-
-<script>
-$(document).ready(function() {
-    $(function() {
-        $( "#tabs" ).tabs();
-    });
-});
 </script>
 
 

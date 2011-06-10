@@ -480,14 +480,18 @@
         </table>
     </div>
 
-    {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
-    <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" >
-    {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
-    <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" >
-    {%templatetag openvariable%}else mimetype.startsWith("image") {%templatetag closevariable%}
-    <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" >
-     {%templatetag openvariable%}else{%templatetag closevariable%}
-    <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" >
+    {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
+
+        {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" >
+        {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" >
+        {%templatetag openvariable%}else mimetype.startsWith("image") {%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" >
+         {%templatetag openvariable%}else{%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" >
+        {%templatetag openvariable%}/if{%templatetag closevariable%}
+
     {%templatetag openvariable%}/if{%templatetag closevariable%}
 
     </div>

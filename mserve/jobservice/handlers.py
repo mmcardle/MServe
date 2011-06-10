@@ -150,13 +150,28 @@ class JobHandler(BaseHandler):
         r = rc.DELETED
         return r
     
-    def read(self, request, jobid=None, mfileid=None):
+    def read(self, request, jobid=None, mfileid=None, authid=None):
         if jobid:
             job = Job.objects.get(id=jobid)
             return job
         elif mfileid:
             jobs = Job.objects.filter(mfile=mfileid)
             return jobs
+        elif authid:
+            auth = Auth.objects.get(pk=authid)
+            logging.info("S %s" % auth)
+            if utils.is_service(auth.base):
+                ds = DataService.objects.get(id=auth.base.id)
+                logging.info("DS 1")
+                return ds.do("GET","jobs")
+
+                jobs = Job.objects.filter(mfile=auth.base.id)
+                return jobs
+            if utils.is_mfile(auth.base):
+                logging.info("DS 2")
+                jobs = Job.objects.filter(mfile=auth.base.id)
+                return jobs
+
 
 class JobOutputHandler(BaseHandler):
     model = JobOutput

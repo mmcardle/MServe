@@ -116,3 +116,21 @@ function load_mfiles_auth(authid){
        }
      });
  }
+
+function load_jobs_auth(authid){
+     $.ajax({
+       type: "GET",
+       url: '/auths/'+authid+"/jobs/",
+       success: function(msg){
+        $(msg).each(function(index,job){
+            create_job_holder(job)
+                if(!job.tasks.ready){
+                    check_job(job,serviceid)
+                }
+        });
+       },
+       error: function(msg){
+            showError("Error Loading Jobs",objectToString(msg))
+       }
+     });
+}

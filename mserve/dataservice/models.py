@@ -477,6 +477,10 @@ class DataService(NamedBase):
         if not url:
             return self
 
+    def jobs(self):
+        from jobservice.models import Job
+        return Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
+
     def post(self,url, *args, **kwargs):
         # TODO : Folders and Jobs
         logging.info("%s %s " % (args, kwargs))

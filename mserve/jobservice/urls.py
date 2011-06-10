@@ -38,6 +38,7 @@ urlpatterns = patterns('',
 
     url(r'^mfiles/(?P<mfileid>[^/]+)/jobs/$', job_handler),
     url(r'^services/(?P<serviceid>[^/]+)/jobs/$', jobservice_handler),
+    url(r'^auths/(?P<authid>[^/]+)/jobs/$', job_handler),
     url(r'^jobs/$', job_handler),
     url(r'^jobs/(?P<jobid>[^/]+)/$', job_handler),
     url(r'^joboutputs/(?P<outputid>[^/]+)/contents/$', joboutput_handler),

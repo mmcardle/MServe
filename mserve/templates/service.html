@@ -4,7 +4,7 @@
 
 {% block usages %}
     <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
-    <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.job_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
+    <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.jobs|length}}</em>&nbsp;&nbsp;&nbsp;</span>
     {% if usagesummary %}
             {% for usagesummary in usagesummary %}
                 {% if usagesummary.metric == "http://mserve/disc_space" %}
@@ -149,7 +149,7 @@
      </div>
 </div>
 
-<script>
+<script type="text/javascript">
 $(document).ready(function() {
     $(function() {
         $( "#tabs" ).tabs();

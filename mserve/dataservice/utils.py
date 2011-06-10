@@ -139,15 +139,22 @@ def gen_sec_link_orig(rel_path,prefix):
 
 def md5_for_file(file):
     """Return hex md5 digest for a Django FieldFile"""
-    file.open()
-    md5 = hashlib.md5()
-    while True:
-        data = file.read(8192)  # multiple of 128 bytes is best
-        if not data:
-            break
-        md5.update(data)
-    file.close()
-    return md5.hexdigest()
+    try:
+        logging.info("content 5.2 %s " % file)
+        file.open()
+        logging.info("content 5.4 %s " % file)
+        md5 = hashlib.md5()
+        logging.info("content 5.5 %s " % file)
+        while True:
+            data = file.read(8192)  # multiple of 128 bytes is best
+            if not data:
+                break
+            md5.update(data)
+        logging.info("content 6 %s " % md5.hexdigest())
+        file.close()
+        return md5.hexdigest()
+    except Exception as e:
+        raise e
 
 def is_container(base):
     return hasattr(base,"hostingcontainer")
