@@ -27,8 +27,6 @@ import logging
 from celery.task.sets import TaskSet
 from dataservice.forms import *
 from dataservice.models import *
-from dataservice.tasks import thumbimage
-
 from django.http import *
 from django.shortcuts import redirect
 from mserve.dataservice.models import DataService
@@ -37,70 +35,14 @@ from mserve.jobservice.models import *
 from mserve.jobservice.models import Job
 from mserve.jobservice.models import JobOutput
 import dataservice.models as models
+import static as static
 import dataservice.usage_store as usage_store
 from piston.handler import BaseHandler
 from piston.utils import rc
 import settings as settings
 import dataservice.utils as utils
 
-#should be
-#from django.core.cache import cache
-cache = {}
-cache['dataservice.tasks.thumbimage'] = {
-        "nbinputs" : 1,
-        "nboutputs" : 1,
-        "input-0" : { "mimetype" : "image/png" },
-        "output-0" : { "mimetype" : "image/png" },
-        "options" : ['width','height'],
-        "results" :[]
-    }
-cache['jobservice.tasks.copyfromurl'] = {
-        "nbinputs" : 0,
-        "nboutputs" : 1,
-        "output-0" : { "mimetype" : "application/octet-stream" },
-        "options":['url'],
-        "results" :[]
-    }
-cache['jobservice.tasks.render_blender'] =    {
-        "nbinputs" : 1,
-        "nboutputs" : 1,
-        "input-0" : { "mimetype" : "application/octet-stream" },
-        "output-0" : { "mimetype" : "image/png"},
-        "options":['frame'],
-        "results" : []
-    }
-cache['prestoprime.tasks.mxftechmdextractor'] = {
-        "nbinputs" : 1,
-        "nboutputs" : 1,
-        "input-0" : { "mimetype" : "application/octet-stream" },
-        "output-0" : { "mimetype" : "text/plain"},
-        "options":[],
-        "results" : []
-    }
-cache['prestoprime.tasks.d10mxfchecksum'] =    {
-        "nbinputs" : 1,
-        "nboutputs" : 1,
-        "input-0" : { "mimetype" : "application/octet-stream" },
-        "output-0" : { "mimetype" : "text/plain"},
-        "options":[],
-        "results" : []
-    }
-cache['prestoprime.tasks.mxfframecount'] = {
-        "nbinputs" : 1,
-        "nboutputs" : 0,
-        "input-0" : { "mimetype" : "application/octet-stream" },
-        "options":[],
-        "results" : ["lines"]
-    }
-cache['prestoprime.tasks.extractd10frame'] = {
-        "nbinputs" : 1,
-        "nboutputs" : 1,
-        "input-0" : { "mimetype" : "application/octet-stream" },
-        "output-0" : { "mimetype" : "image/png" },
-        "options":['frame'],
-        "results" : []
-    }
-
+job_descriptions = static.job_descriptions
 
 class JobServiceHandler(BaseHandler):
     allowed_methods = ('GET',)
@@ -135,7 +77,7 @@ class JobHandler(BaseHandler):
         if mfileid != "":
             mfile = MFile.objects.get(id=mfileid)
             name = mfile.name
-            inputs.append(mfile.file.path)
+            inputs.append(mfile)
         else:
             r = rc.BAD_REQUEST
             r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
@@ -148,7 +90,7 @@ class JobHandler(BaseHandler):
 
         job_description = None
         try:
-            job_description = cache.get(jobtype)
+            job_description = job_descriptions.get(jobtype)
         except Exception as e:
             logging.info("No job description for job type '%s' %s" % (jobtype,e) )
 
@@ -166,7 +108,7 @@ class JobHandler(BaseHandler):
         for i in range(1,nbinputs-1):
             mfileid = request.POST['input-%s'%i]
             mfile = MFile.objects.get(id=mfileid)
-            inputs.append(mfile.file.path)
+            inputs.append(mfile)
 
         if job == None:
             r = rc.BAD_REQUEST
@@ -177,43 +119,7 @@ class JobHandler(BaseHandler):
             outputmimetype = job_description["output-%s"%i]["mimetype"]
             output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=outputmimetype)
             output.save()
-            
-            callback=None
-            if outputmimetype.startswith("image"):
-                fname = "%s.%s" % (name,"png")
-                outputpath = os.path.join( str(job.id) , fname)
-                output.file = outputpath
-                thumbfolder = os.path.join( settings.THUMB_ROOT, str(job.id))
-                if not os.path.exists(thumbfolder):
-                    os.makedirs(thumbfolder)
-
-                thumbfile= os.path.join( thumbfolder , "%s%s" % (fname,".thumb.png"))
-                thumbpath = os.path.join( str(job.id) , "%s%s" % (fname,".thumb.png"))
-
-                logging.info("THUMBFILE %s" % thumbfile)
-
-                output.thumb = thumbpath
-                output.save()
-                thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                callback = thumbimage.subtask([[output.file.path],[thumbfile],thumboptions])
-
-                logging.info("THUMBFILE callback %s" % callback)
-
-            else:
-                fname = "%s.%s" % (name,"output")
-                outputpath = os.path.join( str(job.id) , fname)
-                output.file = outputpath
-                output.save()
-
-            if callback != None:
-                callbacks.append(callback)
-
-            outputs.append(output.file.path)
-
-            (head,tail) = os.path.split(output.file.path)
-
-            if not os.path.isdir(head):
-                os.makedirs(head)
+            outputs.append(output)
 
         m = get_class(jobtype)
 
@@ -283,7 +189,6 @@ class JobOutputContentsHandler(BaseHandler):
                 pass
 
         dlfoldername = "dl%s"%accessspeed
-        #dlfoldername = "dl"
 
         file=joboutput.file
 

@@ -275,13 +275,10 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
                     $("#argsmessage").empty();
                     $("#inputs").empty();
                     $("#inputsmessage").empty();
-                    $("#job-input-preview").empty()
+                    if(servicepage){
+                        $("#job-input-preview").empty()
+                    }
             }
-    });
-
-    $( "#newjobbutton" )
-        .button().click(function() {
-                $( "#dialog-new-job-dialog-form").dialog( "open" );
     });
 }
 

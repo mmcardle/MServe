@@ -108,7 +108,15 @@
                            window.open("/mfiles/{{mfile.id}}/file/")
                     })
                     load_jobs_mfile('{{mfile.id}}')
+
                     create_new_job_ui_dialog('{{mfile.id}}','')
+                    
+                    $( "#newjobbutton" )
+                        .button().click(function() {
+                                $("#mfileid").val('{{mfile.id}}');
+                                $( "#dialog-new-job-dialog-form").dialog( "open" );
+                    });
+                    
                 });
             </script>
 

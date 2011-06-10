@@ -24,15 +24,14 @@
 from django.http import HttpResponse
 from anyjson import serialize as JSON_dump
 from celery.registry import tasks
-from django.core.cache import cache
-import jobservice as js
-import logging
+import static as static
 
 def list_jobs(request):
     """
     A view returning all defined tasks as a JSON object.
     """
 
+    job_descriptions = static.job_descriptions
     reg = tasks.regular().keys()
     per = tasks.periodic().keys()
 
@@ -40,7 +39,8 @@ def list_jobs(request):
     perfilter = []
 
     for k in reg:
-        if not k.startswith("celery."):
+        #if not k.startswith("celery."):
+        if job_descriptions.has_key(k):
             regfilter.append(k)
 
     for k in per:
@@ -51,11 +51,11 @@ def list_jobs(request):
     perfilter.sort()
 
     descriptions = {}
-    
+
     for jobtype in regfilter:
         try:
             #desc = cache.get(jobtype)
-            desc = js.handlers.cache[jobtype]
+            desc = job_descriptions[jobtype]
             descriptions[jobtype] = desc
         except Exception as e:
             pass

@@ -402,8 +402,22 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
 @task
 def thumbimage(inputs,outputs,options={},callbacks=[]):
 
+    from mserve.dataservice.models import MFile
+    from mserve.jobservice.models import JobOutput
+    
     try:
-        mfile = inputs[0]
+        input = inputs[0]
+        if type(input) == MFile or type(input) == JobOutput:
+            model = inputs[0]
+            path = model.file.path
+            name = model.name
+        elif type(input) == str:
+            path = input
+            name = os.path.basename(path)
+        else:
+            raise Exception("thumbimage cant handle input '%s' of type '%s' "% (input[0],type(input[0])) )
+
+
         widthS = options["width"]
         heightS = options["height"]
         height = int(heightS)
@@ -411,22 +425,46 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
 
         logging.info("Creating %sx%s image for %s" % (width,height,input))
 
-        image = _thumbimage(mfile.file.path,width,height)
+        image = _thumbimage(path,width,height)
 
         if image:
 
-            # Save the thumbnail
-            temp_handle = StringIO()
-            image.save(temp_handle, 'png')
-            temp_handle.seek(0)
+            if type(input) == MFile:
+                # Save the thumbnail
+                temp_handle = StringIO()
+                image.save(temp_handle, 'png')
+                temp_handle.seek(0)
 
-            # Save to the thumbnail field
-            suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],
+                # Save to the thumbnail field
+                suf = SimpleUploadedFile(os.path.split(name)[-1],
+                        temp_handle.read(), content_type='image/png')
+
+                mf = MFile.objects.get(id=model.pk)
+                mf.thumb.save(suf.name+'_thumb.png', suf, save=True)
+            elif type(input) == JobOutput:
+                # Save the thumbnail
+                temp_handle = StringIO()
+                image.save(temp_handle, 'png')
+                temp_handle.seek(0)
+
+                # Save to the thumbnail field
+                suf = SimpleUploadedFile(os.path.split(name)[-1],
+                        temp_handle.read(), content_type='image/png')
+
+                jo = JobOutput.objects.get(id=model.pk)
+                jo.thumb.save(suf.name+'_thumb.png', suf, save=True)
+            elif type(input) == str:
+                im.save(path)
+
+
+            if len(outputs) > 0:
+                temp_handle.seek(0)
+                joboutput = outputs[0]
+                from mserve.jobservice.models import JobOutput
+                jo = JobOutput.objects.get(id=joboutput.pk)
+                suf2 = SimpleUploadedFile(os.path.split(name)[-1],
                     temp_handle.read(), content_type='image/png')
-
-            from mserve.dataservice.models import MFile
-            mf = MFile.objects.get(id=mfile.pk)
-            mf.thumb.save(suf.name+'_thumb.png', suf, save=True)
+                jo.file.save(name+'_thumb.png', suf2, save=True)
 
             logging.info("Thumbnail created %s" % (image))
 

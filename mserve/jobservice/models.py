@@ -25,19 +25,18 @@ from django.db import models
 from dataservice.models import *
 from dataservice import utils
 from dataservice import storage
+from dataservice.tasks import thumbimage
 from celery.result import TaskSetResult
 # Create your models here.
 
 thumbpath = settings.THUMB_PATH
+mediapath = settings.MEDIA_URL
 
 class Job(NamedBase):
     #service  = models.ForeignKey(DataService)
     mfile  = models.ForeignKey(MFile)
     created  = models.DateTimeField(auto_now_add=True)
     taskset_id = models.CharField(max_length=200)
-
-    class Meta:
-        ordering = ('-created', 'name')
 
     def save(self):
         if not self.id:
@@ -97,9 +96,22 @@ class JobOutput(NamedBase):
     thumb = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
 
     def thumburl(self):
-        return "%s%s" % (thumbpath,self.thumb)
-
+        if self.thumb and self.thumb != "":
+            return "%s%s" % (thumbpath,self.thumb)
+        else:
+            if self.mimetype:
+                if self.mimetype.startswith("image"):
+                    return os.path.join(mediapath,"images","image-x-generic.png")
+                if self.mimetype.startswith("text"):
+                    return os.path.join(mediapath,"images","text-x-generic.png")
+        return os.path.join(mediapath,"images","package-x-generic.png")
+    
     def save(self):
         if not self.id:
             self.id = utils.random_id()
+
+        if not self.thumb and self.mimetype.startswith('image'):
+            options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+            thumbimage.delay([self],[],options)
+
         super(JobOutput, self).save()

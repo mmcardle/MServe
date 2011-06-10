@@ -150,10 +150,10 @@ function create_job_holder(job){
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
         $("#joboutputs-"+id).hide()
-        $('#jobheader-'+id).click(function() {          create_job_paginator(job);show_job(job);     });
-        $('#jobicon-'+id).click(function() {            create_job_paginator(job);show_job(job);     });
-        $('#jobinfo-'+id).click(function() {            create_job_paginator(job);show_job(job);     });
-        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(job);show_job(job);     });
+        $('#jobheader-'+id).click(function() {          create_job_paginator(job);toggle_job(job);     });
+        $('#jobicon-'+id).click(function() {            create_job_paginator(job);toggle_job(job);     });
+        $('#jobinfo-'+id).click(function() {            create_job_paginator(job);toggle_job(job);     });
+        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(job);toggle_job(job);     });
 
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
         $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
@@ -167,23 +167,19 @@ function create_job_holder(job){
 }
 
 function update_job_outputs(job){
-    id = job.id
-    $("#joboutputs-"+id).empty()
-
-    $( "#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+id)
-
+    $("#joboutputs-"+job.id).empty()
+    $( "#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+job.id)
 }
 
 function show_job(job){
-    id = job.id
+    $('#joboutputs-'+job.id).show('slide');
+    $('#jobpreviewpaginator-'+job.id).show('blind');
 
-    if( $('#joboutputs-'+id).is(':hidden') ) {
-        $('#joboutputs-'+id).toggle('slide');
-    }
+}
 
-    if( $('#jobpreviewpaginator-'+id).is(':hidden') ) {
-        $('#jobpreviewpaginator-'+id).toggle('blind');
-    }
+function toggle_job(job){
+    $('#joboutputs-'+job.id).toggle('slide');
+    $('#jobpreviewpaginator-'+job.id).toggle('blind');
 }
 
 function mfile_job_ajax(mfileid,data){

@@ -106,7 +106,7 @@ def mfile_get_handler( sender, mfile=False, **kwargs):
                             output.thumb = thumbpath
                             output.save()
                             thumboptions = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                            callback = thumbimage.subtask([output.file.path,thumbfile,thumboptions])
+                            callback = thumbimage.subtask([output,thumbfile,thumboptions])
 
                             logging.info("Creating task %s %s " % (mfile.file.path,output.file.path))
                             inputs    = [mfile.file.path]

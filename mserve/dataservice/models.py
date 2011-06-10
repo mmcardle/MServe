@@ -89,8 +89,6 @@ DEFAULT_PROFILE = "default"
 roles = static.default_roles
 profiles = static.default_profiles
 
-logging.info(profiles)
-
 class MServeProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
     bases = models.ManyToManyField('NamedBase', related_name='bases')
@@ -979,11 +977,11 @@ class MFile(NamedBase):
             elif mimetype.startswith('image'):
                 logging.info("Creating thumb inprocess for Image '%s' %s " % (self,mimetype))
                 th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbimage.subtask([[self.file.path],[fullthumbpath],th_options])
+                thumbtask = thumbimage.subtask([[self],[fullthumbpath],th_options])
                 self.thumb = thumbpath
 
                 po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = thumbimage.subtask([[self.file.path],[fullposterpath],po_options])
+                postertask = thumbimage.subtask([[self],[fullposterpath],po_options])
                 self.poster = posterpath
                 tasks.extend([thumbtask,postertask])
 
