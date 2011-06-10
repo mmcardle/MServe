@@ -18,5 +18,4 @@ if [ -f "/var/mserve/mservedb" ]; then
 	sudo chown www-data:www-data /var/mserve/mservedb 
 fi
 cat $PIDFILE
-echo "Perms"
 echo "Running"
