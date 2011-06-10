@@ -368,9 +368,6 @@
     {%templatetag openvariable%}else{%templatetag closevariable%}
         <div class="taskholder"><b>Task :</b>
             <span style='color:green' >Name</span> - <span style='color:blue' >${name}</span>
-            <span style='color:green' >Message</span> - <span style='color:red' >
-                
-            </span>
             <div style="padding-left: 20px;"><b>Result :</b><span style="font-family: Courier">${JSON.stringify($item["data"]["result"],replacer)}</span></div>
         </div>
     {%templatetag openvariable%}/if  {%templatetag closevariable%}

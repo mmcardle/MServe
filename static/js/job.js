@@ -34,10 +34,18 @@ function create_job_paginator(job){
                 end=joboutputs.length;
             }
 
-            $( "#jobOutputTemplate" ).tmpl( joboutputs.slice(start,end) ) .appendTo( jobpaginator );
+            $(joboutputs.slice(start,end)).each(function(index,joboutput){
+                if(joboutput.file != ""){
+                    $( "#jobOutputTemplate" ).tmpl( joboutput ) .appendTo( jobpaginator );
+                }else{
+                    $('<div></div>').html("<span class='red'>Output '"+joboutput.name+"' Empty&nbsp;</span>").appendTo( jobpaginator );
+                }
+            })
+
+            
 
             for(var j=start;j<end;j++) {
-                if(joboutputs[j].mimetype && joboutputs[j].mimetype.startsWith('text')){
+                if(joboutputs[j].file != "" && joboutputs[j].mimetype && joboutputs[j].mimetype.startsWith('text')){
                     load_joboutput_text(joboutputs[j].id)
                 }
             }
@@ -232,7 +240,7 @@ function check_job(job){
             window.setTimeout(function(){ check_job(msg) },5000)
         }else{
             if(msg.tasks.failed){
-                $('#job-'+job.id).addClass('ui-state-error')
+                $('#jobinfo-'+job.id).addClass('ui-state-error')
             }else{
                 create_job_holder(msg)
                 create_job_paginator(msg)

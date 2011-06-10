@@ -1050,10 +1050,26 @@ class MFile(NamedBase):
         return os.path.join(mediapath,"images","package-x-generic.png")
 
     def posterurl(self):
-        return "%s%s" % (thumbpath,self.poster)
+        if self.poster and self.poster != "":
+            return "%s%s" % (thumbpath,self.poster)
+        else:
+            if self.mimetype:
+                if self.mimetype.startswith("image"):
+                    return os.path.join(mediapath,"images","image-x-generic.png")
+                if self.mimetype.startswith("text"):
+                    return os.path.join(mediapath,"images","text-x-generic.png")
+        return os.path.join(mediapath,"images","package-x-generic.png")
 
     def proxyurl(self):
-        return "%s%s" % (thumbpath,self.proxy)
+        if self.poster and self.poster != "":
+            return "%s%s" % (thumbpath,self.proxy)
+        else:
+            if self.mimetype:
+                if self.mimetype.startswith("image"):
+                    return os.path.join(mediapath,"images","image-x-generic.png")
+                if self.mimetype.startswith("text"):
+                    return os.path.join(mediapath,"images","text-x-generic.png")
+        return os.path.join(mediapath,"images","package-x-generic.png")
 
     def save(self):
         if not self.id:

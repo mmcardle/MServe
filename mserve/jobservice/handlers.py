@@ -21,6 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+from django.http import HttpResponseNotFound
 import os
 import os.path
 import logging
@@ -117,7 +118,7 @@ class JobHandler(BaseHandler):
 
         for i in range(0,nboutputs):
             outputmimetype = job_description["output-%s"%i]["mimetype"]
-            output = JobOutput(name="Job '%s'"%jobtype,job=job,mimetype=outputmimetype)
+            output = JobOutput(name="Output %s '%s'"%(i,jobtype),job=job,mimetype=outputmimetype)
             output.save()
             outputs.append(output)
 
@@ -168,6 +169,13 @@ class JobOutputContentsHandler(BaseHandler):
 
         joboutput = JobOutput.objects.get(id=outputid)
 
+        file=joboutput.file
+
+        if file == "":
+            return HttpResponseNotFound()
+
+        outputfilepath = file.path
+
         logging.info(joboutput)
         job = joboutput.job
         logging.info(job)
@@ -190,7 +198,7 @@ class JobOutputContentsHandler(BaseHandler):
 
         dlfoldername = "dl%s"%accessspeed
 
-        file=joboutput.file
+        
 
         p = str(file)
 
@@ -201,20 +209,20 @@ class JobOutputContentsHandler(BaseHandler):
 
         fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
         fullfilepathfolder = os.path.dirname(fullfilepath)
-        mfilefilepath = file.path
+        outputfilepath = file.path
 
         logging.info("Redirect URL      = %s " % redirecturl)
         logging.info("fullfilepath      = %s " % fullfilepath)
         logging.info("fullfilefolder    = %s " % fullfilepathfolder)
-        logging.info("mfilefp      = %s " % mfilefilepath)
+        logging.info("mfilefp      = %s " % outputfilepath)
         logging.info("mfilef       = %s " % file)
 
         if not os.path.exists(fullfilepathfolder):
             os.makedirs(fullfilepathfolder)
 
         if not os.path.exists(fullfilepath):
-            logging.info("linking %s (exist=%s) to %s (exists=%s)" % (mfilefilepath,os.path.exists(mfilefilepath),fullfilepath,os.path.exists(fullfilepath)))
-            os.link(mfilefilepath,fullfilepath)
+            logging.info("linking %s (exist=%s) to %s (exists=%s)" % (outputfilepath,os.path.exists(outputfilepath),fullfilepath,os.path.exists(fullfilepath)))
+            os.link(outputfilepath,fullfilepath)
 
         usage_store.record(joboutput.id,models.metric_access,joboutput.file.size)
 

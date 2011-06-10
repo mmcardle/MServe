@@ -32,110 +32,150 @@ from celery.task.sets import subtask
 from cStringIO import StringIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files import File
+from django.core.files.base import ContentFile
 
 @task
 def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
-    inputfile = inputs[0]
-    outputfile = outputs[0]
-    logging.info("Processing mxftechmdextractor job on %s" % (inputfile))
-    if not os.path.exists(inputfile):
-        logging.info("Inputfile  %s does not exist" % (inputfile))
-        return False
-    args = ["/home/mm/dev/MXFTechMDExtractorPlugin/bin/run.sh",inputfile]
-    cmd = " ".join(args)
-    p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
-    output = p.stdout.read()
-    f = open(outputfile, 'w')
-    f.write(output)
+    try:
+        mfile = inputs[0]
+        inputfile = mfile.file.path
+        joboutput = outputs[0]
 
-    for callback in callbacks:
-        subtask(callback).delay()
+        logging.info("Processing mxftechmdextractor job on %s" % (inputfile))
+        if not os.path.exists(inputfile):
+            logging.info("Inputfile  %s does not exist" % (inputfile))
+            return False
 
-    return {"success":True,"message":"MXFTechMDExtractorPlugin successful"}
+        args = ["/home/mm/dev/MXFTechMDExtractorPlugin/bin/run.sh",inputfile]
+        cmd = " ".join(args)
+        p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
 
+        from mserve.jobservice.models import JobOutput
+        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo.file.save(mfile.name+'_mxftechmdextractor.txt', ContentFile(p.stdout.read()), save=True)
+
+        for callback in callbacks:
+            subtask(callback).delay()
+
+        return {"success":True,"message":"MXFTechMDExtractorPlugin successful"}
+    except Exception as e:
+        logging.info("Error with mxftechmdextractor %s" % e)
+        raise e
 @task
 def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
+    try:
+        mfile = inputs[0]
+        joboutput = outputs[0]
 
-    mfile = inputs[0]
-    joboutput = outputs[0]
+        inputfile = mfile.file.path
+        outputfile = tempfile.NamedTemporaryFile()
 
-    inputfile = mfile.file.path
-    outputfile = tempfile.NamedTemporaryFile()
+        logging.info("Processing d10mxfchecksum job on %s" % (inputfile))
 
-    logging.info("Processing d10mxfchecksum job on %s" % (inputfile))
+        if not os.path.exists(inputfile):
+            logging.info("Inputfile  %s does not exist" % (inputfile))
+            return False
 
-    if not os.path.exists(inputfile):
-        logging.info("Inputfile  %s does not exist" % (inputfile))
-        return False
+        args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
 
-    args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
+        ret = subprocess.call(args)
 
-    subprocess.call(args)
+        if ret != 0:
+            raise Exception("d10mxfchecksum failed")
 
-    outputfile.seek(0)
-    suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],outputfile.read(), content_type='text/plain')
+        outputfile.seek(0)
+        suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='text/plain')
 
-    from mserve.jobservice.models import JobOutput
-    jo = JobOutput.objects.get(id=joboutput.pk)
-    jo.file.save(suf.name+'_d10mxfchecksum.txt', suf, save=True)
+        from mserve.jobservice.models import JobOutput
+        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo.file.save(suf.name+'_d10mxfchecksum.txt', suf, save=True)
 
-    for callback in callbacks:
-        subtask(callback).delay()
+        for callback in callbacks:
+            subtask(callback).delay()
 
-    return {"success":True,"message":"d10mxfchecksum successful"}
-
+        return {"success":True,"message":"d10mxfchecksum successful"}
+    except Exception as e:
+        logging.info("Error with d10mxfchecksum %s" % e)
+        raise e
+    
 @task
 def mxfframecount(inputs,outputs,options={},callbacks=[]):
 
-    mfile = inputs[0]
-    inputfile = mfile.file.path
+    try:
+        mfile = inputs[0]
+        inputfile = mfile.file.path
 
-    outputfile = tempfile.NamedTemporaryFile()
-    logging.info("Processing mxfframecount job on %s" % (inputfile))
+        outputfile = tempfile.NamedTemporaryFile()
+        logging.info("Processing mxfframecount job on %s" % (inputfile))
 
-    if not os.path.exists(inputfile):
-        logging.info("Inputfile  %s does not exist" % (inputfile))
-        return False
+        if not os.path.exists(inputfile):
+            logging.info("Inputfile  %s does not exist" % (inputfile))
+            return False
 
-    args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
-    logging.info(args)
-    subprocess.call(args)
-    frames = 0
-    for line in open(outputfile.name):
-        frames += 1
+        args = ["d10sumchecker","-i",inputfile,"-o",outputfile.name]
+        logging.info(args)
+        ret = subprocess.call(args)
 
-    # TODO: subtract 1 for additional output
-    frames = frames -1
-    
-    import dataservice.usage_store as usage_store
-    usage_store.record(mfile.id,"http://prestoprime/mxf_frames_ingested",frames)
+        if ret != 0:
+            raise Exception("mxfframecount failed")
 
-    for callback in callbacks:
-        subtask(callback).delay()
+        frames = 0
+        for line in open(outputfile.name):
+            frames += 1
 
-    return {"success":True,"message":"mxfframecount successful", "frames": frames }
+        # TODO: subtract 1 for additional output
+        frames = frames -1
+
+        import dataservice.usage_store as usage_store
+        usage_store.record(mfile.id,"http://prestoprime/mxf_frames_ingested",frames)
+
+        for callback in callbacks:
+            subtask(callback).delay()
+
+        return {"success":True,"message":"mxfframecount successful", "frames": frames }
+    except Exception as e:
+        logging.info("Error with mxfframecount %s" % e)
+        raise e
 
 @task(max_retries=3)
 def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
-    inputfile = str(inputs[0])
-    outputfile = str(outputs[0])
-    frame = str(options['frame'])
-    logging.info("Processing extractd10frame job on %s" % (inputfile))
-    if not os.path.exists(inputfile):
-        logging.info("Inputfile  %s does not exist" % (inputfile))
-        return False
+    try:
+        mfile = inputs[0]
+        inputfile = mfile.file.path
 
-    import pyffmpeg
+        joboutput = outputs[0]
+        frame = str(options['frame'])
 
-    stream = pyffmpeg.VideoStream()
-    stream.open(inputfile)
-    image = stream.GetFrameNo(frame)
-    image.save(outputfile)
+        logging.info("Processing extractd10frame job on %s" % (inputfile))
+        if not os.path.exists(inputfile):
+            logging.info("Inputfile  %s does not exist" % (inputfile))
+            return False
 
-    for callback in callbacks:
-            subtask(callback).delay()
+        import pyffmpeg
 
-    return {"success":True,"message":"extractd10frame successful"}
+        stream = pyffmpeg.VideoStream()
+        stream.open(inputfile)
+        image = stream.GetFrameNo(frame)
 
+        # Save the thumbnail
+        temp_handle = StringIO()
+        image.save(temp_handle, 'png')
+        temp_handle.seek(0)
+
+        # Save to the thumbnail field
+        suf = SimpleUploadedFile("mfile",temp_handle.read(), content_type='image/png')
+
+        from mserve.jobservice.models import JobOutput
+        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo.file.save(mfile.name+'_extractd10frame.png', suf , save=False)
+        jo.save()
+
+        for callback in callbacks:
+                subtask(callback).delay()
+
+        return {"success":True,"message":"extractd10frame successful"}
+    except Exception as e:
+        logging.info("Error with extractd10frame %s" % e)
+        raise e
 
 

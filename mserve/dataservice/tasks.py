@@ -73,7 +73,7 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
         temp_handle.seek(0)
 
         # Save to the thumbnail field
-        suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],temp_handle.read(), content_type='image/png')
+        suf = SimpleUploadedFile("mfile",temp_handle.read(), content_type='image/png')
 
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfile.pk)
@@ -106,7 +106,7 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
         temp_handle.seek(0)
 
         # Save to the thumbnail field
-        suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],temp_handle.read(), content_type='image/png')
+        suf = SimpleUploadedFile('mfile',temp_handle.read(), content_type='image/png')
 
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfile.pk)
@@ -270,7 +270,7 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
         # Save to the thumbnail field
         outfile.seek(0)
-        suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],
+        suf = SimpleUploadedFile("mfile",
                 outfile.read(), content_type='image/png')
 
         from mserve.dataservice.models import MFile
@@ -379,7 +379,7 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
             temp_handle.seek(0)
 
             # Save to the poster field
-            suf = SimpleUploadedFile(os.path.split(mfile.name)[-1],
+            suf = SimpleUploadedFile("mfile",
                     temp_handle.read(), content_type='image/png')
 
             from mserve.dataservice.models import MFile
@@ -399,7 +399,7 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
         raise e
 
 
-@task
+@task(max_retries=3)
 def thumbimage(inputs,outputs,options={},callbacks=[]):
 
     from mserve.dataservice.models import MFile
@@ -407,10 +407,14 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
     
     try:
         input = inputs[0]
-        if type(input) == MFile or type(input) == JobOutput:
+        if type(input) == MFile:
             model = inputs[0]
             path = model.file.path
-            name = model.name
+            name = "mfile"
+        elif type(input) == JobOutput:
+            model = inputs[0]
+            path = model.file.path
+            name = "output"
         elif type(input) == str:
             path = input
             name = os.path.basename(path)
@@ -436,7 +440,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
                 temp_handle.seek(0)
 
                 # Save to the thumbnail field
-                suf = SimpleUploadedFile(os.path.split(name)[-1],
+                suf = SimpleUploadedFile(name,
                         temp_handle.read(), content_type='image/png')
 
                 mf = MFile.objects.get(id=model.pk)
@@ -448,7 +452,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
                 temp_handle.seek(0)
 
                 # Save to the thumbnail field
-                suf = SimpleUploadedFile(os.path.split(name)[-1],
+                suf = SimpleUploadedFile(name,
                         temp_handle.read(), content_type='image/png')
 
                 jo = JobOutput.objects.get(id=model.pk)
@@ -462,7 +466,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
                 joboutput = outputs[0]
                 from mserve.jobservice.models import JobOutput
                 jo = JobOutput.objects.get(id=joboutput.pk)
-                suf2 = SimpleUploadedFile(os.path.split(name)[-1],
+                suf2 = SimpleUploadedFile("output",
                     temp_handle.read(), content_type='image/png')
                 jo.file.save(name+'_thumb.png', suf2, save=True)
 

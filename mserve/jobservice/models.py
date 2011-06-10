@@ -110,7 +110,7 @@ class JobOutput(NamedBase):
         if not self.id:
             self.id = utils.random_id()
 
-        if not self.thumb and self.mimetype.startswith('image'):
+        if self.file and not self.thumb and self.mimetype.startswith('image'):
             options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
             thumbimage.delay([self],[],options)
 
