@@ -791,132 +791,96 @@ class MFile(NamedBase):
     def post_process(self):
         if self.file:
 
-            from jobservice.models import Job
-            from jobservice.models import JobOutput
+            logging.info("ingest")
 
-            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
-            job.save()
+            profile = self.service.get_profile()
+
+            #TODO - pre ingest
+            preingest_tasks = profiles[profile]["pre-ingest"]
 
             # MIME type
             self.mimetype = mimetype = mimefile([self],[],{})["mimetype"]
-
-            tasks = []
-
-            # checksum
-            md5task = md5file.subtask([[self],[],{}])
-            tasks.extend([md5task])
-
             # record size
             self.size = self.file.size
             self.save()
 
-            thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
+            ingest_tasks = profiles[profile]["ingest"]
 
-            if mimetype.startswith('video') or self.file.name.endswith('mxf'):
+            logging.info(ingest_tasks)
 
-                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbvideo.subtask([[self],[],th_options ])
+            in_tasks = []
 
-                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = postervideo.subtask([[self],[],po_options])
-
-                profile = self.service.get_profile()
-
-                # TODO : Make this Profile a Model object that can be set
-                if profile == "hd":
-
-                    logging.info("HD ")
-
-                    hd_options = {"width":1920,"height":1200}
-
-                    vid_options= ["-s","1920x1080","-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k"]
-                    aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
-
-                    # TODO: Fix audio for mxf
-                    if self.file.name.endswith('mxf'):
-                        aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
-
-                    hd_ffmpeg_options = []
-                    hd_ffmpeg_options.extend(vid_options)
-                    hd_ffmpeg_options.extend(aud_options)
-
-                    hd_options['ffmpeg_args'] = hd_ffmpeg_options
-
-                    output = JobOutput(name="HD Job Output ",job=job, mimetype="video/quicktime")
-                    output.save()
-                    fname = "%s.%s" % (self.name,"mov")
-                    outputpath = os.path.join( str(job.id) , fname)
-                    output.file = outputpath
-                    output.thumb = thumbpath
-                    output.save()
-
-                    logging.info("HD outputpath %s"%outputpath)
-                    logging.info("HD output.file.path %s"%output.file.path)
-
-                    fullhdpath = os.path.join(settings.STORAGE_ROOT , outputpath)
-                    (hdhead,tail) = os.path.split(fullhdpath)
-
-                    if not os.path.isdir(hdhead):
-                        os.makedirs(hdhead)
-
-                    hdtask = transcodevideo.subtask([[self],[output],hd_options])
-                    tasks.extend([hdtask])
+            from jobservice.models import Job
+            from jobservice.models import JobOutput
 
 
-                proxy_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
+            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
+            job.save()
 
-                vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(settings.postersize[0],settings.postersize[1])]
-                aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+            for ingest_task in ingest_tasks:
+                if ingest_task.has_key("task"):
+                    task_classname = ingest_task["task"]
+                    logging.info("Processing task %s " % task_classname )
 
-                # TODO: Fix audio for mxf
-                if self.file.name.endswith('mxf'):
-                    aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
+                    if ingest_task.has_key("condition"):
+                        condition = ingest_task["condition"]
+                        logging.info("Task has condition %s " % condition )
 
-                ffmpeg_options = []
-                ffmpeg_options.extend(vid_options)
-                ffmpeg_options.extend(aud_options)
+                        passed = eval(condition,{"mfile":self})
 
-                proxy_options['ffmpeg_args'] = ffmpeg_options
+                        if not passed:
+                            logging.info("MFile %s failed condition %s " % (self,condition) )
+                            continue
+                        else:
+                            logging.info("MFile %s passed condition %s " % (self,condition) )
 
-                proxytask = proxyvideo.subtask([[self],[],proxy_options])
-                tasks.extend([thumbtask,postertask,proxytask])
+                    task_type = utils.get_class(task_classname)
 
-            elif mimetype.startswith('image'):
+                    logging.info("Task type %s " % task_type)
 
-                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbimage.subtask([[self],[],th_options])
+                    args = {}
 
-                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = posterimage.subtask([[self],[],po_options])
+                    if ingest_task.has_key("args"):
+                        args = ingest_task["args"]
 
-                tasks.extend([thumbtask,postertask])
+                    output_arr = []
+                    if ingest_task.has_key("outputs"):
+                        logging.info("ingest_task %s" % ingest_task)
+                        outputs = ingest_task["outputs"]
+                        logging.info("Outputs %s" % outputs)
+                        for output in outputs:
+                            mimetype = "application/octet"
+                            name = "output"
+                            if output.has_key("mimetype"):
+                                mimetype = output['mimetype']
+                            if output.has_key("name"):
+                                name = output['name']
+                            output = JobOutput(name=name,job=job, mimetype=mimetype)
+                            output.save()
+                            output_arr.append(output)
 
-            elif self.file.name.endswith('blend'):
-                logging.info("Creating Blender thumb '%s' %s " % (self,mimetype))
-                # TODO : Change to a Preview of a frame of the blend file
-                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                blender_path = os.path.join(settings.MEDIA_ROOT,"images/blender.png")
-                thumbtask = thumbimage.subtask([[blender_path],[fullthumbpath],th_options])
-                self.thumb = thumbpath
-                tasks.extend([thumbtask])
-            else:
-                logging.info("Not creating thumb for '%s' %s " % (self,mimetype))
+                    task = task_type.subtask([[self],output_arr,args])
 
-            logging.debug("Backing up '%s' " % self)
+                    logging.info("Task created %s " % task )
 
-            backup_task = backup_mfile.subtask([[self],[]])
-            tasks.extend([backup_task])
+                    in_tasks.append(task)
 
-            ts = TaskSet(tasks=tasks)
+                else:
+                    logging.info("Task has no task type %s " % ingest_task)
+
+            logging.info("%s" % in_tasks)
+
+
+
+            ts = TaskSet(tasks=in_tasks)
             tsr = ts.apply_async()
             tsr.save()
 
             job.taskset_id=tsr.taskset_id
             job.save()
 
-            #self.save()
-
             return job
+
         else:
             # Return a job with no tasks for an empty file
             job = Job(name="%s Empty Ingest Job"%(self.name),mfile=self)
@@ -1045,12 +1009,13 @@ class MFile(NamedBase):
     def thumburl(self):
         if self.thumb and self.thumb != "":
             return "%s%s" % (thumbpath,self.thumb)
-        else:
-            if self.mimetype:
-                if self.mimetype.startswith("image"):
-                    return os.path.join(mediapath,"images","image-x-generic.png")
-                if self.mimetype.startswith("text"):
-                    return os.path.join(mediapath,"images","text-x-generic.png")
+        elif self.mimetype:
+            if self.name.endswith(".blend"):
+                return os.path.join(mediapath,"images/blender.png")
+            if self.mimetype.startswith("image"):
+                return os.path.join(mediapath,"images","image-x-generic.png")
+            if self.mimetype.startswith("text"):
+                return os.path.join(mediapath,"images","text-x-generic.png")
         return os.path.join(mediapath,"images","package-x-generic.png")
 
     def posterurl(self):

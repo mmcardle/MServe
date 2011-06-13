@@ -183,8 +183,11 @@ LOGIN_REDIRECT_URL='/'
 # JOB CONFIG
 USE_CELERY=True
 DEFAULT_ACCESS_SPEED = 50
+
+# Define Sizes
 thumbsize = (210,128)
 postersize = (420,256)
+wuxga = (1920,1200)
 
 # For FGCI
 FORCE_SCRIPT_NAME = ''

@@ -39,6 +39,14 @@ import sys
 
 fmt = "%3.2f"
 
+def get_class( kls ):
+    parts = kls.split('.')
+    module = ".".join(parts[:-1])
+    m = __import__( module )
+    for comp in parts[1:]:
+        m = getattr(m, comp)
+    return m
+
 def get_methods_for_auth(auth):
     methodslist = [ pickle.loads(base64.b64decode(method_enc)) for method_enc in auth.roles.all().values_list('methods_encoded',flat=True) ]
     methods = [item for sublist in methodslist for item in sublist]

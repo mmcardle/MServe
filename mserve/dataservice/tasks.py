@@ -50,6 +50,8 @@ def _thumbvideo(videopath,width,height):
 
     image = Image.open(tfile.name)
 
+    image.thumbnail((width,height))
+
     return image
 
 
@@ -73,13 +75,15 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
         temp_handle.seek(0)
 
         # Save to the thumbnail field
-        suf = SimpleUploadedFile("mfile",temp_handle.read(), content_type='image/png')
+        suf = SimpleUploadedFile("mfile_thumb",temp_handle.read(), content_type='image/png')
 
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfile.pk)
-        mf.thumb.save(suf.name+'_thumb.png', suf, save=True)
+        #mf.thumb.save(suf.name+'.png', suf, save=True)
+        mfile.thumb.save(suf.name+'.png', suf, save=True)
 
-        logging.info("Thumb %s" % (mf.thumb.path))
+        logging.info("Thumb Video %s" % (mfile.thumb))
+        logging.info("Thumb Video %s" % (mf.thumb))
 
         return {"success":True,"message":"Thumbnail '%sx%s' of video successful"%(width,height)}
     except Exception as e:
@@ -106,11 +110,13 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
         temp_handle.seek(0)
 
         # Save to the thumbnail field
-        suf = SimpleUploadedFile('mfile',temp_handle.read(), content_type='image/png')
+        suf = SimpleUploadedFile('mfile_poster',temp_handle.read(), content_type='image/png')
 
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfile.pk)
-        mf.poster.save(suf.name+'_poster.png', suf, save=True)
+        mf.poster.save(suf.name+'.png', suf, save=True)
+
+        logging.info("Poster Video %s" % (mf.poster.path))
 
         return {"success":True,"message":"Poster '%sx%s' of video successful"%(width,height)}
     except Exception as e:
@@ -122,8 +128,6 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
     mfile = inputs[0]
     infile = mfile.file.path
-    width=options["width"]
-    height=options["height"]
     _ffmpeg_args=options["ffmpeg_args"]
 
     logfile = open('/var/mserve/mserve.log','a')
@@ -180,8 +184,6 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         p.communicate()
 
         logging.info("Transcode 2 ")
-        logging.info("Transcode 2 %s"%type(tmpfile))
-        logging.info("Transcode 2 %s"%type(toutfile.name))
 
         qt_args = ["qt-faststart", tmpfile, tmpoutfile]
         qt = Popen(qt_args, stdin=PIPE, close_fds=True)
@@ -191,7 +193,7 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         jo = JobOutput.objects.get(id=joboutput.pk)
         jo.file.save(mfile.name+'_transcode.mp4', File(toutfile), save=True)
 
-        logging.info("Created file at : %s" % joboutput.file.path)
+        logging.info("Created file at : %s" % jo.file.path)
 
     except Exception as e:
         logging.info("Error encoding video %s" % e)
@@ -206,15 +208,13 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         for callback in callbacks:
             subtask(callback).delay()
 
-        return {"success":True,"message":"Transcode '%sx%s'  successful"%(width,height)}
+        return {"success":True,"message":"Transcode  successful"}
 
 @task
 def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
     mfile = inputs[0]
     infile = mfile.file.path
-    width=options["width"]
-    height=options["height"]
     _ffmpeg_args=options["ffmpeg_args"]
 
     logfile = open('/var/mserve/mserve.log','a')
@@ -290,7 +290,7 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
         for callback in callbacks:
             subtask(callback).delay()
 
-        return {"success":True,"message":"Transcode '%sx%s'  successful"%(width,height)}
+        return {"success":True,"message":"Transcode successful"}
 
 @task
 def mimefile(inputs,outputs,options={},callbacks=[]):
@@ -407,6 +407,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
     
     try:
         input = inputs[0]
+
         if type(input) == MFile:
             model = inputs[0]
             path = model.file.path
@@ -420,7 +421,6 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
             name = os.path.basename(path)
         else:
             raise Exception("thumbimage cant handle input '%s' of type '%s' "% (input[0],type(input[0])) )
-
 
         widthS = options["width"]
         heightS = options["height"]

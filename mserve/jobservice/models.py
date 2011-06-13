@@ -62,7 +62,7 @@ class Job(NamedBase):
                 #    results.append(subtask.result)
                     #results.append({"name":subtask.task_name,"success":subtask.successful()})
                 #else:
-                results.append({"name":subtask.task_name,"result":subtask.result,"success":subtask.successful()})
+                results.append({"name":subtask.task_name,"result":subtask.result,"success":subtask.successful(),"state":subtask.state})
             dict["result"] = results
 
             dict["completed_count"] = tsr.completed_count()

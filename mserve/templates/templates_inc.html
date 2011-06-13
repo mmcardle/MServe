@@ -358,7 +358,7 @@
 
 <script id="jobTaskResultTemplate" type="text/x-jquery-tmpl">
     {%templatetag openvariable%}if success {%templatetag closevariable%}
-        <div class="taskholder"><b>Task :</b>  
+        <div class="taskholder"><b>Task :</b>
             <span style='color:green' >Name</span> - <span style='color:blue' >${name}</span>
             <span style='color:green' >Message</span> - <span style='color:blue' >
                     {%templatetag openvariable%}if result {%templatetag closevariable%}
@@ -368,9 +368,17 @@
             <div style="padding-left: 20px;"><b>Result :</b><span style="font-family: Courier">${JSON.stringify($item["data"]["result"],replacer)}</span></div>
         </div>
     {%templatetag openvariable%}else{%templatetag closevariable%}
-        <div class="taskholder"><b>Task :</b>
-            <span style='color:green' >Name</span> - <span style='color:blue' >${name}</span>
-            <div style="padding-left: 20px;"><b>Result :</b><span style="font-family: Courier">${JSON.stringify($item["data"]["result"],replacer)}</span></div>
+    <div class="taskholder">
+        <b>Task :</b>
+            <span style='color:green' >Name</span> - <span style='color:red' >${name}</span>
+            {%templatetag openvariable%}if state{%templatetag closevariable%}
+                {%templatetag openvariable%}if state == "PENDING" {%templatetag closevariable%}
+                    <span class="spinner"></span>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
+            {%templatetag openvariable%}if result {%templatetag closevariable%}
+                <div style="padding-left: 20px;"><b>Result :</b><span style="font-family: Courier">${JSON.stringify($item["data"]["result"],replacer)}</span></div>
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
         </div>
     {%templatetag openvariable%}/if  {%templatetag closevariable%}
 </script>
