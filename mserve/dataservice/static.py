@@ -29,8 +29,9 @@ default_profiles = {
                 {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                 # MXF Ingest
+                {"task":"dataservice.tasks.thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
-                {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
+                {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
 
                 ],
             "access" : ["check_md5"],

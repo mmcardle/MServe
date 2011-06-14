@@ -58,15 +58,15 @@ def _thumbvideo(videopath,width,height):
     import pyffmpeg
 
     stream = pyffmpeg.VideoStream()
-    stream2 = pyffmpeg.VideoStream()
+    '''stream2 = pyffmpeg.VideoStream()
     stream3 = pyffmpeg.VideoStream()
     stream4 = pyffmpeg.VideoStream()
-    stream5 = pyffmpeg.VideoStream()
+    stream5 = pyffmpeg.VideoStream()'''
     stream.open(videopath)
-    stream2.open(videopath)
+    '''stream2.open(videopath)
     stream3.open(videopath)
     stream4.open(videopath)
-    stream5.open(videopath)
+    stream5.open(videopath)'''
 
     hw = float(int(width)/2)
     hh = float(int(height)/2)
@@ -74,25 +74,43 @@ def _thumbvideo(videopath,width,height):
     image = stream.GetFrameNo(0)
     image = _thumbimageinstance(image,width,height)
 
-    try:
-        image2 = stream2.GetFrameNo(0)
-        image3 = stream3.GetFrameNo(333)
-        image4 = stream4.GetFrameNo(666)
-        image5 = stream5.GetFrameNo(1000)
+    frames = (0,333,666,1000)
 
+    try:
+        reader = pyffmpeg.FFMpegReader(False)
+        reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
+        vt=reader.get_tracks()[0]
+        rdrdurtime=reader.duration_time()
+        cdcdurtime=vt.duration_time()
+        mt=max(cdcdurtime,rdrdurtime)
+        nframes=min(mt*vt.get_fps(),1000)
+
+        frames = range(0,nframes,nframes/5)[-4:]
+
+        vt.seek_to_frame(frames[0])
+        image2 = vt.get_current_frame()[2]
         image2 = _thumbimageinstance(image2,hw,hh)
         image.paste(image2, (0, 0))
 
+        vt.seek_to_frame(frames[1])
+        image3 = vt.get_current_frame()[2]
         image3 = _thumbimageinstance(image3,hw,hh)
         image.paste(image3, (hw, 0))
 
+        vt.seek_to_frame(frames[2])
+        image4 = vt.get_current_frame()[2]
         image4 = _thumbimageinstance(image4,hw,hh)
         image.paste(image4, (0, hh))
 
+        vt.seek_to_frame(frames[3])
+        image5 = vt.get_current_frame()[2]
         image5 = _thumbimageinstance(image5,hw,hh)
         image.paste(image5, (hw,hh))
-    except IOError:
-        logging.info("Unable to get frames for composite thumb")
+
+        reader.close()
+
+    except Exception as e:
+        logging.error(e)
         pass
 
     return image
