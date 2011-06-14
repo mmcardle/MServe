@@ -30,9 +30,6 @@ function load_user(userurl,consumerurl,template){
                 });
             } );
 
-       },
-       error: function(msg){
-            showError("Error Loading User",objectToString(msg))
        }
      });
 }
@@ -52,23 +49,16 @@ function ajax_update_consumer_oauth(id,oauth_token,consumerurl){
        data: data,
        success: function(msg){
             
-       },
-       error: function(msg){
-            showError("Error updating consumer oauth",objectToString(msg))
        }
      });
 }
 
 function ajax_delete_consumer_oauth(id,oauth_token,consumerurl){
-
      $.ajax({
        type: "DELETE",
        url: consumerurl+"/"+id+"/"+oauth_token+"/",
        success: function(msg){
 
-       },
-       error: function(msg){
-            showError("Error Deleting Consumer OAuth",objectToString(msg))
        }
      });
 }
@@ -128,9 +118,6 @@ function reloadMFiles(newfileid){
                     items_per_page:12,
                     callback:handlePaginationClick
             });
-       },
-       error: function(msg){
-            showError( "Failure to get files",msg );
        }
      });
 }

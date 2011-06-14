@@ -3,20 +3,44 @@ function loadJobs(serviceid){
        type: "GET",
        url: '/services/'+serviceid+"/jobs/",
        success: function(msg){
-        $(msg).each(function(index,job){
-            create_job_holder(job)
-                if(!job.tasks.ready){
-                    check_job(job,serviceid)
-                }
-        });
-       },
-       error: function(msg){
-            showError("Error Loading Jobs",objectToString(msg))
+            create_jobs_paginator(msg)
        }
      });
 }
 
-function create_job_paginator(job){
+function create_jobs_paginator(jobs){
+
+        var jobpaginator = $("#jobspaginator")
+
+        function handlePaginationClick(new_page_index, jobpaginator) {
+            // This selects elements from a content array
+            start = new_page_index*this.items_per_page
+            end   = (new_page_index+1)*this.items_per_page
+
+            if(end>jobs.length){
+                end=jobs.length;
+            }
+
+            $(jobs.slice(start,end)).each(function(index,job){
+
+                create_job_holder(job,jobpaginator)
+                if(!job.tasks.ready){
+                    check_job(job,serviceid)
+                }
+            });
+
+            return false;
+        }
+
+        // First Parameter: number of items
+        // Second Parameter: options object
+        jobpaginator.pagination(jobs.length, {
+                items_per_page:10,
+                callback:handlePaginationClick
+        });
+}
+
+function create_job_output_paginator(job){
 
         var tasks = job.tasks
         var jobid = job.id
@@ -41,8 +65,6 @@ function create_job_paginator(job){
                     $('<div></div>').html("<span class='red'>Output '"+joboutput.name+"' Empty&nbsp;</span>").appendTo( jobpaginator );
                 }
             })
-
-            
 
             for(var j=start;j<end;j++) {
                 if(joboutputs[j].file != "" && joboutputs[j].mimetype && joboutputs[j].mimetype.startsWith('text')){
@@ -93,13 +115,10 @@ function load_render_preview(mfileid){
       for(i in msg){
             
       }
-        $("#previewcontent").append("<div style='clear:both' ></div>")
+      $("#previewcontent").append("<div style='clear:both' ></div>")
       for(i in thumbs){
         $("#previewcontent").append("<img src='"+thumbs[i]+"' />")
       }
-   },
-   error: function(msg){
-     showError("Error", ""+msg.responseText );
    }
  });
 
@@ -111,30 +130,27 @@ function load_jobs_mfile(mfileid){
        url: '/mfiles/'+mfileid+"/jobs/",
        success: function(msg){
             if(msg.length > 0){
-                $("#jobs").empty()
+                $("#jobspaginator").empty()
             }
 
             $(msg).each(function(index,job){
-                create_job_holder(job)
+                create_job_holder(job,$("#jobspaginator"))
                 if(!job.tasks.ready){
                     check_job(job,mfileid)
                 }
 
             });
 
-       },
-       error: function(msg){
-            showError("Render",objectToString(msg))
        }
      });
 }
 
-function create_job_holder(job){
+function create_job_holder(job,paginator){
     var tasks = job.tasks
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
-        $( "#jobTemplate" ).tmpl( job ) .prependTo( "#jobs" );
+        $( "#jobTemplate" ).tmpl( job ) .appendTo( paginator );
 
         var allDone = true
 
@@ -158,10 +174,10 @@ function create_job_holder(job){
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
         $("#joboutputs-"+id).hide()
-        $('#jobheader-'+id).click(function() {          create_job_paginator(job);toggle_job(job);     });
-        $('#jobicon-'+id).click(function() {            create_job_paginator(job);toggle_job(job);     });
-        $('#jobinfo-'+id).click(function() {            create_job_paginator(job);toggle_job(job);     });
-        $('#jobprogressbar-'+id).click(function() {     create_job_paginator(job);toggle_job(job);     });
+        $('#jobheader-'+id).click(function() {          create_job_output_paginator(job);toggle_job(job);     });
+        $('#jobicon-'+id).click(function() {            create_job_output_paginator(job);toggle_job(job);     });
+        $('#jobinfo-'+id).click(function() {            create_job_output_paginator(job);toggle_job(job);     });
+        $('#jobprogressbar-'+id).click(function() {     create_job_output_paginator(job);toggle_job(job);     });
 
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
         $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
@@ -196,14 +212,10 @@ function mfile_job_ajax(mfileid,data){
        data: data,
        url: "/mfiles/"+mfileid+"/jobs/",
        success: function(msg){
-                create_job_holder(msg)
-                //create_job_paginator(msg)
+                create_job_holder(msg,$("#jobspaginator"))
                 if(!msg.ready){
                     check_job(msg)
                 }
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
 }
@@ -242,16 +254,13 @@ function check_job(job){
             if(msg.tasks.failed){
                 $('#jobinfo-'+job.id).addClass('ui-state-error')
             }else{
-                create_job_holder(msg)
-                create_job_paginator(msg)
+                create_job_holder(msg,$("#jobspaginator"))
+                create_job_output_paginator(msg)
                 update_job_outputs(msg)
                 show_job(msg)
             }
         }
 
-       },
-       error: function(msg){
-            showError("Error Checking Job",objectToString(msg))
        }
      });
  }
@@ -269,7 +278,7 @@ function delete_job(jobid){
                                     $('#jobheader-'+jobid).hide()
                                },
                                error: function(msg){
-                                    showError("Job Deleted Error",objectToString(msg))
+                                    showError("Job Deleted Error","Could not delete the job")
                                }
                              });
                             $( this ).dialog( "close" );

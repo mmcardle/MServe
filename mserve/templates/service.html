@@ -51,7 +51,6 @@
 	<ul>
 		<li><a href="#tabs-1">Files</a></li>
 		<li><a href="#jobs-tab">Jobs</a></li>
-		<li><a href="#tabs-3">Actions</a></li>
 		<li><a href="#tabs-4">Config</a></li>
 		<li><a href="#tabs-usage">Usage</a></li>
 		<li><a href="#tabs-6">Access Control</a></li>
@@ -72,8 +71,8 @@
         <div id="jobs-tab">
              <h3>Jobs</h3>
 
-            <div id="jobs">
-
+            <div id="jobspaginator">
+                <div class="spinner"><span class="red">Loading Jobs...</span></div>
             </div>
 
             <div id="set-management-property-button-dialog-form" title="Set Management Property">
@@ -98,11 +97,6 @@
             </script>
 
         </div>
-	<div id="tabs-3">
-
-            {% include "methods.html" %}
-
-       </div>
        <div id="tabs-4">
             <h3>Properties</h3>
 

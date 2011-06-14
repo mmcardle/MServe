@@ -25,7 +25,7 @@ function loadContainers(){
                  $("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
                 return;
             }else{
-                $("#nocontainers").remove()
+                $("#containermessages").empty()
             }
 
             function handlePaginationClick(new_page_index, pagination_container) {
@@ -52,7 +52,7 @@ function loadContainers(){
             });
        },
        error: function(msg){
-            showError( "Failure to get containers ",msg );
+            $("#containermessages").append("<div class='message'>Failed to get containers</div>");
        }
      });
 }

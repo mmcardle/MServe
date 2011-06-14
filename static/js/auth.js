@@ -6,9 +6,6 @@ function load_auths(authid){
        success: function(msg){
            $( "#authTemplate" ).tmpl( msg.auth_set  ).appendTo( "#authcontent" );
             
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
 }
@@ -19,9 +16,6 @@ function load_usage_auth(authid){
        url: '/auths/'+authid+'/usages/',
        success: function(msg){
            $( "#usageTemplate" ).tmpl( msg  ).appendTo( "#usagecontent" );
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
 }
@@ -31,9 +25,6 @@ function load_usagesummary_auth(authid){
        url: '/auths/'+authid+'/usagesummary/',
        success: function(msg){
            $( "#usageSummaryTemplate" ).tmpl( msg.usages  ).appendTo( "#usagesummarycontent" );
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
 
@@ -56,9 +47,6 @@ function load_details_auth(authid){
             }else if(msg.name.endsWith(".blend")){
                 $("#mfileRenderDetailsTemplate" ).tmpl( msg  ).appendTo( "#detailscontent" );
             }
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
  }
@@ -110,9 +98,6 @@ function load_mfiles_auth(authid){
                     callback:handlePaginationClick
             });
 
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
  }
@@ -128,9 +113,6 @@ function load_jobs_auth(authid){
                     check_job(job,serviceid)
                 }
         });
-       },
-       error: function(msg){
-            showError("Error Loading Jobs",objectToString(msg))
        }
      });
 }

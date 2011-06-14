@@ -49,9 +49,6 @@ function loadServices(containerid){
                     items_per_page:20,
                     callback:handlePaginationClick
             });
-       },
-       error: function(msg){
-            showError( "Failure to get services ",msg );
        }
      });
 }
@@ -117,9 +114,6 @@ function service_loadmanagementproperties(serviceid){
 
            });
 
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
 }
@@ -132,9 +126,6 @@ function service_setmanagementproperty_ajax(service,prop,val){
        success: function(msg){
          //showMessage("Property Set", "Property '"+prop+"' set to "+val);
          $("."+prop).html(val)
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
  }

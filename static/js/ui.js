@@ -53,9 +53,6 @@ function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
                                 
                                $( "#import-dialog-form" ).dialog( "open" );
 
-                           },
-                           error: function(msg){
-                                showError("Error Loading Jobs",objectToString(msg))
                            }
                          });
 
@@ -87,9 +84,6 @@ function load_service_iframe(authid,url,consumerurl) {
             $("#aiClose").button().click(function() {
                 $.unblockUI();
             });
-       },
-       error: function(msg){
-            showError("Error Loading Jobs",objectToString(msg))
        }
      });
 }
@@ -133,9 +127,6 @@ function create_new_add_auth_ui_dialog(authid) {
                                                        var authhtml = $( "#authTemplate" ).tmpl( msg );
                                                        authhtml.prependTo( "#authcontent" )
                                                        authhtml.show('slide')
-                                                   },
-                                                   error: function(msg){
-                                                     showError("Error", "Failure to add methods '" + authmethods.val()+ "'\nStatus: '" + msg.status+ "'\nResponse Text:\n" + msg.responseText);
                                                    }
                                                  });
 						$( this ).dialog( "close" );
@@ -179,10 +170,7 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
        url: "/mfiles/"+mfileid+"/",
        success: function(mfile){
             $( "#mfileNoActionTemplate" ).tmpl( mfile ).appendTo("#job-input-preview");
-        },
-        error: function(msg){
-         showError("Error", ""+msg.responseText );
-       }
+        }
     });
 
     $.ajax({
@@ -233,9 +221,6 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
                     }
                 }
              });
-       },
-       error: function(msg){
-         showError("Error", ""+msg.responseText );
        }
      });
 
@@ -316,9 +301,6 @@ function create_new_add_method_ui_dialog(roleid) {
                                            data: "methods="+methods.value,
                                            success: function(msg){
                                                poplulate_methods(roleid,msg["methods"])
-                                           },
-                                           error: function(msg){
-                                             showError("Error", "Failure to add methods '" + methods.value + "'\nStatus: '" + msg.status+ "'\nResponse Text:\n" + msg.responseText);
                                            }
                                          });
                                     $( this ).dialog( "close" );

@@ -160,7 +160,7 @@ function load_traffic_plot(){
 
        },
        error: function(msg){
-         showError("Error", ""+msg.responseText );
+         $("#chart_div").html("Error loading chart")
        }
      })
 }
