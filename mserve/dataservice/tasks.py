@@ -35,51 +35,40 @@ import os.path
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files import File
 
-def _thumbvideo_XX(videopath,width,height):
+def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
-    tfile = tempfile.NamedTemporaryFile(suffix=".png")
-    thumbpath = tfile.name
+    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".png")
 
-    args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",thumbpath]
+    logging.info("Processing video thumb %sx%s for %s to %s" % (width,height,videopath,tfile.name))
+    if not os.path.exists(videopath):
+        logging.info("Video %s does not exist" % (videopath))
+        return False
+    args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",tfile.name]
 
-    logging.info(args)
-    ret = subprocess.call(args)
-
-    logging.info("Created thumb from video RET = %s" % ret )
+    subprocess.call(args)
 
     image = Image.open(tfile.name)
 
-    image = _thumbimageinstance(image,width,height)
-
     return image
+
 
 def _thumbvideo(videopath,width,height):
 
     import pyffmpeg
 
-    stream = pyffmpeg.VideoStream()
-    '''stream2 = pyffmpeg.VideoStream()
-    stream3 = pyffmpeg.VideoStream()
-    stream4 = pyffmpeg.VideoStream()
-    stream5 = pyffmpeg.VideoStream()'''
-    stream.open(videopath)
-    '''stream2.open(videopath)
-    stream3.open(videopath)
-    stream4.open(videopath)
-    stream5.open(videopath)'''
-
     hw = float(int(width)/2)
     hh = float(int(height)/2)
 
-    image = stream.GetFrameNo(0)
-    image = _thumbimageinstance(image,width,height)
-
-    frames = (0,333,666,1000)
-
     try:
+
         reader = pyffmpeg.FFMpegReader(False)
         reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
         vt=reader.get_tracks()[0]
+
+        vt.seek_to_frame(0)
+        image = vt.get_current_frame()[2]
+        image = _thumbimageinstance(image,width,height)
+
         rdrdurtime=reader.duration_time()
         cdcdurtime=vt.duration_time()
         mt=max(cdcdurtime,rdrdurtime)
@@ -109,11 +98,14 @@ def _thumbvideo(videopath,width,height):
 
         reader.close()
 
-    except Exception as e:
-        logging.error(e)
-        pass
+        logging.info("Reader Done")
 
-    return image
+        return image
+
+    except IOError as e:
+        logging.info("IOError seeking pyffmeg, trying ffmpegthumbnailer")
+
+    return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
 
 @task
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
@@ -164,7 +156,7 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
 
         return {"success":True,"message":"Poster '%sx%s' of video successful"%(width,height)}
     except Exception as e:
-        logging.info("Error with postervideo %s" % e)
+        logging.info("Error with postervideo %s : %s" % (type(e),e))
         raise e
 
 @task
@@ -176,8 +168,8 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
     infile = mf.file.path
     _ffmpeg_args=options["ffmpeg_args"]
 
-    logfile = open('/var/mserve/mserve.log','a')
-    errfile = open('/var/mserve/mserve.log','a')
+    _stdin = None
+    _stderr = None
 
     tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
     toutfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
@@ -205,8 +197,8 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
         ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
 
-        Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
-        Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
+        Popen(ffmpeg_args_rawvid,stdout=_stdin,stderr=_stderr)
+        Popen(ffmpeg_args_rawwav,stdout=_stdin,stderr=_stderr)
 
         ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
 
@@ -214,7 +206,7 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         ffmpeg_args.append(tmpfile)
 
         logging.info(" ".join(ffmpeg_args))
-        p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
+        p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdin, close_fds=True)
         p.communicate()
 
         qt_args = ["qt-faststart", tmpfile, tmpoutfile]
@@ -558,23 +550,27 @@ def _save_poster(mfileid,image):
 
 def _save_thumb(mfileid,image):
 
-    tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
-    image.save(tfile.name)
-    dfile = File(open(tfile.name))
-    
-    from mserve.dataservice.models import MFile
-    _mf = MFile.objects.get(pk=mfileid)
-    _mf.thumb.save('thumb.png', dfile, save=True)
+    try:
+        tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
+        image.save(tfile.name)
+        dfile = File(open(tfile.name))
 
-    logging.info("MFile thumb %s "%_mf.thumb)
+        from mserve.dataservice.models import MFile
+        _mf = MFile.objects.get(pk=mfileid)
+        _mf.thumb.save('thumb.png', dfile, save=True)
 
-    mfcheck = MFile.objects.get(id=mfileid)
+        mfcheck = MFile.objects.get(id=mfileid)
 
-    if mfcheck.thumb == "":
-        return False
+        if mfcheck.thumb == "":
+            return False
 
-    logging.info("MFile Check thumb %s "%mfcheck.thumb)
-    return True
+        return True
+    except IOError as e:
+        logging.info("MFile Check thumb error %s "%e)
+        raise e
+    except Exception as e:
+        logging.info("MFile Check thumb error %s "%e)
+        raise e
 
 def _save_output_thumb(outputid,image):
 

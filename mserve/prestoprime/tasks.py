@@ -31,7 +31,6 @@ from subprocess import Popen, PIPE
 from celery.task.sets import subtask
 from cStringIO import StringIO
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.files import File
 from django.core.files.base import ContentFile
 
 @task
