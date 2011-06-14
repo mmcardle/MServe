@@ -91,7 +91,11 @@ def render_blender(inputs,outputs,options={},callbacks=[]):
     else:
         format="PNG"
 
-    inputfile = inputs[0]
+    mfileid = inputs[0]
+    from mserve.dataservice.models import MFile
+    mf = MFile.objects.get(id=mfileid)
+    inputfile = mf.file.path
+
     outputfile = outputs[0]
 
     logging.info("Processing render job %s frame: %s " % (inputfile,frame))

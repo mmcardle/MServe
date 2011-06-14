@@ -37,8 +37,12 @@ from django.core.files.base import ContentFile
 @task
 def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
     try:
-        mfile = inputs[0]
-        inputfile = mfile.file.path
+        mfileid = inputs[0]
+
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+        inputfile = mf.file.path
+
         joboutput = outputs[0]
 
         logging.info("Processing mxftechmdextractor job on %s" % (inputfile))
@@ -52,7 +56,7 @@ def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
 
         from mserve.jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput.pk)
-        jo.file.save(mfile.name+'_mxftechmdextractor.txt', ContentFile(p.stdout.read()), save=True)
+        jo.file.save('mxftechmdextractor.txt', ContentFile(p.stdout.read()), save=True)
 
         for callback in callbacks:
             subtask(callback).delay()
@@ -64,10 +68,12 @@ def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
 @task
 def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
     try:
-        mfile = inputs[0]
+        mfileid = inputs[0]
         joboutput = outputs[0]
 
-        inputfile = mfile.file.path
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+        inputfile = mf.file.path
         outputfile = tempfile.NamedTemporaryFile()
 
         logging.info("Processing d10mxfchecksum job on %s" % (inputfile))
@@ -88,7 +94,7 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
 
         from mserve.jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput.pk)
-        jo.file.save(suf.name+'_d10mxfchecksum.txt', suf, save=True)
+        jo.file.save('d10mxfchecksum.txt', suf, save=True)
 
         for callback in callbacks:
             subtask(callback).delay()
@@ -102,8 +108,10 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
 def mxfframecount(inputs,outputs,options={},callbacks=[]):
 
     try:
-        mfile = inputs[0]
-        inputfile = mfile.file.path
+        mfileid = inputs[0]
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+        inputfile = mf.file.path
 
         outputfile = tempfile.NamedTemporaryFile()
         logging.info("Processing mxfframecount job on %s" % (inputfile))
@@ -127,7 +135,7 @@ def mxfframecount(inputs,outputs,options={},callbacks=[]):
         frames = frames -1
 
         import dataservice.usage_store as usage_store
-        usage_store.record(mfile.id,"http://prestoprime/mxf_frames_ingested",frames)
+        usage_store.record(mf.id,"http://prestoprime/mxf_frames_ingested",frames)
 
         for callback in callbacks:
             subtask(callback).delay()
@@ -140,8 +148,10 @@ def mxfframecount(inputs,outputs,options={},callbacks=[]):
 @task(max_retries=3)
 def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
     try:
-        mfile = inputs[0]
-        inputfile = mfile.file.path
+        mfileid = inputs[0]
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+        inputfile = mf.file.path
 
         joboutput = outputs[0]
         frame = str(options['frame'])
@@ -167,7 +177,7 @@ def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
 
         from mserve.jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput.pk)
-        jo.file.save(mfile.name+'_extractd10frame.png', suf , save=False)
+        jo.file.save('extractd10frame.png', suf , save=False)
         jo.save()
 
         for callback in callbacks:

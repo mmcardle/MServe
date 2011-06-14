@@ -621,7 +621,7 @@ class MFile(NamedBase):
     checksum = models.CharField(max_length=32, blank=True, null=True)
     size     = models.BigIntegerField(default=0)
     thumb    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
-    poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
+    poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getposterstorage())
     proxy    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getproxystorage())
     created  = models.DateTimeField(auto_now_add=True)
     updated  = models.DateTimeField(auto_now=True)
@@ -795,12 +795,13 @@ class MFile(NamedBase):
 
             profile = self.service.get_profile()
 
-            #TODO - pre ingest
+            # TODO - pre ingest
             preingest_tasks = profiles[profile]["pre-ingest"]
 
             # MIME type
-            self.mimetype = mimetype = mimefile([self],[],{})["mimetype"]
+            self.mimetype = mimetype = mimefile([self.id],[],{})["mimetype"]
             # record size
+
             self.size = self.file.size
             self.save()
 
@@ -812,7 +813,6 @@ class MFile(NamedBase):
 
             from jobservice.models import Job
             from jobservice.models import JobOutput
-
 
             job = Job(name="%s Ingest Job"%(self.name),mfile=self)
             job.save()
@@ -838,8 +838,6 @@ class MFile(NamedBase):
 
                     logging.info("Task type %s " % task_type)
 
-                    args = {}
-
                     if ingest_task.has_key("args"):
                         args = ingest_task["args"]
 
@@ -859,7 +857,7 @@ class MFile(NamedBase):
                             output.save()
                             output_arr.append(output)
 
-                    task = task_type.subtask([[self],output_arr,args])
+                    task = task_type.subtask([[self.id],output_arr,args])
 
                     logging.info("Task created %s " % task )
 
@@ -869,8 +867,6 @@ class MFile(NamedBase):
                     logging.info("Task has no task type %s " % ingest_task)
 
             logging.info("%s" % in_tasks)
-
-
 
             ts = TaskSet(tasks=in_tasks)
             tsr = ts.apply_async()

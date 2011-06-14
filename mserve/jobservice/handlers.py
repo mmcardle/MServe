@@ -77,8 +77,7 @@ class JobHandler(BaseHandler):
 
         if mfileid != "":
             mfile = MFile.objects.get(id=mfileid)
-            name = mfile.name
-            inputs.append(mfile)
+            inputs.append(mfile.id)
         else:
             r = rc.BAD_REQUEST
             r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
@@ -109,7 +108,7 @@ class JobHandler(BaseHandler):
         for i in range(1,nbinputs-1):
             mfileid = request.POST['input-%s'%i]
             mfile = MFile.objects.get(id=mfileid)
-            inputs.append(mfile)
+            inputs.append(mfile.id)
 
         if job == None:
             r = rc.BAD_REQUEST
@@ -120,7 +119,7 @@ class JobHandler(BaseHandler):
             outputmimetype = job_description["output-%s"%i]["mimetype"]
             output = JobOutput(name="Output %s '%s'"%(i,jobtype),job=job,mimetype=outputmimetype)
             output.save()
-            outputs.append(output)
+            outputs.append(output.id)
 
         m = get_class(jobtype)
 

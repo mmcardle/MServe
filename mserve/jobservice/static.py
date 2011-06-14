@@ -6,13 +6,20 @@ job_descriptions['dataservice.tasks.thumbimage'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.posterimage'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 0,
+        "input-0" : { "mimetype" : "image/png" },
+        "options" : ['width','height'],
+        "results" :[]
+    }
 job_descriptions['dataservice.tasks.thumbvideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "video" },
         "options" : ['width','height'],
         "results" :[]
-    },
+    }
 job_descriptions['dataservice.tasks.postervideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,

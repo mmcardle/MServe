@@ -164,7 +164,7 @@ def post_save_handler( sender, instance=False, **kwargs):
         if instance.name is not None and not instance.initial_usage_recorded and instance.name.endswith(".mxf"):
             logging.info("Prestoprime POST save handler %s id:'%s' " % (instance,instance.id))
 
-            mxfframecounttask = mxfframecount.subtask([[instance],[]])
+            mxfframecounttask = mxfframecount.subtask([[instance.id],[]])
 
             #count = result["frames"]
             #logging.info("Recording ingest usage %s " % (count))
@@ -193,7 +193,7 @@ def post_save_handler( sender, instance=False, **kwargs):
             logging.info("Prestoprime input %s  " %  instance.file  )
             logging.info("Prestoprime output %s  " % mfiled10check.checkfile.file  )
 
-            d10mxfchecksumtask = d10mxfchecksum.subtask([[instance],[output]])
+            d10mxfchecksumtask = d10mxfchecksum.subtask([[instance.id],[output]])
 
             ts = TaskSet(tasks=[d10mxfchecksumtask,mxfframecounttask])
             tsr = ts.apply_async()
