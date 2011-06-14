@@ -37,17 +37,36 @@ from django.core.files import File
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
-    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".png")
+    tfile = tempfile.NamedTemporaryFile(suffix=".png")
+    tfile1 = tempfile.NamedTemporaryFile(suffix=".png")
+    tfile2 = tempfile.NamedTemporaryFile(suffix=".png")
+    tfile3 = tempfile.NamedTemporaryFile(suffix=".png")
+    tfile4 = tempfile.NamedTemporaryFile(suffix=".png")
 
     logging.info("Processing video thumb %sx%s for %s to %s" % (width,height,videopath,tfile.name))
     if not os.path.exists(videopath):
         logging.info("Video %s does not exist" % (videopath))
         return False
-    args = ["ffmpegthumbnailer","-t","20","-s","%sx%s"%(width,height),"-i",videopath,"-o",tfile.name]
 
-    subprocess.call(args)
+    hw = float(int(width)/2)
+    hh = float(int(height)/2)
+
+    subprocess.call(["ffmpegthumbnailer","-t","10","-s","%sx%s"%(width,height),"-i",videopath,"-o",tfile.name])
+    subprocess.call(["ffmpegthumbnailer","-t","20","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile1.name])
+    subprocess.call(["ffmpegthumbnailer","-t","40","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile2.name])
+    subprocess.call(["ffmpegthumbnailer","-t","60","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile3.name])
+    subprocess.call(["ffmpegthumbnailer","-t","80","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile4.name])
 
     image = Image.open(tfile.name)
+    image1 = Image.open(tfile1.name)
+    image2 = Image.open(tfile2.name)
+    image3 = Image.open(tfile3.name)
+    image4 = Image.open(tfile4.name)
+
+    image.paste(image1, (0,0))
+    image.paste(image2, (hw,0))
+    image.paste(image3, (0,hh))
+    image.paste(image4, (hw,hh))
 
     return image
 
@@ -243,8 +262,10 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
     infile = mf.file.path
     _ffmpeg_args=options["ffmpeg_args"]
 
-    logfile = open('/var/mserve/mserve.log','a')
-    errfile = open('/var/mserve/mserve.log','a')
+    #_stdout = open('/var/mserve/mserve.log','a')
+    #_stderr = open('/var/mserve/mserve.log','a')
+    _stdout = PIPE
+    _stderr = PIPE
 
     tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
     outfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
@@ -270,24 +291,16 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
         ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
         ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
 
-        Popen(ffmpeg_args_rawvid,stdout=logfile,stderr=errfile)
-        Popen(ffmpeg_args_rawwav,stdout=logfile,stderr=errfile)
-
-        #vid_options= ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(width,height)]
-        #aud_options= ["-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
-
-        # TODO: Fix audio for mxf
-        # if infile.endswith(".mxf"):
-        #    aud_options= ["-acodec","libfaac","-ac","1","-ab","64","-ar","44100"]
+        Popen(ffmpeg_args_rawvid,stdout=_stdout,stderr=_stderr)
+        Popen(ffmpeg_args_rawwav,stdout=_stdout,stderr=_stderr)
 
         ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
 
-        #ffmpeg_args.extend(aud_options)
         ffmpeg_args.extend(_ffmpeg_args)
         ffmpeg_args.append(tmpfile)
 
         logging.info(" ".join(ffmpeg_args))
-        p = Popen(ffmpeg_args, stdin=PIPE, stdout=logfile, close_fds=True)
+        p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdout, close_fds=True)
         p.communicate()
 
         qt_args = ["qt-faststart", tmpfile, outfile.name]
