@@ -67,8 +67,8 @@ class Job(NamedBase):
 
             dict["completed_count"] = tsr.completed_count()
             dict["failed"] = tsr.failed()
-            if int(tsr.total) != 0:
-                dict["percent"] = int(tsr.completed_count())/int(tsr.total)*100
+            if tsr.total != 0:
+                dict["percent"] = float(tsr.completed_count())/float(tsr.total)*100
             else:
                 dict["percent"] = 0
             dict["ready"] = tsr.ready()
