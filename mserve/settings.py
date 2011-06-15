@@ -182,7 +182,7 @@ LOGIN_REDIRECT_URL='/'
 
 # JOB CONFIG
 USE_CELERY=True
-DEFAULT_ACCESS_SPEED = 50
+DEFAULT_ACCESS_SPEED = "unlimited"
 
 # Define Sizes
 thumbsize = (210,128)

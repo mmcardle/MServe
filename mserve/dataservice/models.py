@@ -71,6 +71,8 @@ metric_disc_space = "http://mserve/disc_space"
 metric_ingest = "http://mserve/ingest"
 metric_access = "http://mserve/access"
 metric_archived = "http://mserve/archived"
+metric_corruption = "http://mserve/corruption"
+metric_dataloss = "http://mserve/dataloss"
 
 metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_disc_space,metric_ingest,metric_access,metric_archived]
 
@@ -743,9 +745,12 @@ class MFile(NamedBase):
 
         mfile_get_signal.send(sender=self, mfile=mfile)
 
-        p = str(file)
-        dlfoldername = "dl%s" % accessspeed
+        if accessspeed == "unlimited":
+            dlfoldername = "dl"
+        else:
+            dlfoldername = "dl%s" % accessspeed
 
+        p = str(file)
         redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
         redirecturl = redirecturl[1:]
 
@@ -1101,7 +1106,7 @@ class ManagementProperty(models.Model):
 
     def values(self):
         if self.property == "accessspeed":
-            return {"type" : "step", "min":50 , "max" : 5000, "step" : 50}
+            return {"type" : "step", "min":50 , "max" : 5000, "step" : 50, "altchoices" : ["unlimited"]}
         elif self.property == "profile":
             return {"type" : "enum", "choices" : [DEFAULT_PROFILE,"hd"] }
         else:

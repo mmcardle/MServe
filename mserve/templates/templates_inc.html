@@ -121,7 +121,12 @@
 <script id="managementpropertyTemplate-steps" type="text/x-jquery-tmpl">
     <tr>
         <th>${ property}</th>
-        <td class="${ property }" style="text-align: center;vertical-align: middle;">${ value }</td>
+        <td class="${ property } red" style="text-align: center;vertical-align: middle;">${ value }</td>
+
+        <td style="vertical-align: middle;">
+            <div id="managementalts-${id}">
+            </div>
+        </td>
 
         <td style="vertical-align: middle;width:400px"><div style="" id="slider-${ id }"></div></td>
 
@@ -131,15 +136,16 @@
             <button id="service-setmanagementproperty-button-${ id }" >Set</button>
 
         </td>
+
     </tr>
 </script>
 
 <script id="managementpropertyTemplate-choices" type="text/x-jquery-tmpl">
     <tr>
         <th>${ property}</th>
-        <td class="${ property }" style="text-align: center;vertical-align: middle;">${ value }</td>
+        <td class="${ property } red" style="text-align: center;vertical-align: middle;">${ value }</td>
 
-        <td style="vertical-align: middle;width:400px">
+        <td colspan="2" style="vertical-align: middle;width:400px">
             <div id="managementradio-${id}" class="servicetyperadio">
             </div>
         </td>
@@ -150,6 +156,9 @@
             <button id="service-setmanagementproperty-button-${ id }" >Set</button>
 
         </td>
+
+
+
     </tr>
 </script>
 

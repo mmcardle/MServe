@@ -75,8 +75,14 @@ function service_loadmanagementproperties(serviceid){
                             service_setmanagementproperty_ajax(serviceid,property.property, $( "#slider-"+property.id ).slider( "value" ) )
                         }
                     )
+
+                    sliderval=0
+                    if(isNaN(property.value) ){
+                        sliderval = property.val
+                    }
+
                     $( "#slider-"+property.id ).slider({
-                            value: property.value ,
+                            value:  sliderval,
                             range: "min",
                             min: property.values.min,
                             max: property.values.max,
@@ -85,6 +91,20 @@ function service_loadmanagementproperties(serviceid){
                                     $( "#val-"+property.id ).val( ui.value );
                             }
                     });
+                     var malt = $( "#managementalts-"+property.id )
+
+                     $.each(property.values.altchoices, function(i,choice){
+
+                            var b = $("<button>Set "+choice+"</button>")
+                            b.button()
+                            malt.append( b )
+                            b.click(function(){
+                                service_setmanagementproperty_ajax(serviceid,property.property, choice )
+                            })
+  
+                     })
+
+
                     $( "#val-"+property.id ).val(  $( "#slider-"+property.id ).slider( "value" ) );
 
                 }else if(property.values.type == "enum"){
