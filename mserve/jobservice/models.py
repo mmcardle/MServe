@@ -25,18 +25,19 @@ from django.db import models
 from dataservice.models import *
 from dataservice import utils
 from dataservice import storage
-from dataservice.tasks import thumbimage
+from dataservice.tasks import thumboutput
 from celery.result import TaskSetResult
-# Create your models here.
 
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
 
 class Job(NamedBase):
-    #service  = models.ForeignKey(DataService)
     mfile  = models.ForeignKey(MFile)
     created  = models.DateTimeField(auto_now_add=True)
     taskset_id = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ('-created','name')
 
     def save(self):
         if not self.id:
@@ -52,19 +53,10 @@ class Job(NamedBase):
         if tsr is not None:
             
             dict["taskset_id"] = tsr.taskset_id
-            # Dont return results until job in complete
-            #if tsr.successful():
-            #    dict["result"] = tsr.join()
-            #else:
             results = []
             for subtask in tsr.subtasks:
-                #if subtask.successful():
-                #    results.append(subtask.result)
-                    #results.append({"name":subtask.task_name,"success":subtask.successful()})
-                #else:
                 results.append({"name":subtask.task_name,"result":subtask.result,"success":subtask.successful(),"state":subtask.state})
             dict["result"] = results
-
             dict["completed_count"] = tsr.completed_count()
             dict["failed"] = tsr.failed()
             if tsr.total != 0:
@@ -112,6 +104,6 @@ class JobOutput(NamedBase):
 
         if self.file and not self.thumb and self.mimetype.startswith('image'):
             options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-            thumbimage.delay([self],[],options)
+            thumboutput.delay([self.id],[],options)
 
         super(JobOutput, self).save()

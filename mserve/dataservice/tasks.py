@@ -73,58 +73,62 @@ def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
 def _thumbvideo(videopath,width,height):
 
-    import pyffmpeg
-
-    hw = float(int(width)/2)
-    hh = float(int(height)/2)
-
     try:
+        import pyffmpeg
 
-        reader = pyffmpeg.FFMpegReader(False)
-        reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
-        vt=reader.get_tracks()[0]
+        hw = float(int(width)/2)
+        hh = float(int(height)/2)
 
-        vt.seek_to_frame(0)
-        image = vt.get_current_frame()[2]
-        image = _thumbimageinstance(image,width,height)
+        try:
 
-        rdrdurtime=reader.duration_time()
-        cdcdurtime=vt.duration_time()
-        mt=max(cdcdurtime,rdrdurtime)
-        nframes=min(mt*vt.get_fps(),1000)
+            reader = pyffmpeg.FFMpegReader(False)
+            reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
+            vt=reader.get_tracks()[0]
 
-        frames = range(0,nframes,nframes/5)[-4:]
+            vt.seek_to_frame(0)
+            image = vt.get_current_frame()[2]
+            image = _thumbimageinstance(image,width,height)
 
-        vt.seek_to_frame(frames[0])
-        image2 = vt.get_current_frame()[2]
-        image2 = _thumbimageinstance(image2,hw,hh)
-        image.paste(image2, (0, 0))
+            rdrdurtime=reader.duration_time()
+            cdcdurtime=vt.duration_time()
+            mt=max(cdcdurtime,rdrdurtime)
+            nframes=min(mt*vt.get_fps(),1000)
 
-        vt.seek_to_frame(frames[1])
-        image3 = vt.get_current_frame()[2]
-        image3 = _thumbimageinstance(image3,hw,hh)
-        image.paste(image3, (hw, 0))
+            frames = range(0,nframes,nframes/5)[-4:]
 
-        vt.seek_to_frame(frames[2])
-        image4 = vt.get_current_frame()[2]
-        image4 = _thumbimageinstance(image4,hw,hh)
-        image.paste(image4, (0, hh))
+            vt.seek_to_frame(frames[0])
+            image2 = vt.get_current_frame()[2]
+            image2 = _thumbimageinstance(image2,hw,hh)
+            image.paste(image2, (0, 0))
 
-        vt.seek_to_frame(frames[3])
-        image5 = vt.get_current_frame()[2]
-        image5 = _thumbimageinstance(image5,hw,hh)
-        image.paste(image5, (hw,hh))
+            vt.seek_to_frame(frames[1])
+            image3 = vt.get_current_frame()[2]
+            image3 = _thumbimageinstance(image3,hw,hh)
+            image.paste(image3, (hw, 0))
 
-        reader.close()
+            vt.seek_to_frame(frames[2])
+            image4 = vt.get_current_frame()[2]
+            image4 = _thumbimageinstance(image4,hw,hh)
+            image.paste(image4, (0, hh))
 
-        logging.info("Reader Done")
+            vt.seek_to_frame(frames[3])
+            image5 = vt.get_current_frame()[2]
+            image5 = _thumbimageinstance(image5,hw,hh)
+            image.paste(image5, (hw,hh))
 
-        return image
+            reader.close()
 
-    except IOError as e:
-        logging.info("IOError seeking pyffmeg, trying ffmpegthumbnailer")
+            logging.info("Reader Done")
 
-    return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
+            return image
+
+        except IOError as e:
+            logging.info("IOError seeking pyffmeg, trying ffmpegthumbnailer")
+
+        return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
+    except ImportError:
+        logging.error("Could not import pyffmpeg, failing back to ffmpegthumbnailer")
+        return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
 
 @task
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
@@ -373,6 +377,64 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
         raise e
 
 @task
+def mfilefetch(inputs,outputs,options={},callbacks=[]):
+    try:
+        mfileid = inputs[0]
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+        file = mf.file
+
+        outputid = outputs[0]
+
+        from jobservice.models import JobOutput
+        output = JobOutput.objects.get(id=outputid)
+        output.file.save("JobOutput",File(file))
+        output.mimetype = mf.mimetype
+        output.save()
+
+        return {"message":"Retrieval of '%s' successful"%mf.name}
+    except Exception as e:
+        logging.info("Error with backup_mfile %s" % e)
+        raise e
+
+
+@task
+def md5fileverify(inputs,outputs,options={},callbacks=[]):
+
+    """Return hex md5 digest for a Django FieldFile"""
+    try:
+        mfileid = inputs[0]
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+        file = open(mf.file.path,'r')
+        md5 = hashlib.md5()
+        while True:
+            data = file.read(8192)  # multiple of 128 bytes is best
+            if not data:
+                break
+            md5.update(data)
+        file.close()
+        calculated_md5 = md5.hexdigest()
+
+        logging.info("Verify MD5 calclated %s" % calculated_md5)
+
+        from mserve.dataservice.models import MFile
+        _mf = MFile.objects.get(id=mfileid)
+        db_md5 = _mf.checksum
+
+        if db_md5 != calculated_md5:
+            raise Exception("MD5 Verification Failed")
+
+        for callback in callbacks:
+            subtask(callback).delay()
+
+        return {"message":"Verification of '%s' successful %s=%s" % (mf,db_md5,calculated_md5) }
+
+    except Exception as e:
+        logging.info("Error with mime %s" % e)
+        raise e
+
+@task
 def md5file(inputs,outputs,options={},callbacks=[]):
 
     """Return hex md5 digest for a Django FieldFile"""
@@ -391,12 +453,12 @@ def md5file(inputs,outputs,options={},callbacks=[]):
         md5string = md5.hexdigest()
         logging.info("MD5 calclated %s" % (md5string ))
 
-        from mserve.dataservice.models import MFile
         _mf = MFile.objects.get(id=mfileid)
         _mf.checksum = md5string
         _mf.save()
 
         for callback in callbacks:
+            logging.info("Running Callback %s" % callback)
             subtask(callback).delay()
 
         return {"success":True,"message":"MD5 of '%s' successful"%mf, "md5" : md5string}

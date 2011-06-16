@@ -35,6 +35,9 @@ git clone git://soave.it-innovation.soton.ac.uk/git/pp-dataservice
 git submodule init
 git submodule update
 
+## Optional ##
+install pyffmpeg (http://code.google.com/p/pyffmpeg/)
+
 
 MServe
 ======

@@ -428,7 +428,7 @@
 <div class="infoholder">
     <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
                                          onmouseout="$('#id-${id}').hide();" >
-            <table cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
             <colgroup><col>
             </colgroup>
             <tbody>
@@ -466,7 +466,7 @@
 <div class="infoholder" id="mfileholder-${id}" >
     <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
                                          onmouseout="$('#id-${id}').hide();" >
-            <table cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
             <colgroup><col>
             </colgroup>
             <tbody>
@@ -518,7 +518,7 @@
 <script id="mfileNoActionTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder">
     <div id="image-${id}" class='fluid' >
-            <table cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
             <colgroup><col>
             </colgroup>
             <tbody>
@@ -547,11 +547,11 @@
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
     {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
-        <a target='_blank' href='/joboutputs/${id}/contents' ><img src='${thumburl}' /></a>
+        <a  target='_blank' href='/joboutputs/${id}/contents' ><img id="joboutput-${id}" src='${thumburl}' /></a>
     {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
         <div id="text-${id}" style="width:100%;height:200px;overflow: scroll;border: 1px inset silver;padding: 0px;margin: 5px;" ></div>
     {%templatetag openvariable%}else{%templatetag closevariable%}
-        <a target='_blank' href='/joboutputs/${id}/contents' >Download</a>
+        <a target='_blank' href='/joboutputs/${id}/contents' style="color:green;font-weight: bold;font-variant: small-caps;font-size: large" >Download Output</a>
     {%templatetag openvariable%}/if  {%templatetag closevariable%}
 </script>
 

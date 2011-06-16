@@ -103,7 +103,7 @@ function reloadMFiles(newfileid){
                 }
 
                 if(newfileid != null){
-                    $("#image-"+newfileid).show('bounce')
+                    $("#image-"+newfileid).show('drop')
                 }
 
                 return false;
@@ -122,15 +122,34 @@ function reloadMFiles(newfileid){
      });
 }
 
+function get_mfile_thumb(mfile){
+    function f(depth) {
+       if(depth>3){ return }
+       $.ajax({
+           type: "GET",
+           url: "/mfiles/"+mfile.id+"/",
+           success: function(newmfile){
+                if(newmfile.thumb != ""){
+                    $("#mfile-table-"+mfile.id).css("background-image", "url('"+newmfile.thumburl+"')");
+                }else{
+                    window.setTimeout(f, 3000, depth+1);
+                }
+           }
+       });
+    }
+    window.setTimeout(f, 3000, 0);
+}
+
 function loadMFile(mfile){
     $("#nofiles").remove()
     $("#mfileTemplate" ).tmpl( mfile ) .prependTo( "#managedresourcesmfilescontent" );
-    $("#image-"+mfile.id).show('bounce');
+    $("#image-"+mfile.id).show('drop');
 
     (function() {
         var gid = mfile.id;
         var gmfileid = mfile.id;
         mfile_buttons(gmfileid)
+        get_mfile_thumb(mfile)
     })();
 }
 

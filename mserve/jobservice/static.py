@@ -27,6 +27,14 @@ job_descriptions['dataservice.tasks.postervideo'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.mfilefetch'] = {
+    "nbinputs" : 1,
+    "nboutputs" : 1,
+    "input-0" : { "mimetype" : "video" },
+    "output-0" : { "mimetype" : "application/octet-stream" },
+    "options" : [],
+    "results" :[]
+}
 job_descriptions['jobservice.tasks.copyfromurl'] = {
         "nbinputs" : 0,
         "nboutputs" : 1,

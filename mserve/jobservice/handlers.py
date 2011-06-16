@@ -143,8 +143,8 @@ class JobHandler(BaseHandler):
 
         return job
 
-    def delete(self, request, id):
-        job = Job.objects.get(id=id)
+    def delete(self, request, jobid):
+        job = Job.objects.get(id=jobid)
         job.delete()
         r = rc.DELETED
         return r
@@ -210,9 +210,10 @@ class JobOutputContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        dlfoldername = "dl%s"%accessspeed
-
-        
+        dlfoldername = "dl"
+        if accessspeed != "unlimited":
+            logging.info("DL %s"%dlfoldername)
+            dlfoldername = "dl%s"%accessspeed
 
         p = str(file)
 

@@ -413,6 +413,21 @@ class MFileContentsHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
+class MFileAccessHandler(BaseHandler):
+    allowed_methods = ('POST')
+
+    def create(self, request, mfileid=None, authid=None):
+
+        if mfileid:
+            logging.info("MFileAccessHandler return mfile")
+            return MFile.objects.get(pk=mfileid).do("POST","access")
+        elif authid:
+            logging.info("MFileAccessHandler return auth")
+            return Auth.objects.get(pk=authid).do("POST","access")
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
 
 class RoleHandler(BaseHandler):
     def read(self,request, id):

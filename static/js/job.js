@@ -150,7 +150,7 @@ function create_job_holder(job,paginator){
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
 
-        $( "#jobTemplate" ).tmpl( job ) .appendTo( paginator );
+        $( "#jobTemplate" ).tmpl( job ) .prependTo( paginator );
 
         var allDone = true
 
@@ -195,15 +195,49 @@ function update_job_outputs(job){
     $( "#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+job.id)
 }
 
+function get_joboutput_thumb(job){
+    function f(depth) {
+       if(depth>3){ return }
+       $.ajax({
+           type: "GET",
+           url: "/jobs/"+job.id+"/",
+           success: function(newjob){
+            $(newjob.joboutput_set).each(function(index, joboutput){
+                if(joboutput.thumb != ""){
+                    $("#joboutput-"+joboutput.id).attr("src",joboutput.thumburl);
+                }else{
+                    window.setTimeout(f, 3000, depth+1);
+                }
+            })
+           }
+       });
+    }
+    window.setTimeout(f, 3000, 0);
+}
+
 function show_job(job){
     $('#joboutputs-'+job.id).show('slide');
     $('#jobpreviewpaginator-'+job.id).show('blind');
+    get_joboutput_thumb(job)
 
 }
 
 function toggle_job(job){
     $('#joboutputs-'+job.id).toggle('slide');
     $('#jobpreviewpaginator-'+job.id).toggle('blind');
+}
+
+function create_access_job(mfileid){
+     $.ajax({
+       type: "POST",
+       url: "/mfiles/"+mfileid+"/access/",
+       success: function(msg){
+                create_job_holder(msg,$("#jobspaginator"))
+                if(!msg.ready){
+                    check_job(msg)
+                }
+       }
+     });
 }
 
 function mfile_job_ajax(mfileid,data){
@@ -272,7 +306,7 @@ function delete_job(jobid){
                     "Delete Job?": function() {
                               $.ajax({
                                type: "DELETE",
-                               url: '/jobapi/'+jobid+"/",
+                               url: '/jobs/'+jobid+"/",
                                success: function(msg){
                                     $('#job-'+jobid).hide('blind')
                                     $('#jobheader-'+jobid).hide()

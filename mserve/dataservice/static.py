@@ -34,7 +34,14 @@ default_profiles = {
                 {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
 
                 ],
-            "access" : ["check_md5"],
+            "pre-access" : [
+                    # Standard Access Check
+                    {"task":"dataservice.tasks.md5fileverify",    "args": {} },
+                ],
+            "access" : [
+                    # Standard Access
+                    {"task":"dataservice.tasks.mfilefetch",       "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
+                ],
             "update" : ["md5","thumb"],
             "periodic" : ["md5"]
             },

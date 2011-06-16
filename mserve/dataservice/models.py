@@ -634,6 +634,7 @@ class MFile(NamedBase):
             "properties":[],
             "usages":["GET"],
             "file": ["GET","PUT","DELETE"],
+            "access": ["POST"],
             "jobs":["GET","POST"],
             }
 
@@ -666,6 +667,9 @@ class MFile(NamedBase):
                 job = self.create_job(name)
                 return job
             return HttpResponseBadRequest()
+        if url == "access":
+            job = self.create_access_job()
+            return job
         return None
 
     def put(self,url, *args, **kwargs):
@@ -793,6 +797,97 @@ class MFile(NamedBase):
         mfileauth_ro.save()
         return mfileauth_ro
 
+    def create_access_job(self):
+        if self.file:
+
+            profile = self.service.get_profile()
+
+            # TODO - pre access
+            preaccess_tasks = profiles[profile]["pre-access"]
+
+            access_tasks = profiles[profile]["access"]
+
+            logging.info(access_tasks)
+
+            in_tasks = []
+
+            from jobservice.models import Job
+            from jobservice.models import JobOutput
+
+            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
+            job.save()
+
+            for ingest_task in access_tasks:
+                if ingest_task.has_key("task"):
+                    task_classname = ingest_task["task"]
+                    logging.info("Processing task %s " % task_classname )
+
+                    if ingest_task.has_key("condition"):
+                        condition = ingest_task["condition"]
+                        logging.info("Task has condition %s " % condition )
+
+                        passed = eval(condition,{"mfile":self})
+
+                        if not passed:
+                            logging.info("MFile %s failed condition %s " % (self,condition) )
+                            continue
+                        else:
+                            logging.info("MFile %s passed condition %s " % (self,condition) )
+
+                    task_type = utils.get_class(task_classname)
+
+                    logging.info("Task type %s " % task_type)
+
+                    if ingest_task.has_key("args"):
+                        args = ingest_task["args"]
+
+                    output_arr = []
+                    if ingest_task.has_key("outputs"):
+                        logging.info("ingest_task %s" % ingest_task)
+                        outputs = ingest_task["outputs"]
+                        logging.info("Outputs %s" % outputs)
+                        for output in outputs:
+                            mimetype = "application/octet"
+                            name = "output"
+                            if output.has_key("mimetype"):
+                                mimetype = output['mimetype']
+                            if output.has_key("name"):
+                                name = output['name']
+                            output = JobOutput(name=name,job=job, mimetype=mimetype)
+                            output.save()
+                            output_arr.append(output.id)
+
+                    task = task_type.subtask([[self.id],output_arr,args])
+
+                    logging.info("Task created %s " % task )
+
+                    in_tasks.append(task)
+
+                else:
+                    logging.info("Task has no task type %s " % ingest_task)
+
+            logging.info("%s" % in_tasks)
+
+            ts = TaskSet(tasks=in_tasks)
+            tsr = ts.apply_async()
+            tsr.save()
+
+            job.taskset_id=tsr.taskset_id
+            job.save()
+
+            return job
+
+        else:
+            # Return a job with no tasks for an empty file
+            job = Job(name="%s Empty Ingest Job"%(self.name),mfile=self)
+            job.save()
+            ts = TaskSet(tasks=[])
+            tsr.save()
+            job.taskset_id=tsr.taskset_id
+            job.save()
+            return job
+
+
     def post_process(self):
         if self.file:
 
@@ -804,9 +899,9 @@ class MFile(NamedBase):
             preingest_tasks = profiles[profile]["pre-ingest"]
 
             # MIME type
-            self.mimetype = mimetype = mimefile([self.id],[],{})["mimetype"]
-            # record size
+            self.mimetype = mimefile([self.id],[],{})["mimetype"]
 
+            # record size
             self.size = self.file.size
             self.save()
 
@@ -892,99 +987,6 @@ class MFile(NamedBase):
             job.save()
             return job
 
-    def post_process2XXX(self):
-        if self.file:
-
-            from jobservice.models import Job
-
-            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
-            job.save()
-
-            # MIME type
-            self.mimetype = mimetype = mimefile([self],[],{})["mimetype"]
-
-            tasks = []
-
-            # checksum
-            md5task = md5file.subtask([[self],[],{}])
-            tasks.extend([md5task])
-
-            # record size
-            self.size = self.file.size
-            self.save()
-
-            thumbpath = os.path.join( str(self.file) + ".thumb.jpg")
-            posterpath = os.path.join( str(self.file) + ".poster.jpg")
-            proxypath = os.path.join( str(self.file) + ".proxy.m4v")
-            fullthumbpath = os.path.join(settings.THUMB_ROOT , thumbpath)
-            fullposterpath = os.path.join(settings.THUMB_ROOT , posterpath)
-            fullproxypath = os.path.join(settings.THUMB_ROOT , proxypath)
-            (thumbhead,tail) = os.path.split(fullthumbpath)
-            (posterhead,tail) = os.path.split(fullposterpath)
-            (proxyhead,tail) = os.path.split(fullproxypath)
-
-            if not os.path.isdir(thumbhead):
-                os.makedirs(thumbhead)
-
-            if not os.path.isdir(posterhead):
-                os.makedirs(posterhead)
-
-            if mimetype.startswith('video') or self.file.name.endswith('mxf'):
-
-                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbvideo.subtask([[self.file.path],[fullthumbpath],th_options ])
-                self.thumb = thumbpath
-
-                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = thumbvideo.subtask([[self.file.path],[fullposterpath],po_options])
-                self.poster = posterpath
-
-                proxytask = proxyvideo.subtask([[self.file.path],[fullproxypath],po_options])
-                self.proxy = proxypath
-                tasks.extend([thumbtask,postertask,proxytask])
-
-            elif mimetype.startswith('image'):
-                logging.info("Creating thumb inprocess for Image '%s' %s " % (self,mimetype))
-                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                thumbtask = thumbimage.subtask([[self],[fullthumbpath],th_options])
-                self.thumb = thumbpath
-
-                po_options = {"width":settings.postersize[0],"height":settings.postersize[1]}
-                postertask = thumbimage.subtask([[self],[fullposterpath],po_options])
-                self.poster = posterpath
-                tasks.extend([thumbtask,postertask])
-
-            elif self.file.name.endswith('blend'):
-                logging.info("Creating Blender thumb '%s' %s " % (self,mimetype))
-                # TODO : Change to a Preview of a frame of the blend file
-                th_options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-                blender_path = os.path.join(settings.MEDIA_ROOT,"images/blender.png")
-                thumbtask = thumbimage.subtask([[blender_path],[fullthumbpath],th_options])
-                self.thumb = thumbpath
-                tasks.extend([thumbtask])
-            else:
-                logging.info("Not creating thumb for '%s' %s " % (self,mimetype))
-
-            logging.debug("Backing up '%s' " % self)
-
-            backup_task = backup_mfile.subtask([[self],[]])
-            tasks.extend([backup_task])
-
-            ts = TaskSet(tasks=tasks)
-            tsr = ts.apply_async()
-            tsr.save()
-
-            job.taskset_id=tsr.taskset_id
-            job.save()
-
-            self.save()
-
-            return job
-        else:
-            return None
-
-
-        
     def get_rel_path(self):
         if self.folder is not None:
             return os.path.join(self.folder.get_rel_path(),self.name)
