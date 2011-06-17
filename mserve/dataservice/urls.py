@@ -38,7 +38,7 @@ dataservice_url_handler = Resource(DataServiceURLHandler)
 mfile_handler = Resource(MFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
-mfile_access_handler = Resource(MFileAccessHandler)
+mfile_workflow_handler = Resource(MFileWorkflowHandler)
 mfile_verify_handler = Resource(MFileVerifyHandler)
 auth_handler = Resource(AuthHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
@@ -73,7 +73,7 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<mfileid>[^/]+)/usages/$', usage_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/auths/$', auth_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler),
-    url(r'^mfiles/(?P<mfileid>[^/]+)/access/$', mfile_access_handler),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/workflows/$', mfile_workflow_handler),
 
     url(r'^auths/$', auth_handler  ),
     url(r'^auths/(?P<id>[^/]+)/$', auth_handler  ),

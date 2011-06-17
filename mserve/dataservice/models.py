@@ -572,10 +572,17 @@ class DataService(NamedBase):
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
 
+        # MIME type
+        mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
+
+        # record size
+        if mfile.file :
+            mfile.size = mfile.file.size
+
         mfile.save()
 
         if post_process:
-            mfile.post_process()
+            mfile.create_workflow_job("ingest")
 
         return mfile
 
@@ -634,7 +641,7 @@ class MFile(NamedBase):
             "properties":[],
             "usages":["GET"],
             "file": ["GET","PUT","DELETE"],
-            "access": ["POST"],
+            "workflow": ["GET","POST"],
             "jobs":["GET","POST"],
             }
 
@@ -667,10 +674,13 @@ class MFile(NamedBase):
                 job = self.create_job(name)
                 return job
             return HttpResponseBadRequest()
-        if url == "access":
-            job = self.create_access_job()
-            return job
-        return None
+        if url == "workflow":
+            if kwargs.has_key('name'):
+                name = kwargs['name']
+                job = self.create_workflow_job(name)
+                return job
+            return HttpResponseBadRequest("No workflow name specified")
+        return HttpResponseBadRequest()
 
     def put(self,url, *args, **kwargs):
         if url == "auths":
@@ -690,7 +700,7 @@ class MFile(NamedBase):
                 else:
                     mfile.file=file
                 self.save()
-                self.post_process()
+                self.create_workflow_job("update")
                 return self
             return HttpResponseBadRequest()
         return HttpResponseNotFound()
@@ -797,17 +807,19 @@ class MFile(NamedBase):
         mfileauth_ro.save()
         return mfileauth_ro
 
-    def create_access_job(self):
+    def create_workflow_job(self,name):
         if self.file:
 
             profile = self.service.get_profile()
+            # TODO - pre workflow
+            
+            prename = "pre-%s"%name
 
-            # TODO - pre access
-            preaccess_tasks = profiles[profile]["pre-access"]
-
-            access_tasks = profiles[profile]["access"]
-
-            logging.info(access_tasks)
+            if profiles[profile].has_key(prename):
+                pre_workflow = profiles[profile][prename]
+                logging.warn("TODO: Pre workflow tasks %s" % pre_workflow)
+            
+            workflow_tasks = profiles[profile][name]
 
             in_tasks = []
 
@@ -817,13 +829,13 @@ class MFile(NamedBase):
             job = Job(name="%s Ingest Job"%(self.name),mfile=self)
             job.save()
 
-            for ingest_task in access_tasks:
-                if ingest_task.has_key("task"):
-                    task_classname = ingest_task["task"]
+            for workflow_task in workflow_tasks:
+                if workflow_task.has_key("task"):
+                    task_classname = workflow_task["task"]
                     logging.info("Processing task %s " % task_classname )
 
-                    if ingest_task.has_key("condition"):
-                        condition = ingest_task["condition"]
+                    if workflow_task.has_key("condition"):
+                        condition = workflow_task["condition"]
                         logging.info("Task has condition %s " % condition )
 
                         passed = eval(condition,{"mfile":self})
@@ -838,13 +850,13 @@ class MFile(NamedBase):
 
                     logging.info("Task type %s " % task_type)
 
-                    if ingest_task.has_key("args"):
-                        args = ingest_task["args"]
+                    if workflow_task.has_key("args"):
+                        args = workflow_task["args"]
 
                     output_arr = []
-                    if ingest_task.has_key("outputs"):
-                        logging.info("ingest_task %s" % ingest_task)
-                        outputs = ingest_task["outputs"]
+                    if workflow_task.has_key("outputs"):
+                        logging.info("ingest_task %s" % workflow_task)
+                        outputs = workflow_task["outputs"]
                         logging.info("Outputs %s" % outputs)
                         for output in outputs:
                             mimetype = "application/octet"
@@ -864,7 +876,7 @@ class MFile(NamedBase):
                     in_tasks.append(task)
 
                 else:
-                    logging.info("Task has no task type %s " % ingest_task)
+                    logging.info("Task has no task type %s " % workflow_task)
 
             logging.info("%s" % in_tasks)
 
@@ -898,12 +910,6 @@ class MFile(NamedBase):
             # TODO - pre ingest
             preingest_tasks = profiles[profile]["pre-ingest"]
 
-            # MIME type
-            self.mimetype = mimefile([self.id],[],{})["mimetype"]
-
-            # record size
-            self.size = self.file.size
-            self.save()
 
             ingest_tasks = profiles[profile]["ingest"]
 

@@ -403,27 +403,35 @@ class MFileContentsHandler(BaseHandler):
     def read(self, request, mfileid=None, authid=None):
 
         if mfileid:
-            logging.info("MFileContentsHandler return mfile")
+            logging.info("MFileContentsHandler mfile")
             return MFile.objects.get(pk=mfileid).do("GET","file")
         elif authid:
-            logging.info("MFileContentsHandler return auth")
+            logging.info("MFileContentsHandler auth")
             return Auth.objects.get(pk=authid).do("GET","file")
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
             return r
 
-class MFileAccessHandler(BaseHandler):
+class MFileWorkflowHandler(BaseHandler):
     allowed_methods = ('POST')
 
     def create(self, request, mfileid=None, authid=None):
 
+        if not request.POST.has_key('name'):
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
+
+        name = request.POST['name']
+        kwargs = { "name":name }
+
         if mfileid:
-            logging.info("MFileAccessHandler return mfile")
-            return MFile.objects.get(pk=mfileid).do("POST","access")
+            logging.info("MFileWorkflowHandler mfile")
+            return MFile.objects.get(pk=mfileid).do("POST","workflows",**kwargs)
         elif authid:
-            logging.info("MFileAccessHandler return auth")
-            return Auth.objects.get(pk=authid).do("POST","access")
+            logging.info("MFileWorkflowHandler auth")
+            return Auth.objects.get(pk=authid).do("POST","workflows",**kwargs)
         else:
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")

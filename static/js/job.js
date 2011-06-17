@@ -228,14 +228,22 @@ function toggle_job(job){
 }
 
 function create_access_job(mfileid){
+    jdata = { "name":'access' }
+    data = $.param(jdata)
+    var data = { one: 'first', two: 'second', name: 'access' };
+    var result = decodeURIComponent($.param(data));
      $.ajax({
        type: "POST",
-       url: "/mfiles/"+mfileid+"/access/",
+       data: result,
+       url: "/mfiles/"+mfileid+"/workflows/",
        success: function(msg){
                 create_job_holder(msg,$("#jobspaginator"))
                 if(!msg.ready){
                     check_job(msg)
                 }
+       },
+       error: function(msg){
+            showError("Error starting job","Could not start an access job")
        }
      });
 }
