@@ -31,6 +31,7 @@ import settings
 import static as static
 from piston.utils import rc
 import django.dispatch
+import urlparse
 from celery.task.control import inspect
 from celery.task.sets import TaskSet
 from celery.task.sets import subtask
@@ -601,6 +602,13 @@ class DataService(NamedBase):
 
         return mfile
 
+class RemoteMServeService(models.Model):
+    url     = models.URLField()
+    name    = models.CharField(max_length=200)
+
+    def __unicode__(self):
+        return "MServe : %s" % (self.name)
+
 class MFolder(NamedBase):
     service  = models.ForeignKey(DataService)
     parent   = models.ForeignKey('self',null=True)
@@ -918,8 +926,17 @@ class MFile(NamedBase):
                                         logging.info("No remote task for %s" % remote_task_name )
                                     else:
                                         try:
-                                            task = subtask(task=remote_task_name,args=[[self.id],output_arr,args])
-                                            logging.info("Remote task  %s" % task)
+
+                                            remoteservices = RemoteMServeService.objects.all()
+
+                                            if len(remoteservices) > 0:
+                                                url = remoteservices[0].url
+                                                task = subtask(task=remote_task_name,args=[[self.id,url],output_arr,args])
+                                                logging.info("Remote task  %s" % task)
+                                            else:
+                                                logging.info("No Remote service to use")
+
+                                            
                                         except Exception as e:
                                             logging.info("Error %s" % e)
                                 else:

@@ -20,7 +20,7 @@ default_profiles = {
                 {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
-                {"task":"thumbimage",                           "allowremote" :True,  "remotecondition" : "numlocal > 0" , "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"thumbimage",                           "allowremote" :True,  "remotecondition" : "numlocal >= 0" , "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
 
                 # Video

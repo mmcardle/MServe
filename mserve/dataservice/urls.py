@@ -32,6 +32,7 @@ from dataservice.handlers import *
 from jobservice.handlers import *
 
 hosting_handler = Resource(HostingContainerHandler)
+remote_mserve_handler = Resource(RemoteMServeServiceHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
@@ -59,6 +60,9 @@ urlpatterns = patterns('',
     url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler),
     url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler),
     url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler),
+
+
+    url(r'^remoteservices/$', remote_mserve_handler),
 
     url(r'^services/$', dataservice_handler ),
     url(r'^services/(?P<id>[^/]+)/$', dataservice_handler ),

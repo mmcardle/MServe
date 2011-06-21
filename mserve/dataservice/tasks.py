@@ -24,15 +24,17 @@
 from celery.decorators import task
 from celery.task.sets import subtask
 from subprocess import Popen, PIPE
+import json
 import logging
 import subprocess
 import hashlib
 import Image
 import tempfile
 import magic
-import pycurl
+import urlparse
 import os
 import os.path
+import time
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files import File
 import pycurl
@@ -572,6 +574,7 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
 def thumbimage(inputs,outputs,options={},callbacks=[]):
     try:
         inputid = inputs[0]
+        remoteservice = inputs[1]
 
         widthS = options["width"]
         heightS = options["height"]
@@ -584,7 +587,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
 
         logging.info("Creating Remote %sx%s image for %s" % (width,height,inputid))
 
-        image = _thumb_file_remote(path,width,height)
+        image = _thumb_file_remote(path,remoteservice,width,height)
 
         if image:
 
@@ -769,37 +772,35 @@ def _thumbimageinstance(im,width,height):
 
     return im
 
+def _thumb_file_remote(filename,remoteservice,width,height):
 
-def _thumb_file_remote(filename,width,height):
+        logging.info("Calling remote service %s " % remoteservice)
 
-        remoteservice = "http://jester/services/hmCKMjRGPeEKoEuxhaMV3eGL4wAfNLDhiRfe2Zzl3KE/mfiles/"
-        print remoteservice
+        scheme, netloc, path, query, fragid = urlparse.urlsplit(remoteservice)
+
+        logging.info("%s %s %s %s %s "% (scheme, netloc, path, query, fragid ))
+
+        remotemfile = '%s://%s/%s/mfiles/' % (scheme,netloc,path)
 
         resp = StringIO.StringIO()
 
         pf = [  ('file', (pycurl.FORM_FILE, str(filename))), ]
         c = pycurl.Curl()
         c.setopt(c.POST, 1)
-        c.setopt(c.URL, remoteservice)
+        c.setopt(c.URL, str(remotemfile))
         c.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
-        #c.setopt(c.HTTPHEADER, [ 'Expect:' ] )
         c.setopt(c.WRITEFUNCTION, resp.write)
-
         c.setopt(c.HTTPPOST, pf)
-        #c.setopt(c.VERBOSE, 1)
-
         c.perform()
         c.close()
 
-        print resp.getvalue()
-
-        import json
+        logging.info(resp.getvalue())
 
         js = json.loads(resp.getvalue())
 
         id = js['id']
 
-        remotejob = 'http://jester/mfiles/%s/jobs/' % id
+        remotejob = '%s://%s/mfiles/%s/jobs/' % (scheme,netloc,id)
 
         jobresp = StringIO.StringIO()
 
@@ -810,31 +811,24 @@ def _thumb_file_remote(filename,width,height):
         c2 = pycurl.Curl()
         c2.setopt(c2.POST, 1)
         c2.setopt(c2.URL, str(remotejob))
-        c2.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
-        #c2.setopt(c.HTTPHEADER, [ 'Expect:' ] )
+        c2.setopt(c2.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
         c2.setopt(c2.WRITEFUNCTION, jobresp.write)
-
         c2.setopt(c2.HTTPPOST, jobpf)
-        #c2.setopt(c.VERBOSE, 1)
-
         c2.perform()
+        c2.close()
 
         print "Job Resp - %s" % jobresp.getvalue()
-
-        c2.close()
 
         jobjs = json.loads(jobresp.getvalue())
 
         jobid = jobjs['id']
 
-        remotejob = 'http://jester/jobs/%s/' % jobid
-
-        import time
+        remotejob = '%s://%s/jobs/%s/' % (scheme,netloc,jobid)
 
         jobstatusresp = StringIO.StringIO()
         c3 = pycurl.Curl()
-        c3.setopt(c2.URL, str(remotejob))
-        c3.setopt(c2.WRITEFUNCTION, jobstatusresp.write)
+        c3.setopt(c3.URL, str(remotejob))
+        c3.setopt(c3.WRITEFUNCTION, jobstatusresp.write)
 
         status = False
         while True:
@@ -860,7 +854,8 @@ def _thumb_file_remote(filename,width,height):
 
             outfile = tempfile.NamedTemporaryFile()
             f = open(outfile.name,'w')
-            remotemfile= "http://jester/mfiles/%s/" % id
+
+            remotemfile= "%s://%s/mfiles/%s/" % (scheme,netloc,id)
 
             print remotemfile
             mfileresp = StringIO.StringIO()
@@ -876,7 +871,7 @@ def _thumb_file_remote(filename,width,height):
 
             posterpath = mfilejs['thumburl']
 
-            posterurl = "http://jester/%s/" % posterpath
+            posterurl = "%s://%s/%s/"% (scheme,netloc,posterpath)
 
             c5 = pycurl.Curl()
             c5.setopt(c5.URL, str(posterurl))

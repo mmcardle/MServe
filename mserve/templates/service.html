@@ -75,20 +75,6 @@
                 <div class="spinner"><span class="red">Loading Jobs...</span></div>
             </div>
 
-            <div id="set-management-property-button-dialog-form" title="Set Management Property">
-                <p class="validateTips">Input management property and value.</p>
-
-                <form >
-                <fieldset>
-                    <legend></legend>
-                        <label for="property">Property</label>
-                        <input type="text" name="prop" id="prop" class="text ui-widget-content ui-corner-all" />
-                        <label for="value">Value</label>
-                        <input type="text" name="val" id="val" value="" class="text ui-widget-content ui-corner-all" />
-                </fieldset>
-                </form>
-            </div>
-
             <script type="text/javascript">
                 $(document).ready(function() {
                     loadMFiles('{{service.id}}');
@@ -98,9 +84,9 @@
 
         </div>
        <div id="tabs-4">
-            <h3>Properties</h3>
+           <h2>Properties</h2>
 
-            <dl>
+            <dl style="padding-left: 40px;">
                 <dt>Start Time</dt>
                 <dd>
                     {% if service.starttime %}
@@ -119,14 +105,14 @@
                 </dd>
             </dl>
 
-            <h3>Management Properties</h3>
+            <h2>Management Properties</h2>
 
-            <table id="managementpropertyholder" style="vertical-align: middle;" >
+            <table id="managementpropertyholder" style="vertical-align: middle;padding:20px;padding-left: 40px;" >
                 <tr><th>Name</th><th>Current Value</th><th></th><th>New Value</th><th></th><th></th></tr>
 
             </table>
 
-            <h3>Profile Configuration</h3>
+            <h2>Profile Configuration</h2>
 
             <div id="profilepaginator">
 

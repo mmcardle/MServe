@@ -21,6 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+from mserve.dataservice.models import RemoteMServeService
 from django.http import Http404
 from django.http import HttpResponseForbidden
 from piston.handler import BaseHandler
@@ -34,6 +35,7 @@ from django.shortcuts import redirect
 from django.conf import settings
 from django.http import HttpResponseNotFound
 import settings as settings
+from django.contrib.admin.views.decorators import staff_member_required
 import static as static
 from dataservice.models import mfile_get_signal
 import utils as utils
@@ -406,6 +408,16 @@ class AuthContentsHandler(BaseHandler):
         except Exception as e:
             logging.error(e)
             raise e
+
+class RemoteMServeServiceHandler(BaseHandler):
+    allowed_methods = ('GET')
+    model = RemoteMServeService
+
+    def read(self, request):
+        if request.user.is_staff:
+            return RemoteMServeService.objects.all()
+        else:
+            return []
 
 class MFileContentsHandler(BaseHandler):
     allowed_methods = ('GET')

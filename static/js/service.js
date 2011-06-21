@@ -60,6 +60,18 @@ function check_service_method(method){
 }
 
 function service_loadprofiles(serviceid){
+
+    $.ajax({
+       type: "GET",
+       url: "/remoteservices/",
+       success: function(remoteservices){
+            service_loadprofiles_remote(serviceid, remoteservices)
+        }
+    });
+
+}
+
+function service_loadprofiles_remote(serviceid, remoteservices){
     $.ajax({
        type: "GET",
        url: "/services/"+serviceid+"/profiles/",
@@ -81,7 +93,17 @@ function service_loadprofiles(serviceid){
                     end=profiles.length;
                 }
 
-                $( "#profileTemplate" ).tmpl( profiles.slice(start,end) ) .appendTo( "#profilepaginator" );
+                profileslice = profiles.slice(start,end)
+                $( "#profileTemplate" ).tmpl( profileslice ) .appendTo( "#profilepaginator" );
+
+                rhtml = ""
+                $(remoteservices).each(function(index,service){
+                        rhtml += '<span class="blue" title="'+service.url+'">'+service.name+'<input style="display: inline" type="checkbox" name="name" value="v" /></span>'
+                    }
+                )
+
+                $(".profile-remoteservices").append(rhtml)
+                $(".savebutton").button().click( function(){showMessage("Alert","To be done :)")})
 
                 return false;
             }

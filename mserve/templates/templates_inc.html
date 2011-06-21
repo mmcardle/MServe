@@ -229,16 +229,15 @@
 
 <script id="profileTemplate" type="text/x-jquery-tmpl">
 
-    <h2 class="red">Profile ${name}</h2>
-
-    <table border="1" cellpadding="5" cellspacing="4"  style="width: 90%" >
-        <tr><th style="width: 10%" >Workflow Name</th><th>Steps</th></tr>
+    <h3 class="red">Profile ${name}</h3>
+    <table border="1" cellpadding="5" cellspacing="4"  style="width: 90%;padding: 2px;margin-left: 40px;" >
+        <tr><th style="width: 10%" >Workflow</th><th>Steps</th></tr>
         {%templatetag openvariable%}each(index,workflow) workflows{%templatetag closevariable%}
         <tr>
             <td >${index}</td>
             <td>
-                <table style="width: 100%" >
-                    <tr><th style="width: 25%">Task Name</th><th style="width: 25%">Remote Execution</th><th style="">Config</th></tr>
+                <table style="width: 100%" border="0" >
+                    <tr><th style="width: 25%">Tasks</th><th style="width: 25%">Remote Execution</th><th style="">Config</th></tr>
 
                         {%templatetag openvariable%}if workflow.length == 0 {%templatetag closevariable%}
                         <tr>
@@ -250,8 +249,9 @@
                         <tr>
                             <td class="green">${task}</td>
                             <td>
-                                Munoz <input style="display: inline" type="checkbox" name="name" value="v" />
-                                Jester <input style="display: inline" type="checkbox" name="name" value="v" />
+                                <div class="profile-remoteservices">
+
+                                </div>
                             </td>
                             <td>
                                 {%templatetag openvariable%}each(k,arg) args{%templatetag closevariable%}
@@ -262,12 +262,10 @@
                         {%templatetag openvariable%}/each{%templatetag closevariable%}
                 </table>
             </td>
+            <td><button class="savebutton">Save</button></td>
         </tr>
         {%templatetag openvariable%}/each{%templatetag closevariable%}
     </table>
-
-
-    
 </script>
 
 
