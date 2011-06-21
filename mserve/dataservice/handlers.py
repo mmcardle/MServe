@@ -34,6 +34,7 @@ from django.shortcuts import redirect
 from django.conf import settings
 from django.http import HttpResponseNotFound
 import settings as settings
+import static as static
 from dataservice.models import mfile_get_signal
 import utils as utils
 import usage_store as usage_store
@@ -149,6 +150,15 @@ class DataServiceHandler(BaseHandler):
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
             return r
+
+class DataServiceProfileHandler(BaseHandler):
+    allowed_methods = ('GET')
+
+    def read(self, request, serviceid):
+
+        service = DataService.objects.get(id=serviceid)
+
+        return service.do("GET","profiles")
 
 class DataServiceURLHandler(BaseHandler):
 

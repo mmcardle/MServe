@@ -59,6 +59,43 @@ function check_service_method(method){
     }
 }
 
+function service_loadprofiles(serviceid){
+    $.ajax({
+       type: "GET",
+       url: "/services/"+serviceid+"/profiles/",
+       success: function(profiles){
+
+            if(profiles.length==0){
+                 $("#profilemessages").append("<div id='noprofiles' class='message' >No profiles</div>");
+                return;
+            }else{
+
+                $("#noprofiles").remove()
+            }
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>profiles.length){
+                    end=profiles.length;
+                }
+
+                $( "#profileTemplate" ).tmpl( profiles.slice(start,end) ) .appendTo( "#profilepaginator" );
+
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+            $("#servicepaginator").pagination(profiles.length, {
+                    items_per_page:5,
+                    callback:handlePaginationClick
+            });
+       }
+     });
+}
+
 function service_loadmanagementproperties(serviceid){
      $.ajax({
        type: "GET",
@@ -150,61 +187,3 @@ function service_setmanagementproperty_ajax(service,prop,val){
      });
  }
 
-function service_setmanagementproperty(serviceid) {
-    // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
-    $( "#dialog:ui-dialog" ).dialog( "destroy" );
-
-    var prop = $( "#prop" ),
-    val = $( "#val" ),
-
-    allFields = $( [] ).add( prop ).add( val ),
-    tips = $( ".validateTips" );
-
-    function updateTips( t ) {
-            tips.text( t ).addClass( "ui-state-highlight" );
-            setTimeout(function() {
-                    tips.removeClass( "ui-state-highlight", 1500 );
-            }, 500 );
-    }
-
-    function check(o,name){
-      if( o.val() !=null && o.val() != ""){
-          return true;
-      } else {
-          updateTips( "That is not a valid " +name+ " "+ o.val() + ".");
-          return false;
-      }
-    }
-
-    $( "#set-management-property-button-dialog-form" ).dialog({
-            autoOpen: false,
-            height: 300,
-            width: 350,
-            modal: true,
-            buttons: {
-                    "Set Management Property": function() {
-                            var bValid = true;
-                            allFields.removeClass( "ui-state-error" );
-
-                            bValid = bValid && check( prop, "property");
-                            bValid = bValid && check( val, "value");
-
-                            if ( bValid ) {
-                                    service_setmanagementproperty_ajax(serviceid,prop.val(),val.val());
-                                    $( this ).dialog( "close" );
-                            }
-                    },
-                    Cancel: function() {
-                            $( this ).dialog( "close" );
-                    }
-            },
-            close: function() {
-                    allFields.val( "" ).removeClass( "ui-state-error" );
-            }
-    });
-
-    $( "#service-setmanagementproperty-button" )
-        .click(function() {
-                $( "#set-management-property-button-dialog-form" ).dialog( "open" );
-        });
-}

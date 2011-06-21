@@ -15,12 +15,12 @@ default_profiles = {
                 ],
             "ingest" : [
 
-                # Standard Ingest (images/videos)
+                # Standard Ingest 
                 {"task":"dataservice.tasks.md5file",            "args": {} },
                 {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
-                {"task":"dataservice.tasks.thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"thumbimage",                           "allowremote" :True,  "remotecondition" : "numlocal > 0" , "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
 
                 # Video
@@ -37,13 +37,13 @@ default_profiles = {
             "pre-access" : [
 
                 # Standard Access Check
-                {"task":"dataservice.tasks.md5fileverify",    "args": {} },
+                {"task":"dataservice.tasks.md5fileverify",      "args": {} },
 
                 ],
             "access" : [
 
                 # Standard Access Tasks
-                {"task":"dataservice.tasks.mfilefetch",       "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
+                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
 
                 ],
             "update" : [
@@ -53,7 +53,7 @@ default_profiles = {
                 {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
-                {"task":"dataservice.tasks.thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
 
                 # Video
@@ -67,7 +67,7 @@ default_profiles = {
                 {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
 
             ],
-            "periodic" : ["md5"]
+            "periodic" : []
             },
     "hd": {
             "pre-ingest" : [
@@ -80,7 +80,7 @@ default_profiles = {
                 {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
-                {"task":"dataservice.tasks.thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
 
                 # Video
@@ -97,10 +97,41 @@ default_profiles = {
                 {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
 
                 ],
-            "access" : ["check_md5"],
-            "update" : ["md5","thumb"],
-            "periodic" : ["md5"]
-            }
+            "pre-access" : [
+
+                # Standard Access Check
+                {"task":"dataservice.tasks.md5fileverify",      "args": {} },
+
+                ],
+            "access" : [
+
+                # Standard Access Tasks
+                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
+
+                ],
+            "update" : [
+
+                # Standard Ingest (images/videos)
+                {"task":"dataservice.tasks.md5file",            "args": {} },
+                {"task":"dataservice.tasks.backup_mfile",       "args": {} },
+
+                # Images
+                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
+
+                # Video
+                {"task":"dataservice.tasks.thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
+                {"task":"dataservice.tasks.postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
+                {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
+
+                # MXF Ingest
+                {"task":"dataservice.tasks.thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
+                {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
+
+            ],
+            "periodic" : []
+        }
 }
 
 default_roles = {
@@ -122,7 +153,8 @@ default_roles = {
         "usages":["GET"],\
         "mfiles":["GET","POST","PUT","DELETE"],\
         "jobs":["GET","POST","PUT","DELETE"],\
-        "mfolders":["GET","POST","PUT","DELETE"]\
+        "mfolders":["GET","POST","PUT","DELETE"],\
+        "profiles":["GET"]
         }
     }
 ,

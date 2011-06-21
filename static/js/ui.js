@@ -1,5 +1,4 @@
 
-
 function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
     	$(function() {
 		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!

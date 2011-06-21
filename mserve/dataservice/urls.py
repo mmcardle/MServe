@@ -35,6 +35,7 @@ hosting_handler = Resource(HostingContainerHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
+dataservice_profile_handler = Resource(DataServiceProfileHandler)
 mfile_handler = Resource(MFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
@@ -66,6 +67,7 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/auths/$', auth_handler),
     url(r'^services/(?P<serviceid>[^/]+)/mfiles/$', mfile_handler),
     url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler),
 
     url(r'^mfiles/$', mfile_handler  ),
     url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler  ),

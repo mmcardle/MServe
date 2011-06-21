@@ -1,5 +1,5 @@
 job_descriptions = {}
-job_descriptions['dataservice.tasks.thumbimage'] = {
+job_descriptions['thumbimage'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "image/png" },

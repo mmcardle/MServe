@@ -123,11 +123,6 @@
         <th>${ property}</th>
         <td class="${ property } red" style="text-align: center;vertical-align: middle;">${ value }</td>
 
-        <td style="vertical-align: middle;">
-            <div id="managementalts-${id}">
-            </div>
-        </td>
-
         <td style="vertical-align: middle;width:400px"><div style="" id="slider-${ id }"></div></td>
 
         <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
@@ -135,6 +130,11 @@
         <td style="vertical-align: middle;">
             <button id="service-setmanagementproperty-button-${ id }" >Set</button>
 
+        </td>
+
+        <td style="vertical-align: middle;">
+            <div id="managementalts-${id}">
+            </div>
         </td>
 
     </tr>
@@ -150,14 +150,12 @@
             </div>
         </td>
 
-        <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
 
         <td style="vertical-align: middle;">
             <button id="service-setmanagementproperty-button-${ id }" >Set</button>
 
         </td>
-
-
+                <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
 
     </tr>
 </script>
@@ -228,6 +226,50 @@
     </div>
 </div>
 </script>
+
+<script id="profileTemplate" type="text/x-jquery-tmpl">
+
+    <h2 class="red">Profile ${name}</h2>
+
+    <table border="1" cellpadding="5" cellspacing="4"  style="width: 90%" >
+        <tr><th style="width: 10%" >Workflow Name</th><th>Steps</th></tr>
+        {%templatetag openvariable%}each(index,workflow) workflows{%templatetag closevariable%}
+        <tr>
+            <td >${index}</td>
+            <td>
+                <table style="width: 100%" >
+                    <tr><th style="width: 25%">Task Name</th><th style="width: 25%">Remote Execution</th><th style="">Config</th></tr>
+
+                        {%templatetag openvariable%}if workflow.length == 0 {%templatetag closevariable%}
+                        <tr>
+                            <td class="red">No Tasks</td>
+                        </tr>
+                        {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                        {%templatetag openvariable%}each(j,task) workflow{%templatetag closevariable%}
+                        <tr>
+                            <td class="green">${task}</td>
+                            <td>
+                                Munoz <input style="display: inline" type="checkbox" name="name" value="v" />
+                                Jester <input style="display: inline" type="checkbox" name="name" value="v" />
+                            </td>
+                            <td>
+                                {%templatetag openvariable%}each(k,arg) args{%templatetag closevariable%}
+                                    <span>${k} : ${arg}</span>
+                                {%templatetag openvariable%}/each{%templatetag closevariable%}
+                            </td>
+                        <tr>
+                        {%templatetag openvariable%}/each{%templatetag closevariable%}
+                </table>
+            </td>
+        </tr>
+        {%templatetag openvariable%}/each{%templatetag closevariable%}
+    </table>
+
+
+    
+</script>
+
 
 <script id="authTemplate" type="text/x-jquery-tmpl">
 

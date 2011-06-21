@@ -31,7 +31,10 @@ import settings
 import static as static
 from piston.utils import rc
 import django.dispatch
+from celery.task.control import inspect
 from celery.task.sets import TaskSet
+from celery.task.sets import subtask
+from celery.registry import tasks
 from django.shortcuts import redirect
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseForbidden
@@ -461,6 +464,7 @@ class DataService(NamedBase):
         "mfiles":["GET","POST"],
         "mfolders":["GET","POST"],
         "jobs":["GET"],
+        "profiles":["GET"],
         }
 
     def __init__(self, *args, **kwargs):
@@ -476,6 +480,17 @@ class DataService(NamedBase):
             from jobservice.models import Job
             jobs = Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
             return jobs
+        if url == "profiles":
+            profiles = static.default_profiles
+            # TODO:
+            # Return any service sepcific workflow
+            ret = []
+            for k in profiles.keys():
+                r = {}
+                r['name'] = k
+                r['workflows'] = profiles[k]
+                ret.append(r)
+            return ret
         if not url:
             return self
 
@@ -812,6 +827,14 @@ class MFile(NamedBase):
 
             profile = self.service.get_profile()
             # TODO - pre workflow
+
+            # MIME type
+            #self.mimetype = mimefile([self.id],[],{})["mimetype"]
+            #self.save()
+
+            pretasks = mimefile.subtask([[self.id],[],{}])
+
+            logging.info("MFILE - %s"%self.mimetype)
             
             prename = "pre-%s"%name
 
@@ -829,10 +852,13 @@ class MFile(NamedBase):
             job = Job(name="%s Ingest Job"%(self.name),mfile=self)
             job.save()
 
+            ins = inspect()
+            logging.info("act  : %s " % ins.active())
+
             for workflow_task in workflow_tasks:
                 if workflow_task.has_key("task"):
-                    task_classname = workflow_task["task"]
-                    logging.info("Processing task %s " % task_classname )
+                    task_name = workflow_task["task"]
+                    logging.info("Processing task %s " % task_name )
 
                     if workflow_task.has_key("condition"):
                         condition = workflow_task["condition"]
@@ -845,10 +871,6 @@ class MFile(NamedBase):
                             continue
                         else:
                             logging.info("MFile %s passed condition %s " % (self,condition) )
-
-                    task_type = utils.get_class(task_classname)
-
-                    logging.info("Task type %s " % task_type)
 
                     if workflow_task.has_key("args"):
                         args = workflow_task["args"]
@@ -869,7 +891,43 @@ class MFile(NamedBase):
                             output.save()
                             output_arr.append(output.id)
 
-                    task = task_type.subtask([[self.id],output_arr,args])
+                    task = subtask(task=task_name,args=[[self.id],output_arr,args])
+                    
+                    if workflow_task.has_key("allowremote") and workflow_task["allowremote"]:
+
+                        remoteconditionpassed = False
+                        if workflow_task.has_key("remotecondition"):
+                            
+                            host = settings.HOSTNAME
+                            act = ins.active()
+                            if act != None:
+                                localname = "local.%s"%host
+                                numlocal = len(act[localname])
+                                numremote = len(act["remote.%s"%host])
+
+                                remotecondition = workflow_task["remotecondition"]
+
+                                remoteconditionpassed = eval(remotecondition,{"mfile":self,"numlocal":numlocal,"numremote":numremote})
+
+                                if remoteconditionpassed:
+                                    remote_task_name = "%s.remote" % task_name
+                                    logging.info("Checking for %s" % remote_task_name )
+                                    
+                                    reg = tasks.regular().keys()
+                                    if not remote_task_name in reg:
+                                        logging.info("No remote task for %s" % remote_task_name )
+                                    else:
+                                        try:
+                                            task = subtask(task=remote_task_name,args=[[self.id],output_arr,args])
+                                            logging.info("Remote task  %s" % task)
+                                        except Exception as e:
+                                            logging.info("Error %s" % e)
+                                else:
+                                    logging.info("Not creating remote task %s, condition failed %s " % (task_name,remotecondition))
+                            else:
+                                logging.warn("Celery Inspection returned None")
+                        else:
+                            logging.info("Not creating remote task %s " % task_name )
 
                     logging.info("Task created %s " % task )
 
@@ -899,99 +957,8 @@ class MFile(NamedBase):
             job.save()
             return job
 
-
     def post_process(self):
-        if self.file:
-
-            logging.info("ingest")
-
-            profile = self.service.get_profile()
-
-            # TODO - pre ingest
-            preingest_tasks = profiles[profile]["pre-ingest"]
-
-
-            ingest_tasks = profiles[profile]["ingest"]
-
-            logging.info(ingest_tasks)
-
-            in_tasks = []
-
-            from jobservice.models import Job
-            from jobservice.models import JobOutput
-
-            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
-            job.save()
-
-            for ingest_task in ingest_tasks:
-                if ingest_task.has_key("task"):
-                    task_classname = ingest_task["task"]
-                    logging.info("Processing task %s " % task_classname )
-
-                    if ingest_task.has_key("condition"):
-                        condition = ingest_task["condition"]
-                        logging.info("Task has condition %s " % condition )
-
-                        passed = eval(condition,{"mfile":self})
-
-                        if not passed:
-                            logging.info("MFile %s failed condition %s " % (self,condition) )
-                            continue
-                        else:
-                            logging.info("MFile %s passed condition %s " % (self,condition) )
-
-                    task_type = utils.get_class(task_classname)
-
-                    logging.info("Task type %s " % task_type)
-
-                    if ingest_task.has_key("args"):
-                        args = ingest_task["args"]
-
-                    output_arr = []
-                    if ingest_task.has_key("outputs"):
-                        logging.info("ingest_task %s" % ingest_task)
-                        outputs = ingest_task["outputs"]
-                        logging.info("Outputs %s" % outputs)
-                        for output in outputs:
-                            mimetype = "application/octet"
-                            name = "output"
-                            if output.has_key("mimetype"):
-                                mimetype = output['mimetype']
-                            if output.has_key("name"):
-                                name = output['name']
-                            output = JobOutput(name=name,job=job, mimetype=mimetype)
-                            output.save()
-                            output_arr.append(output)
-
-                    task = task_type.subtask([[self.id],output_arr,args])
-
-                    logging.info("Task created %s " % task )
-
-                    in_tasks.append(task)
-
-                else:
-                    logging.info("Task has no task type %s " % ingest_task)
-
-            logging.info("%s" % in_tasks)
-
-            ts = TaskSet(tasks=in_tasks)
-            tsr = ts.apply_async()
-            tsr.save()
-
-            job.taskset_id=tsr.taskset_id
-            job.save()
-
-            return job
-
-        else:
-            # Return a job with no tasks for an empty file
-            job = Job(name="%s Empty Ingest Job"%(self.name),mfile=self)
-            job.save()
-            ts = TaskSet(tasks=[])
-            tsr.save()
-            job.taskset_id=tsr.taskset_id
-            job.save()
-            return job
+        return self.create_workflow_job("ingest")
 
     def get_rel_path(self):
         if self.folder is not None:

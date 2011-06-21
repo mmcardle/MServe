@@ -50,7 +50,7 @@ class Job(NamedBase):
     def tasks(self):
         tsr = TaskSetResult.restore(self.taskset_id)
         dict = {}
-        if tsr is not None:
+        if tsr is not None and hasattr(tsr,"taskset_id"):
             
             dict["taskset_id"] = tsr.taskset_id
             results = []

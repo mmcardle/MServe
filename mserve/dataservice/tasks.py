@@ -30,10 +30,13 @@ import hashlib
 import Image
 import tempfile
 import magic
+import pycurl
 import os
 import os.path
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files import File
+import pycurl
+import StringIO
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
@@ -467,6 +470,40 @@ def md5file(inputs,outputs,options={},callbacks=[]):
         raise e
 
 @task(default_retry_delay=15,max_retries=3)
+def posterimage_remote(inputs,outputs,options={},callbacks=[]):
+
+    try:
+        print inputs
+        mfileid = inputs[0]
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
+
+        remoteservice = "http://jester/services/CpNP8KcttY9D4vunctgSRPIfZOdstOkUAVAl0tNKs/mfiles/"
+
+        #response = cStringIO.StringIO()
+        resp = StringIO.StringIO()
+
+        pf = [  ('file', (pycurl.FORM_FILE, str(mf.file.path))), ]
+        c = pycurl.Curl()
+        c.setopt(c.POST, 1)
+        c.setopt(c.URL, remoteservice)
+        c.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
+        #c.setopt(c.HTTPHEADER, [ 'Expect:' ] )
+        c.setopt(c.WRITEFUNCTION, resp.write)
+
+        c.setopt(c.HTTPPOST, pf)
+        #c.setopt(c.VERBOSE, 1)
+
+        c.perform()
+        c.close()
+
+        print resp
+
+    except Exception as e:
+        logging.info("Error with posterimage %s" % e)
+        raise e
+
+@task(default_retry_delay=15,max_retries=3)
 def posterimage(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -531,7 +568,44 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with thumbvideo %s" % e)
         raise e
 
-@task(default_retry_delay=15,max_retries=3)
+@task(default_retry_delay=15,max_retries=3,name="thumbimage.remote")
+def thumbimage(inputs,outputs,options={},callbacks=[]):
+    try:
+        inputid = inputs[0]
+
+        widthS = options["width"]
+        heightS = options["height"]
+        height = int(heightS)
+        width  = int(widthS)
+
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(pk=inputid)
+        path = mf.file.path
+
+        logging.info("Creating Remote %sx%s image for %s" % (width,height,inputid))
+
+        image = _thumb_file_remote(path,width,height)
+
+        if image:
+
+            if not _save_thumb(inputid,image):
+                thumbimage.retry([inputs,outputs,options,callbacks])
+
+            logging.info("Thumbnail created %s" % (image))
+
+            for callback in callbacks:
+                subtask(callback).delay()
+
+            return {"success":True,"message":"Thumbnail '%sx%s' successful"%(width,height)}
+        else:
+            raise Exception("Could not create image remote")
+
+    except Exception as e:
+        logging.info("Error with thumbimage %s" % e)
+        raise e
+
+
+@task(default_retry_delay=15,max_retries=3,name="thumbimage")
 def thumbimage(inputs,outputs,options={},callbacks=[]):
     
     try:
@@ -694,3 +768,133 @@ def _thumbimageinstance(im,width,height):
     im.thumbnail((width,height))
 
     return im
+
+
+def _thumb_file_remote(filename,width,height):
+
+        remoteservice = "http://jester/services/hmCKMjRGPeEKoEuxhaMV3eGL4wAfNLDhiRfe2Zzl3KE/mfiles/"
+        print remoteservice
+
+        resp = StringIO.StringIO()
+
+        pf = [  ('file', (pycurl.FORM_FILE, str(filename))), ]
+        c = pycurl.Curl()
+        c.setopt(c.POST, 1)
+        c.setopt(c.URL, remoteservice)
+        c.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
+        #c.setopt(c.HTTPHEADER, [ 'Expect:' ] )
+        c.setopt(c.WRITEFUNCTION, resp.write)
+
+        c.setopt(c.HTTPPOST, pf)
+        #c.setopt(c.VERBOSE, 1)
+
+        c.perform()
+        c.close()
+
+        print resp.getvalue()
+
+        import json
+
+        js = json.loads(resp.getvalue())
+
+        id = js['id']
+
+        remotejob = 'http://jester/mfiles/%s/jobs/' % id
+
+        jobresp = StringIO.StringIO()
+
+        jobpf = [  ('jobtype', (pycurl.FORM_CONTENTS, "dataservice.tasks.posterimage") ),
+                    ('width', (pycurl.FORM_CONTENTS, str(width)) ),
+                    ('height', (pycurl.FORM_CONTENTS, str(height)) ),
+                    ]
+        c2 = pycurl.Curl()
+        c2.setopt(c2.POST, 1)
+        c2.setopt(c2.URL, str(remotejob))
+        c2.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
+        #c2.setopt(c.HTTPHEADER, [ 'Expect:' ] )
+        c2.setopt(c2.WRITEFUNCTION, jobresp.write)
+
+        c2.setopt(c2.HTTPPOST, jobpf)
+        #c2.setopt(c.VERBOSE, 1)
+
+        c2.perform()
+
+        print "Job Resp - %s" % jobresp.getvalue()
+
+        c2.close()
+
+        jobjs = json.loads(jobresp.getvalue())
+
+        jobid = jobjs['id']
+
+        remotejob = 'http://jester/jobs/%s/' % jobid
+
+        import time
+
+        jobstatusresp = StringIO.StringIO()
+        c3 = pycurl.Curl()
+        c3.setopt(c2.URL, str(remotejob))
+        c3.setopt(c2.WRITEFUNCTION, jobstatusresp.write)
+
+        status = False
+        while True:
+            time.sleep(3)
+
+            c3.perform()
+
+            print "Job Resp - %s" % jobstatusresp.getvalue()
+
+            jobjs = json.loads(jobstatusresp.getvalue())
+
+            status = jobjs['tasks']['successful']
+
+            print status
+
+            if status:
+                break
+
+        c3.close()
+
+        import tempfile
+        if status:
+
+            outfile = tempfile.NamedTemporaryFile()
+            f = open(outfile.name,'w')
+            remotemfile= "http://jester/mfiles/%s/" % id
+
+            print remotemfile
+            mfileresp = StringIO.StringIO()
+            c4 = pycurl.Curl()
+            c4.setopt(c4.URL, str(remotemfile))
+            c4.setopt(c4.WRITEFUNCTION, mfileresp.write)
+            c4.perform()
+            c4.close()
+
+            print "Mfile Resp - %s" % mfileresp.getvalue()
+
+            mfilejs = json.loads(mfileresp.getvalue())
+
+            posterpath = mfilejs['thumburl']
+
+            posterurl = "http://jester/%s/" % posterpath
+
+            c5 = pycurl.Curl()
+            c5.setopt(c5.URL, str(posterurl))
+            c5.setopt(c5.WRITEFUNCTION, f.write)
+            c5.perform()
+            c5.close()
+
+            print outfile
+
+            mfiledelresp = StringIO.StringIO()
+            c6 = pycurl.Curl()
+            c6.setopt(pycurl.CUSTOMREQUEST, 'DELETE')
+            c6.setopt(c6.URL, str(remotemfile))
+            c6.setopt(c6.WRITEFUNCTION, mfiledelresp.write)
+            c6.perform()
+
+            print mfiledelresp.getvalue()
+
+            image = Image.open(outfile.name)
+
+            return image

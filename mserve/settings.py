@@ -37,6 +37,9 @@ logging.basicConfig(
     filemode='a'
 )
 
+import platform
+HOSTNAME = platform.uname()[1]
+
 ADMINS = (
     # ('Your Name', 'your_email@domain.com'),
 )
@@ -142,6 +145,32 @@ BROKER_USER = "myuser"
 BROKER_PASSWORD = "mypassword"
 BROKER_VHOST = "myvhost"
 
+CELERY_DEFAULT_QUEUE = "local_tasks"
+CELERY_QUEUES = {
+    "local_tasks": {
+        "binding_key": "local.#",
+    },
+    "remote_tasks": {
+        "binding_key": "remote.#",
+    },
+}
+CELERY_DEFAULT_EXCHANGE = "tasks"
+CELERY_DEFAULT_EXCHANGE_TYPE = "topic"
+CELERY_DEFAULT_ROUTING_KEY = "task.default"
+#CELERY_RESULT_BACKEND = "amqp"
+
+class Router(object):
+
+    def route_for_task(self, task, args=None, kwargs=None):
+        if task.endswith(".remote"):
+            return {
+                    "exchange": "tasks",# Not Needed (will go to default)
+                    "exchange_type": "topic",# Not Needed (will go to default)
+                    "routing_key": "remote.1"
+                    }
+        return None
+
+CELERY_ROUTES = (Router(), )
 CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks", "prestoprime.tasks" )
 
 import djcelery

@@ -26,6 +26,7 @@ import os
 import os.path
 import logging
 from celery.task.sets import TaskSet
+from celery.task.sets import subtask
 from dataservice.forms import *
 from dataservice.models import *
 from django.http import *
@@ -66,82 +67,85 @@ class JobHandler(BaseHandler):
     fields = ('id','name','created','taskset_id','joboutput_set','tasks')
 
     def create(self, request, mfileid=None):
-        
-        jobtype = request.POST['jobtype']
 
-        name = "newfile"
-        inputs = []
-        outputs = []
-        callbacks = []
-        options = {}
+        if request.POST.has_key('jobtype'):
+            jobtype = request.POST['jobtype']
 
-        if mfileid != "":
-            mfile = MFile.objects.get(id=mfileid)
-            inputs.append(mfile.id)
+            inputs = []
+            outputs = []
+            callbacks = []
+            options = {}
+
+            if mfileid != "":
+                mfile = MFile.objects.get(id=mfileid)
+                inputs.append(mfile.id)
+            else:
+                r = rc.BAD_REQUEST
+                r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
+                return r
+
+            for v in request.POST:
+                options[v]=request.POST[v]
+
+            logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
+
+            job_description = None
+            try:
+                job_description = job_descriptions.get(jobtype)
+            except Exception as e:
+                logging.info("No job description for job type '%s' %s" % (jobtype,e) )
+
+            if job_description == None:
+                r = rc.BAD_REQUEST
+                r.write("\nJob has no description - Creation Failed!")
+                return r
+
+            nbinputs = job_description["nbinputs"]
+            nboutputs= job_description["nboutputs"]
+
+            job = mfile.do("POST","jobs",**{"name":"Job"})
+            job.save()
+
+            for i in range(1,nbinputs-1):
+                mfileid = request.POST['input-%s'%i]
+                mfile = MFile.objects.get(id=mfileid)
+                inputs.append(mfile.id)
+
+            if job == None:
+                r = rc.BAD_REQUEST
+                r.write("Job Creation failed!")
+                return r
+
+            for i in range(0,nboutputs):
+                outputmimetype = job_description["output-%s"%i]["mimetype"]
+                output = JobOutput(name="Output %s '%s'"%(i,jobtype),job=job,mimetype=outputmimetype)
+                output.save()
+                outputs.append(output.id)
+
+            logging.info("Creating task %s inputs= %s outputs= %s options= %s" % (jobtype,inputs,outputs,options))
+
+            # TODO : Submit to correct Q options={"queue":"%s"%job.id}
+            task = subtask(task=jobtype,args=[inputs,outputs,options],callbacks=callbacks)
+
+            tasks = [task]
+
+            ts = TaskSet(tasks=tasks)
+            tsr = ts.apply_async()
+            tsr.save()
+
+            job.taskset_id=tsr.taskset_id
+            job.save()
+
+            logging.info("Creating Job Type %s on file %s" % (jobtype,mfileid))
+
+            logging.info("Created Job  %s" % (job))
+
+            return job
         else:
             r = rc.BAD_REQUEST
-            r.write("\nRequest has no serviceid or mfileid - Creation Failed!")
+            r.write("Invalid Request! no jobtype in request.")
             return r
 
-        for v in request.POST:
-            options[v]=request.POST[v]
-
-        logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
-
-        job_description = None
-        try:
-            job_description = job_descriptions.get(jobtype)
-        except Exception as e:
-            logging.info("No job description for job type '%s' %s" % (jobtype,e) )
-
-        if job_description == None:
-            r = rc.BAD_REQUEST
-            r.write("\nJob has no description - Creation Failed!")
-            return r
-
-        nbinputs = job_description["nbinputs"]
-        nboutputs= job_description["nboutputs"]
-
-        job = mfile.do("POST","jobs",**{"name":"Job"})
-        job.save()
-
-        for i in range(1,nbinputs-1):
-            mfileid = request.POST['input-%s'%i]
-            mfile = MFile.objects.get(id=mfileid)
-            inputs.append(mfile.id)
-
-        if job == None:
-            r = rc.BAD_REQUEST
-            r.write("Job Creation failed!")
-            return r
-
-        for i in range(0,nboutputs):
-            outputmimetype = job_description["output-%s"%i]["mimetype"]
-            output = JobOutput(name="Output %s '%s'"%(i,jobtype),job=job,mimetype=outputmimetype)
-            output.save()
-            outputs.append(output.id)
-
-        m = get_class(jobtype)
-
-        logging.info("Creating task %s inputs= %s outputs= %s options= %s" % (m,inputs,outputs,options))
-
-        # TODO : Submit to correct Q options={"queue":"%s"%job.id}
-        task = m.subtask([inputs,outputs,options],callbacks=callbacks)
-
-        tasks = [task]
-
-        ts = TaskSet(tasks=tasks)
-        tsr = ts.apply_async()
-        tsr.save()
-
-        job.taskset_id=tsr.taskset_id
-        job.save()
-
-        logging.info("Creating Job Type %s on file %s" % (jobtype,mfileid))
-
-        logging.info("Created Job  %s" % (m))
-
-        return job
 
     def delete(self, request, jobid):
         job = Job.objects.get(id=jobid)
@@ -243,11 +247,3 @@ class JobOutputContentsHandler(BaseHandler):
 
         logging.info("Redirecting  to %s " % redirecturl)
         return redirect("/%s"%redirecturl)
-
-def get_class( kls ):
-    parts = kls.split('.')
-    module = ".".join(parts[:-1])
-    m = __import__( module )
-    for comp in parts[1:]:
-        m = getattr(m, comp)
-    return m

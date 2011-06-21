@@ -908,6 +908,7 @@ class DavServer(object):
         # How? perhaps a special header is needed
         # X-MServe-Process
         if not ranged:
+            logging.info("Not ranged - post processing content")
             mfile.post_process()
         if request.META.has_key('HTTP_X_MSERVE'):
             encoding_header = request.META['HTTP_X_MSERVE']
