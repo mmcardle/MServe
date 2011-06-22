@@ -343,14 +343,22 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
 def mimefile(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
+        logging.info("1 %s"%mfileid)
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-
+        logging.info("2 %s"%mfileid)
         m = magic.open(magic.MAGIC_MIME)
         m.load()
-        result = m.file(mf.file.path)
+        logging.info("3.25 %s"%m)
+        path = mf.file.path
+        logging.info("3.4 %s"%path)
+        upath = path.encode("utf-8")
+        logging.info("3.4 %s"%upath)
+        result = m.file(upath)
+        logging.info("3.5 %s"%result)
         mimetype = result.split(';')[0]
-        logging.info("Mime for file %s is %s" % (mf,mimetype))
+        logging.info("3 %s"%mimetype)
+        #logging.info("Mime for file %s is %s" % (mf,mimetype))
 
         mf.mimetype = mimetype
         mf.save()
@@ -361,6 +369,9 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
         return {"success":True,"message":"Mime detection successful", "mimetype" : mimetype}
     except Exception as e:
         logging.info("Error with mime %s" % e)
+        import sys
+        import traceback
+        traceback.print_exc(file=sys.stdout)
         raise e
 @task
 def backup_mfile(inputs,outputs,options={},callbacks=[]):

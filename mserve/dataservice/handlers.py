@@ -153,8 +153,35 @@ class DataServiceHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
+class DataServiceTaskHandler(BaseHandler):
+    allowed_methods = ('GET','POST')
+    model = DataServiceTask
+    fields = ('task_name','id','condition','allowremote','remotecondition','args')
+
+    def create(self, request, serviceid, profileid ):
+
+        DataService.objects.get(id=serviceid).profiles.get(id=profileid)
+
+        dstf = DataServiceTaskForm(request.POST)
+
+        if dstf.is_valid():
+            dst = dstf.save()
+            logging.info("DST %s "  % dst.id)
+            return dst
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
+
+class DataServiceWorkflowHandler(BaseHandler):
+    allowed_methods = ('GET')
+    model = DataServiceWorkflow
+    fields = ('name','id','tasks')
+
 class DataServiceProfileHandler(BaseHandler):
     allowed_methods = ('GET')
+    model = DataServiceProfile
+    fields = ('name','id','workflows')
 
     def read(self, request, serviceid):
 

@@ -27,6 +27,11 @@ from django.forms import ModelForm
 
 ID_FIELD_LENGTH  = 200
 
+class DataServiceTaskForm(ModelForm):
+    class Meta:
+        #exclude=['id','workflow','task_name','condition','allowremote','remotecondition']
+        model = DataServiceTask
+
 class HostingContainerForm(ModelForm):
     class Meta:
         exclude=['id','status','reportnum','initial_usage_recorded','usages','properties']

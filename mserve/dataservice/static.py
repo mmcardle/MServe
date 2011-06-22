@@ -10,9 +10,6 @@ hd_h = settings.wuxga[1]
 
 default_profiles = {
     "default": {
-            "pre-ingest" : [
-                {"task":"dataservice.tasks.mimefile",           "args": {} },
-                ],
             "ingest" : [
 
                 # Standard Ingest 
@@ -20,7 +17,7 @@ default_profiles = {
                 {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
-                {"task":"thumbimage",                           "allowremote" :True,  "remotecondition" : "numlocal >= 0" , "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
 
                 # Video
@@ -32,12 +29,6 @@ default_profiles = {
                 {"task":"dataservice.tasks.thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
                 {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
                 {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
-
-                ],
-            "pre-access" : [
-
-                # Standard Access Check
-                {"task":"dataservice.tasks.md5fileverify",      "args": {} },
 
                 ],
             "access" : [
@@ -69,10 +60,7 @@ default_profiles = {
             ],
             "periodic" : []
             },
-    "hd": {
-            "pre-ingest" : [
-                {"task":"dataservice.tasks.mimefile",           "args": {} },
-                ],
+    "hdtranscoder": {
             "ingest" : [
 
                 # Standard Ingest (images/videos)
@@ -89,18 +77,12 @@ default_profiles = {
                 {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                 # HD
-                {"task":"dataservice.tasks.transcodevideo",     "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
-                {"task":"dataservice.tasks.transcodevideo",     "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
+                {"task":"dataservice.tasks.transcodevideo",     "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
+                {"task":"dataservice.tasks.transcodevideo",     "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
 
                 # MXF Ingest
                 {"task":"dataservice.tasks.proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
                 {"task":"dataservice.tasks.postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-
-                ],
-            "pre-access" : [
-
-                # Standard Access Check
-                {"task":"dataservice.tasks.md5fileverify",      "args": {} },
 
                 ],
             "access" : [

@@ -228,46 +228,82 @@
 </script>
 
 <script id="profileTemplate" type="text/x-jquery-tmpl">
-
-    <h3 class="red">Profile ${name}</h3>
-    <table border="1" cellpadding="5" cellspacing="4"  style="width: 90%;padding: 2px;margin-left: 40px;" >
-        <tr><th style="width: 10%" >Workflow</th><th>Steps</th></tr>
+    <h3 class="red" style="margin-left:15px;">Profile ${name}</h3>
+        <div class="workflows">
         {%templatetag openvariable%}each(index,workflow) workflows{%templatetag closevariable%}
-        <tr>
-            <td >${index}</td>
-            <td>
-                <table style="width: 100%" border="0" >
-                    <tr><th style="width: 25%">Tasks</th><th style="width: 25%">Remote Execution</th><th style="">Config</th></tr>
+                <h3 class="red"><a href="#">Workflow ${workflow.name}</a></h3>
+                <div>
+                <table class="workflowtable" id="workflowtable-${id}" border="0" >
+                    <tr><th style="width: 16%">Tasks</th><th style="width: 20%">Condition</th><th style="width: 12%">Remote Execution</th><th style="width: 12%">Remote Trigger</th><th style="">Parameters</th></tr>
 
-                        {%templatetag openvariable%}if workflow.length == 0 {%templatetag closevariable%}
+                        {%templatetag openvariable%}if workflow.tasks.length == 0 {%templatetag closevariable%}
                         <tr>
                             <td class="red">No Tasks</td>
                         </tr>
                         {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-                        {%templatetag openvariable%}each(j,task) workflow{%templatetag closevariable%}
-                        <tr>
-                            <td class="green">${task}</td>
-                            <td>
-                                <div class="profile-remoteservices">
+                        {% templatetag openvariable %}tmpl(workflow.tasks) "#taskTemplate" {% templatetag closevariable %}
 
-                                </div>
+                        <tbody style="border: 1px solid red;" class="workflowtbody">
+                        <tr>
+                            <td><span class="red">Add New</span></td>
+                        </tr>
+                        <tr>
+                            <form id="newtaskform-workflow-${id}">
+                            <td>
+                                <input type="hidden" style="width: 96%" id="id_workflow" name="workflow" value="${id}" >
+                                <input type="text" style="width: 96%" value="" name="task_name" id="id_task_name" class="task_name" ></td>
+                            <td>
+                                <input type="text" style="width: 96%" value="" id="id_condition" name="condition" >
                             </td>
                             <td>
-                                {%templatetag openvariable%}each(k,arg) args{%templatetag closevariable%}
-                                    <span>${k} : ${arg}</span>
-                                {%templatetag openvariable%}/each{%templatetag closevariable%}
+                                <input type="checkbox" class="allowremotecheck" id="id_allowremote-${id}" /><label for="id_allowremote-${id}">Allow Remote</label>
                             </td>
-                        <tr>
-                        {%templatetag openvariable%}/each{%templatetag closevariable%}
+                            <td>
+                                <input type="text" style="width: 96%" value="" id="id_remotecondition" name="remotecondition" >
+                            </td>
+                            <td>
+                                <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1 id="id_args" name="args">{}</textarea>
+                            </td>
+                            </form>
+                            <td>
+                                <button id="addbutton-workflow-${id}">Add</button>
+                            </td>
+                        </tr>
+                        </tbody>
                 </table>
-            </td>
-            <td><button class="savebutton">Save</button></td>
-        </tr>
+                    
+                </div>
         {%templatetag openvariable%}/each{%templatetag closevariable%}
-    </table>
+        </div>
+
 </script>
 
+<script id="taskTemplate" type="text/x-jquery-tmpl">
+    <tr>
+        <td class="green">${task_name}</td>
+        <td>
+            <input type="text" style="border: none; width: 96%" value="${condition}" >
+        </td>
+        <td>
+            {%templatetag openvariable%}if allowremote {%templatetag closevariable%}
+                <input type="checkbox" class="allowremotecheck" id="check-${id}" checked /><label for="check-${id}">Allow Remote</label>
+            {%templatetag openvariable%}else{%templatetag closevariable%}
+                <input type="checkbox" class="allowremotecheck" id="check-${id}" /><label for="check-${id}">Allow Remote</label>
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </td>
+        <td>
+            <input type="text" style="border: none; width: 100%" value="${remotecondition}" >
+        </td>
+        <td>
+            <textarea style="width: 96%;border: 1px dotted silver" NAME="comments" COLS=30 ROWS=1>${args}</textarea>
+        </td>
+        <td>
+            <button class="savebutton">Save</button>
+            <button class="delbutton">Delete</button>
+        </td>
+    <tr>
+</script>
 
 <script id="authTemplate" type="text/x-jquery-tmpl">
 

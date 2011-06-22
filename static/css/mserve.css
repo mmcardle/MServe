@@ -46,7 +46,7 @@ html, .main {
 	float:left;
 }
 .blue {
-	color:royalblue;
+	color:#78bbe6;
 }
 .white {
 	color:white;
@@ -220,6 +220,21 @@ a, a:visited {
 }
 a img {
     border:none;
+}
+
+.workflows{
+    margin:5px;
+    margin-left:15px;
+    padding:0px;
+}
+.workflowtable{
+    width:100%;
+}
+.workflowtbody {
+
+}
+.workflowtbody td {
+
 }
 
 .ascript {

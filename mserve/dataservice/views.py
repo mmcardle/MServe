@@ -168,10 +168,12 @@ def render_service(request,id,form=MFileForm()):
     properties = ManagementProperty.objects.filter(base=service)
     auths = Auth.objects.filter(base=id)
     managementpropertyform = ManagementPropertyForm()
+    dataservicetaskform = DataServiceTaskForm()
     form.fields['sid'].initial = service.id
     dict = {}
     dict["properties"] = properties
     dict["managementpropertyform"] = managementpropertyform
+    dict["dataservicetaskform"] = dataservicetaskform
     dict["service"] = service
     dict["mfiles"] = mfiles
     dict["auths"] = auths

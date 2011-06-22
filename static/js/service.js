@@ -63,15 +63,15 @@ function service_loadprofiles(serviceid){
 
     $.ajax({
        type: "GET",
-       url: "/remoteservices/",
-       success: function(remoteservices){
-            service_loadprofiles_remote(serviceid, remoteservices)
+       url: "/tasks/",
+       success: function(tasks){
+            service_loadprofiles_remote(serviceid, tasks)
         }
     });
 
 }
 
-function service_loadprofiles_remote(serviceid, remoteservices){
+function service_loadprofiles_remote(serviceid, tasks){
     $.ajax({
        type: "GET",
        url: "/services/"+serviceid+"/profiles/",
@@ -96,14 +96,34 @@ function service_loadprofiles_remote(serviceid, remoteservices){
                 profileslice = profiles.slice(start,end)
                 $( "#profileTemplate" ).tmpl( profileslice ) .appendTo( "#profilepaginator" );
 
-                rhtml = ""
-                $(remoteservices).each(function(index,service){
-                        rhtml += '<span class="blue" title="'+service.url+'">'+service.name+'<input style="display: inline" type="checkbox" name="name" value="v" /></span>'
-                    }
-                )
+                $(".allowremotecheck").button()
+                $(".workflows").accordion({
+                    collapsible: true,
+                    autoHeight: false,
+                    navigation: true,
+                })
 
-                $(".profile-remoteservices").append(rhtml)
-                $(".savebutton").button().click( function(){showMessage("Alert","To be done :)")})
+                $(profileslice).each(function(pindex,profile){
+                    $(profile.workflows).each(function(windex,workflow){
+                        $("#addbutton-workflow-"+workflow.id).button().click(
+                            function(){
+                                    data = $("#newtaskform-workflow-"+workflow.id).serialize()
+                                    service_newprofile_ajax(serviceid,profile.id,workflow.id,data)
+                            }
+                        )
+
+                        //$(workflow.tasks).each(function(tindex,task){
+
+                        //}
+
+                    });
+                });
+
+                $(".task_name").autocomplete({
+			source: tasks.regular
+		});
+
+                update_profile_buttons()
 
                 return false;
             }
@@ -117,6 +137,28 @@ function service_loadprofiles_remote(serviceid, remoteservices){
        }
      });
 }
+
+function update_profile_buttons(){
+    $(".savebutton").button().click( function(){showMessage("Alert","To be done")} );
+    $(".delbutton").button().click( function(){showMessage("Alert","To be done ")} );
+    $(".allowremotecheck").button()
+}
+
+function service_newprofile_ajax(serviceid,profileid,workflowid,data){
+     $.ajax({
+       type: "POST",
+       data: data,
+       url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
+       success: function(task){
+            $("#taskTemplate" ).tmpl( task ) .appendTo( "#workflowtable-"+workflowid );
+            update_profile_buttons()
+       },
+       error: function(msg){
+            showError("Error Adding Task",msg.responseText)
+        }
+     });
+ }
+
 
 function service_loadmanagementproperties(serviceid){
      $.ajax({

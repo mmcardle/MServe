@@ -135,15 +135,16 @@ def random_id():
 
     return encoded_key
 
-
 def gen_sec_link_orig(rel_path,prefix):
-      if not rel_path.startswith("/"):
-        rel_path = "%s%s" % ("/", rel_path)
-      secret = 'ugeaptuk6'
-      uri_prefix = '/%s/' % prefix
-      hextime = "%08x" % time.time()
-      token = hashlib.md5(secret + rel_path + hextime).hexdigest()
-      return '%s%s/%s%s' % (uri_prefix, token, hextime, rel_path)
+    rel_path = rel_path.encode("utf-8")
+    if not rel_path.startswith("/"):
+        rel_path = os.path.join("/", rel_path)
+    secret = 'ugeaptuk6'
+    uri_prefix = '/%s/' % prefix
+    hextime = "%08x" % time.time()
+    s = secret + rel_path + hextime
+    token = hashlib.md5(s).hexdigest()
+    return os.path.join(uri_prefix, token, hextime, rel_path)
 
 def md5_for_file(file):
     """Return hex md5 digest for a Django FieldFile"""

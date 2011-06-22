@@ -37,6 +37,7 @@ managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 dataservice_profile_handler = Resource(DataServiceProfileHandler)
+dataservice_task_handler = Resource(DataServiceTaskHandler)
 mfile_handler = Resource(MFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
@@ -61,7 +62,6 @@ urlpatterns = patterns('',
     url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler),
     url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler),
 
-
     url(r'^remoteservices/$', remote_mserve_handler),
 
     url(r'^services/$', dataservice_handler ),
@@ -72,6 +72,7 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/mfiles/$', mfile_handler),
     url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/$', dataservice_task_handler),
 
     url(r'^mfiles/$', mfile_handler  ),
     url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler  ),

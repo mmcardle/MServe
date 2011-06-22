@@ -40,6 +40,7 @@ from django.shortcuts import redirect
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
+from django.http import HttpResponseRedirect
 from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -435,6 +436,37 @@ class HostingContainer(NamedBase):
         managementproperty = ManagementProperty(property="profile",base=dataservice,value=DEFAULT_PROFILE)
         managementproperty.save()
 
+        for profile_name in profiles.keys():
+            profile = profiles[profile_name]
+            dsp = DataServiceProfile(service=dataservice,name=profile_name)
+            dsp.save()
+
+            ks = profile.keys()
+            ks.sort()
+            for workflow_name in ks:
+                workflow = profile[workflow_name]
+                wf = DataServiceWorkflow(profile=dsp,name=workflow_name)
+                wf.save()
+
+                for task in workflow:
+                    task_name = task['task']
+
+                    condition = ""
+                    if task.has_key('condition'): condition = task['condition']
+
+                    allowremote = task.has_key('allowremote') and task['allowremote']
+
+                    remotecondition = ""
+                    if task.has_key('remotecondition'): remotecondition = task['remotecondition']
+
+                    args = ""
+                    if task.has_key('args'): args = task['args']
+
+                    dst = DataServiceTask(workflow=wf,task_name=task_name,condition=condition,allowremote=allowremote,remotecondition=remotecondition,args=args)
+                    dst.save()
+
+
+
         return dataservice
 
     def get_rate_for_metric(self, metric):
@@ -450,6 +482,38 @@ class HostingContainer(NamedBase):
         import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage)
+
+class DataServiceProfile(models.Model):
+    service = models.ForeignKey('DataService',related_name="profiles")
+    name    = models.CharField(max_length=200)
+
+    def __unicode__(self):
+        return "Profile %s for %s" % (self.name,self.service.name)
+
+class DataServiceWorkflow(models.Model):
+    profile = models.ForeignKey(DataServiceProfile,related_name="workflows")
+    name    = models.CharField(max_length=200)
+
+    def __unicode__(self):
+        return "Workflow %s for %s" % (self.name,self.profile.name)
+
+TASK_CHOICES = []
+
+from celery.registry import tasks
+tasks = tasks.regular()
+for task in tasks.keys():
+    TASK_CHOICES.append( (task,task) )
+
+class DataServiceTask(models.Model):
+    workflow        = models.ForeignKey(DataServiceWorkflow,related_name="tasks")
+    task_name       = models.CharField(max_length=200,choices=TASK_CHOICES)
+    condition       = models.CharField(max_length=200,blank=True,null=True)
+    allowremote     = models.BooleanField(default=False)
+    remotecondition = models.CharField(max_length=200,blank=True,null=True)
+    args            = models.TextField()
+
+    def __unicode__(self):
+        return "Task %s for %s" % (self.task_name,self.workflow.name)
 
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer)
@@ -482,9 +546,11 @@ class DataService(NamedBase):
             jobs = Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
             return jobs
         if url == "profiles":
+            return self.profiles.all()
+
             profiles = static.default_profiles
             # TODO:
-            # Return any service sepcific workflow
+            # Return any service specific workflow
             ret = []
             for k in profiles.keys():
                 r = {}
@@ -581,21 +647,26 @@ class DataService(NamedBase):
                 mfile = MFile(name=name,service=service,file=file,empty=False)
         mfile.save()
 
-        logging.debug("MFile creation started '%s' "%mfile)
-        logging.debug("Creating roles for '%s' "%mfile)
+        logging.debug("MFile creation started '%s' "%mfile.name)
+        logging.debug("Creating roles for '%s' "%mfile.name)
 
         mfileauth_owner = Auth(base=mfile,authname="owner")
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
 
         # MIME type
+        
         mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
 
         # record size
-        if mfile.file :
+        if mfile.file:
             mfile.size = mfile.file.size
-
+        
         mfile.save()
+
+        logging.info("MFile PATH %s " % mfile.file.path)
+        logging.info("MFile size %s " % mfile.size)
+        
 
         if post_process:
             mfile.create_workflow_job("ingest")
@@ -670,6 +741,12 @@ class MFile(NamedBase):
 
     class Meta:
         ordering = ('-created','name')
+
+    def __unicode__(self):
+        return "MFile  %s" % (self.name.encode("utf-8"))
+
+    def __str__(self):
+        return "MFile  %s" % (self.name.encode("utf-8"))
 
     def __init__(self, *args, **kwargs):
         super(MFile, self).__init__(*args, **kwargs)
@@ -751,8 +828,7 @@ class MFile(NamedBase):
                 pass
             
 
-        check1 = mfile.checksum
-        check2 = utils.md5_for_file(mfile.file)
+
 
         file=mfile.file
 
@@ -761,7 +837,11 @@ class MFile(NamedBase):
         for k,v in sigret:
             logging.info("Signal %s returned %s " % (k,v))
 
+
         import usage_store as usage_store
+        '''
+        check1 = mfile.checksum
+        check2 = utils.md5_for_file(mfile.file)
         if(check1==check2):
             logging.info("Verification of %s on read ok" % mfile)
         else:
@@ -776,7 +856,7 @@ class MFile(NamedBase):
             else:
                 logging.info("The file %s has been lost" % mfile)
                 usage_store.record(mfile.id,metric_dataloss,mfile.size)
-                return rc.NOT_HERE
+                return rc.NOT_HERE'''
 
         file=mfile.file
 
@@ -787,13 +867,14 @@ class MFile(NamedBase):
         else:
             dlfoldername = "dl%s" % accessspeed
 
-        p = str(file)
-        redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
+        path = unicode(file)
+
+        redirecturl = utils.gen_sec_link_orig(file.name,dlfoldername)
         redirecturl = redirecturl[1:]
 
         SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
 
-        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
+        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,path)
         fullfilepathfolder = os.path.dirname(fullfilepath)
         mfilefilepath = file.path
 
@@ -810,7 +891,10 @@ class MFile(NamedBase):
         
         usage_store.record(mfile.id,models.metric_access,mfile.size)
 
-        response = redirect("/%s"%redirecturl)
+        redirecturl = os.path.join("/",redirecturl)
+        return HttpResponseRedirect(redirecturl)
+        response = redirect(redirecturl)
+        return redirecturl
         return response
 
     def create_job(self,name):
@@ -833,24 +917,24 @@ class MFile(NamedBase):
     def create_workflow_job(self,name):
         if self.file:
 
-            profile = self.service.get_profile()
-            # TODO - pre workflow
+            self.mimetype = mimefile([self.id],[],{})["mimetype"]
+            self.size = self.file.size
 
-            # MIME type
-            #self.mimetype = mimefile([self.id],[],{})["mimetype"]
-            #self.save()
+            self.save()
 
-            pretasks = mimefile.subtask([[self.id],[],{}])
+            profile_name = self.service.get_profile()
 
-            logging.info("MFILE - %s"%self.mimetype)
-            
-            prename = "pre-%s"%name
+            profile = self.service.profiles.get(service=self.service,name=profile_name)
 
-            if profiles[profile].has_key(prename):
-                pre_workflow = profiles[profile][prename]
-                logging.warn("TODO: Pre workflow tasks %s" % pre_workflow)
-            
-            workflow_tasks = profiles[profile][name]
+            workflow_tasks = profile.workflows.get(name=name).tasks.all()
+
+            logging.info("WORKFLOW %s" % self.service.profiles)
+            logging.info("WORKFLOW %s" % profile)
+            logging.info("WORKFLOW %s" % workflow_tasks)
+
+            workflow_task_config = profiles[profile_name][name]
+
+            logging.info("WORKFLOW %s" % workflow_task_config)
 
             in_tasks = []
 
@@ -864,29 +948,26 @@ class MFile(NamedBase):
             logging.info("act  : %s " % ins.active())
 
             for workflow_task in workflow_tasks:
-                if workflow_task.has_key("task"):
-                    task_name = workflow_task["task"]
+                    task_name = workflow_task.task_name
                     logging.info("Processing task %s " % task_name )
 
-                    if workflow_task.has_key("condition"):
-                        condition = workflow_task["condition"]
+                    if workflow_task.condition != None and workflow_task.condition != "":
+                        condition = workflow_task.condition
                         logging.info("Task has condition %s " % condition )
 
                         passed = eval(condition,{"mfile":self})
 
                         if not passed:
-                            logging.info("MFile %s failed condition %s " % (self,condition) )
                             continue
-                        else:
-                            logging.info("MFile %s passed condition %s " % (self,condition) )
 
-                    if workflow_task.has_key("args"):
-                        args = workflow_task["args"]
+                    args = {}
+                    if workflow_task.args is not None and workflow_task.args != "":
+                        args = eval(workflow_task.args)
 
                     output_arr = []
-                    if workflow_task.has_key("outputs"):
+                    '''if workflow_task_config.has_key("outputs"):
                         logging.info("ingest_task %s" % workflow_task)
-                        outputs = workflow_task["outputs"]
+                        outputs = workflow_task_config["outputs"]
                         logging.info("Outputs %s" % outputs)
                         for output in outputs:
                             mimetype = "application/octet"
@@ -897,14 +978,14 @@ class MFile(NamedBase):
                                 name = output['name']
                             output = JobOutput(name=name,job=job, mimetype=mimetype)
                             output.save()
-                            output_arr.append(output.id)
+                            output_arr.append(output.id)'''
 
                     task = subtask(task=task_name,args=[[self.id],output_arr,args])
                     
-                    if workflow_task.has_key("allowremote") and workflow_task["allowremote"]:
+                    if workflow_task.allowremote:
 
                         remoteconditionpassed = False
-                        if workflow_task.has_key("remotecondition"):
+                        if workflow_task.remotecondition != None:
                             
                             host = settings.HOSTNAME
                             act = ins.active()
@@ -913,7 +994,7 @@ class MFile(NamedBase):
                                 numlocal = len(act[localname])
                                 numremote = len(act["remote.%s"%host])
 
-                                remotecondition = workflow_task["remotecondition"]
+                                remotecondition = workflow_task.remotecondition
 
                                 remoteconditionpassed = eval(remotecondition,{"mfile":self,"numlocal":numlocal,"numremote":numremote})
 
@@ -950,8 +1031,6 @@ class MFile(NamedBase):
 
                     in_tasks.append(task)
 
-                else:
-                    logging.info("Task has no task type %s " % workflow_task)
 
             logging.info("%s" % in_tasks)
 
