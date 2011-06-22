@@ -67,9 +67,10 @@ def webdav(request,id):
         except Auth.DoesNotExist:
             pass
 
-        #if response == None:
-        #    logging.info("Response NOT FOUND")
-        #    return HttpResponseNotFound()
+        #logging.info(response)
+        if response == None:
+            logging.info("Response null")
+            return HttpResponseNotFound()
 
         #logging.info("Response for %s : %s " % (request.method,response.status_code))
 
@@ -181,14 +182,31 @@ class DavServer(object):
             isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
             if isFi:
-                return object.do("GET","file")
+                # TODO Check the response
+                object.do("GET","file")
+                range_string = "0-"
 
+                if request.META.has_key("HTTP_RANGE"):
+                    range_header = request.META['HTTP_RANGE']
+                    range_split = range_header.split('=')
+                    if len(range_split)>1:
+                        range_string = range_split[1]
+                    else:
+                        logging.error("Invalid Range Header '%s'" % (range_header))
+
+                path = object.file.path.encode("utf-8")
+                enc_url = urllib2.quote(path)
+                response["X-SendFile2"] = " %s %s" % (enc_url,range_string)
+
+                return response
         else:
+            logging.info("HEAD returned 404 ")
             return HttpResponseNotFound()
 
     def _handle_head(self, request):
         # TODO Configure response headers for HEAD request
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
+        logging.info("HEAD %s %s %s" % (isFo,isFi,object))
         response = HttpResponse()
         if isFi:
             response = HttpResponse(mimetype=object.mimetype)
@@ -817,6 +835,8 @@ class DavServer(object):
 
     def __handle_upload_service(self, request):
 
+        logging.info(request)
+
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
         if isFo:
@@ -884,6 +904,7 @@ class DavServer(object):
         else:
             try:
                 mf = open(mfile.file.path,'wb')
+                logging.info(mfile.file.path)
                 try:
                     for chunk in fbuffer(input,length):
                         mf.write(chunk)
