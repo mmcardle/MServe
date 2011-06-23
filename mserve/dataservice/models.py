@@ -620,7 +620,7 @@ class DataService(NamedBase):
             folder.save()
             return folder
 
-    def create_mfile(self,name,file=None,post_process=True):
+    def create_mfile(self,name,file=None,post_process=True,folder=None):
         service = self
 
         # Check for duplicates
@@ -628,7 +628,7 @@ class DataService(NamedBase):
         n=0
         fn,ext = os.path.splitext(name)
         while not done:
-            existing_files = MFile.objects.filter(name=name,folder=None,service=service)
+            existing_files = MFile.objects.filter(name=name,folder=folder,service=service)
             if len(existing_files) == 0:
                 done = True
             else:
@@ -654,8 +654,8 @@ class DataService(NamedBase):
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
 
+        mfile.folder = folder
         # MIME type
-        
         mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
 
         # record size
@@ -735,7 +735,7 @@ class MFile(NamedBase):
             "properties":[],
             "usages":["GET"],
             "file": ["GET","PUT","DELETE"],
-            "workflow": ["GET","POST"],
+            "workflows": ["GET","POST"],
             "jobs":["GET","POST"],
             }
 
@@ -774,7 +774,7 @@ class MFile(NamedBase):
                 job = self.create_job(name)
                 return job
             return HttpResponseBadRequest()
-        if url == "workflow":
+        if url == "workflows":
             if kwargs.has_key('name'):
                 name = kwargs['name']
                 job = self.create_workflow_job(name)
@@ -827,9 +827,6 @@ class MFile(NamedBase):
             except ObjectDoesNotExist:
                 pass
             
-
-
-
         file=mfile.file
 
         sigret = mfile_get_signal.send(sender=self, mfile=mfile)
@@ -839,7 +836,7 @@ class MFile(NamedBase):
 
 
         import usage_store as usage_store
-        '''
+        
         check1 = mfile.checksum
         check2 = utils.md5_for_file(mfile.file)
         if(check1==check2):
@@ -847,16 +844,22 @@ class MFile(NamedBase):
         else:
             logging.info("Verification of %s on read FAILED" % mfile)
             usage_store.record(mfile.id,metric_corruption,1)
-            backup = BackupFile.objects.get(mfile=mfile)
-            check3 = mfile.checksum
-            check4 = utils.md5_for_file(backup.file)
-            if(check3==check4):
-                shutil.copy(backup.file.path, mfile.file.path)
-                file = backup.file
-            else:
-                logging.info("The file %s has been lost" % mfile)
-                usage_store.record(mfile.id,metric_dataloss,mfile.size)
-                return rc.NOT_HERE'''
+            try:
+                backup = BackupFile.objects.get(mfile=mfile)
+                check3 = mfile.checksum
+                if os.path.exists(backup.file.path):
+                    check4 = utils.md5_for_file(backup.file)
+                    if(check3==check4):
+                        shutil.copy(backup.file.path, mfile.file.path)
+                        file = backup.file
+                    else:
+                        logging.info("The file %s has been lost" % mfile)
+                        usage_store.record(mfile.id,metric_dataloss,mfile.size)
+                        return rc.NOT_HERE
+            except BackupFile.DoesNotExist as e:
+                logging.info("There is no backup file for %s "%mfile)
+                return rc.NOT_HERE
+
 
         file=mfile.file
 
@@ -870,6 +873,7 @@ class MFile(NamedBase):
         path = unicode(file)
 
         redirecturl = utils.gen_sec_link_orig(file.name,dlfoldername)
+        logging.info("%s %s "%(file.name,dlfoldername))
         redirecturl = redirecturl[1:]
 
         SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
@@ -893,9 +897,6 @@ class MFile(NamedBase):
 
         redirecturl = os.path.join("/",redirecturl)
         return HttpResponseRedirect(redirecturl)
-        response = redirect(redirecturl)
-        return redirecturl
-        return response
 
     def create_job(self,name):
         from jobservice.models import Job
@@ -904,7 +905,7 @@ class MFile(NamedBase):
         return job
 
     def duplicate(self):
-        new_mfile = self.service.create_mfile(self.name,file=self.file)
+        new_mfile = self.service.create_mfile(self.name,file=self.file,folder=self.folder)
         new_mfile.save()
         return new_mfile
 
@@ -923,6 +924,8 @@ class MFile(NamedBase):
             self.save()
 
             profile_name = self.service.get_profile()
+
+            logging.info(profile_name)
 
             profile = self.service.profiles.get(service=self.service,name=profile_name)
 
@@ -965,6 +968,20 @@ class MFile(NamedBase):
                         args = eval(workflow_task.args)
 
                     output_arr = []
+
+                    from jobservice.static import job_descriptions
+
+                    if job_descriptions.has_key(task_name):
+                        job_description = job_descriptions[task_name]
+
+                        nboutputs = job_description['nboutputs']
+
+                        for i in range(0,nboutputs):
+                            outputmimetype = job_description["output-%s"%i]["mimetype"]
+                            output = JobOutput(name="Output%s-%s"%(i,task_name),job=job,mimetype=outputmimetype)
+                            output.save()
+                            output_arr.append(output.id)
+
                     '''if workflow_task_config.has_key("outputs"):
                         logging.info("ingest_task %s" % workflow_task)
                         outputs = workflow_task_config["outputs"]
@@ -1179,7 +1196,7 @@ class ManagementProperty(models.Model):
         if self.property == "accessspeed":
             return {"type" : "step", "min":50 , "max" : 5000, "step" : 50, "altchoices" : ["unlimited"]}
         elif self.property == "profile":
-            return {"type" : "enum", "choices" : [DEFAULT_PROFILE,"hd"] }
+            return {"type" : "enum", "choices" : profiles.keys() }
         else:
             return {}
 

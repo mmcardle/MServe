@@ -184,6 +184,7 @@ class DavServer(object):
             if isFi:
                 # TODO Check the response
                 object.do("GET","file")
+
                 range_string = "0-"
 
                 if request.META.has_key("HTTP_RANGE"):
@@ -882,7 +883,7 @@ class DavServer(object):
             mfile = object
         elif not is_folder and ancestors_exist:
             created = True
-            mfile = self.service.create_mfile(name,post_process=False)
+            mfile = self.service.create_mfile(name,post_process=False,folder=parentfolder)
             mfile.folder=parentfolder
         else:
             return HttpResponseBadRequest("Error creating file")

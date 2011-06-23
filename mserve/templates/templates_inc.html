@@ -70,7 +70,7 @@
         </tr>
         <tr>
              {%templatetag openvariable%}if mfile_set[2] {%templatetag closevariable%}
-                          <td style="background-image: url(${mfile_set[2].thumburl});"></td>
+                          <td class="service_preview_td" style="background-image: url(${mfile_set[2].thumburl});"></td>
              {%templatetag openvariable%}else{%templatetag closevariable%}
                           <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
              {%templatetag openvariable%}/if{%templatetag closevariable%}

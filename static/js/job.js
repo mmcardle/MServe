@@ -228,9 +228,7 @@ function toggle_job(job){
 }
 
 function create_access_job(mfileid){
-    jdata = { "name":'access' }
-    data = $.param(jdata)
-    var data = { one: 'first', two: 'second', name: 'access' };
+    var data = { name: 'access' };
     var result = decodeURIComponent($.param(data));
      $.ajax({
        type: "POST",

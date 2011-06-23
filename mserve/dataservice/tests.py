@@ -106,7 +106,7 @@ class APITest(TestCase):
 
         # GET container
         props = service.do("GET","properties")
-        self.failUnlessEqual(len(props), 1)
+        self.failUnlessEqual(len(props), 2)
 
         usages = service.do("GET","usages")
         self.failUnlessEqual(len(usages), 1)
@@ -116,7 +116,7 @@ class APITest(TestCase):
 
         # PUT container
         props = service.do("PUT","properties",{"accesspeed":100})
-        self.failUnlessEqual(len(props), 1)
+        self.failUnlessEqual(len(props), 2)
 
         shouldbe403_1 = service.do("PUT","usages")
         self.failUnlessEqual(type(shouldbe403_1), HttpResponseForbidden)
@@ -126,7 +126,7 @@ class APITest(TestCase):
         auths = service.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),2)
-        self.failUnlessEqual(len(auths[0].geturls()),6)
+        self.failUnlessEqual(len(auths[0].geturls()),7)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = service.do("PUT","auths",**kwargs_2)
@@ -177,8 +177,9 @@ class APITest(TestCase):
         files = service.do("GET","mfiles")
         self.failUnlessEqual(len(files), 2)
 
-        ffile = fullfile.do("GET","file")
-        self.failUnlessEqual(type(ffile), HttpResponseRedirect)
+        ffresp = fullfile.do("GET","file")
+        # Status code will depend on time it take to backup
+        self.failUnless(ffresp.status_code==302 or ffresp.status_code==410 )
 
         folder1 = service.do("POST","mfolders",name="folder1")
         shouldbe_409 = service.do("POST","mfolders",name="folder1")
@@ -202,7 +203,7 @@ class APITest(TestCase):
 
         # GET service auth
         props = service_auth.do("GET","properties")
-        self.failUnlessEqual(len(props), 1)
+        self.failUnlessEqual(len(props), 2)
 
         usages = service_auth.do("GET","usages")
         self.failUnlessEqual(len(usages), 0)
@@ -212,7 +213,7 @@ class APITest(TestCase):
 
         # PUT
         props = service_auth.do("PUT","properties",{"accesspeed":100})
-        self.failUnlessEqual(len(props), 1)
+        self.failUnlessEqual(len(props), 2)
 
         shouldbe403_1 = service_auth.do("PUT","usages")
         self.failUnlessEqual(type(shouldbe403_1), HttpResponseForbidden)
@@ -226,7 +227,7 @@ class APITest(TestCase):
         auths = service_auth.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),6)
+        self.failUnlessEqual(len(auths[0].geturls()),7)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = service_auth.do("PUT","auths",**kwargs_2)
@@ -277,7 +278,8 @@ class APITest(TestCase):
         self.failUnlessEqual(len(files), 2)
 
         ffile = fullfile.do("GET","file")
-        self.failUnlessEqual(type(ffile), HttpResponseRedirect)
+        # Status code will depend on time it take to backup
+        self.failUnless(ffile.status_code==302 or ffile.status_code==410 )
 
         folder1 = service_auth.do("POST","mfolders",name="folder1")
         shouldbe_409 = service_auth.do("POST","mfolders",name="folder1")
@@ -323,7 +325,7 @@ class APITest(TestCase):
 
         # GET service auth
         props = service_auth.do("GET","properties")
-        self.failUnlessEqual(len(props), 1)
+        self.failUnlessEqual(len(props), 2)
 
         usages = service_auth.do("GET","usages")
         self.failUnlessEqual(len(usages), 0)
@@ -347,7 +349,7 @@ class APITest(TestCase):
         auths = service_auth.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),6)
+        self.failUnlessEqual(len(auths[0].geturls()),7)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = service_auth.do("PUT","auths",**kwargs_2)
