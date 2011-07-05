@@ -28,14 +28,15 @@
 
 from mserve.dataservice.models import *
 from mserve.webdav.models import *
+from datetime import datetime
+from datetime import tzinfo
+from datetime import timedelta
 import logging
-import datetime
 import time
 import os.path
 import os
 import urllib2
 from copy import deepcopy
-from datetime import datetime,timedelta,tzinfo
 from django.http import *
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -72,7 +73,7 @@ def webdav(request,id):
             logging.info("Response null")
             return HttpResponseNotFound()
 
-        #logging.info("Response for %s : %s " % (request.method,response.status_code))
+        logging.info("Response for %s : %s " % (request.method,response.status_code))
 
         if response['Content-Type'] == 'text/xml':
             pass#logging.info(response.content)
@@ -693,7 +694,7 @@ class DavServer(object):
 
         finfo = DavFileInfo(href=rel_path)
         f_props = deepcopy(props)
-
+        from datetime import datetime
         while len(f_props) != 0:
             p = f_props.pop(0)
             if p.name in self.SUPPORTED_PROPERTIES:
@@ -737,6 +738,8 @@ class DavServer(object):
         # Check Source
         is_folder,ancestors,filename,foldername = _get_path_info_request(request,self.id)
         a,src_folder = self.__ancestors_exist(service,ancestors)
+        
+        from datetime import datetime
 
         while len(f_props) != 0:
             p = f_props.pop(0)
@@ -825,6 +828,7 @@ class DavServer(object):
                 return None
 
     def __get_localized_datetime(self, timestamp):
+        from datetime import datetime
         utc = datetime.utcfromtimestamp(timestamp)
         local = datetime.fromtimestamp(timestamp)
         delta = local - utc
@@ -835,8 +839,6 @@ class DavServer(object):
         return localized
 
     def __handle_upload_service(self, request):
-
-        logging.info(request)
 
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
@@ -850,21 +852,40 @@ class DavServer(object):
         rangeend = -1
         created = False
 
-        if request.META.has_key('HTTP_CONTENT_LENGTH'):
+        if request.META.has_key('CONTENT_LENGTH'):
+            length = request.META['CONTENT_LENGTH']
+        elif request.META.has_key('HTTP_CONTENT_LENGTH'):
             length = request.META['HTTP_CONTENT_LENGTH']
 
-        if request.META.has_key('HTTP_RANGE'):
-            range_header = request.META['HTTP_RANGE']
-            byte,range=range_header.split('=')
-            ranges = range.split('-')
+        if request.META.has_key('RANGE'):
+                range_header = request.META['RANGE']
+                byte,range=range_header.split('=')
+                ranges = range.split('-')
 
-            if len(ranges) != 2:
-                return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+                if len(ranges) != 2:
+                    return HttpResponseBadRequest("Do not support range '%s' "% range_header)
 
-            rangestart = int(ranges[0])
-            rangeend = int(ranges[1])
-            length = rangeend - rangestart
-            ranged = true
+                rangestart = int(ranges[0])
+                rangeend = int(ranges[1])
+                length = rangeend - rangestart
+                ranged = true
+        elif request.META.has_key('HTTP_RANGE'):
+                range_header = request.META['HTTP_RANGE']
+                byte,range=range_header.split('=')
+                ranges = range.split('-')
+
+                if len(ranges) != 2:
+                    return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+
+                rangestart = int(ranges[0])
+                rangeend = int(ranges[1])
+                length = rangeend - rangestart
+                ranged = true
+
+        if request.META.has_key('TRANSFER_ENCODING'):
+            encoding_header = request.META['TRANSFER_ENCODING']
+            if encoding_header.find('chunked') != -1:
+                chunked = True
 
         if request.META.has_key('HTTP_TRANSFER_ENCODING'):
             encoding_header = request.META['HTTP_TRANSFER_ENCODING']
@@ -889,6 +910,8 @@ class DavServer(object):
             return HttpResponseBadRequest("Error creating file")
 
         input = request.META['wsgi.input']
+        logging.info(input)
+        logging.info(dir(input))
 
         if rangestart != -1:
             try:
@@ -916,7 +939,7 @@ class DavServer(object):
                 pass
 
         if chunked:
-            if request.META.has_key('HTTP_TRAILER'):
+            if request.META.has_key('TRAILER') or request.META.has_key('HTTP_TRAILER') :
                 trailer = input.readline()
                 trailersplit= trailer.split(':')
                 if len(trailersplit)>1:
@@ -941,7 +964,7 @@ class DavServer(object):
         if created:
             return HttpResponse(status=201)
         else:
-            return HttpResponse(status=204)
+            return HttpResponse(status=200)
 
 class DavFileInfo(object):
 
