@@ -56,7 +56,7 @@ metric_dataloss = "http://mserve/dataloss"
 class ProfileHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT')
     model = MServeProfile
-    fields = (('user', () ),'mfiles','mfolders',('dataservices', ('id', 'name','mfile_set')), ('containers', ('id', 'name'))  )
+    fields = (('user', () ),'mfiles','mfolders', 'myauths' ,('dataservices', ('id', 'name','mfile_set')), ('containers', ('id', 'name')),   )
 
     def read(self, request):
         if not request.user.is_authenticated():
@@ -70,6 +70,113 @@ class ProfileHandler(BaseHandler):
             pp = MServeProfile(user=request.user)
             pp.save()
             return pp
+
+class ServiceRequestHandler(BaseHandler):
+    allowed_methods = ('GET', 'POST', 'DELETE','PUT')
+    model = ServiceRequest
+    fields = ('id','name','reason','state','status', ('profile', ( 'id',  'user' )  ))
+
+    def update(self,request,id=None):
+        if request.user.is_staff:
+            if request.POST.has_key("state"):
+                if request.POST['state'] == "A":
+                    sr = ServiceRequest.objects.get(id=id)
+                    
+                    sr.state = "A"
+                    sr.save()
+
+                    dataservice = HostingContainer.objects.all()[0].create_data_service(sr.name)
+
+                    custauth = dataservice.auth_set.get(authname="customer")
+
+                    sr.profile.auths.add(custauth)
+
+                    return sr
+                elif request.POST['state'] == "R":
+                    sr = ServiceRequest.objects.get(id=id)
+                    sr.state = "R"
+                    sr.save()
+                    return sr
+                else:
+                    r = rc.BAD_REQUEST
+                    r.write("Unknown state")
+                    return r
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid arguments")
+                return r
+
+        else:
+            response = HttpResponse("Not Authorised.")
+            response.status_code = 401
+            return response
+
+    def delete(self, request, id=None):
+        if not request.user.is_authenticated():
+            response = HttpResponse("Not Authorised.")
+            response.status_code = 401
+            return response
+        sr = ServiceRequest.objects.get(id=id)
+        if request.user.get_profile() == sr.profile:
+            sr.delete()
+            r = rc.DELETED
+            return r
+        else:
+            response = HttpResponse("Not Authorised.")
+            response.status_code = 401
+            return response
+
+    def read(self, request, id=None):
+
+        if request.user.is_staff:
+            if id:
+                sr = ServiceRequest.objects.get(id=id)
+                return sr
+            else:
+                sr = ServiceRequest.objects.all()
+                return sr
+
+        if not request.user.is_authenticated():
+            response = HttpResponse("Not Authorised.")
+            response.status_code = 401
+            return response
+        try:
+            profile = MServeProfile.objects.get(user=request.user)
+
+        except MServeProfile.DoesNotExist:
+            logging.info("PortalProfile Does not exist for this user!")
+            profile = MServeProfile(user=request.user)
+            profile.save()
+
+        if id:
+            return ServiceRequest.objects.filter(profile=profile,id=id)
+        else:
+            return ServiceRequest.objects.filter(profile=profile)
+
+    def create(self, request):
+        if not request.user.is_authenticated():
+            response = HttpResponse("Not Authorised.")
+            response.status_code = 401
+            return response
+
+        try:
+            profile = MServeProfile.objects.get(user=request.user)
+
+        except MServeProfile.DoesNotExist:
+            logging.info("PortalProfile Does not exist for this user!")
+            profile = MServeProfile(user=request.user)
+            profile.save()
+
+        srform = ServiceRequestForm(request.POST)
+        if srform.is_valid():
+            servicerequest = srform.save()
+            profile.servicerequests.add(servicerequest)
+            profile.save()
+            return  servicerequest
+        else:
+            r = rc.BAD_REQUEST
+            r.write(srform.as_p())
+            return r
 
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE',)
@@ -534,18 +641,21 @@ class UsageHandler(BaseHandler):
     fields = ('squares','total','nInProgress','metric','rate','reports','time,','rateCumulative','total','rateTime')
 
     def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):
+        logging.info("req %s " % request)
+        logging.info("GET %s " % request.GET)
+        logging.info("GET %s " % type(request.GET))
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
-            return container.do("GET","usages")
+            return container.do("GET","usages",**request.GET)
         if serviceid:
             service = DataService.objects.get(pk=serviceid)
-            return service.do("GET","usages")
+            return service.do("GET","usages",**request.GET)
         if mfileid:
             mfile = MFile.objects.get(pk=mfileid)
-            return mfile.do("GET","usages")
+            return mfile.do("GET","usages",**request.GET)
         if authid:
             auth = Auth.objects.get(pk=authid)
-            return auth.do("GET","usages")
+            return auth.do("GET","usages",**request.GET)
 
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')

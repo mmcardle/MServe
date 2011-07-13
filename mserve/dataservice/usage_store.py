@@ -195,7 +195,7 @@ def get_usage_summary(id=None):
 
             return get_usage_summary(id=base.id)
     
-    if settings.DATABASE_ENGINE != "sqlite3":
+    if not settings.DATABASES['default']['ENGINE'].endswith("sqlite3"):
         summary += usages.values('metric') \
             .annotate(n=Count('total')) \
             .annotate(avg=Avg('total')) \
@@ -209,6 +209,6 @@ def get_usage_summary(id=None):
         # sqlite3 - No built-in variance and std deviation
         summary += usages.values('metric') \
             .annotate(sum=Sum('rate'))\
-            .annotate(sum=Total('rateCumulative'))
+            .annotate(sum=Sum('rateCumulative'))
 
     return summary

@@ -47,11 +47,12 @@ def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.get_usage_summary(None)
     usage = usage_store.get_usage(None)
+    servicerequestform = ServiceRequestForm()
     dict = {}
+    dict["servicerequestform"] = servicerequestform
     if request.user.is_authenticated() and request.user.is_staff:
         dict["hostingcontainers"] = hostings
         dict["form"] = form
-        dict["usage"] = usage
         dict["usagesummary"] = usagesummary
     return render_to_response('home.html', dict, context_instance=RequestContext(request))
 

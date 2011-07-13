@@ -50,6 +50,7 @@ role_handler = Resource(RoleHandler)
 resources_handler = Resource(ResourcesHandler)
 info_handler = Resource(InfoHandler)
 profile_handler = Resource(ProfileHandler)
+service_request_handler = Resource(ServiceRequestHandler)
 auth_contents_handler = Resource(AuthContentsHandler)
 
 urlpatterns = patterns('',
@@ -101,6 +102,8 @@ urlpatterns = patterns('',
     #url(r'^mfile/$', mfile_handler),
     #url(r'^auth/$', auth_handler),
     url(r'^users/$', profile_handler,name='user'),
+    url(r'^users/requests/$', service_request_handler,name='user_requests'),
+    url(r'^users/requests/(?P<id>[^/]+)/$', service_request_handler),
 
     # REST Methods for individual resources
     #url(r'^container/(?P<id>[^/]+)/$', hosting_handler),

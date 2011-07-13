@@ -242,7 +242,7 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         qt.communicate()
 
         from mserve.jobservice.models import JobOutput
-        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo = JobOutput.objects.get(id=joboutput)
         jo.file.save('transcode.mp4', File(toutfile), save=True)
 
         logging.info("Created file at : %s" % jo.file.path)

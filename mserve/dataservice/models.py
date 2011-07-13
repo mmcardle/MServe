@@ -96,9 +96,22 @@ DEFAULT_PROFILE = "default"
 roles = static.default_roles
 profiles = static.default_profiles
 
+TASK_CHOICES = []
+
+#from celery.registry import tasks
+for task in tasks.regular().keys():
+    TASK_CHOICES.append( (task,task) )
+
 class MServeProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
     bases = models.ManyToManyField('NamedBase', related_name='bases')
+    auths = models.ManyToManyField('Auth', related_name='profileauths')
+
+    def myauths(self):
+        ret = []
+        for auth in self.auths.all():
+            ret.append(Auth.objects.get(id=auth.id))
+        return ret
 
     def mfiles(self):
         ret = []
@@ -130,6 +143,27 @@ class MServeProfile(models.Model):
 
     def __unicode__(self):
         return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(),self.user.username)
+
+SERVICEREQUEST_STATES = (
+    ('P','PENDING'),
+    ('A','ACCEPTED'),
+    ('R','REJECTED'),
+)
+
+class ServiceRequest(models.Model):
+    name        = models.CharField(max_length=200)
+    reason      = models.TextField()
+    profile     = models.ForeignKey('MServeProfile',null=True, blank=True, related_name="servicerequests")
+    state       = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES, default='P')
+
+    def status(self):
+        for index,word in SERVICEREQUEST_STATES:
+            if index == self.state:
+                return word
+        return "unknown"
+
+    def __unicode__(self):
+        return self.name
 
 class Usage(models.Model):
     base            = models.ForeignKey('NamedBase',null=True, blank=True)
@@ -229,7 +263,25 @@ class Base(models.Model):
             return self.auth_set.all()
 
         if method=="GET" and url=="usages":
-            return self.usages.all()
+            logging.info("check for full usage")
+            if kwargs.has_key('full'):
+                
+                values = kwargs.get('full')
+
+                if 'true' in values or 'True' in values:
+                    logging.info("full usage true")
+                    import usage_store
+                    usages = usage_store.get_usage(self.id)
+
+                    result = {}
+                    result["usages"] = usages
+                    result["reportnum"] = self.reportnum
+
+                    return result
+                else:
+                    return self.usages.all()
+            else:
+                return self.usages.all()
 
         if method=="GET" and url=="properties":
             if type(self) == Auth:
@@ -497,12 +549,7 @@ class DataServiceWorkflow(models.Model):
     def __unicode__(self):
         return "Workflow %s for %s" % (self.name,self.profile.name)
 
-TASK_CHOICES = []
 
-from celery.registry import tasks
-tasks = tasks.regular()
-for task in tasks.keys():
-    TASK_CHOICES.append( (task,task) )
 
 class DataServiceTask(models.Model):
     workflow        = models.ForeignKey(DataServiceWorkflow,related_name="tasks")
@@ -931,13 +978,8 @@ class MFile(NamedBase):
 
             workflow_tasks = profile.workflows.get(name=name).tasks.all()
 
-            logging.info("WORKFLOW %s" % self.service.profiles)
-            logging.info("WORKFLOW %s" % profile)
-            logging.info("WORKFLOW %s" % workflow_tasks)
-
             workflow_task_config = profiles[profile_name][name]
 
-            logging.info("WORKFLOW %s" % workflow_task_config)
 
             in_tasks = []
 
@@ -948,15 +990,14 @@ class MFile(NamedBase):
             job.save()
 
             ins = inspect()
-            logging.info("act  : %s " % ins.active())
 
             for workflow_task in workflow_tasks:
                     task_name = workflow_task.task_name
-                    logging.info("Processing task %s " % task_name )
+                    logging.debug("Processing task %s " % task_name )
 
                     if workflow_task.condition != None and workflow_task.condition != "":
                         condition = workflow_task.condition
-                        logging.info("Task has condition %s " % condition )
+                        logging.debug("Task has condition %s " % condition )
 
                         passed = eval(condition,{"mfile":self})
 
@@ -982,21 +1023,6 @@ class MFile(NamedBase):
                             output.save()
                             output_arr.append(output.id)
 
-                    '''if workflow_task_config.has_key("outputs"):
-                        logging.info("ingest_task %s" % workflow_task)
-                        outputs = workflow_task_config["outputs"]
-                        logging.info("Outputs %s" % outputs)
-                        for output in outputs:
-                            mimetype = "application/octet"
-                            name = "output"
-                            if output.has_key("mimetype"):
-                                mimetype = output['mimetype']
-                            if output.has_key("name"):
-                                name = output['name']
-                            output = JobOutput(name=name,job=job, mimetype=mimetype)
-                            output.save()
-                            output_arr.append(output.id)'''
-
                     task = subtask(task=task_name,args=[[self.id],output_arr,args])
                     
                     if workflow_task.allowremote:
@@ -1017,8 +1043,8 @@ class MFile(NamedBase):
 
                                 if remoteconditionpassed:
                                     remote_task_name = "%s.remote" % task_name
-                                    logging.info("Checking for %s" % remote_task_name )
-                                    
+                                    logging.debug("Checking for %s" % remote_task_name )
+
                                     reg = tasks.regular().keys()
                                     if not remote_task_name in reg:
                                         logging.info("No remote task for %s" % remote_task_name )
@@ -1038,11 +1064,11 @@ class MFile(NamedBase):
                                         except Exception as e:
                                             logging.info("Error %s" % e)
                                 else:
-                                    logging.info("Not creating remote task %s, condition failed %s " % (task_name,remotecondition))
+                                    logging.debug("Not creating remote task %s, condition failed %s " % (task_name,remotecondition))
                             else:
                                 logging.warn("Celery Inspection returned None")
                         else:
-                            logging.info("Not creating remote task %s " % task_name )
+                            logging.debug("Not creating remote task %s " % task_name )
 
                     logging.info("Task created %s " % task )
 

@@ -12,9 +12,36 @@ default_profiles = {
     "default": {
             "ingest" : [
 
+                # Standard Ingest
+                {"task":"dataservice.tasks.md5file",            "args": {} },
+
+                # Images
+                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
+
+                ],
+            "access" : [
+
+                # Standard Access Tasks
+                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
+
+                ],
+            "update" : [
+
+                {"task":"dataservice.tasks.md5file",            "args": {} },
+
+                # Images
+                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"dataservice.tasks.posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
+
+            ],
+            "periodic" : []
+            },
+    "web-delivery": {
+            "ingest" : [
+
                 # Standard Ingest 
                 {"task":"dataservice.tasks.md5file",            "args": {} },
-                {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
                 {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
@@ -41,7 +68,6 @@ default_profiles = {
                  
                 # Standard Ingest (images/videos)
                 {"task":"dataservice.tasks.md5file",            "args": {} },
-                {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
                 {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
@@ -60,7 +86,7 @@ default_profiles = {
             ],
             "periodic" : []
             },
-    "hdtranscoder": {
+    "hd-delivery": {
             "ingest" : [
 
                 # Standard Ingest (images/videos)

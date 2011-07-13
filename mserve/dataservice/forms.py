@@ -27,6 +27,11 @@ from django.forms import ModelForm
 
 ID_FIELD_LENGTH  = 200
 
+class ServiceRequestForm(ModelForm):
+    class Meta:
+        exclude=['profile','state']
+        model = ServiceRequest
+
 class DataServiceTaskForm(ModelForm):
     class Meta:
         #exclude=['id','workflow','task_name','condition','allowremote','remotecondition']

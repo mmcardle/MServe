@@ -214,10 +214,10 @@ class JobOutputContentsHandler(BaseHandler):
             except ObjectDoesNotExist:
                 pass
 
-        dlfoldername = "dl"
-        if accessspeed != "unlimited":
-            logging.info("DL %s"%dlfoldername)
-            dlfoldername = "dl%s"%accessspeed
+        if accessspeed == "unlimited":
+            dlfoldername = "dl"
+        else:
+            dlfoldername = "dl%s" % accessspeed
 
         p = str(file)
 

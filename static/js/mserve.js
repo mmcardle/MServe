@@ -1,20 +1,30 @@
 
 function load_user(userurl,consumerurl,template){
-
      $.ajax({
        type: "GET",
        url: userurl,
        success: function(msg){
             
             if(msg.mfiles.length==0){
-                $("#user_mfilemessages" ).append("No Resources")
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Resources - Request a service using the form below "  } )
+                message.css("width","400px")
+                message.appendTo( "#user_mfilemessages" );
+                $( "#user-request-service" ).show()
             }else{
                 $("#user_mfilemessages").empty()
             }
 
+            if(msg.myauths.length==0){
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Auths - Request a service using the form below "  } )
+                message.css("width","400px")
+                message.appendTo( "#user_authmessages" );
+                $( "#user-request-service" ).show()
+            }else{
+                $("#user_authmessages").empty()
+            }
+
             $( template ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
-            //$( "#mfolderOAuthTemplate" ).tmpl( msg.mfolders ).appendTo( "#user_mfileholder" );
-            //$( "#serviceOAuthTemplate" ).tmpl( msg.dataservices ).appendTo( "#user_mfileholder" );
+            $( "#authTemplate" ).tmpl( msg.myauths ).appendTo( "#user_authholder" );
 
             oauth_token = getParameterByName("oauth_token")
 
@@ -32,6 +42,101 @@ function load_user(userurl,consumerurl,template){
 
        }
      });
+}
+
+
+function user_request_service(requesturl){
+
+    data = $("#user-request-service-form").serialize()
+
+    var errorfield = $("#user-request-service-form-errors")
+    errorfield.empty()
+
+    var namefield = $("#user-request-service-form #id_name")
+    namefield.removeClass( "ui-state-error" );
+    if ( namefield.val() == "" || namefield.val() == null ) {
+            namefield.addClass( "ui-state-error" );
+            errorfield.text("Name field must not be empty")
+            return false;
+    }
+
+    var reasonfield = $("#user-request-service-form #id_reason")
+    reasonfield.removeClass( "ui-state-error" );
+    if ( reasonfield.val() == "" || reasonfield.val() == null ) {S
+            reasonfield.addClass( "ui-state-error" );
+            errorfield.text("Please enter a reason!")
+            return false;
+    }
+
+     $.ajax({
+       type: "POST",
+       url: requesturl,
+       data: data,
+       success: function(req){
+            errorfield.empty()
+            namefield.removeClass( "ui-state-error" );
+            namefield.val("")
+            reasonfield.removeClass( "ui-state-error" );
+            reasonfield.val("")
+            $("#requestTemplate").tmpl(req).appendTo("#user-requests")
+            $("#user-requests .amessage").remove()
+            make_request_buttons(requesturl,req)
+            
+       }
+     });
+}
+
+function delete_service_request(url,request){
+
+     $.ajax({
+       type: "DELETE",
+       url: url+request.id+"/",
+       success: function(msg){
+            $("#request-"+request.id).remove()
+       }
+     });
+}
+function update_service_request(requesturl,request,data){
+
+     $.ajax({
+       type: "PUT",
+       url: requesturl+request.id+"/",
+       data: data,
+       success: function(request){
+            $("#request-"+request.id).replaceWith($("#requestTemplate").tmpl(request))
+            make_request_buttons(requesturl,request)
+       }
+     });
+}
+function load_user_requests(requesturl){
+
+     $.ajax({
+       type: "GET",
+       url: requesturl,
+       success: function(requests){
+            if(requests.length==0){
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff })
+                message.css("width","400px")
+                message.appendTo( "#user-requests" );
+            }
+            $("#requestTemplate").tmpl(requests).appendTo("#user-requests")
+            $(requests).each(function(index,request){
+                make_request_buttons(requesturl,request)
+            })
+       }
+     });
+}
+
+function make_request_buttons(requesturl,request){
+    $("#delete-button-"+request.id).button().click(function(){
+        delete_service_request(requesturl,request)
+    })
+    $("#approve-button-"+request.id).button().click(function(){
+        update_service_request(requesturl,request,{"state":"A"})
+    })
+    $("#reject-button-"+request.id).button().click(function(){
+        update_service_request(requesturl,request,{"state":"R"})
+    })
 }
 
 function ajax_update_consumer_oauth(id,oauth_token,consumerurl){

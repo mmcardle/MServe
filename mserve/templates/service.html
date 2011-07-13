@@ -105,6 +105,15 @@
                 </dd>
             </dl>
 
+            <h2>Access </h2>
+            <dl style="padding-left: 40px;">
+                <dt>WebDAV</dt>
+                <dd>
+                        <strong><span id="webdav"></span></strong>
+                </dd>
+            </dl>
+
+
             <h2>Management Properties</h2>
 
             <table id="managementpropertyholder" style="vertical-align: middle;padding:20px;padding-left: 40px;" >
@@ -139,6 +148,7 @@
 $(document).ready(function() {
     $(function() {
         $( "#tabs" ).tabs();
+        $("#webdav").text("dav://"+window.location.hostname+"/webdav/"+"{{service.id}}"+"/")
     });
 });
 </script>

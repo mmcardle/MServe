@@ -27,6 +27,14 @@ job_descriptions['dataservice.tasks.postervideo'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.transcodevideo'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "video" },
+        "output-0" : { "mimetype" : "video/mp4" },
+        "options" : ['width','height','ffmpeg_args'],
+        "results" :[]
+    }
 job_descriptions['dataservice.tasks.mfilefetch'] = {
     "nbinputs" : 1,
     "nboutputs" : 1,

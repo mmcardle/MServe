@@ -26,6 +26,7 @@ from piston.utils import rc
 from django.http import HttpResponse
 from dataservice.models import NamedBase
 from dataservice.models import Usage
+from dataservice.models import Auth
 from dataservice.models import DataService
 from dataservice.models import HostingContainer
 from dataservice.handlers import ResourcesHandler
@@ -72,8 +73,10 @@ class PPUsageHandler(BaseHandler):
             mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
             ids = serviceids + mfileids + [base.id]
 
+        logging.info(base)
+        logging.info(id)
         if utils.is_service(base):
-            service   = DataService.objects.get(id=id)
+            service   = DataService.objects.get(id=base.id)
             ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
 
         if utils.is_mfile(base):

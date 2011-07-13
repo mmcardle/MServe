@@ -1,4 +1,56 @@
 
+
+<script id="requestTemplate" type="text/x-jquery-tmpl">
+    <div id="request-${id}" class="ui-widget" style="margin: 1px;">
+        <div class="ui-state-highlight ui-corner-all" style="padding: 0 .4em;">
+            <p>
+                {%templatetag openvariable%}if state == "P" {%templatetag closevariable%}
+                    <span class="ui-icon ui-icon-info" style="float: left; margin-right: .1em;"></span>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                {%templatetag openvariable%}if state == "A" {%templatetag closevariable%}
+                    <span class="ui-icon ui-icon-circle-check" style="float: left; margin-right: .1em;"></span>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                {%templatetag openvariable%}if state == "R" {%templatetag closevariable%}
+                    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .1em"></span>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                {%templatetag openvariable%}if isStaff {%templatetag closevariable%}
+                <span>Request From <strong>${ profile.user.username }</strong></span>&nbsp;:
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                <span>${ name }</span>&nbsp;:
+                <span>${ reason }</span>&nbsp;:
+
+                {%templatetag openvariable%}if state == "R" {%templatetag closevariable%}
+                    <span style="font-weight: bold;color:red">${ status }</span>
+                {%templatetag openvariable%}else{%templatetag closevariable%}
+                    <span style="font-weight: bold">${ status }</span>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                {%templatetag openvariable%}if isStaff && state == "P" {%templatetag closevariable%}
+                    <button style="float: right" id="approve-button-${id}">Approve</button>
+                    <button style="float: right" id="reject-button-${id}">Reject</button>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                {%templatetag openvariable%}if !isStaff && state == "P" {%templatetag closevariable%}
+                    <button style="float: right" id="delete-button-${id}">Delete</button>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+                
+            </p>
+        </div>
+    </div>
+</script>
+
+<script id="messageTemplate" type="text/x-jquery-tmpl">
+    <div class="${cl} ui-widget" style="margin: 5px;">
+        <div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em;">
+                <p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>${ message }</p>
+        </div>
+    </div>
+</script>
+
 <script id="containerTemplate" type="text/x-jquery-tmpl">
 
 <div class="infoholder">

@@ -23,14 +23,14 @@
 ########################################################################
 # Django settings for mserve project.
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 DEFAULT_CHARSET = 'utf-8'
 
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(filename)s %(lineno)d %(asctime)s %(levelname)-8s %(message)s',
+    format='%(pathname)s %(lineno)d %(asctime)s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M:%S',
     #change as needed
     filename='/var/mserve/mserve.log',
@@ -47,19 +47,17 @@ ADMINS = (
 LOG_FILE="django_log"
 
 MANAGERS = ADMINS
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+	'NAME' : 'mservedb',             # Or path to database file if using sqlite3.
+	'USER' : 'root',        # Not used with sqlite3.
+	'PASSWORD' : 'pass',       # Not used with sqlite3.
+	'HOST' : '',            # Set to empty string for localhost. Not used with sqlite3.
+	'PORT' : '',            # Set to empty string for default. Not used with sqlite3.
+    }
+}
 
-#DATABASE_ENGINE = 'sqlite3'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-#DATABASE_NAME = '/var/mserve/mservedb'             # Or path to database file if using sqlite3.
-#DATABASE_USER = ''             # Not used with sqlite3.
-#DATABASE_PASSWORD = ''         # Not used with sqlite3.
-#DATABASE_HOST = ''             # Set to empty string for localhost. Not used with sqlite3.
-#DATABASE_PORT = ''             # Set to empty string for default. Not used with sqlite3.
-DATABASE_ENGINE = 'mysql'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-DATABASE_NAME = 'mservedb'             # Or path to database file if using sqlite3.
-DATABASE_USER = 'root'             # Not used with sqlite3.
-DATABASE_PASSWORD = 'pass'         # Not used with sqlite3.
-DATABASE_HOST = ''             # Set to empty string for localhost. Not used with sqlite3.
-DATABASE_PORT = ''             # Set to empty string for default. Not used with sqlite3.
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
