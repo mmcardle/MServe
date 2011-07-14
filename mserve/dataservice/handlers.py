@@ -564,9 +564,6 @@ class UsageHandler(BaseHandler):
     fields = ('squares','total','nInProgress','metric','rate','reports','time,','rateCumulative','total','rateTime')
 
     def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):
-        logging.info("req %s " % request)
-        logging.info("GET %s " % request.GET)
-        logging.info("GET %s " % type(request.GET))
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
             return container.do("GET","usages",**request.GET)

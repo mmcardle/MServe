@@ -111,7 +111,7 @@ class MServeProfile(models.Model):
         ret = []
         for auth in self.auths.all():
             ret.append(Auth.objects.get(id=auth.id))
-        return ret
+        return set(ret)
 
     def mfiles(self):
         ret = []
@@ -123,14 +123,14 @@ class MServeProfile(models.Model):
                 ds = DataService.objects.get(id=auth.base.id)
                 for mfile in ds.mfile_set.all():
                     ret.append(mfile)
-        return ret
+        return set(ret)
 
     def dataservices(self):
         ret = []
         for base in self.bases.all():
             if utils.is_service(base):
                 ret.append(DataService.objects.get(id=base.id))
-        return ret
+        return set(ret)
 
     def mfolders(self):
         ret = []
@@ -140,14 +140,14 @@ class MServeProfile(models.Model):
         for auth in self.auths.all():
             if utils.is_service(auth.base):
                 ret.append(DataService.objects.get(id=auth.base.id))
-        return ret
+        return set(ret)
 
     def containers(self):
         ret = []
         for base in self.bases.all():
             if utils.is_container(base):
                 ret.append(HostingContainer.objects.get(id=base.id))
-        return ret
+        return set(ret)
 
     def __unicode__(self):
         return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(),self.user.username)
