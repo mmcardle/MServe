@@ -900,27 +900,31 @@ class MFile(NamedBase):
         import usage_store as usage_store
         
         check1 = mfile.checksum
-        check2 = utils.md5_for_file(mfile.file)
-        if(check1==check2):
-            logging.info("Verification of %s on read ok" % mfile)
+
+        if check1 == "" or check1 == None:
+            logging.warn("Mfile %s has no checksum - will return file without check" % self )
         else:
-            logging.info("Verification of %s on read FAILED" % mfile)
-            usage_store.record(mfile.id,metric_corruption,1)
-            try:
-                backup = BackupFile.objects.get(mfile=mfile)
-                check3 = mfile.checksum
-                if os.path.exists(backup.file.path):
-                    check4 = utils.md5_for_file(backup.file)
-                    if(check3==check4):
-                        shutil.copy(backup.file.path, mfile.file.path)
-                        file = backup.file
-                    else:
-                        logging.info("The file %s has been lost" % mfile)
-                        usage_store.record(mfile.id,metric_dataloss,mfile.size)
-                        return rc.NOT_HERE
-            except BackupFile.DoesNotExist as e:
-                logging.info("There is no backup file for %s "%mfile)
-                return rc.NOT_HERE
+            check2 = utils.md5_for_file(mfile.file)
+            if check1 == check2:
+                logging.info("Verification of %s on read ok" % mfile)
+            else:
+                logging.info("Verification of %s on read FAILED" % mfile)
+                usage_store.record(mfile.id,metric_corruption,1)
+                try:
+                    backup = BackupFile.objects.get(mfile=mfile)
+                    check3 = mfile.checksum
+                    if os.path.exists(backup.file.path):
+                        check4 = utils.md5_for_file(backup.file)
+                        if(check3==check4):
+                            shutil.copy(backup.file.path, mfile.file.path)
+                            file = backup.file
+                        else:
+                            logging.info("The file %s has been lost" % mfile)
+                            usage_store.record(mfile.id,metric_dataloss,mfile.size)
+                            return rc.NOT_HERE
+                except BackupFile.DoesNotExist as e:
+                    logging.info("There is no backup file for %s "%mfile)
+                    return rc.NOT_HERE
 
 
         file=mfile.file
