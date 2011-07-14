@@ -17,11 +17,9 @@
                 {%templatetag openvariable%}/if{%templatetag closevariable%}
 
                 {%templatetag openvariable%}if isStaff {%templatetag closevariable%}
-                <span>Request From <strong>${ profile.user.username }</strong></span>&nbsp;:
+                <span><strong>Request From </strong><span class="red">${ profile.user.username }</span></span>&nbsp;:
                 {%templatetag openvariable%}/if{%templatetag closevariable%}
-
-                <span>${ name }</span>&nbsp;:
-                <span>${ reason }</span>&nbsp;:
+               
 
                 {%templatetag openvariable%}if state == "R" {%templatetag closevariable%}
                     <span style="font-weight: bold;color:red">${ status }</span>
@@ -30,8 +28,8 @@
                 {%templatetag openvariable%}/if{%templatetag closevariable%}
 
                 {%templatetag openvariable%}if isStaff && state == "P" {%templatetag closevariable%}
-                    <button style="float: right" id="approve-button-${id}">Approve</button>
-                    <button style="float: right" id="reject-button-${id}">Reject</button>
+                    <button style="" id="approve-button-${id}">Approve</button>
+                    <button style="" id="reject-button-${id}">Reject</button>
                 {%templatetag openvariable%}/if{%templatetag closevariable%}
 
                 {%templatetag openvariable%}if !isStaff && state == "P" {%templatetag closevariable%}
@@ -39,13 +37,22 @@
                 {%templatetag openvariable%}/if{%templatetag closevariable%}
                 
             </p>
+            <p>
+                <span><strong>Requested Name : </strong>${ name }</span>
+            </p>
+            <p>
+                <span><strong>Time : </strong>${ ctime }</span>
+            </p>
+            <p>
+                <span><strong>Reason for request: </strong>${ reason }</span>
+            </p>
         </div>
     </div>
 </script>
 
 <script id="messageTemplate" type="text/x-jquery-tmpl">
-    <div class="${cl} ui-widget" style="margin: 5px;">
-        <div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em;">
+    <div class="${cl} ui-widget" style="margin: 1px;">
+        <div class="ui-state-highlight ui-corner-all" style="padding: 0 .4em;">
                 <p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>${ message }</p>
         </div>
     </div>
@@ -359,23 +366,36 @@
 
 <script id="authTemplate" type="text/x-jquery-tmpl">
 
-    <div class="auth"><h3>Access : ${authname}</h3>
-    <div><a href="/browse/${id}/" >View Auth </a> </div>
-    <dl>
-    {%templatetag openvariable%}each roles{%templatetag closevariable%}
-        <dt >Role: ${rolename}</dt>
-        <dd ><strong>${description}</strong></dd>
-        <dd class="role-${id}">
-        {%templatetag openvariable%}each methods{%templatetag closevariable%}
-                ${$value}
-        {%templatetag openvariable%}/each{%templatetag closevariable%}
-        </dd>
-        <!--<dd><button class="addmethods">Add Method</button>-->
-    {%templatetag openvariable%}/each{%templatetag closevariable%}
-    </dl>
+<div class="infoholder" id="mfileholder-${id}" >
+    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"onmouseout="$('#id-${id}').hide();" >
+        <a href='/browse/${id}/'>
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}");' class='thumb'>
+            <tbody>
+            <tr>
+                <td>
+                    <div class='title'>
+                        {% autoescape off %}
+                                    ${getShort(authname+" access to "+ basename,20)}
+                        {% endautoescape  %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                        ${authname} access to ${basename}
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        </a>
     </div>
 
+</div>
+
 </script>
+
 
 <script id="mfileDetailsTemplate" type="text/x-jquery-tmpl">
     <h3>Details</h3>
@@ -671,6 +691,21 @@
         </table>
     </div>
 </div>
+</script>
+
+
+<script id="dialogTemplate" type="text/x-jquery-tmpl">
+    
+    <div id="${id}" title="${title}">
+        <form>
+            <div  class="ui-widget" style="margin: 2px;">
+                <div class="ui-corner-all" style="padding: 0 .1em;">
+                    <p>${message}</p>
+                </div>
+            </div>
+        </form>
+    </div>
+
 </script>
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">

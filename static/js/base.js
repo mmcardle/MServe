@@ -71,9 +71,10 @@ function formatSize( filesize ) {
 
 function getShort( name , len) {
     if(name.length>len){
-        return name.substr(0,len)+"..."
+        s = name.substr(0,len)+"..."
+        return s.charAt(0).toUpperCase() + s.slice(1);
     }else{
-        return name
+        return name.charAt(0).toUpperCase() + name.slice(1);
     }
 }
 

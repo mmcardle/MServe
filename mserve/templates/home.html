@@ -58,7 +58,7 @@
 {% endif %}
 
         {% if user.is_authenticated %}
-        <h1>Resources</h1>
+        <h1>Resources you own</h1>
 
             <div id="user_mfilemessages">
 
@@ -69,7 +69,7 @@
 
             </div>
 
-        <h1>Auths</h1>
+        <h1>Resources you have access to</h1>
 
             <div id="user_authmessages">
 
@@ -81,23 +81,32 @@
 
         <div class="clr"></div>
 
-        <table>
+        <table style="table-layout: fixed;width: 100%">
             <tr>
-                <td style="width: 200px">
+                {% if not user.is_staff %}
+                <td>
                     <h1>Request a Service</h1>
 
                     <div id="user-request-service" >
                         <form id="user-request-service-form"  >
                             <div id="user-request-service-form-errors" style="color:red;font-weight: bold"></div>
                             {{ servicerequestform.as_p }}
+
                         </form>
                         <button id="user-request-service-button"  >Request a Service</button>
                     </div>
                 </td>
-                <td style="width: 500px">
+                {% endif %}
+                <td >
                     <h1>Pending Requests</h1>
-                    <div id="user-requests">
+                    <div id="pending-requests" style="height: 150px;overflow: auto;">
                         
+                    </div>
+                </td>
+                <td>
+                    <h1>Requests</h1>
+                    <div id="done-requests" style="height: 150px;overflow: auto;">
+
                     </div>
                 </td>
             </tr>

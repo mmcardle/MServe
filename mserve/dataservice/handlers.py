@@ -74,24 +74,32 @@ class ProfileHandler(BaseHandler):
 class ServiceRequestHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE','PUT')
     model = ServiceRequest
-    fields = ('id','name','reason','state','status', ('profile', ( 'id',  'user' )  ))
+    fields = ('id','name','reason','state','status','time','ctime', ('profile', ( 'id',  'user' )  ))
 
     def update(self,request,id=None):
         if request.user.is_staff:
             if request.POST.has_key("state"):
                 if request.POST['state'] == "A":
-                    sr = ServiceRequest.objects.get(id=id)
-                    
-                    sr.state = "A"
-                    sr.save()
 
-                    dataservice = HostingContainer.objects.all()[0].create_data_service(sr.name)
+                    if request.POST.has_key('cid'):
 
-                    custauth = dataservice.auth_set.get(authname="customer")
+                        cid = request.POST['cid']
+                        sr = ServiceRequest.objects.get(id=id)
 
-                    sr.profile.auths.add(custauth)
+                        sr.state = "A"
+                        sr.save()
 
-                    return sr
+                        dataservice = HostingContainer.objects.get(id=cid).create_data_service(sr.name)
+
+                        custauth = dataservice.auth_set.get(authname="customer")
+
+                        sr.profile.auths.add(custauth)
+
+                        return sr
+                    else:
+                        r = rc.BAD_REQUEST
+                        r.write("Invalid arguments - No Container id specified")
+                        return r
                 elif request.POST['state'] == "R":
                     sr = ServiceRequest.objects.get(id=id)
                     sr.state = "R"
@@ -745,7 +753,7 @@ class ManagementPropertyHandler(BaseHandler):
 class AuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = Auth
-    fields = ('authname','id','auth_set','urls','methods',('roles' ,('id','rolename','description','methods') ) )
+    fields = ('authname','id','auth_set','urls','methods','basename','thumburl',('roles' ,('id','rolename','description','methods') ) )
 
     def read(self,request, id=None, containerid=None,serviceid=None,mfileid=None,authid=None,murl=None):
         if id:

@@ -6,7 +6,7 @@ function load_user(userurl,consumerurl,template){
        success: function(msg){
             
             if(msg.mfiles.length==0){
-                message = $( "#messageTemplate" ).tmpl( {"message":"No Resources - Request a service using the form below "  } )
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Resources"  } )
                 message.css("width","400px")
                 message.appendTo( "#user_mfilemessages" );
                 $( "#user-request-service" ).show()
@@ -78,8 +78,8 @@ function user_request_service(requesturl){
             namefield.val("")
             reasonfield.removeClass( "ui-state-error" );
             reasonfield.val("")
-            $("#requestTemplate").tmpl(req).appendTo("#user-requests")
-            $("#user-requests .amessage").remove()
+            $("#requestTemplate").tmpl(req).prependTo("#pending-requests")
+            $("#pending-requests .amessage").remove()
             make_request_buttons(requesturl,req)
             
        }
@@ -103,23 +103,48 @@ function update_service_request(requesturl,request,data){
        url: requesturl+request.id+"/",
        data: data,
        success: function(request){
-            $("#request-"+request.id).replaceWith($("#requestTemplate").tmpl(request))
+            $("#request-"+request.id).remove()
+                console.log($("#pending-requests").html())
+            if(!$("#pending-requests").html().trim()){
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff })
+                message.appendTo( "#pending-requests" );
+            }
+            $("#requestTemplate").tmpl(request).prependTo("#done-requests")
             make_request_buttons(requesturl,request)
        }
      });
 }
+
 function load_user_requests(requesturl){
 
      $.ajax({
        type: "GET",
        url: requesturl,
        success: function(requests){
-            if(requests.length==0){
+
+            pending = []
+            done = []
+
+            $(requests).each(function(index,request){
+                if(request.state == "P"){
+                    pending.push(request)
+                }else{
+                    done.push(request)
+                }
+            })
+
+            if(pending.length==0){
                 message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff })
-                message.css("width","400px")
-                message.appendTo( "#user-requests" );
+                message.appendTo( "#pending-requests" );
             }
-            $("#requestTemplate").tmpl(requests).appendTo("#user-requests")
+
+            if(done.length==0){
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Requests","cl":"amessage","isStaff": isStaff })
+                message.appendTo( "#done-requests" );
+            }
+
+            $("#requestTemplate").tmpl(pending).appendTo("#pending-requests")
+            $("#requestTemplate").tmpl(done).appendTo("#done-requests")
             $(requests).each(function(index,request){
                 make_request_buttons(requesturl,request)
             })
@@ -132,11 +157,78 @@ function make_request_buttons(requesturl,request){
         delete_service_request(requesturl,request)
     })
     $("#approve-button-"+request.id).button().click(function(){
-        update_service_request(requesturl,request,{"state":"A"})
+        //update_service_request(requesturl,request,{"state":"A"})
+
+        data = {"requesturl":requesturl,"request":request,"state":"A" }
+
+        chooseContainer(data)
     })
     $("#reject-button-"+request.id).button().click(function(){
         update_service_request(requesturl,request,{"state":"R"})
     })
+}
+
+function mycallback(val,data){
+    update_service_request(data.requesturl,data.request,{"state":data.state,"cid":val})
+}
+
+function chooseContainer(data){
+    $.ajax({
+       type: "GET",
+       url: "/containers/",
+       success: function(msg){
+            containers = msg;
+            choices = []
+            $(containers).each(function(index,container){
+               choices.push( {"name":container.name,"value":container.id} )
+            })
+            choose_dialog_ui(choices,"Input Needed", "Choose a Container", mycallback, data)
+       }
+     });
+}
+
+function choose_dialog_ui(choices, title, message, callback, data) {
+    // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+    $( "#dialog:ui-dialog" ).dialog( "destroy" );
+
+    var containers = $( "#containers" ),
+    allFields = $( [] ).add( containers ),
+    tips = $( ".validateTips" );
+
+    id = "dialog-id-"+Math.floor(Math.random()*1000)
+
+    cdialog = $("#dialogTemplate").tmpl( {"id": id , "message" : message, "title": title } )
+
+    inputbox = $('<select type="radio" >')
+
+    $(choices).each(function(index,choice){
+        $('<option value="'+choice.value+'" >'+choice.name+'</option>').appendTo(inputbox)
+    })
+
+    cdialog.append(inputbox)
+
+    cdialog.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                    "Choose Container": function() {
+                        callback(inputbox.val(),data)
+                        $( this ).dialog( "close" );
+
+                    },
+                    Cancel: function() {
+                            $( this ).dialog( "close" );
+                    }
+            },
+            close: function() {
+                    allFields.val( "" ).removeClass( "ui-state-error" );
+            }
+    });
+
+    cdialog.dialog( "open" );
+
 }
 
 function ajax_update_consumer_oauth(id,oauth_token,consumerurl){

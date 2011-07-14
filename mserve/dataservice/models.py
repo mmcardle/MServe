@@ -155,6 +155,13 @@ class ServiceRequest(models.Model):
     reason      = models.TextField()
     profile     = models.ForeignKey('MServeProfile',null=True, blank=True, related_name="servicerequests")
     state       = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES, default='P')
+    time        = models.DateTimeField(auto_now_add=True)   # Time first recorded (shouldnt change)
+    
+    class Meta:
+        ordering = ["-time"]
+
+    def ctime(self):
+        return self.time.ctime()
 
     def status(self):
         for index,word in SERVICEREQUEST_STATES:
@@ -1242,6 +1249,16 @@ class Auth(Base):
             urls.update(roles[rolename]['urls'])
         return urls
 
+    def basename(self):
+        return self.base.name
+
+    def thumburl(self):
+        if utils.is_service(self.base):
+            ds = DataService.objects.get(id=self.base.id)
+            if len(ds.mfile_set.all()) > 0:
+                return list(ds.mfile_set.all())[0].thumburl()
+        return os.path.join(mediapath,"images","package-x-generic.png")
+    
     def getroles(self):
         return self.roles_csv.split(",")
 

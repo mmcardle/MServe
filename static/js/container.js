@@ -5,7 +5,6 @@ function create_container(){
    data: "name=Container",
    url: '/containers/',
    success: function(msg){
-
             loadContainers()
    },
    error: function(msg){
