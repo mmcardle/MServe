@@ -52,8 +52,7 @@
 
 {% block content %}
 
-<h2>Auth </h2>
-<p>{{ auth }}</p>
+<h2>Access to service <span class="red">{{auth.basename}}</span> with the role <span class="green">{{auth.authname}}</span> </h2>
 
 <div id="tabs">
 

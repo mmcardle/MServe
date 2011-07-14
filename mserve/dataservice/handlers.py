@@ -459,94 +459,9 @@ class AuthContentsHandler(BaseHandler):
     allowed_methods = ('GET')
 
     def read(self, request, id):
-
         try:
             auth = Auth.objects.get(id=id)
-
-            mfile = MFile.objects.get(pk=auth.base.id)
-
-            service = mfile.service
-            container = service.container
-            logging.info("Finding limit for %s " % (mfile.name))
-            accessspeed = DEFAULT_ACCESS_SPEED
-            try:
-                prop = ManagementProperty.objects.get(base=service,property="accessspeed")
-                accessspeed = prop.value
-                logging.info("Limit set from service property to %s for %s " % (accessspeed,mfile.name))
-            except ObjectDoesNotExist:
-                try:
-                    prop = ManagementProperty.objects.get(base=container,property="accessspeed")
-                    accessspeed = prop.value
-                    logging.info("Limit set from container property to %s for %s " % (accessspeed,mfile.name))
-                except ObjectDoesNotExist:
-                    pass
-            logging.info("content 0")
-
-            file=mfile.file
-
-            check1 = mfile.checksum
-
-            logging.info("content 2 %s" % mfile.file)
-
-            check2 = utils.md5_for_file(mfile.file)
-
-            logging.info("content 1")
-
-            file=mfile.file
-
-            sigret = mfile_get_signal.send(sender=self, mfile=mfile)
-            for k,v in sigret:
-                logging.info("Signal %s returned %s " % (k,v))
-
-            if(check1==check2):
-                logging.info("Verification of %s on read ok" % mfile)
-            else:
-                logging.info("Verification of %s on read FAILED" % mfile)
-                usage_store.record(mfile.id,metric_corruption,1)
-                backup = BackupFile.objects.get(mfile=mfile)
-                check3 = mfile.checksum
-                check4 = utils.md5_for_file(backup.file)
-                if(check3==check4):
-                    shutil.copy(backup.file.path, mfile.file.path)
-                    file = backup.file
-                else:
-                    logging.info("The file %s has been lost" % mfile)
-                    usage_store.record(mfile.id,metric_dataloss,mfile.size)
-                    return rc.NOT_HERE
-
-            p = str(file)
-            dlfoldername = "dl%s" % accessspeed
-
-            redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
-            redirecturl = redirecturl[1:]
-
-            logging.info("Redirect %s " % redirecturl)
-
-            SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
-
-            fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
-            fullfilepathfolder = os.path.dirname(fullfilepath)
-            mfilefilepath = file.path
-
-            logging.info("fullfilepath %s " % fullfilepath)
-            logging.info("fullfilepathfolder %s " % fullfilepathfolder)
-            logging.info("mfilefilepath %s " % mfilefilepath)
-
-            if not os.path.exists(fullfilepathfolder):
-                os.makedirs(fullfilepathfolder)
-
-            if not os.path.exists(fullfilepath):
-                logging.info("Linking ")
-                logging.info("   %s " % mfilefilepath )
-                logging.info("to %s " % fullfilepath )
-                os.link(mfilefilepath,fullfilepath)
-            else:
-                logging.info("fullfilepath Exists %s  " % fullfilepath)
-
-            import dataservice.models as models
-            usage_store.record(mfile.id,models.metric_access,mfile.size)
-
-            return redirect("/%s"%redirecturl)
+            return auth.do("GET","file")
         except Exception as e:
             logging.error(e)
             raise e

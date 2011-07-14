@@ -104,8 +104,8 @@ for task in tasks.regular().keys():
 
 class MServeProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
-    bases = models.ManyToManyField('NamedBase', related_name='bases')
-    auths = models.ManyToManyField('Auth', related_name='profileauths')
+    bases = models.ManyToManyField('NamedBase', related_name='bases',null=True, blank=True)
+    auths = models.ManyToManyField('Auth', related_name='profileauths',null=True, blank=True)
 
     def myauths(self):
         ret = []
@@ -118,6 +118,11 @@ class MServeProfile(models.Model):
         for base in self.bases.all():
             if utils.is_mfile(base):
                 ret.append(MFile.objects.get(id=base.id))
+        for auth in self.auths.all():
+            if utils.is_service(auth.base):
+                ds = DataService.objects.get(id=auth.base.id)
+                for mfile in ds.mfile_set.all():
+                    ret.append(mfile)
         return ret
 
     def dataservices(self):
@@ -132,6 +137,9 @@ class MServeProfile(models.Model):
         for base in self.bases.all():
             if utils.is_mfolder(base):
                 ret.append(MFolder.objects.get(id=base.id))
+        for auth in self.auths.all():
+            if utils.is_service(auth.base):
+                ret.append(DataService.objects.get(id=auth.base.id))
         return ret
 
     def containers(self):
