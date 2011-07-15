@@ -188,6 +188,7 @@ INSTALLED_APPS = (
     'jobservice',
     'prestoprime',
     'djcelery',
+    'celery',
     'request'
 )
 
