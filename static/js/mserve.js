@@ -23,8 +23,48 @@ function load_user(userurl,consumerurl,template){
                 $("#user_authmessages").empty()
             }
 
-            $( template ).tmpl( msg.mfiles ).appendTo( "#user_mfileholder" );
-            $( "#authTemplate" ).tmpl( msg.myauths ).appendTo( "#user_authholder" );
+            var mfiles = msg.mfiles
+
+            function handlePaginationClick(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>mfiles.length){
+                    end=mfiles.length;
+                }
+
+                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#user_mfileholder" );
+                return false;
+            }
+
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+            $("#user_mfileholder").pagination(mfiles.length, {
+                    items_per_page:4,
+                    callback:handlePaginationClick
+            });
+
+            var myauths = msg.myauths
+
+            function handlePaginationClick2(new_page_index, pagination_container) {
+                // This selects elements from a content array
+                start = new_page_index*this.items_per_page
+                end   = (new_page_index+1)*this.items_per_page
+                if(end>myauths.length){
+                    end=myauths.length;
+                }
+
+                $( "#authTemplate" ).tmpl( myauths.slice(start,end) ) .appendTo( "#user_authholder" );
+                return false;
+            }
+
+            // First Parameter: number of items
+            // Second Parameter: options object
+            $("#user_authholder").pagination(myauths.length, {
+                    items_per_page:4,
+                    callback:handlePaginationClick2
+            });
 
             oauth_token = getParameterByName("oauth_token")
 

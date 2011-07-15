@@ -9,7 +9,9 @@ function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
                 allFields = $( [] ).add( name )
                 tips = $( ".validateTips" );
 
-		$( "#import-dialog-form" ).dialog({
+
+		importdialog = $( "#importdialogTemplate" ).tmpl()
+                importdialog.dialog({
 			autoOpen: false,
 			height: 250,
 			width: 550,
@@ -43,14 +45,14 @@ function create_new_import_ui_dialog(authid,remoteserviceurl,consumerurl) {
                                     service.appendTo($( "#import-dialog-items" ))
                                     $("#remoteservicebutton-"+remoteservice.id).button().click(
                                         function() {
-                                                $( "#import-dialog-form" ).dialog( "close" );
+                                                importdialog.dialog( "close" );
                                                 load_service_iframe(authid,remoteservice.url,consumerurl)
                                             }
                                     );
                                });
 
                                 
-                               $( "#import-dialog-form" ).dialog( "open" );
+                               importdialog.dialog( "open" );
 
                            }
                          });

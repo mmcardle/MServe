@@ -43,7 +43,37 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import date
 
-def home(request,form=HostingContainerForm()):    
+mobile_uas = [
+	'w3c ','acs-','alav','alca','amoi','audi','avan','benq','bird','blac',
+	'blaz','brew','cell','cldc','cmd-','dang','doco','eric','hipt','inno',
+	'ipaq','java','jigs','kddi','keji','leno','lg-c','lg-d','lg-g','lge-',
+	'maui','maxo','midp','mits','mmef','mobi','mot-','moto','mwbp','nec-',
+	'newt','noki','oper','palm','pana','pant','phil','play','port','prox',
+	'qwap','sage','sams','sany','sch-','sec-','send','seri','sgh-','shar',
+	'sie-','siem','smal','smar','sony','sph-','symb','t-mo','teli','tim-',
+	'tosh','tsm-','upg1','upsi','vk-v','voda','wap-','wapa','wapi','wapp',
+	'wapr','webc','winw','winw','xda','xda-'
+	]
+ 
+mobile_ua_hints = [ 'SymbianOS', 'Opera Mini', 'iPhone', 'iPad' ]
+
+def append_dict(dict,request):
+    mobile_browser = False
+    logging.info(request.META['HTTP_USER_AGENT'])
+    ua = request.META['HTTP_USER_AGENT'].lower()[0:4]
+    logging.info(ua)
+    if (ua in mobile_uas):
+        mobile_browser = True
+    else:
+        for hint in mobile_ua_hints:
+            if request.META['HTTP_USER_AGENT'].find(hint) > 0:
+                mobile_browser = True
+
+    dict['mobile_browser'] = mobile_browser
+    logging.info(dict)
+    return dict
+
+def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
     usagesummary = usage_store.get_usage_summary(None)
     usage = usage_store.get_usage(None)
@@ -54,7 +84,7 @@ def home(request,form=HostingContainerForm()):
         dict["hostingcontainers"] = hostings
         dict["form"] = form
         dict["usagesummary"] = usagesummary
-    return render_to_response('home.html', dict, context_instance=RequestContext(request))
+    return render_to_response('home.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 @staff_member_required
 def stats(request):
@@ -104,7 +134,7 @@ def render_base(request,id):
 
         dict = {}
         dict["error"] = "Error displaying the auth with id='%s' " % id
-        return render_to_response('error.html', dict, context_instance=RequestContext(request))
+        return render_to_response('error.html', append_dict(dict,request), context_instance=RequestContext(request))
 
     except Auth.DoesNotExist:
         logging.info("Request to browse '%s' , ID does not relate to a auth object." % (id))
@@ -115,7 +145,7 @@ def render_base(request,id):
 @login_required
 def profile(request):
     dict ={}
-    return render_to_response('user.html', dict, context_instance=RequestContext(request))
+    return render_to_response('user.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 def render_container(request,id,form=DataServiceForm()):
     container = HostingContainer.objects.get(pk=id)
@@ -137,7 +167,7 @@ def render_container(request,id,form=DataServiceForm()):
     dict["usage"] = usage
     dict["usagesummary"] = usagesummary
 
-    return render_to_response('container.html', dict, context_instance=RequestContext(request))
+    return render_to_response('container.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 @staff_member_required
 def render_container_auth(request,authid):
@@ -161,7 +191,7 @@ def render_container_auth(request,authid):
     dict["usage"] = usage
     dict["usagesummary"] = usagesummary
     
-    return render_to_response('container.html', dict, context_instance=RequestContext(request))
+    return render_to_response('container.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 def render_service(request,id,form=MFileForm()):
     service = DataService.objects.get(pk=id)
@@ -181,7 +211,7 @@ def render_service(request,id,form=MFileForm()):
     dict["form"] = form
     dict["usage"] = usage_store.get_usage(id)
     dict["usagesummary"] = usage_store.get_usage_summary(service.id)
-    return render_to_response('service.html', dict, context_instance=RequestContext(request))
+    return render_to_response('service.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 def render_service_auth(request,auth):
 
@@ -195,7 +225,7 @@ def render_service_auth(request,auth):
     dict["service"] = DataService.objects.get(id=base.id)
     dict["form"] = form
     
-    return render_to_response('auths/service_auth.html', dict, context_instance=RequestContext(request))
+    return render_to_response('auths/service_auth.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 def render_mfile(request, id, form=AuthForm(), show=False):
     mfile = MFile.objects.get(pk=id)
@@ -231,12 +261,12 @@ def render_mfile(request, id, form=AuthForm(), show=False):
     dict["usage"] = usage_store.get_usage(id)
     dict["usagesummary"] = usage_store.get_usage_summary(mfile.id)
     
-    return render_to_response('mfile.html', dict, context_instance=RequestContext(request))
+    return render_to_response('mfile.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 def render_mfile_auth(request, auth):
     dict = {}
     dict["auth"] = auth
-    return render_to_response('auths/mfile_auth.html', dict, context_instance=RequestContext(request))
+    return render_to_response('auths/mfile_auth.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 @staff_member_required
 def usage(request):
@@ -245,13 +275,13 @@ def usage(request):
     dict = {}
     dict["usage"] = usage
     dict["usagesummary"] = usagesummary
-    return render_to_response('allusage.html', dict, context_instance=RequestContext(request))
+    return render_to_response('allusage.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 
 def render_error(request,error):
     dict = {}
     dict["error"] = error
-    return render_to_response('error.html', dict, context_instance=RequestContext(request))
+    return render_to_response('error.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 
     

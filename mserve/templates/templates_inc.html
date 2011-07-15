@@ -59,91 +59,94 @@
 </script>
 
 <script id="containerTemplate" type="text/x-jquery-tmpl">
-
-<div class="infoholder">
-    <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
-        {%templatetag openvariable%}each(servicei,val) [0,1,2,3]   {%templatetag closevariable%}
-        <tr>
-              {%templatetag openvariable%}each(mfilei,val) [0,1,2,3]   {%templatetag closevariable%}
-                 {%templatetag openvariable%}if dataservice_set[servicei] && dataservice_set[servicei].mfile_set[mfilei]   {%templatetag closevariable%}
-                    <td class="container_preview_td" style="background-image: url(${dataservice_set[servicei].mfile_set[mfilei].thumburl});"></td>
-                 {%templatetag openvariable%}else{%templatetag closevariable%}
-                    <td class="container_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
+    
+        <div class="infoholder">
+            <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
+                 {%templatetag openvariable%}each(i,val) [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]   {%templatetag closevariable%}
+                 
+                 {%templatetag openvariable%}if i%4==0 {%templatetag closevariable%}
+                 <tr>
                  {%templatetag openvariable%}/if{%templatetag closevariable%}
-             {%templatetag openvariable%}/each{%templatetag closevariable%}
-        </tr>
-        {%templatetag openvariable%}/each{%templatetag closevariable%}
-    </table>
 
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
-         onmouseout="$('#id-${id}').hide();" style="position: relative; top: -130px">
+                 <td class="container_preview_td" style="background-image: url(${thumbs[i]});"></td>
 
-        <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
-            <colgroup><col>
-            </colgroup>
-            <tbody>
-            <tr><td>
-                    <div class='title'>
-                        <a href='/browse/${id}/'>
-                                {% autoescape off %}
-                                    ${getShort(name,20)}
-                                {% endautoescape  %}
-                        </a></div></td></tr>
-            <tr><td>
-                    <a href='/browse/${id}/'>
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
-                          <div>${dataservice_set.length} files </div>
-                          <div style="font-weight: bold">Latest Services :</div>
+                {%templatetag openvariable%}if i%4==3 {%templatetag closevariable%}
+                 </tr>
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-                          {%templatetag openvariable%}each dataservice_set{%templatetag closevariable%}
-                                <!-- Show Last 4 files -->
-                              {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
-                                <div>${getShort($value.name,30)}</div>
-                              {%templatetag openvariable%}/if{%templatetag closevariable%}
-                          {%templatetag openvariable%}/each{%templatetag closevariable%}
-                      </div>
-                    </a>
-                </td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+                {%templatetag openvariable%}/each{%templatetag closevariable%}
+            </table>
+
+            <div id="image-${id}" class='fluid' style="position: relative; top: -130px"
+                 {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+                 >
+
+                <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
+                    <colgroup><col>
+                    </colgroup>
+                    <tbody>
+                    <tr><td>
+                            <div class='title'>
+                                <a href='/browse/${id}/'>
+                                        {% autoescape off %}
+                                            ${getShort(name,20)}
+                                        {% endautoescape  %}
+                                        &nbsp;(${dataservice_set.length})
+                                </a></div></td></tr>
+                    <tr><td>
+                            <a href='/browse/${id}/'>
+                            <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                                  <div>${dataservice_set.length} files </div>
+                                  <div style="font-weight: bold">Latest Services :</div>
+
+                                  {%templatetag openvariable%}each dataservice_set{%templatetag closevariable%}
+                                        <!-- Show Last 4 files -->
+                                      {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
+                                        <div>${getShort($value.name,30)}</div>
+                                      {%templatetag openvariable%}/if{%templatetag closevariable%}
+                                  {%templatetag openvariable%}/each{%templatetag closevariable%}
+                              </div>
+                            </a>
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
 </script>
 
 <script id="serviceTemplate" type="text/x-jquery-tmpl">
 
 <div class="infoholder">
     <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
-        <tr>
-             {%templatetag openvariable%}if mfile_set[0] {%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url(${mfile_set[0].thumburl});"></td>
-             {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
-             {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-             {%templatetag openvariable%}if mfile_set[1] {%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url(${mfile_set[1].thumburl});"></td>
-              {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
-             {%templatetag openvariable%}/if{%templatetag closevariable%}
-        </tr>
-        <tr>
-             {%templatetag openvariable%}if mfile_set[2] {%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url(${mfile_set[2].thumburl});"></td>
-             {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
-             {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-             {%templatetag openvariable%}if mfile_set[3] {%templatetag closevariable%}
-                           <td class="service_preview_td" style="background-image: url(${mfile_set[3].thumburl});"></td>
-             {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
-             {%templatetag openvariable%}/if{%templatetag closevariable%}
-        </tr>
+               {%templatetag openvariable%}each(i,val) [0,1,2,3]   {%templatetag closevariable%}
+
+                 {%templatetag openvariable%}if i%4==0 {%templatetag closevariable%}
+                 <tr>
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                 <td class="service_preview_td" style="background-image: url(${thumbs[i]});"></td>
+
+                {%templatetag openvariable%}if i%4==1 {%templatetag closevariable%}
+                 </tr>
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                {%templatetag openvariable%}/each{%templatetag closevariable%}
+
+
     </table>
 
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
-         onmouseout="$('#id-${id}').hide();" style="position: relative; top: -130px">
+    <div id="image-${id}" class='fluid'
+                 {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+                    style="position: relative; top: -130px">
 
         <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
             <colgroup><col>
@@ -251,8 +254,12 @@
         </tr>
     </table>
 
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
-         onmouseout="$('#id-${id}').hide();" style="position: relative; top: -130px">
+    <div id="image-${id}" class='fluid'
+                          {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+                 style="position: relative; top: -130px">
 
         <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
             <colgroup><col>
@@ -316,13 +323,13 @@
                                 <input type="text" style="width: 96%" value="" id="id_condition" name="condition" >
                             </td>
                             <td>
-                                <input type="checkbox" class="allowremotecheck" id="id_allowremote-${id}" /><label for="id_allowremote-${id}">Allow Remote</label>
+     
                             </td>
                             <td>
                                 <input type="text" style="width: 96%" value="" id="id_remotecondition" name="remotecondition" >
                             </td>
                             <td>
-                                <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1 id="id_args" name="args">{}</textarea>
+                                <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1" name="args">{}</textarea>
                             </td>
                             </form>
                             <td>
@@ -342,20 +349,24 @@
     <tr>
         <td class="green">${task_name}</td>
         <td>
-            <input type="text" style="border: none; width: 96%" value="${condition}" >
+            <input type="text" style="width: 96%" value="${condition}" >
         </td>
         <td>
+            <div id="allowremotecheck-${id}">
             {%templatetag openvariable%}if allowremote {%templatetag closevariable%}
-                <input type="checkbox" class="allowremotecheck" id="check-${id}" checked /><label for="check-${id}">Allow Remote</label>
+                <input style="display: inline-block" type="radio" name="radio-${id}" id="check-${id}-1" checked="checked" /><label for="check-${id}-1"></label>
+                <input style="display: inline-block" type="radio" name="radio-${id}" id="check-${id}-2" /><label for="check-${id}-2">No</label>
             {%templatetag openvariable%}else{%templatetag closevariable%}
-                <input type="checkbox" class="allowremotecheck" id="check-${id}" /><label for="check-${id}">Allow Remote</label>
+                <input style="display: inline-block" type="radio" name="radio-${id}"  id="check-${id}-1" /><label for="check-${id}-1">Yes</label>
+                <input style="display: inline-block" type="radio" name="radio-${id}"  id="check-${id}-2" checked="checked" /><label for="check-${id}-2">No</label>
             {%templatetag openvariable%}/if{%templatetag closevariable%}
+            </div>
         </td>
         <td>
-            <input type="text" style="border: none; width: 100%" value="${remotecondition}" >
+            <input type="text" style="width: 96%" value="${remotecondition}" >
         </td>
         <td>
-            <textarea style="width: 96%;border: 1px dotted silver" NAME="comments" COLS=30 ROWS=1>${args}</textarea>
+            <textarea style="width: 96%;border: 1px dotted silver" NAME="comments" COLS=30 ROWS=1 id="id_args-${id}">${args}</textarea>
         </td>
         <td>
             <button class="savebutton">Save</button>
@@ -367,7 +378,12 @@
 <script id="authTemplate" type="text/x-jquery-tmpl">
 
 <div class="infoholder" id="mfileholder-${id}" >
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"onmouseout="$('#id-${id}').hide();" >
+    <div id="image-${id}" class='fluid'
+                {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+                >
         <a href='/browse/${id}/'>
             <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}");' class='thumb'>
             <tbody>
@@ -543,8 +559,12 @@
 
 <script id="mfolderOAuthTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder">
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
-                                         onmouseout="$('#id-${id}').hide();" >
+    <div id="image-${id}" class='fluid'
+                 {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+                 >
             <table cellpadding='0' cellspacing='0' style='background-image:url("");' class='thumb'>
             <colgroup><col>
             </colgroup>
@@ -574,8 +594,12 @@
 
 <script id="mfileOAuthTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder">
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
-                                         onmouseout="$('#id-${id}').hide();" >
+    <div id="image-${id}" class='fluid'
+                 {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+                 >
             <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
             <colgroup><col>
             </colgroup>
@@ -612,8 +636,12 @@
 
 <script id="mfileTemplate" type="text/x-jquery-tmpl">
 <div class="infoholder" id="mfileholder-${id}" >
-    <div id="image-${id}" class='fluid' onmouseover="$('#id-${id}').show();"
-                                         onmouseout="$('#id-${id}').hide();" >
+    <div id="image-${id}" class='fluid'
+                  {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+            >
             <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}/");' class='thumb'>
             <colgroup><col>
             </colgroup>
@@ -648,18 +676,18 @@
     {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
 
         {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" >
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" >
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("image") {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" >
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" ></div>
          {%templatetag openvariable%}else{%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" >
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}/if{%templatetag closevariable%}
 
     {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-    </div>
+    
 </div>
 </script>
 
@@ -693,6 +721,11 @@
 </div>
 </script>
 
+<script id="importdialogTemplate" type="text/x-jquery-tmpl">
+    <div id="import-dialog-form" title="Import Data">
+        <p id="import-dialog-items"></p>
+    </div>
+</script>
 
 <script id="dialogTemplate" type="text/x-jquery-tmpl">
     

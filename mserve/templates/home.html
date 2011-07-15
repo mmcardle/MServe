@@ -34,16 +34,13 @@
 
             <h3>Admin <span class="red">Containers</span></h3>
 
-            <div class="paginator" id="containerpaginator" style="min-height: 230px;"></div>
+            <div id="containerpaginator" class="jcarousel-skin-tango" style="min-height: 230px;"></div>
             <div style="clear:both" id="containermessages"></div>
 
             <button id="createcontainerbutton" >New Container</button>
 
             <script type="text/javascript">
-                $(document).ready(function() {
-                    loadContainers();
-                    $("#createcontainerbutton" ).click(function() {  create_container() });
-                });
+
             </script>
 
     {% else %}
@@ -64,8 +61,7 @@
 
             </div>
 
-
-            <div id="user_mfileholder">
+            <div id="user_mfileholder" class="jcarousel-skin-tango">
 
             </div>
 
@@ -122,10 +118,16 @@
 {% endblock auths %}
 
 {% block bottomscript %}
+
+    
   {% if user.is_authenticated %}
     {% if user.is_staff %}
     <script type="text/javascript">
         isStaff= true
+        $(document).ready(function() {
+                    loadContainers();
+                    $("#createcontainerbutton" ).click(function() {  create_container() });
+        });
     </script>
     {% else %}
     <script type="text/javascript">
@@ -135,6 +137,7 @@
     <script type="text/javascript">
 
         $(document).ready(function() {
+
                 $('button').button();
                 $('#user-request-service-button').click( function(){
                     user_request_service("{% url user_requests %}")

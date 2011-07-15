@@ -443,6 +443,15 @@ class HostingContainer(NamedBase):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = container_metrics
 
+    def thumbs(self):
+        thumbs = []
+        for service in self.dataservice_set.all()[:4]:
+            for mfile in service.mfile_set.exclude(thumb__exact='')[:4]:
+                thumbs.append(mfile.thumburl())
+        for i in range(len(thumbs),16):
+                thumbs.append(os.path.join(mediapath,"images","package-x-generic.png"))
+        return thumbs
+
     def get(self,url, *args, **kwargs):
         if url == "services":
             return self.dataservice_set.all()
@@ -597,6 +606,14 @@ class DataService(NamedBase):
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
         self.metrics = service_metrics
+
+    def thumbs(self):
+        thumbs = []
+        for mfile in self.mfile_set.exclude(thumb__exact='')[:4]:
+            thumbs.append(mfile.thumburl())
+        for i in range(len(thumbs),4):
+            thumbs.append(os.path.join(mediapath,"images","package-x-generic.png"))
+        return thumbs
 
     def get(self,url, *args, **kwargs):
         if url == "mfiles":

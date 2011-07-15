@@ -189,7 +189,7 @@ class ServiceRequestHandler(BaseHandler):
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE',)
     model = HostingContainer
-    fields = ('name', 'id', 'dataservice_set','reportnum', ('properties', ('id','value','property', ), ), )
+    fields = ('name', 'id', ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  ) ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
     exclude = ()
 
     def read(self, request, id=None, murl=None):
@@ -232,7 +232,7 @@ class HostingContainerHandler(BaseHandler):
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE')
     model = DataService
-    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set')
+    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs')
     exclude = ('pk')
 
     def read(self,request, id=None, containerid=None):

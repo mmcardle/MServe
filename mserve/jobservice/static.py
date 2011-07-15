@@ -41,7 +41,7 @@ job_descriptions['dataservice.tasks.mfilefetch'] = {
     "input-0" : { "mimetype" : "video" },
     "output-0" : { "mimetype" : "application/octet-stream" },
     "options" : [],
-    "results" :[]
+    "results" :[],
 }
 job_descriptions['jobservice.tasks.copyfromurl'] = {
         "nbinputs" : 0,

@@ -45,8 +45,8 @@ function loadServices(containerid){
 
             // First Parameter: number of items
             // Second Parameter: options object
-            $("#servicepaginator").pagination(msg.length, {
-                    items_per_page:20,
+            $("#servicepaginator").pagination(services.length, {
+                    items_per_page:8,
                     callback:handlePaginationClick
             });
        }
@@ -105,16 +105,24 @@ function service_loadprofiles_remote(serviceid, tasks){
 
                 $(profileslice).each(function(pindex,profile){
                     $(profile.workflows).each(function(windex,workflow){
+
+                        $(workflow.tasks).each(function(tindex,task){
+
+                            $("#allowremotecheck-"+task.id).buttonset()
+
+                            //if( tasks["descriptions"][task.task_name] && tasks["descriptions"][task.task_name].examples ){
+                                //$( "#id_args-"+task.id ).autocomplete({
+                                //        source: tasks["descriptions"][task.task_name].examples
+                                //})
+                            //}
+                        });
+
                         $("#addbutton-workflow-"+workflow.id).button().click(
                             function(){
                                     data = $("#newtaskform-workflow-"+workflow.id).serialize()
                                     service_newprofile_ajax(serviceid,profile.id,workflow.id,data)
                             }
                         )
-
-                        //$(workflow.tasks).each(function(tindex,task){
-
-                        //}
 
                     });
                 });
@@ -141,7 +149,7 @@ function service_loadprofiles_remote(serviceid, tasks){
 function update_profile_buttons(){
     $(".savebutton").button().click( function(){showMessage("Alert","To be done")} );
     $(".delbutton").button().click( function(){showMessage("Alert","To be done ")} );
-    $(".allowremotecheck").button()
+    //$(".allowremotecheck").button()
 }
 
 function service_newprofile_ajax(serviceid,profileid,workflowid,data){

@@ -43,10 +43,11 @@ function loadContainers(){
                 return false;
             }
 
+
             // First Parameter: number of items
             // Second Parameter: options object
             $("#containerpaginator").pagination(msg.length, {
-                    items_per_page:20,
+                    items_per_page:4,
                     callback:handlePaginationClick
             });
        },

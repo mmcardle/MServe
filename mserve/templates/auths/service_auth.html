@@ -119,10 +119,6 @@
 
 </div>
 
-<div id="import-dialog-form" title="Import Data">
-        <p id="import-dialog-items"></p>
-</div>
-
 
 <script type="text/javascript">
     $(document).ready(function() {
@@ -136,9 +132,6 @@
             $("#dialog-new-job-dialog-form").dialog( "open" );
         });
         create_new_import_ui_dialog('{{auth.id}}',"{% url remoteservice %}","{% url consumer %}" )
-        $(function() {
-            $( "#tabs" ).tabs();
-        });
     });
 </script>
 
