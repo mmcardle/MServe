@@ -155,7 +155,7 @@ CELERY_QUEUES = {
 CELERY_DEFAULT_EXCHANGE = "tasks"
 CELERY_DEFAULT_EXCHANGE_TYPE = "topic"
 CELERY_DEFAULT_ROUTING_KEY = "task.default"
-#CELERY_RESULT_BACKEND = "amqp"
+CELERY_RESULT_BACKEND = "djcelery.backends.database.DatabaseBackend"
 
 class Router(object):
 
@@ -188,7 +188,6 @@ INSTALLED_APPS = (
     'jobservice',
     'prestoprime',
     'djcelery',
-    'celery',
     'request'
 )
 
