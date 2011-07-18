@@ -196,9 +196,13 @@ class DavServer(object):
                     else:
                         logging.error("Invalid Range Header '%s'" % (range_header))
 
-                path = object.file.path.encode("utf-8")
-                enc_url = urllib2.quote(path)
-                response["X-SendFile2"] = " %s %s" % (enc_url,range_string)
+                    path = object.file.path.encode("utf-8")
+                    enc_url = urllib2.quote(path)
+                    response["X-SendFile2"] = "%s %s" % (enc_url,range_string)
+                else:
+                    path = object.file.path.encode("utf-8")
+                    enc_url = urllib2.quote(path)
+                    response["X-SendFile"] = "%s" % (enc_url)
 
                 return response
         else:

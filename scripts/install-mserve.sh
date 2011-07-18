@@ -212,7 +212,7 @@ install_mod_auth_token() {
 #######################
 # install http server
 case $HTTP_SERVER in 
-	apache) apt-get -y install apache2 libapache2-mod-fastcgi
+	apache) apt-get -y install apache2 libapache2-mod-fastcgi libapache2-mod-xsendfile
 	        install_mod_auth_token	
 		;;
         lighttpd) apt-get -y install lighttpd
@@ -443,6 +443,7 @@ configure_apache () {
 	# create a new site, e.g. copy the default one
 	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
 	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/pp-dataservice-fcgi.sock\n\n\
+        XSendFile On\nXSendFileAllowAbove On\n\
 	Alias /media ${MSERVE_DATA}/www-root/media\n\n\
 	RewriteEngine On\n\
 	RewriteRule ^/(dl.*)$ /\$1 [QSA,L,PT]\n\
