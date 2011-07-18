@@ -329,7 +329,7 @@ cd ..
 #########################
 # Install django-request
 echo "installing django-request"
-django_request_url="git://github.com/kylef/django-request.git"
+django_request_url="https://github.com/kylef/django-request.git"
 git clone $django_request_url || f_ "failed to fetch django-request from $django_request_url"
 cd django-request
 python setup.py install || f_ "failed to install django-request"
