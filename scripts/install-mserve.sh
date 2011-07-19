@@ -121,6 +121,10 @@ if [ $# -ge 1 ]; then
 		f_ "specified MSERVE archive is not found"
 	fi
 	echo "MSERVE archive $MSERVE_ARCHIVE found"
+	MSERVE_ARCHIVE=$(pwd)/$MSERVE_ARCHIVE
+	if [ ! -f $MSERVE_ARCHIVE ]; then
+		f_ "failed to find absolute path of $MSERVE_ARCHIVE"
+	fi
 fi
 
 #############################################
@@ -246,12 +250,19 @@ rm mysql.preseed
 
 ######################
 # install django 1.2.3
-echo "Installing django_1.2.3-3"
-wget  http://security.debian.org/debian-security/pool/updates/main/p/python-django/python-django_1.2.3-3+squeeze1_all.deb || \
-	f_ "failed to fetch python-django_1.2.3-3"
+#echo "Installing django_1.2.3-3"
+#wget  http://security.debian.org/debian-security/pool/updates/main/p/python-django/python-django_1.2.3-3+squeeze1_all.deb || \
+#	f_ "failed to fetch python-django_1.2.3-3"
+#
+#dpkg -i python-django_1.2.3-3+squeeze1_all.deb || f_ "failed to install python-django"
+#rm python-django_1.2.3-3+squeeze1_all.deb
+apt-get -y remove python-django || f_ "failed to uninstall python-django"
+wget https://www.djangoproject.com/download/1.3/tarball/ || f_ "failed to fetch Django-1.2.tar.gz"
+mv index.html Django-1.3.tar.gz 
+tar xzf Django-1.3.tar.gz || f_ "failed to untar Django-1.3.tar.gz"
+cd Django-1.3
+python setup.py install || f_ "failed to install Django-1.3.tar.gz"
 
-dpkg -i python-django_1.2.3-3+squeeze1_all.deb || f_ "failed to install python-django"
-rm python-django_1.2.3-3+squeeze1_all.deb
 
 
 ##############################################################
@@ -331,6 +342,7 @@ cd ..
 echo "installing django-request"
 django_request_url="https://github.com/kylef/django-request.git"
 git clone $django_request_url || f_ "failed to fetch django-request from $django_request_url"
+#cp -r ../django-request .
 cd django-request
 python setup.py install || f_ "failed to install django-request"
 cd ..
@@ -362,8 +374,8 @@ if [ -z "$MSERVE_ARCHIVE" ]; then
 	git submodule update || f_ "failed to update submodule"
 else
 	# use the provided mserve archive, we assume tgz file
-	echo " from $MSERVE_ARCHIVE"
-	tar xvz $MSERVE_ARCHIVE || f_ "failed to untar MSERVE archive"
+	echo " $MSERVE_ARCHIVE"
+	tar xvfz $MSERVE_ARCHIVE || f_ "failed to untar MSERVE archive"
 	cd pp-dataservice
 fi
 
@@ -574,11 +586,13 @@ cat > initial_data.json <<JSON
 ]
 JSON
 
-sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py syncdb --noinput
+sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py syncdb --noinput || \
+	f_ "failed to create mserve database"
 rm initial_data.json
 
 # fix db
-mysql -u root -p$MYSQL_ROOT_PWD < ${MSERVE_HOME}/pp-dataservice/scripts/request_fix.sql
+mysql -u root -p$MYSQL_ROOT_PWD < ${MSERVE_HOME}/pp-dataservice/scripts/request_fix.sql || \
+	f_ "failed to fix mservedb"
 
 
 
@@ -588,12 +602,12 @@ mysql -u root -p$MYSQL_ROOT_PWD < ${MSERVE_HOME}/pp-dataservice/scripts/request_
 ###############################
 
 # start up mserver
-${MSERVE_HOME}/pp-dataservice/mserve/restart.sh
+${MSERVE_HOME}/pp-dataservice/mserve/restart.sh || f_ "failed to restart mserve"
 
 # Celery Startup in debugging mode
 #sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py celeryd --verbosity=2 --loglevel=DEBUG
 
-${MSERVE_HOME}/pp-dataservice/mserve/celeryd.sh
+${MSERVE_HOME}/pp-dataservice/mserve/celeryd.sh || f_ "failed to restart celeryd"
 
 print_summary
 
