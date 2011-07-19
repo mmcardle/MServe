@@ -884,7 +884,7 @@ class DavServer(object):
                 rangestart = int(ranges[0])
                 rangeend = int(ranges[1])
                 length = rangeend - rangestart
-                ranged = true
+                ranged = True
 
         if request.META.has_key('TRANSFER_ENCODING'):
             encoding_header = request.META['TRANSFER_ENCODING']
