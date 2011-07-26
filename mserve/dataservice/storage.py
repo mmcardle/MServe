@@ -23,7 +23,6 @@
 ########################################################################
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
-import time
 
 class SimulateTapeFileSystemStorage(FileSystemStorage):
 
@@ -31,7 +30,6 @@ class SimulateTapeFileSystemStorage(FileSystemStorage):
         super(SimulateTapeFileSystemStorage, self).__init__(location=location);
 
     def _open(self,name,mode='rb'):
-        time.sleep(10)
         return super(SimulateTapeFileSystemStorage, self)._open(name,mode);
 
 def gettapestorage():
