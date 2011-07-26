@@ -187,10 +187,24 @@ class ServiceRequestHandler(BaseHandler):
             return r
 
 class HostingContainerHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST', 'DELETE',)
+    allowed_methods = ('GET', 'POST', 'DELETE','PUT')
     model = HostingContainer
     fields = ('name', 'id', ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  ) ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
     exclude = ()
+
+    def update(self, request, id):
+        if request.user.is_staff:
+            hostingcontainer   =  HostingContainer.objects.get(id=id)
+            form = HostingContainerForm(request.POST,instance=hostingcontainer)
+            if form.is_valid():
+                hostingcontainer = form.save()
+                return hostingcontainer
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! ")
+                return r
+        else:
+            return HttpResponseForbidden()
 
     def read(self, request, id=None, murl=None):
 
@@ -224,7 +238,7 @@ class HostingContainerHandler(BaseHandler):
                 return hostingcontainer
             else:
                 r = rc.BAD_REQUEST
-                r.write("Invalid Request! %s " %s)
+                r.write("Invalid Request! %s " % (form))
                 return r
         else:
             return HttpResponseForbidden()

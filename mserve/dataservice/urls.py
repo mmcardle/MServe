@@ -57,7 +57,7 @@ urlpatterns = patterns('',
 
     # API v2
     url(r'^containers/$', hosting_handler),
-    url(r'^containers/(?P<id>[^/]+)/$', hosting_handler ),
+    url(r'^containers/(?P<id>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
     url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler ),
     url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler),
     url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler),

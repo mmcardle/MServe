@@ -24,6 +24,7 @@
 from django import forms
 from dataservice.models import *
 from django.forms import ModelForm
+from static import *
 
 ID_FIELD_LENGTH  = 200
 
@@ -37,7 +38,14 @@ class DataServiceTaskForm(ModelForm):
         #exclude=['id','workflow','task_name','condition','allowremote','remotecondition']
         model = DataServiceTask
 
+PROFILE_CHOICES = [  ]
+for k in default_profiles:
+    PROFILE_CHOICES.append( (k,k)  )
+
 class HostingContainerForm(ModelForm):
+    default_profile = forms.CharField(widget=forms.Select(choices=PROFILE_CHOICES),required=False, label="Services will be created with this profile")
+    default_path    = forms.CharField(label='Path after %s (Dont include leading slash)' % (settings.STORAGE_ROOT), required=False)
+
     class Meta:
         exclude=['id','status','reportnum','initial_usage_recorded','usages','properties']
         model = HostingContainer

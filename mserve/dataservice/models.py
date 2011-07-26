@@ -26,6 +26,7 @@ import storage
 import logging
 import datetime
 import os
+import shutil
 import utils as utils
 import settings
 import static as static
@@ -429,7 +430,9 @@ class NamedBase(Base):
         return self.name;
 
 class HostingContainer(NamedBase):
-    status      = models.CharField(max_length=200)
+    status              = models.CharField(max_length=200)
+    default_profile     = models.CharField(max_length=200,blank=True,null=True)
+    default_path        = models.CharField(max_length=200,blank=True,null=True)
 
     methods = ["GET","POST","PUT","DELETE"]
     urls = {
@@ -509,7 +512,11 @@ class HostingContainer(NamedBase):
         managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
 
-        managementproperty = ManagementProperty(property="profile",base=dataservice,value=DEFAULT_PROFILE)
+        pr = DEFAULT_PROFILE
+        if self.default_profile != None and self.default_profile != "":
+            pr = self.default_profile
+
+        managementproperty = ManagementProperty(property="profile",base=dataservice,value=pr)
         managementproperty.save()
 
         for profile_name in profiles.keys():
@@ -540,8 +547,6 @@ class HostingContainer(NamedBase):
 
                     dst = DataServiceTask(workflow=wf,task_name=task_name,condition=condition,allowremote=allowremote,remotecondition=remotecondition,args=args)
                     dst.save()
-
-
 
         return dataservice
 
@@ -798,7 +803,7 @@ class MFile(NamedBase):
     empty    = models.BooleanField(default=False)
     service  = models.ForeignKey(DataService)
     folder   = models.ForeignKey(MFolder,null=True)
-    file     = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
+    file     = models.FileField(upload_to=utils.mfile_upload_to,blank=True,null=True,storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
     size     = models.BigIntegerField(default=0)
@@ -972,7 +977,11 @@ class MFile(NamedBase):
             logging.info("Linking ")
             logging.info("   %s " % mfilefilepath )
             logging.info("to %s " % fullfilepath )
-            os.link(mfilefilepath,fullfilepath)
+            try:
+                os.link(mfilefilepath,fullfilepath)
+            except Exception as e:
+                logging.info("Caught error linking file, trying copy. %s" % str(e))
+                shutil.copy(mfilefilepath,fullfilepath)
 
         import dataservice.models as models
         

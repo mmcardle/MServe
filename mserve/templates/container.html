@@ -63,6 +63,21 @@
     <div id="tabs-3">
          {% if user.is_staff %}
 
+            <h3>Container Configuration</h3>
+
+            <div style="width:500px;">
+                <form id="containerupdateform" action="/services/{{service.id}}/mfiles/" method="POST"  style="width: 100%;height: 100%;" >
+                {{ hcform.as_p }}
+                </form>
+                <button id="containerupdatebutton">Update</button>
+
+                <script type="text/javascript">
+                    $(document).ready(function() {
+                        $("#containerupdatebutton" ).button().click(function() {  update_container('{% url hostingcontainer container.id %}') });
+                    });
+                </script>
+
+            </div>
 
             <h3>Management Properties</h3>
 
