@@ -33,7 +33,7 @@ function load_user(userurl,consumerurl,template){
                     end=mfiles.length;
                 }
 
-                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#user_mfileholder" );
+                $( template ).tmpl( mfiles.slice(start,end) ) .appendTo( "#user_mfileholder" );
                 return false;
             }
 
