@@ -54,19 +54,28 @@ class Job(NamedBase):
             
             dict["taskset_id"] = tsr.taskset_id
             results = []
-            for subtask in tsr.subtasks:
-                results.append({"name":subtask.task_name,"result":subtask.result,"success":subtask.successful(),"state":subtask.state})
-            dict["result"] = results
-            dict["completed_count"] = tsr.completed_count()
-            dict["failed"] = tsr.failed()
-            if tsr.total != 0:
-                dict["percent"] = float(tsr.completed_count())/float(tsr.total)*100
+            if tsr.subtasks:
+                for subtask in tsr.subtasks:
+                    results.append({"name":subtask.task_name,"result":subtask.result,"success":subtask.successful(),"state":subtask.state})
+                dict["completed_count"] = tsr.completed_count()
+                dict["failed"] = tsr.failed()
+                dict["total"] = tsr.total
+                if tsr.total != 0:
+                    dict["percent"] = float(tsr.completed_count())/float(tsr.total)*100
+                else:
+                    dict["percent"] = 0
+                dict["ready"] = tsr.ready()
+                dict["successful"] = tsr.successful()
+                dict["waiting"] = tsr.waiting()
             else:
+                dict["completed_count"] = 0
+                dict["failed"] = 0
+                dict["total"] = 0
                 dict["percent"] = 0
-            dict["ready"] = tsr.ready()
-            dict["successful"] = tsr.successful()
-            dict["total"] = tsr.total
-            dict["waiting"] = tsr.waiting()
+                dict["successful"] = False
+                dict["waiting"] = False
+            dict["result"] = results
+
             return dict
         else:
             dict["taskset_id"] = ""

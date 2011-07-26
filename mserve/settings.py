@@ -169,7 +169,7 @@ class Router(object):
         return None
 
 CELERY_ROUTES = (Router(), )
-CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks", "prestoprime.tasks" )
+CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks", "prestoprime.tasks", "postmark.tasks" )
 
 import djcelery
 djcelery.setup_loader()
@@ -187,6 +187,7 @@ INSTALLED_APPS = (
     'webdav',
     'jobservice',
     'prestoprime',
+    'postmark',
     'djcelery',
     'request'
 )
@@ -218,3 +219,7 @@ wuxga = (1920,1200)
 
 # For FGCI
 FORCE_SCRIPT_NAME = ''
+
+# POSTMARK SPECIFIC
+DIGITAL_RAPIDS_INPUT_DIR = "/mnt/postmark/postmark/input/"
+DIGITAL_RAPIDS_OUTPUT_DIR = "/mnt/postmark/postmark/output/"

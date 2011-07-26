@@ -103,3 +103,11 @@ job_descriptions['prestoprime.tasks.extractd10frame'] = {
         "options":['frame'],
         "results" : []
     }
+job_descriptions['digitalrapids'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "video" },
+        "output-0" : { "mimetype" : "video/mp4" },
+        "options":[],
+        "results" : []
+}
