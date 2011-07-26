@@ -35,7 +35,7 @@ import urllib
 import random
 import os
 import sys
-
+import logging
 
 fmt = "%3.2f"
 
@@ -103,7 +103,18 @@ def clean_mfile(mfile):
     mfiledict["size"] = mfile.size
     return mfiledict
 
+def mfile_upload_to(instance, filename):
+    timeformat = time.strftime("%Y/%m/%d/")
+    if instance.service.container.default_path != None and instance.service.container.default_path != "":
+        return os.path.join(instance.service.container.default_path, timeformat , random_id() ,filename)
+    return os.path.join(timeformat , random_id() ,filename)
+
 def create_filename(instance, filename):
+
+    logging.info(instance)
+    logging.info(filename)
+    logging.info(instance.service)
+
     timeformat = time.strftime("%Y/%m/%d/")
     return os.path.join(timeformat , random_id() ,filename)
 
