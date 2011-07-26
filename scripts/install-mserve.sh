@@ -31,22 +31,29 @@
 # 
 #################################################
 #
-# At this point we assume the following:
-# mserve username: www-data password: panos
-# mysql root password: pass
+# At this point we assume the following default 
+# values:
+# mserve username: www-data password: rand() 
+# mysql root password: rand()
 # installation directory /var/opt/mserve
 # mserve data directory: /var/opt/mserve-data
 #
 #################################################
 
+
 MSERVE_HOME=/var/opt/mserve
 MSERVE_DATA=/var/opt/mserve-data
 MSERVE_ADMIN_USER="admin"
 MSERVE_ADMIN_EMAIL="admin@my.email.com"
-MSERVE_ADMIN_PASSWD="password"
+MSERVE_ADMIN_PASSWD=
+MSERVE_DATABASE_USER=mserve
+MSERVE_DATABASE_PASSWORD=
 HTTP_SERVER=apache
 VERBOSE=
 MSERVE_ARCHIVE=
+DATABASE_ADMIN_USER=root
+DATABASE_ADMIN_PASSWORD=
+
 
 ###############
 # print usage
@@ -57,13 +64,16 @@ usage_f() {
 	-d <MSERVE data directory>	# default: /var/opt/mserve-data
 	-s <MSERVE HTTP server>     	# [apache|lighttpd] default: apache
 	-u <MSERVE admin user name> 	# administrtor user name, default: admin
-	-p <MSERVE admin password>	# default: password
+	-p <MSERVE admin password>	# admin password
 	-e <MSERVE admin email>		# administrator email, default: admin@my.email.com
+	-U <Database admin user>	# Database admin user, default root
+	-P <Database admin password>	# Database admin password
 	-v verbose mode
 
 	example: $0 -s apache
 "
 }
+
 
 ###################################
 # report a fault and exit function
@@ -73,9 +83,14 @@ f_ () {
 }
 
 
+gen_password () {
+	openssl rand -base64 8 | sed 's/0/2/;s/=//;s/O/P/;s/l/s/;s/1/2/;s/\//j/'
+}
+
+
 ###################################
 # parse input options arguments
-while getopts 'm:d:s:u:e:p:hv' OPTION
+while getopts 'm:d:s:u:e:p:U:P:hv' OPTION
 do
 	case $OPTION in
 		m) MSERVE_HOME=$OPTARG
@@ -99,6 +114,10 @@ do
 			;;
 		p) MSERVE_ADMIN_PASSWD=$OPTARG
 			;;
+		U) DATABASE_ADMIN_USER=$OPTARG
+			;;
+		P) DATABASE_ADMIN_PASSWORD=$OPTARG
+			;;
 		v) VERBOSE="ON"
 			;;
 		h|\?) usage_f
@@ -110,6 +129,7 @@ do
 			;;
 	esac
 done
+
 
 ##############################################
 # check for mserve archive argument provided
@@ -127,20 +147,57 @@ if [ $# -ge 1 ]; then
 	fi
 fi
 
+
+#######################
+# check for passwords
+if [ -n $MSERVE_ADMIN_PASSWD ]; then
+	echo "MSERVE admin password is not set, generating a new one"
+	MSERVE_ADMIN_PASSWD=$(gen_password)
+fi
+
+
+echo "Generating password for MSERVE database user"
+MSERVE_DATABASE_PASSWORD=$(gen_password)
+
+if [ -n $DATABASE_ADMIN_PASSWORD ]; then
+	echo "Database admin password is not set, generating a new one"
+	DATABASE_ADMIN_PASSWORD=$(gen_password)
+fi
+	
+
 #############################################
 # print installation configuration summary
 print_summary() {
+	date_stamp=$(date)
 	echo "
-	MSERVE installation summary configuration:
+	MSERVE installation summary $date_stamp
+        	
+	Configuration:
 	
 	MSERVE_HOME=$MSERVE_HOME
 	MSERVE_DATA=$MSERVE_DATA
+
 	HTTP_SERVER=$HTTP_SERVER
+
 	MSERVE_ADMIN_USER=$MSERVE_ADMIN_USER
 	MSERVE_ADMIN_PASSWD=$MSERVE_ADMIN_PASSWD
 	MSERVE_ADMIN_EMAIL=$MSERVE_ADMIN_EMAIL
+
+	DATABASE_ADMIN_USER=$DATABASE_ADMIN_USER
+	DATABASE_ADMIN_PASSWORD=$DATABASE_ADMIN_PASSWORD
+
+	MSERVE_DATABASE_USER=$MSERVE_DATABASE_USER
+	MSERVE_DATABASE_PASSWORD=$MSERVE_DATABASE_PASSWORD
+
+	NB: the above information is stored under $MSERVE_HOME/installation_summary.txt
 	"
 }
+
+echo "##############################
+# Do not edit or remove this file
+
+" > /root/installation_summary.txt
+print_summary >> /root/installation_summary.txt
 
 
 ######################################
@@ -185,6 +242,7 @@ apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wge
 apt-get -y install git-core mercurial ffmpegthumbnailer || \
 	f_ "failed to install git-core mercurial ffmpegthumbnailer"
 
+
 ##########################################
 # skip rabbitmq-server confirmation screen
 echo "rabbitmq-server	rabbitmq-server/upgrade_previous	note" > rabbitmq.preseed
@@ -193,6 +251,7 @@ cat rabbitmq.preseed | sudo debconf-set-selections
 apt-get -y install rabbitmq-server || f_ "failed to install rabbitmq-server" || \
 	f_ "failed to install rabbitmq-server"
 rm rabbitmq.preseed
+
 
 ###################################
 # install other basic prerequisites
@@ -224,6 +283,8 @@ case $HTTP_SERVER in
 esac
 
 
+##################
+# install erlang
 apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
@@ -238,7 +299,7 @@ apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 # 
 # in order to avoid mysql prompts it can be installed as:
 echo "Installing MySQL"
-MYSQL_ROOT_PWD=pass
+MYSQL_ROOT_PWD=$DATABASE_ADMIN_PASSWORD
 echo "mysql-server-5.1 mysql-server/root_password password $MYSQL_ROOT_PWD" > mysql.preseed
 echo "mysql-server-5.1 mysql-server/root_password_again password $MYSQL_ROOT_PWD" >> mysql.preseed
 echo "mysql-server-5.1 mysql-server/start_on_boot boolean true" >> mysql.preseed
@@ -257,7 +318,7 @@ rm mysql.preseed
 #dpkg -i python-django_1.2.3-3+squeeze1_all.deb || f_ "failed to install python-django"
 #rm python-django_1.2.3-3+squeeze1_all.deb
 apt-get -y remove python-django || f_ "failed to uninstall python-django"
-wget https://www.djangoproject.com/download/1.3/tarball/ || f_ "failed to fetch Django-1.2.tar.gz"
+wget https://www.djangoproject.com/download/1.3/tarball/ || f_ "failed to fetch Django-1.3.tar.gz"
 mv index.html Django-1.3.tar.gz 
 tar xzf Django-1.3.tar.gz || f_ "failed to untar Django-1.3.tar.gz"
 cd Django-1.3
@@ -284,9 +345,14 @@ rm rabbitmq-server_2.5.1-1_all.deb
 echo "PART-II MServe configuration"
 
 
-###########################
-# Create mservedb database
+#############################################
+# Create mserve users and mservedb database
+echo "Create mserve users and mservedb database"
 echo "CREATE DATABASE mservedb;" | mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mservedb database"
+echo "CREATE USER '$MSERVE_DATABASE_USER'@'localhost' IDENTIFIED BY '$MSERVE_DATABASE_PASSWORD'; \
+	GRANT ALL ON mservedb.* TO '$MSERVE_DATABASE_USER';" | \
+	mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mserve database user"
+
 
 
 ############################################################
@@ -368,7 +434,7 @@ if [ -z "$MSERVE_ARCHIVE" ]; then
 	cd pp-dataservice
 
 	# checkout mm version
-	#git checkout mm-pp-dataservice
+	git checkout mm-pp-dataservice
 
 	git submodule init || f_ "failed to init submodule"
 	git submodule update || f_ "failed to update submodule"
@@ -378,6 +444,7 @@ else
 	tar xvfz $MSERVE_ARCHIVE || f_ "failed to untar MSERVE archive"
 	cd pp-dataservice
 fi
+
 
 #########################################
 # Configuring MSERVE in standalone mode
@@ -389,7 +456,9 @@ chown -R www-data:www-data ${MSERVE_DATA}
 #####################################
 #Configuration of mserve settings.py
 mv mserve/settings.py mserve/settings_dist.py
-sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g" \
+sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g; \
+	s#\('USER'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_USER\2#; \
+	s#\('PASSWORD'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_PASSWORD\2#" \
 	mserve/settings_dist.py > mserve/settings.py
 
 
@@ -410,6 +479,7 @@ sed -e "s#\./manage.py#${MSERVE_HOME}/pp-dataservice/mserve/manage.py#g; s#/var/
 chmod +x mserve/celeryd.sh
 cd ..
 
+
 ##################################
 # configure lighttpd
 configure_lighttpd () {
@@ -424,7 +494,8 @@ configure_lighttpd () {
 		cp  /etc/lighttpd/lighttpd.conf /etc/lighttpd/lighttpd.conf-dist
 	fi
 
-	cat /etc/lighttpd/lighttpd.conf | sed -e "s@^# *\"mod_rewrite\"@            \"mod_rewrite\"@ ; s@^server.document-root *= \"/var/www/\" *\$@server.document-root = \"${MSERVE_DATA}/www-root\"@" > /tmp/lighttpd.conf
+	cat /etc/lighttpd/lighttpd.conf | sed -e "s@^# *\"mod_rewrite\"@            \"mod_rewrite\"@ ; \
+		s@^server.document-root *= \"/var/www/\" *\$@server.document-root = \"${MSERVE_DATA}/www-root\"@" > /tmp/lighttpd.conf
 
 	cp /tmp/lighttpd.conf /etc/lighttpd/lighttpd.conf
 
@@ -453,7 +524,8 @@ configure_apache () {
 	local _source=/etc/apache2/sites-available/default
 	local _target=/etc/apache2/sites-available/mserve
 	# create a new site, e.g. copy the default one
-	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
+	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; \
+		s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
 	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/pp-dataservice-fcgi.sock\n\n\
         XSendFile On\nXSendFileAllowAbove On\n\
 	Alias /media ${MSERVE_DATA}/www-root/media\n\n\
@@ -504,9 +576,9 @@ esac
 
 
 
-###################################
+####################################
 # PART III deploy mserve in /var/opt
-###################################
+####################################
 
 ########################################################################
 # changing permissions and running the rest from /opt/mserve as www-data
@@ -587,13 +659,19 @@ cat > initial_data.json <<JSON
 JSON
 
 sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py syncdb --noinput || \
-	f_ "failed to create mserve database"
+	f_ "failed to configure mserve database"
 rm initial_data.json
 
 # fix db
-mysql -u root -p$MYSQL_ROOT_PWD < ${MSERVE_HOME}/pp-dataservice/scripts/request_fix.sql || \
+mysql -u $MSERVE_DATABASE_USER -p$MSERVE_DATABASE_PASSWORD < ${MSERVE_HOME}/pp-dataservice/scripts/request_fix.sql || \
 	f_ "failed to fix mservedb"
 
+
+echo "##############################
+# Do not edit or remove this file
+
+" > ${MSERVE_HOME}/.installation_summary.txt
+print_summary >> ${MSERVE_HOME}/.installation_summary.txt
 
 
 
@@ -609,6 +687,17 @@ ${MSERVE_HOME}/pp-dataservice/mserve/restart.sh || f_ "failed to restart mserve"
 
 ${MSERVE_HOME}/pp-dataservice/mserve/celeryd.sh || f_ "failed to restart celeryd"
 
+# sometimes apache needs restarting
+if [ $HTTP_SERVER == "apache" ]; then
+	if [ ! /etc/init.d/apache2 ]; then
+		echo "restarting apache"
+		/etc/init.d/apache2 restart || f_ "failed to restart apache"
+	fi
+fi
+
+#print_summary | tee ${MSERVE_HOME}/installation_summary.txt
+mv /root/installation_summary.txt ${MSERVE_HOME}/.installation_summary.txt || \
+	f_ "failed to copy installation summary from /root to ${MSERVE_HOME}"
 print_summary
 
 exit
