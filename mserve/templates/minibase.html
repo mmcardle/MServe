@@ -29,6 +29,36 @@
 <script type="text/javascript" src="/mservemedia/js/jquery-file-upload/jquery.fileupload-ui.js"></script>
 <script type="text/javascript" src="/mservemedia/js/uploader.js" ></script>
 
+{% if mobile_browser %}
+    <script type="text/javascript">
+        mobile_browser = true
+    </script>
+    <style>
+    .thumb .info {
+        font-size:12px;
+        color:black;
+        display: block;
+        text-align:left;
+        margin: 1px;
+        height:80px;
+    }
+    </style>
+    {% else %}
+        <script type="text/javascript">
+        mobile_browser = false
+    </script>
+    <style>
+    .thumb .info {
+        font-size:12px;
+        color:black;
+        display: none;
+        text-align:left;
+        margin: 1px;
+        height:80px;
+    }
+    </style>
+ {% endif %}
+
 <!--<link rel="stylesheet" href="style.css" />-->
 <title>{% block title %}MServe{% endblock %}</title>
 
