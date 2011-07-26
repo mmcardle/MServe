@@ -23,6 +23,7 @@
 ########################################################################
 from django.http import HttpResponseNotFound
 import os
+import shutil
 import os.path
 import logging
 from celery.task.sets import TaskSet
@@ -165,13 +166,11 @@ class JobHandler(BaseHandler):
             logging.info("S %s" % auth)
             if utils.is_service(auth.base):
                 ds = DataService.objects.get(id=auth.base.id)
-                logging.info("DS 1")
                 return ds.do("GET","jobs")
 
                 jobs = Job.objects.filter(mfile=auth.base.id)
                 return jobs
             if utils.is_mfile(auth.base):
-                logging.info("DS 2")
                 jobs = Job.objects.filter(mfile=auth.base.id)
                 return jobs
 
@@ -241,7 +240,11 @@ class JobOutputContentsHandler(BaseHandler):
 
         if not os.path.exists(fullfilepath):
             logging.info("linking %s (exist=%s) to %s (exists=%s)" % (outputfilepath,os.path.exists(outputfilepath),fullfilepath,os.path.exists(fullfilepath)))
-            os.link(outputfilepath,fullfilepath)
+            try:
+                os.link(outputfilepath,fullfilepath)
+            except Exception as e:
+                logging.info("Caught error linking file, trying copy. %s" % str(e))
+                shutil.copy(outputfilepath,fullfilepath)
 
         usage_store.record(joboutput.id,models.metric_access,joboutput.file.size)
 
