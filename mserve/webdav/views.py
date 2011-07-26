@@ -116,6 +116,19 @@ class DavServer(object):
         self.id = id
 
     def handle(self, request):
+
+        if request.META.has_key("SERVER_SOFTWARE"):
+            sw = request.META["SERVER_SOFTWARE"]
+            logging.info(sw)
+            if sw.startswith("Apache"):
+                self.apache = True
+            else:
+                self.apache = False
+            if sw.startswith("lighttpd"):
+                self.lighttpd = True
+            else:
+                self.lighttpd = False
+
         if request.method == 'COPY':
             return self._handle_copy(request)
         elif request.method == 'DELETE':
@@ -188,21 +201,27 @@ class DavServer(object):
 
                 range_string = "0-"
 
-                if request.META.has_key("HTTP_RANGE"):
-                    range_header = request.META['HTTP_RANGE']
-                    range_split = range_header.split('=')
-                    if len(range_split)>1:
-                        range_string = range_split[1]
-                    else:
-                        logging.error("Invalid Range Header '%s'" % (range_header))
+                path = object.file.path.encode("utf-8")
+                enc_url = urllib2.quote(path)
 
-                    path = object.file.path.encode("utf-8")
-                    enc_url = urllib2.quote(path)
-                    response["X-SendFile2"] = "%s %s" % (enc_url,range_string)
-                else:
-                    path = object.file.path.encode("utf-8")
-                    enc_url = urllib2.quote(path)
+                if self.apache:
+                    # Apache can deal with range requests itself
                     response["X-SendFile"] = "%s" % (enc_url)
+                else:
+                    # lighttpd needs help to deal with range requests
+                    if request.META.has_key("HTTP_RANGE"):
+                        range_header = request.META['HTTP_RANGE']
+			logging.info(range_header)
+			range_header = range_header.replace("/*","")
+                        range_split = range_header.split('=')
+                        if len(range_split)>1:
+                            range_string = range_split[1]
+                        else:
+                            logging.error("Invalid Range Header '%s'" % (range_header))
+
+                        response["X-SendFile2"] = "%s %s" % (enc_url,range_string)
+                    else:
+                        response["X-SendFile"] = "%s" % (enc_url)
 
                 return response
         else:
