@@ -157,8 +157,11 @@ def render_container(request,id,form=DataServiceForm()):
     usagesummary = usage_store.get_usage_summary(container.id)
 
     managementpropertyform = ManagementPropertyForm()
+    hcform = HostingContainerForm(instance=container)
+
     dict = {}
     dict["container"] = container
+    dict["hcform"] = hcform
     dict["services"] = services
     dict["properties"] = properties
     dict["form"] = form
