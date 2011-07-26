@@ -110,11 +110,6 @@ def mfile_upload_to(instance, filename):
     return os.path.join(timeformat , random_id() ,filename)
 
 def create_filename(instance, filename):
-
-    logging.info(instance)
-    logging.info(filename)
-    logging.info(instance.service)
-
     timeformat = time.strftime("%Y/%m/%d/")
     return os.path.join(timeformat , random_id() ,filename)
 
