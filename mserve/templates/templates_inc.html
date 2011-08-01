@@ -742,7 +742,7 @@
 </script>
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
-    {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
+    {%templatetag openvariable%}if thumburl != "" {%templatetag closevariable%}
         <a  target='_blank' href='/joboutputs/${id}/contents' ><img id="joboutput-${id}" src='${thumburl}' /></a>
     {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
         <div id="text-${id}" style="width:100%;height:200px;overflow: scroll;border: 1px inset silver;padding: 0px;margin: 5px;" ></div>

@@ -26,6 +26,7 @@ from dataservice.models import *
 from dataservice import utils
 from dataservice import storage
 from dataservice.tasks import thumboutput
+from dataservice.tasks import thumbvideooutput
 from celery.result import TaskSetResult
 
 thumbpath = settings.THUMB_PATH
@@ -111,8 +112,12 @@ class JobOutput(NamedBase):
         if not self.id:
             self.id = utils.random_id()
 
-        if self.file and not self.thumb and self.mimetype.startswith('image'):
-            options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
-            thumboutput.delay([self.id],[],options)
+        if self.file and not self.thumb:
+            if self.mimetype.startswith('image'):
+                options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumboutput.delay([self.id],[],options)
+            if self.mimetype.startswith('video'):
+                options = {"width":settings.thumbsize[0],"height":settings.thumbsize[1]}
+                thumbvideooutput.delay([self.id],[],options)
 
         super(JobOutput, self).save()

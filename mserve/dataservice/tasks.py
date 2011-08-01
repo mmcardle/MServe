@@ -685,6 +685,43 @@ def thumboutput(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with thumbimage %s" % e)
         raise e
 
+@task(default_retry_delay=15,max_retries=3)
+def thumbvideooutput(inputs,outputs,options={},callbacks=[]):
+
+    try:
+        inputid = inputs[0]
+
+        widthS = options["width"]
+        heightS = options["height"]
+        height = int(heightS)
+        width  = int(widthS)
+
+        from mserve.jobservice.models import JobOutput
+        jo = JobOutput.objects.get(pk=inputid)
+        path = jo.file.path
+
+        logging.info("Creating %sx%s image for %s" % (width,height,inputid))
+
+        image = _thumbvideo(path,width,height)
+
+        if image:
+
+            if not _save_output_thumb(inputid,image):
+                thumbvideooutput.retry([inputs,outputs,options,callbacks])
+
+            logging.info("Thumbnail created %s" % (image))
+
+            for callback in callbacks:
+                subtask(callback).delay()
+
+            return {"success":True,"message":"Thumbnail '%sx%s' successful"%(width,height)}
+        else:
+            raise Exception("Could not create image")
+
+    except Exception as e:
+        logging.info("Error with thumbimage %s" % e)
+        raise e
+
 def _save_poster(mfileid,image):
 
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
