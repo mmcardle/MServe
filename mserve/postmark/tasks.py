@@ -17,8 +17,8 @@
 # the software.
 #
 #	Created By :			Mark McArdle
-#	Created Date :			2011-03-25
-#	Created for Project :		PrestoPrime
+#	Created Date :			2011-07-26
+#	Created for Project :		Postmark
 #
 ########################################################################
 from celery.decorators import task
@@ -45,23 +45,39 @@ import settings as settings
 def _drop_folder(filepath,inputfolder,outputfolder):
 
     try:
-        name = os.path.basename(filepath)
+        uid = utils.unique_id()
+        name = "%s_%s" % (uid,os.path.basename(filepath))
         inputfile = os.path.join(inputfolder,name)
         outputfile = os.path.join(outputfolder,name)
         shutil.copy(filepath, inputfile)
 
         exists = os.path.exists(outputfile)
 
+        # Wait till file exists
         while not exists:
             logging.info("Output file %s doesnt exist, sleeping" % outputfile)
             time.sleep(10)
             exists = os.path.exists(outputfile)
 
+        # Wait until file stops growing
+        growing = True
+        size = os.path.getsize(outputfile)
+        logging.info("Size is %s"%str(size))
+        while growing:
+            time.sleep(10)
+            newsize = os.path.getsize(outputfile)
+            logging.info("Size is now %s"%str(newsize))
+            growing = (size!=newsize)
+            size = newsize
+            logging.info("File Growing  %s"% growing)
+
         return outputfile
 
 
     except Exception as e:
-        pass
+        logging.info("Error with watching drop folder %s" % e)
+        raise e
+
 
 @task(name="digitalrapids")
 def digitalrapids(inputs,outputs,options={},callbacks=[]):
@@ -69,13 +85,10 @@ def digitalrapids(inputs,outputs,options={},callbacks=[]):
     baseinputdir    = settings.DIGITAL_RAPIDS_INPUT_DIR
     baseoutputdir   = settings.DIGITAL_RAPIDS_OUTPUT_DIR
 
-    uid = utils.unique_id()
-    inputdir    = os.path.join(baseinputdir,uid)
-    outputdir   = os.path.join(baseoutputdir,uid)
+    inputdir    = os.path.join(baseinputdir)
+    outputdir   = os.path.join(baseoutputdir)
     
     try:
-        os.makedirs(inputdir)
-        os.makedirs(outputdir)
     
         mfileid = inputs[0]
         joboutput = outputs[0]
@@ -90,11 +103,15 @@ def digitalrapids(inputs,outputs,options={},callbacks=[]):
 
         video = _drop_folder(videopath,inputdir,outputdir)
 
+        from dataservice import usage_store
+        inputfilesize = os.path.getsize(videopath)
+        usage_store.record(mfileid,"http://mserve/digitalrapids",inputfilesize)
+
         videofile = open(video,'r')
 
         from mserve.jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput)
-        jo.file.save('transcode.mp4', File(videofile), save=True)
+        jo.file.save('transcode.mov', File(videofile), save=True)
 
         videofile.close()
 
