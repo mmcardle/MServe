@@ -1190,9 +1190,10 @@ class MFile(NamedBase):
         return os.path.join(mediapath,"images","package-x-generic.png")
 
     def proxyurl(self):
-        if self.poster and self.poster != "":
+        if self.proxy and self.proxy != "":
             return "%s%s" % (thumbpath,self.proxy)
         else:
+            return ""
             if self.mimetype:
                 if self.mimetype.startswith("image"):
                     return os.path.join(mediapath,"images","image-x-generic.png")
