@@ -27,13 +27,19 @@ DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 DEFAULT_CHARSET = 'utf-8'
 
+import os
+MSERVE_HOME='/opt/mserve'
+MSERVE_DATA='/var/opt/mserve-data'
+MSERVE_LOG='/var/log/mserve'
+
+
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(pathname)s %(lineno)d %(asctime)s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M:%S',
     #change as needed
-    filename='/var/mserve/mserve.log',
+    filename=os.path.join(MSERVE_LOG, 'mserve.log'),
     filemode='a'
 )
 
@@ -77,13 +83,13 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = '/var/mserve/www-root/mservemedia/'
-THUMB_ROOT = '/var/mserve/www-root/mservethumbs/'
+MEDIA_ROOT = os.path.join(MSERVE_DATA, 'mservemedia/') 
+THUMB_ROOT = os.path.join(MSERVE_DATA, 'www-root/mservethumbs/')
 THUMB_PATH = "/mservethumbs/"
 
 # MServe Specific Settings
-STORAGE_ROOT = '/var/mserve/mservedata/'
-SECDOWNLOAD_ROOT = '/var/mserve/'
+STORAGE_ROOT = os.path.join(MSERVE_DATA, 'mservedata/')
+SECDOWNLOAD_ROOT = os.path.join(MSERVE_DATA+"/")
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
@@ -128,7 +134,8 @@ ROOT_URLCONF = 'mserve.urls'
 TEMPLATE_DIRS = (
 
     # Change to where your checkout is
-    "/opt/mserve/pp-dataservice/mserve/templates",
+    os.path.join(MSERVE_HOME, "templates"),
+    #"/opt/mserve/pp-dataservice/mserve/templates",
     # Change to where the admin templates are
     "/usr/lib/pymodules/python2.6/django/contrib/admin/templates/",
     

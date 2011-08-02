@@ -41,8 +41,9 @@
 #################################################
 
 
-MSERVE_HOME=/var/opt/mserve
+MSERVE_HOME=/opt/mserve
 MSERVE_DATA=/var/opt/mserve-data
+MSERVE_LOG=/var/log/mserve
 MSERVE_ADMIN_USER="admin"
 MSERVE_ADMIN_EMAIL="admin@my.email.com"
 MSERVE_ADMIN_PASSWD=
@@ -58,22 +59,24 @@ CONFIGURATION=
 
 COMMAND=install
 
-date_stamp=$(date +"%F")
+date_stamp=$(date +%F)
 
 ##############
 # print usage
 usage_f() {
-	echo "usage: $0 [-m mserve home] [-d mserve data] [-s http server] [mserve tarball]
+	echo "usage: $0 [-m mserve home] [-d mserve data] [-s http server] [-t mserve tarball]
 	OPTIONS:
-	-c <install|update|uninstall>	# scritp operation, default: install
+	-c <install|update|uninstall>	# script operation, default: install
 	-m <MSERVE home directory>	# default: /var/opt/mserve
 	-d <MSERVE data directory>	# default: /var/opt/mserve-data
+	-l <MSERVE log directory>	# defautl: /var/log/mserve
 	-s <MSERVE HTTP server>     	# [apache|lighttpd] default: apache
 	-u <MSERVE admin user name> 	# administrtor user name, default: admin
 	-p <MSERVE admin password>	# admin password
 	-e <MSERVE admin email>		# administrator email, default: admin@my.email.com
 	-U <Database admin user>	# Database admin user, default root
 	-P <Database admin password>	# Database admin password
+	-t <mserve tarball>  		# MSERVE distribution archive
 	-v verbose mode
 
 	example: $0 -s apache
@@ -82,9 +85,10 @@ usage_f() {
 
 
 ###################################
-# report a fault and exit function
+# report fault and exit function
 f_ () {
-	echo $1
+	printf "\033[01;31m\nMSERVE setup %s\n\n" "$1"
+	tput sgr0
 	exit 2
 }
 
@@ -97,8 +101,7 @@ gen_password () {
 ##############################################
 # check for mserve archive argument provided
 check_mserve_archive () {
-	if [ $# -ge 1 ]; then
-		MSERVE_ARCHIVE=$1
+	if [ -n $MSERVE_ARCHIVE ]; then
 
 		# check if archive exists
 		if [ ! -f $MSERVE_ARCHIVE ]; then
@@ -109,7 +112,10 @@ check_mserve_archive () {
 		if [ ! -f $MSERVE_ARCHIVE ]; then
 			f_ "failed to find absolute path of $MSERVE_ARCHIVE"
 		fi
+	else
+		echo "MSERVE archive file is not provided"
 	fi
+
 }
 
 #######################
@@ -126,7 +132,7 @@ check_mysql_password () {
 		echo "no password provided for mysql, try connect with no password"
 		verify_pass=$(mysql -u root -Bse 'show databases')
 		if [ $? -ne 0 ]; then
-			f_ "failed to connect to mysql, service requires a root password, run installer with -P argument"
+			f_ "failed to connect to mysql, setup requires db root password, run installer with -P argument"
 		fi
 	else
 		echo "verify mysql connection with provided password"
@@ -172,7 +178,7 @@ check_mysql_status() {
 #############################################
 # print installation configuration summary
 print_summary() {
-	date_stamp=$(date)
+	local date_stamp=$(date)
 	echo "
 # MSERVE installation summary $date_stamp
         	
@@ -180,6 +186,7 @@ print_summary() {
 	
 _MSERVE_HOME=$MSERVE_HOME
 _MSERVE_DATA=$MSERVE_DATA
+_MSERVE_LOG=$MSERVE_LOG
 
 _HTTP_SERVER=$HTTP_SERVER
 
@@ -211,7 +218,7 @@ check_os_release () {
 	release=$(lsb_release -r | awk '{print $2}')
 	if [ "$release" != "10.04" ]; then
 		echo "this system is not Ubuntu 10.04 TLS"
-		#exit 1
+		exit 1
 	fi
 }
 
@@ -220,12 +227,14 @@ check_os_release () {
 
 ####################################
 # parse input options arguments
-while getopts 'm:d:s:u:e:p:U:P:c:hv' OPTION
+while getopts 'm:d:s:l:u:e:p:U:P:t:c:hv' OPTION
 do
 	case $OPTION in
 		m) MSERVE_HOME=$OPTARG
 			;;
 		d) MSERVE_DATA=$OPTARG
+			;;
+		l) MSERVE_LOG=$OPTARG
 			;;
 		s) HTTP_SERVER=$OPTARG
 			case $OPTARG in
@@ -247,6 +256,8 @@ do
 		U) DATABASE_ADMIN_USER=$OPTARG
 			;;
 		P) DATABASE_ADMIN_PASSWORD=$OPTARG
+			;;
+		t) MSERVE_ARCHIVE=$OPTARG
 			;;
 		c) COMMAND=$OPTARG
 			;;	
@@ -337,8 +348,8 @@ DROPDB
 
 	# remove system packages
 
-
-
+	printf "\033[01;32m\nMSERVE uninstall completed successfully.\n"
+	tput sgr0
 }
 
 update_mserve () {
@@ -351,6 +362,7 @@ update_mserve () {
 	#update variables
 	MSERVE_HOME=$_MSERVE_HOME
 	MSERVE_DATA=$_MSERVE_DATA
+	MSERVE_LOG=$_MSERVE_LOG
 
 	HTTP_SERVER=$_HTTP_SERVER
 
@@ -369,6 +381,7 @@ update_mserve () {
 echo -en "\n\n\tStarting MSERVE "
 case $COMMAND in
 	install) echo -e "installation\n\n"
+		COMMAND="installation"
 		if [ -d $MSERVE_HOME ]; then
 			echo "An existing installation of MSERVE found in $MSERVE_HOME. 
 Please use the -c argument to either update (-c update) the existing one,
@@ -406,8 +419,7 @@ print_summary
 
 echo "##############################
 # Do not edit or remove this file
-
-" > /root/installation_summary.txt
+" > /root/installation_summary.tmp
 print_summary >> /root/installation_summary.tmp
 
 # check if root is running the script and OS release
@@ -423,6 +435,7 @@ check_os_release
 
 ##################################################
 echo "PART-I installing MServe prerequisites"
+##################################################
 
 #################################################
 # upgrade system
@@ -433,7 +446,7 @@ echo "PART-I installing MServe prerequisites"
 
 #############################
 # update system repositories
-#apt-get update || f_ "fail, could not update system repositories"
+apt-get update || f_ "fail, could not update system repositories"
 
 apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
 apt-get -y install git-core mercurial ffmpegthumbnailer || \
@@ -486,18 +499,17 @@ esac
 
 ##################
 # install erlang
+echo "installing system packages for erlang and python libraries"
 apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
 	python-setuptools python-flup python-magic \
 	python-imaging python-pycurl python-openid python-crypto python-lxml || \
-	f_ "failed to install erlang packages"
-#python-django
+	f_ "failed to install erlang packages and python libraries"
+
 
 ####################################################################
 # MySQL installation
-# during installation set MySQL root password, we assume it is pass 
-# 
 # in order to avoid mysql prompts it can be installed as:
 echo "Installing MySQL"
 MYSQL_ROOT_PWD=$DATABASE_ADMIN_PASSWORD
@@ -575,9 +587,10 @@ echo "PART-II MServe configuration"
 #############################################
 # Create mserve users and mservedb database
 # need to check if db exists and user too
-if [ $COMMAND == "install" ]; then
+if [ $COMMAND == "installation" ]; then
 	echo "Create mserve users and mservedb database"
-	echo "CREATE DATABASE mservedb;FLUSH PRIVILEGES;" | mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mservedb database"
+	echo "CREATE DATABASE mservedb; FLUSH PRIVILEGES;" | mysql -u root -p$MYSQL_ROOT_PWD || \
+		f_ "failed to create mservedb database"
 	echo "CREATE USER '$MSERVE_DATABASE_USER'@'localhost' IDENTIFIED BY '$MSERVE_DATABASE_PASSWORD'; \
 		GRANT ALL ON mservedb.* TO '$MSERVE_DATABASE_USER';" | \
 		mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mserve database user"
@@ -601,7 +614,7 @@ except ImportError:
    sys.exit(1)
 " | python
 if [ $? -ne 0 ]; then
-	echo "Installing django-oauth"
+	echo "installing django-oauth"
 	django_oauth_url="http://bitbucket.org/david/django-oauth"
 	hg clone $django_oauth_url || f_ "failed to checkout django-auth from $django_oauth_url"
 	cd django-oauth
@@ -625,7 +638,7 @@ except ImportError:
    sys.exit(1)
 " | python
 if [ $? -ne 0 ]; then
-	echo "Installing oauth2"
+	echo "installing oauth2"
 	python_oauth2_url="https://github.com/simplegeo/python-oauth2.git"
 	git clone $python_oauth2_url || f_ "failed to fetch $python_oauth2_url"
 	cd python-oauth2/
@@ -750,23 +763,33 @@ else
 	# use the provided mserve archive, we assume tgz file
 	echo " $MSERVE_ARCHIVE"
 	tar xvfz $MSERVE_ARCHIVE || f_ "failed to untar MSERVE archive"
-	cd pp-dataservice
+	cd pp-dataservice || f_ "failed to cd pp-dataservice"
 fi
 
 
 #########################################
 # Configuring MSERVE in standalone mode
-if [ $COMMAND == "install" ]; then
+if [ $COMMAND == "installation" ]; then
 	echo "Configuring MServe in standalone mode"
 	mkdir -p ${MSERVE_DATA}/www-root
 	chown -R www-data:www-data ${MSERVE_DATA}
+	echo "Configuring mserve log"
+	mkdir -p "${MSERVE_LOG}"
+	chown -R www-data:www-data "${MSERVE_LOG}"
 fi
 
 
 #####################################
 #Configuration of mserve settings.py
 mv mserve/settings.py mserve/settings_dist.py
-sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g; \
+#sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g; \
+#	s#\('USER'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_USER\2#; \
+#	s#\('PASSWORD'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_PASSWORD\2#" \
+#	mserve/settings_dist.py > mserve/settings.py
+
+sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
+	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#; \
 	s#\('USER'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_USER\2#; \
 	s#\('PASSWORD'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_PASSWORD\2#" \
 	mserve/settings_dist.py > mserve/settings.py
@@ -774,9 +797,12 @@ sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g; \
 
 ###########################
 # modify mserve/restart.sh
-# other user, e.g. /var/opt/mserve
 mv mserve/restart.sh mserve/restart_dist.sh
-sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g" \
+#sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g" \
+#	mserve/restart_dist.sh > mserve/restart.sh
+
+sed -e "s#^MSERVE_HOME=/opt/mserve#MSERVE_HOME=${MSERVE_HOME}#; \
+	s#^MSERVE_DATA=/var/opt/mserve-data#MSERVE_DATA=${MSERVE_DATA}#" \
 	mserve/restart_dist.sh > mserve/restart.sh
 chmod +x mserve/restart.sh
 
@@ -784,8 +810,14 @@ chmod +x mserve/restart.sh
 ####################
 # modify celaryd.sh
 mv mserve/celeryd.sh mserve/celeryd_dist.sh
-sed -e "s#\./manage.py#${MSERVE_HOME}/pp-dataservice/mserve/manage.py#g; s#/var/mserve#${MSERVE_DATA}#g" \
+#sed -e "s#\./manage.py#${MSERVE_HOME}/pp-dataservice/mserve/manage.py#g; s#/var/mserve#${MSERVE_DATA}#g" \
+#	mserve/celeryd_dist.sh > mserve/celeryd.sh
+
+sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
+	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
 	mserve/celeryd_dist.sh > mserve/celeryd.sh
+
 chmod +x mserve/celeryd.sh
 cd ..
 
@@ -836,7 +868,7 @@ configure_apache () {
 	# create a new site, e.g. copy the default one
 	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; \
 		s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
-	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/pp-dataservice-fcgi.sock\n\n\
+	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/mserve-fcgi.sock\n\n\
         XSendFile On\nXSendFileAllowAbove On\n\
 	Alias /media ${MSERVE_DATA}/www-root/media\n\n\
 	RewriteEngine On\n\
@@ -875,7 +907,6 @@ configure_apache () {
 #######################
 # configure http server
 echo "configuring $HTTP_SERVER as HTTP server"
-echo $HTTP_SERVER > .HTTP_SERVER
 case $HTTP_SERVER in
 	apache) configure_apache
 		;;
@@ -894,7 +925,7 @@ echo -e "\n\nPART III deploying mserve in $MSERVE_HOME"
 
 ########################################################################
 # changing permissions and running the rest from /opt/mserve as www-data
-old_installation=${MSERVE_HOME}-${date_stamp}$$
+old_installation=${MSERVE_HOME}-${date_stamp}-$$
 if [ $COMMAND == "update" ]; then
 	echo "moving old installation in $old_installation"
 	mv $MSERVE_HOME $old_installation
@@ -903,9 +934,13 @@ fi
 echo "copying mserve directory"
 cd
 mkdir ${MSERVE_HOME} || f_ "failed to create $MSERVE_HOME directory"
-cp -r mserve$$/* ${MSERVE_HOME}
-chown -R www-data:www-data ${MSERVE_HOME}
-rm -rf mserve$$
+#cp -r mserve$$/* ${MSERVE_HOME}
+cp -ar mserve$$/pp-dataservice/mserve/* ${MSERVE_HOME} || \
+	f_ "failed to deploy mserve files into ${MSERVE_HOME}"
+cp -ar mserve$$/pp-dataservice/{scripts,static,README.txt} ${MSERVE_HOME} || \
+	f_ "failed to deploy scripts, static into ${MSERVE_HOME}"
+chown -R www-data:www-data ${MSERVE_HOME} || f_ "failed to change ${MSERVE_HOME} permissions to www-data"
+rm -rf mserve$$ || f_ "failed to remove temporary mserve$$ directory"
 
 
 #######################
@@ -913,12 +948,12 @@ rm -rf mserve$$
 echo "creating media links"
 cd ${MSERVE_DATA}/www-root
 ln -s /usr/share/pyshared/django/contrib/admin/media
-ln -s ${MSERVE_HOME}/pp-dataservice/static mservemedia
+ln -s ${MSERVE_HOME}/static mservemedia
 
 
 ######################
 # Rabbit MQ Setup
-if [ $COMMAND == "install" ]; then
+if [ $COMMAND == "installation" ]; then
 	echo "RabbitMQ setup"
 	rabbitmqctl add_user myuser mypassword
 	rabbitmqctl add_vhost myvhost
@@ -937,12 +972,13 @@ case $HTTP_SERVER in
 		;;
 esac
 
-if [ $COMMAND == "install" ]; then
+if [ $COMMAND == "installation" ]; then
 
-###############################################################################
-# update mserve db, you need to provide information creating user and password
-now=$(date +"%F %T")
-cat > .python_script<<EOFPY
+	###############################################################################
+	# update mserve db, you need to provide information creating user and password
+	cd
+	now=$(date +"%F %T")
+	cat > .python_script<<EOFPY
 from django.utils.hashcompat import sha_constructor
 from django.utils.encoding import smart_str
 import random
@@ -952,10 +988,10 @@ hash = sha_constructor(salt + smart_str("$MSERVE_ADMIN_PASSWD")).hexdigest()
 print "sha1\$%s\$%s" % (salt, hash)
 EOFPY
 
-hash=$(python .python_script)
-rm .python_script
+	hash=$(python .python_script)
+	rm .python_script
 
-cat > initial_data.json <<JSON
+	cat > initial_data.json <<JSON
 [
   {
     "pk": 1,
@@ -980,7 +1016,7 @@ JSON
 
 fi
 
-sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py syncdb --noinput || \
+sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || \
 	f_ "failed to configure mserve database"
 
 if [ -f initial_data.json ]; then
@@ -988,9 +1024,9 @@ if [ -f initial_data.json ]; then
 fi
 
 # fix db
-if [ $COMMAND == "install" ]; then
+if [ $COMMAND == "installation" ]; then
 	mysql -u $MSERVE_DATABASE_USER -p$MSERVE_DATABASE_PASSWORD < \
-		${MSERVE_HOME}/pp-dataservice/scripts/request_fix.sql || \
+		${MSERVE_HOME}/scripts/request_fix.sql || \
 		f_ "failed to fix mservedb"
 fi
 
@@ -1000,12 +1036,12 @@ fi
 ###############################
 
 # start up mserver
-${MSERVE_HOME}/pp-dataservice/mserve/restart.sh || f_ "failed to restart mserve"
+${MSERVE_HOME}/restart.sh || f_ "failed to restart mserve"
 
 # Celery Startup in debugging mode
 #sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py celeryd --verbosity=2 --loglevel=DEBUG
 
-${MSERVE_HOME}/pp-dataservice/mserve/celeryd.sh || f_ "failed to restart celeryd"
+${MSERVE_HOME}/celeryd.sh || f_ "failed to restart celeryd"
 
 # sometimes apache needs restarting
 if [ $HTTP_SERVER == "apache" ]; then
@@ -1019,11 +1055,14 @@ fi
 mv /root/installation_summary.tmp ${MSERVE_HOME}/.installation_summary.txt || \
 	f_ "failed to copy installation summary from /root to ${MSERVE_HOME}"
 
-echo -e "\n\nA copy of MSERVE installation summary is stored under ${MSERVE_HOME}/.installation_summary.txt"
+echo -e "\nNB: a copy of MSERVE installation summary is stored under ${MSERVE_HOME}/.installation_summary.txt\n"
 
 if [ -d $old_installation ]; then
-	echo "Old installation in $old_installation can now be removed"
+	echo "The old MSERVE installation, moved in $old_installation, can now be deleted."
 fi
+
+printf "\033[01;32m\nMSERVE $COMMAND completed successfully.\n"
+tput sgr0
 
 exit
 
