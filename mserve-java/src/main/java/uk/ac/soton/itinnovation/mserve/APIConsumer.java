@@ -1,9 +1,11 @@
 package uk.ac.soton.itinnovation.mserve;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,26 +13,30 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.apache.commons.httpclient.Credentials;
+import org.apache.commons.httpclient.Header;
+import org.apache.commons.httpclient.HostConfiguration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpConnectionManager;
+import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.UsernamePasswordCredentials;
-import org.apache.commons.httpclient.auth.AuthScope;
+import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.HeadMethod;
+import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.multipart.FilePart;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
 import org.apache.commons.httpclient.methods.multipart.StringPart;
+import org.apache.commons.httpclient.params.HttpConnectionManagerParams;
 
 public class APIConsumer {
 
@@ -38,17 +44,27 @@ public class APIConsumer {
     private String host = "localhost";
 
     public static void main(String[] args){
-        try {
+
+
+
+        /*try {
             APIConsumer consumer = new APIConsumer();
             //String cid = consumer.createContainer();
-            String cid = "05ac6c9b-02e7-419b-a9d9-6b70cc76eafa";
+            //String cid = "05ac6c9b-02e7-419b-a9d9-6b70cc76eafa";
 
 
-            System.out.println("makeServiceURL");
-            String sid = consumer.makeServiceREST(cid);
-            String mid = consumer.makeEmptyMFileREST(sid);
-            consumer.putToEmptyMFile(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-            
+            //System.out.println("makeServiceURL");
+            //String sid = consumer.makeServiceREST(cid);
+            //String mid = consumer.makeEmptyMFileREST(sid);
+            //consumer.putToEmptyMFile(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
+
+
+            String path = "http://ogio/webdav/VUpBSGVKZEhxblZVTEhvZlFjM0ZYVkkyTmNQODlKTFNZbGlaVlBXWnRwTT0/";
+
+            File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
+            consumer.doChunkedPutToWebdavURL(path, file);
+
+
             //consumer.getUsage(cid);
             //consumer.getUsage(sid);
             //consumer.getUsage(mid);
@@ -62,9 +78,229 @@ public class APIConsumer {
 
         } catch (MalformedURLException ex) {
             Logger.getLogger(APIConsumer.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        }*/
 
+            String path = "/pic/somefolder//picture.jpg";
+
+            String[] split = path.replace("//", "/").split("/");
+
+
+            System.out.println("split " + split);
+
+
+            ArrayList arr = new ArrayList();
+            
+            Collections.addAll(arr, split);
+
+            String filename = (String)arr.get(arr.size()-1);
+            List<String> folderList = arr.subList(0, arr.size()-1);
+            folderList.remove("");
+
+            System.out.println("filename " + filename);
+            System.out.println("folderList " + folderList);
+
+            String base = "/";
+            for(String folder : folderList){
+                base = base +  folder + "/";
+                System.out.println("mkcol " + base);
+            }
+
+
+
+
+            //APIConsumer consumer = new APIConsumer();
+            //System.out.println(""+consumer);
+            //String path = "http://ogio/webdav/VUpBSGVKZEhxblZVTEhvZlFjM0ZYVkkyTmNQODlKTFNZbGlaVlBXWnRwTT0/hello.txt";
+            //System.out.println(""+path);
+            //consumer.partial(path);
+
+            //consumer.doHeadToWebdavURL(path);
+            //Header[] hs = consumer.head(path);
+            //for (Header h : hs){
+            //    System.out.println(""+h);
+            //}
+
+            //File file = new File("/home/mm/upload_test");
+
+
+
+            /*consumer.doChunkedPutToWebdavURL(path, file, "");
+
+
+            consumer.doChunkedPutToWebdavURL(path, file, "bytes=2-8");
+
+
+            for(int i = 1;i<4;i++){
+                File cfile = new File("/home/mm/chunk."+i);
+                long len = cfile.length();
+                long start = (i-1)*len;
+                long end = (i)*len;
+                consumer.doChunkedPutToWebdavURL(path, cfile,"bytes="+start+"-"+end);
+            }*/
     }
+    
+        public void partial(String url) {
+        try{
+                HttpClient client = new HttpClient();
+                PutMethod putMethod = new PutMethod(url);
+
+                System.out.println(""+url);
+                System.out.println(""+putMethod);
+
+                //filePost.setRequestHeader("Accept", "application/json");
+                //putMethod.addRequestHeader("Content-Length", "" + (fileOffset + buffer.remaining()) );
+
+                byte[] bytes = "Dull!".getBytes();
+
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+
+                putMethod.setRequestEntity(new InputStreamRequestEntity(bis));
+
+                putMethod.addRequestHeader("Range", "bytes=6-11");
+                //putMethod.addRequestHeader("Content-Length", ""+bis.available());
+
+                client.executeMethod(putMethod);
+
+                System.out.println("exec");
+
+                InputStream stream = putMethod.getResponseBodyAsStream();
+
+                if(stream!= null){
+                    BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+                    String output = "";
+                    String str;
+                    while (null != ((str = buf.readLine()))) {
+                        output += str;
+                    }
+                    buf.close();
+                    putMethod.releaseConnection();
+                }
+
+            }catch(IOException ex){
+                throw new RuntimeException(ex);
+            }
+
+	}
+
+    public Header[] head(String path) {
+		Header[] headers = new Header[0];
+
+                HostConfiguration hostConfig = new HostConfiguration();
+		hostConfig.setHost("localhost:80");
+
+		HttpConnectionManager connManager = new MultiThreadedHttpConnectionManager();
+		HttpConnectionManagerParams params = new HttpConnectionManagerParams();
+		int maxHostConnections = 20;
+		params.setMaxConnectionsPerHost(hostConfig, maxHostConnections);
+		connManager.setParams(params);
+
+		HttpClient httpClient = new HttpClient(connManager);
+                httpClient.setHostConfiguration(hostConfig);
+                
+		//HttpClient httpClient = new HttpClient();
+
+		HeadMethod method = new HeadMethod(path);
+		try {
+			int status = httpClient.executeMethod(method);
+			if (!(status >= 400) || status==404) {
+				headers = method.getResponseHeaders();
+			}
+		} catch (HttpException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			method.releaseConnection();
+		}
+		return headers;
+	}
+
+    public String doHeadToWebdavURL(String url) {
+        try{
+            HttpClient client = new HttpClient();
+            HeadMethod headMethod = new HeadMethod(url);
+
+            System.out.println(""+url);
+            System.out.println(""+headMethod);
+
+            //filePost.setRequestHeader("Accept", "application/json");
+
+            client.executeMethod(headMethod);
+
+            InputStream stream = headMethod.getResponseBodyAsStream();
+
+            if(stream!= null){
+                BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+                String output = "";
+                String str;
+                while (null != ((str = buf.readLine()))) {
+                    output += str;
+                }
+                buf.close();
+                headMethod.releaseConnection();
+                return output;
+            }
+            return "";
+
+        }catch(IOException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public String doChunkedPutToWebdavURL(String url, File f, String range) {
+        try{
+            HttpClient client = new HttpClient();
+            PutMethod putMethod = new PutMethod(url);
+            
+            System.out.println(""+url);
+            System.out.println(""+putMethod);
+            
+            //filePost.setRequestHeader("Accept", "application/json");
+            //putMethod.addRequestHeader("Content-Length", "" + (fileOffset + buffer.remaining()) );
+
+            
+            putMethod.setRequestEntity(new InputStreamRequestEntity(new FileInputStream(f)));
+
+            if(!range.equals("")){
+                putMethod.addRequestHeader("Range", range);
+            }
+
+            boolean chunked = true;
+            if(chunked){
+                putMethod.addRequestHeader("Transfer-Encoding", "chunked");
+                putMethod.setContentChunked(true);
+                //long l = 5l+f.length();
+                //putMethod.setRequestHeader("Content-Length", ""+l);
+            }else{
+                putMethod.addRequestHeader("Content-Length", ""+f.length());
+            }
+
+            client.executeMethod(putMethod);
+
+            System.out.println("exec");
+
+            InputStream stream = putMethod.getResponseBodyAsStream();
+
+            if(stream!= null){
+                BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+                String output = "";
+                String str;
+                while (null != ((str = buf.readLine()))) {
+                    output += str;
+                }
+                buf.close();
+                putMethod.releaseConnection();
+                return output;
+            }
+            return "";
+
+        }catch(IOException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
 
     public APIConsumer(){}
 
