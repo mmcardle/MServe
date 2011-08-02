@@ -51,7 +51,7 @@ MSERVE_DATABASE_USER=mserve
 MSERVE_DATABASE_PASSWORD=
 HTTP_SERVER=apache
 VERBOSE=
-MSERVE_ARCHIVE=
+MSERVE_ARCHIVE=NOTSET
 DATABASE_ADMIN_USER=root
 DATABASE_ADMIN_PASSWORD=
 
@@ -101,7 +101,7 @@ gen_password () {
 ##############################################
 # check for mserve archive argument provided
 check_mserve_archive () {
-	if [ -n $MSERVE_ARCHIVE ]; then
+	if [ $MSERVE_ARCHIVE != "NOTSET" ]; then
 
 		# check if archive exists
 		if [ ! -f $MSERVE_ARCHIVE ]; then
@@ -292,7 +292,7 @@ check_existing_installation () {
 
 stop_mserve_processes () {
 	echo "stopping MSERVE processes"
-	PIDFILE="/tmp/pp-dataservice.pid"
+	PIDFILE="/tmp/mserve.pid"
 	if [ -f $PIDFILE ]; then
 		sudo -u www-data kill `cat -- $PIDFILE`
 		sudo -u www-data rm -f -- $PIDFILE
@@ -300,7 +300,7 @@ stop_mserve_processes () {
 	echo "Killed Previous Process"
 
 	echo -e "\n\nStopping celeryd processes"
-	sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py celeryd_multi stop \
+	sudo -u www-data ${MSERVE_HOME}/manage.py celeryd_multi stop \
 		--logfile=${MSERVE_DATA}/celeryd%n.log -l DEBUG 2 -n:1 local.$hn \
 		-n:2 remote.$hn -Q:1 local_tasks -Q:2 remote_tasks -c 5 \
 		--pidfile=${MSERVE_DATA}/celeryd%n.pid
@@ -590,10 +590,13 @@ echo "PART-II MServe configuration"
 if [ $COMMAND == "installation" ]; then
 	echo "Create mserve users and mservedb database"
 	echo "CREATE DATABASE mservedb; FLUSH PRIVILEGES;" | mysql -u root -p$MYSQL_ROOT_PWD || \
-		f_ "failed to create mservedb database"
+		f_ "failed to create mservedb database, check manually your database and drop existing mservedb."
 	echo "CREATE USER '$MSERVE_DATABASE_USER'@'localhost' IDENTIFIED BY '$MSERVE_DATABASE_PASSWORD'; \
 		GRANT ALL ON mservedb.* TO '$MSERVE_DATABASE_USER';" | \
-		mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mserve database user"
+		mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mserve database user, check database manually and drop existing $MSERVE_DATABASE_USER user."
+
+	# echo "select user from mysql.user where user='mserve'" | mysql -u root -pwtnq6dWTgnM | grep -q mserve
+	# echo "use mservedb;" | mysql -u root -pwtnq6dWTgnM
 fi
 
 ############################################################
@@ -746,9 +749,9 @@ else
 fi
 
 #########################
-# Install pp-dataservice
-echo -n "installing mserve pp-dataservice from"
-if [ -z "$MSERVE_ARCHIVE" ]; then
+# Install mserve 
+echo -n "installing mserve from"
+if [ "$MSERVE_ARCHIVE" == "NOTSET" ]; then
 	mserve_url="git://soave.it-innovation.soton.ac.uk/git/pp-dataservice"
 	echo " $mserve_rul"
 	git clone $mserve_url || f_ "failed to fetch mserve from $mserve_url"
@@ -782,11 +785,6 @@ fi
 #####################################
 #Configuration of mserve settings.py
 mv mserve/settings.py mserve/settings_dist.py
-#sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g; \
-#	s#\('USER'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_USER\2#; \
-#	s#\('PASSWORD'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_PASSWORD\2#" \
-#	mserve/settings_dist.py > mserve/settings.py
-
 sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#; \
@@ -798,9 +796,6 @@ sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 ###########################
 # modify mserve/restart.sh
 mv mserve/restart.sh mserve/restart_dist.sh
-#sed -e "s#/opt/mserve#${MSERVE_HOME}#g; s#/var/mserve#${MSERVE_DATA}#g" \
-#	mserve/restart_dist.sh > mserve/restart.sh
-
 sed -e "s#^MSERVE_HOME=/opt/mserve#MSERVE_HOME=${MSERVE_HOME}#; \
 	s#^MSERVE_DATA=/var/opt/mserve-data#MSERVE_DATA=${MSERVE_DATA}#" \
 	mserve/restart_dist.sh > mserve/restart.sh
@@ -810,15 +805,38 @@ chmod +x mserve/restart.sh
 ####################
 # modify celaryd.sh
 mv mserve/celeryd.sh mserve/celeryd_dist.sh
-#sed -e "s#\./manage.py#${MSERVE_HOME}/pp-dataservice/mserve/manage.py#g; s#/var/mserve#${MSERVE_DATA}#g" \
-#	mserve/celeryd_dist.sh > mserve/celeryd.sh
-
 sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
 	mserve/celeryd_dist.sh > mserve/celeryd.sh
 
 chmod +x mserve/celeryd.sh
+
+############################
+# configure init scripts
+if [ -f scripts/mserve-init ]; then
+	mv scripts/mserve-init scripts/mserve-init_dist
+	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
+		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
+		scripts/mserve-init_dist > scripts/mserve-init
+	chmod +x scripts/mserve-init
+else
+	echo "No scripts/mserve-init found"
+fi
+
+if [ -f scripts/celeryd-init ]; then
+	mv scripts/celeryd-init scripts/celeryd-init_dist
+	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
+		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
+		scripts/celeryd-init_dist > scripts/celeryd-init
+	chmod +x scripts/celeryd-init
+else
+	echo "No scripts/celeryd-init found"
+fi
+
+
 cd ..
 
 
@@ -1036,12 +1054,18 @@ fi
 ###############################
 
 # start up mserver
-${MSERVE_HOME}/restart.sh || f_ "failed to restart mserve"
+if [ -x ${MSERVE_HOME}/scripts/mserve-init ]; then
+	${MSERVE_HOME}/scripts/mserve-init start || f_ "mserve-init failed to start mserve"
+else
+	${MSERVE_HOME}/restart.sh || f_ "failed to restart mserve"
+fi
 
-# Celery Startup in debugging mode
-#sudo -u www-data ${MSERVE_HOME}/pp-dataservice/mserve/manage.py celeryd --verbosity=2 --loglevel=DEBUG
-
-${MSERVE_HOME}/celeryd.sh || f_ "failed to restart celeryd"
+# start celeryd
+if [ -x ${MSERVE_HOME}/scripts/celeryd-init ]; then
+	${MSERVE_HOME}/scripts/celeryd-init start || f_ "celeryd-init failed to start celeryd"
+else
+	${MSERVE_HOME}/celeryd.sh || f_ "failed to restart celeryd"
+fi
 
 # sometimes apache needs restarting
 if [ $HTTP_SERVER == "apache" ]; then
@@ -1057,8 +1081,16 @@ mv /root/installation_summary.tmp ${MSERVE_HOME}/.installation_summary.txt || \
 
 echo -e "\nNB: a copy of MSERVE installation summary is stored under ${MSERVE_HOME}/.installation_summary.txt\n"
 
+if [ -x ${MSERVE_HOME}/scripts/mserve-init ]; then
+	echo -e "\nNB: mserve-init should be copied into /etc/init.d directory."
+fi
+
+if [ -x ${MSERVE_HOME}/scripts/celeryd-init ]; then
+	echo -e "\nNB: celeryd-init should be copied into /etc/init.d directory."
+fi
+
 if [ -d $old_installation ]; then
-	echo "The old MSERVE installation, moved in $old_installation, can now be deleted."
+	echo -e "\nThe old MSERVE installation, moved in $old_installation, can now be deleted."
 fi
 
 printf "\033[01;32m\nMSERVE $COMMAND completed successfully.\n"
