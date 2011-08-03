@@ -274,6 +274,12 @@ class DataServiceHandler(BaseHandler):
             container = HostingContainer.objects.get(id=containerid)
 
             dataservice = container.create_data_service(name)
+
+            if request.POST.has_key('starttime'):
+                dataservice.starttime = request.POST['starttime']
+            if request.POST.has_key('endtime'):
+                dataservice.endtime = request.POST['endtime']
+            dataservice.save()
             
             return dataservice
         else:
