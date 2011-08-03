@@ -314,6 +314,12 @@ uninstall_mserve () {
 	# stop mserve running processes
 	stop_mserve_processes
 
+	# remove service init scripts
+	update-rc.d -f mserve-service remove || f_ "update-rc.d failed to remove mserve-service"
+	rm -f /etc/init.d/mserve-service
+	update-rc.d -f celeryd-service remove || f_ "update-rc.d failed to remove celeryd-service"
+	rm -f /etc/init.d/celeryd-service 
+
 	echo -e "\n\nReconfiguring http server $_HTTP_SERVER"
 	if [ _HTTP_SERVER="apache" ]; then
 		a2dissite mserve
@@ -814,26 +820,26 @@ chmod +x mserve/celeryd.sh
 
 ############################
 # configure init scripts
-if [ -f scripts/mserve-init ]; then
-	mv scripts/mserve-init scripts/mserve-init_dist
+if [ -f scripts/mserve-service ]; then
+	mv scripts/mserve-service scripts/mserve-service_dist
 	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
-		scripts/mserve-init_dist > scripts/mserve-init
-	chmod +x scripts/mserve-init
+		scripts/mserve-service_dist > scripts/mserve-service
+	chmod +x scripts/mserve-service
 else
-	echo "No scripts/mserve-init found"
+	echo "No scripts/mserve-service found"
 fi
 
-if [ -f scripts/celeryd-init ]; then
-	mv scripts/celeryd-init scripts/celeryd-init_dist
+if [ -f scripts/celeryd-service ]; then
+	mv scripts/celeryd-service scripts/celeryd-service_dist
 	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
-		scripts/celeryd-init_dist > scripts/celeryd-init
-	chmod +x scripts/celeryd-init
+		scripts/celeryd-service_dist > scripts/celeryd-service
+	chmod +x scripts/celeryd-service
 else
-	echo "No scripts/celeryd-init found"
+	echo "No scripts/celeryd-service found"
 fi
 
 
@@ -1054,16 +1060,42 @@ fi
 ###############################
 
 # start up mserver
-if [ -x ${MSERVE_HOME}/scripts/mserve-init ]; then
-	${MSERVE_HOME}/scripts/mserve-init start || f_ "mserve-init failed to start mserve"
+if [ -x ${MSERVE_HOME}/scripts/mserve-service ]; then
+	echo "trying to start mserve using mserve using init script"
+	${MSERVE_HOME}/scripts/mserve-service start || f_ "mserve-service failed to start mserve"
+	# try to deploy service script
+	sleep 4
+	echo "trying to stop mserve using mserve init script"
+	${MSERVE_HOME}/scripts/mserve-service stop || f_ "mserve-service failed to stop mserve"
+	echo "deploying mserve init script"
+	cp $MSERVE_HOME/scripts/mserve-service /etc/init.d/ || f_ "failed to copy mserve-service script to /etc/init.d"
+	update-rc.d mserve-service defaults || f_ "failed to register mserve-service with system update-rc.d util"
+	# starting service
+	echo "starting mserve service"
+	sleep 4
+	service mserve-service start || f_ "service mserve-service start failed to start mserve"
 else
+	echo "no mserve init script found, starting mserve service manually"
 	${MSERVE_HOME}/restart.sh || f_ "failed to restart mserve"
 fi
 
 # start celeryd
-if [ -x ${MSERVE_HOME}/scripts/celeryd-init ]; then
-	${MSERVE_HOME}/scripts/celeryd-init start || f_ "celeryd-init failed to start celeryd"
+if [ -x ${MSERVE_HOME}/scripts/celeryd-service ]; then
+	echo "trying to start celeryd using celeryd init script"
+	${MSERVE_HOME}/scripts/celeryd-service start || f_ "celeryd-service failed to start celeryd"
+	# try to deploy service script
+	sleep 4
+	echo "trying to stop celeryd service using init script"
+	${MSERVE_HOME}/scripts/celeryd-service stop || f_ "celeryd-service failed to stop mserve"
+	cp $MSERVE_HOME/scripts/celeryd-service /etc/init.d/ || f_ "failed to copy celeryd-service script to /etc/init.d"
+	update-rc.d celeryd-service defaults || f_ "failed to register celeryd-service with system update-rc.d util"
+	# starting service
+	echo "starting celeryd service"
+	sleep 4
+	service celeryd-service start || f_ "service mserve-service start failed to start mserve"
+
 else
+	echo "no celeryd init script found, starting celeryd service manually"
 	${MSERVE_HOME}/celeryd.sh || f_ "failed to restart celeryd"
 fi
 
@@ -1081,12 +1113,12 @@ mv /root/installation_summary.tmp ${MSERVE_HOME}/.installation_summary.txt || \
 
 echo -e "\nNB: a copy of MSERVE installation summary is stored under ${MSERVE_HOME}/.installation_summary.txt\n"
 
-if [ -x ${MSERVE_HOME}/scripts/mserve-init ]; then
-	echo -e "\nNB: mserve-init should be copied into /etc/init.d directory."
+if [ ! -f /etc/init.d/mserve-service ]; then
+	echo -e "\nNB: mserve-service should be copied into /etc/init.d directory."
 fi
 
-if [ -x ${MSERVE_HOME}/scripts/celeryd-init ]; then
-	echo -e "\nNB: celeryd-init should be copied into /etc/init.d directory."
+if [ ! -f /etc/init.d/celeryd-service ]; then
+	echo -e "\nNB: celeryd-service should be copied into /etc/init.d directory."
 fi
 
 if [ -d $old_installation ]; then
@@ -1097,4 +1129,3 @@ printf "\033[01;32m\nMSERVE $COMMAND completed successfully.\n"
 tput sgr0
 
 exit
-
