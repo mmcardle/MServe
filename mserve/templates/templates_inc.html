@@ -50,8 +50,16 @@
     </div>
 </script>
 
+<script id="strongMessageTemplate" type="text/x-jquery-tmpl">
+    <div class="${cl} ui-widget" style="margin: 2px;">
+        <div class="ui-state-error ui-corner-all" style="padding: 0 .4em;">
+            <p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span><strong>${ message }</strong></p>
+        </div>
+    </div>
+</script>
+
 <script id="messageTemplate" type="text/x-jquery-tmpl">
-    <div class="${cl} ui-widget" style="margin: 1px;">
+    <div class="${cl} ui-widget" style="margin: 2px;">
         <div class="ui-state-highlight ui-corner-all" style="padding: 0 .4em;">
                 <p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>${ message }</p>
         </div>

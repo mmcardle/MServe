@@ -244,9 +244,9 @@ class HostingContainerHandler(BaseHandler):
             return HttpResponseForbidden()
 
 class DataServiceHandler(BaseHandler):
-    allowed_methods = ('GET','POST','DELETE')
+    allowed_methods = ('GET','POST','DELETE','PUT')
     model = DataService
-    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs')
+    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority')
     exclude = ('pk')
 
     def read(self,request, id=None, containerid=None):
@@ -255,6 +255,24 @@ class DataServiceHandler(BaseHandler):
         if id:
             return self.model.objects.get(id=id).do("GET")
         return Http404()
+
+    def update(self, request, id):
+        try:
+            service = DataService.objects.get(pk=id)
+
+            if request.POST.has_key("priority"):
+                if request.POST['priority'] == "True" or request.POST['priority'] == "true":
+                    service.priority = True
+                if request.POST['priority'] == "False" or request.POST['priority'] == "false":
+                    service.priority = False
+            service.save()
+            return service
+        except Exception as e:
+            r = rc.BAD_REQUEST
+            logging.info("Exception %s" % (e))
+            r.write("Invalid Request!")
+            return r
+
 
     def delete(self, request, id):
         logging.info("Deleting Service %s " % id)
@@ -291,7 +309,7 @@ class DataServiceHandler(BaseHandler):
 class DataServiceTaskHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = DataServiceTask
-    fields = ('task_name','id','condition','allowremote','remotecondition','args')
+    fields = ('task_name','id','condition','args')
 
     def create(self, request, serviceid, profileid ):
 

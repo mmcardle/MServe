@@ -53,6 +53,16 @@ function loadServices(containerid){
      });
 }
 
+function update_service_priority(url,priority){
+     $.ajax({
+       type: "PUT",
+       data: "priority="+priority,
+       url: url,
+       success: function(msg){
+       }
+     });
+}
+
 function check_service_method(method){
     if (! eval("typeof service_" + method + " == 'function'")) {
         $('#button-'+method+'-button').button({ disabled: true });

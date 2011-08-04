@@ -537,15 +537,10 @@ class HostingContainer(NamedBase):
                     condition = ""
                     if task.has_key('condition'): condition = task['condition']
 
-                    allowremote = task.has_key('allowremote') and task['allowremote']
-
-                    remotecondition = ""
-                    if task.has_key('remotecondition'): remotecondition = task['remotecondition']
-
                     args = ""
                     if task.has_key('args'): args = task['args']
 
-                    dst = DataServiceTask(workflow=wf,task_name=task_name,condition=condition,allowremote=allowremote,remotecondition=remotecondition,args=args)
+                    dst = DataServiceTask(workflow=wf,task_name=task_name,condition=condition,args=args)
                     dst.save()
 
         return dataservice
@@ -578,14 +573,10 @@ class DataServiceWorkflow(models.Model):
     def __unicode__(self):
         return "Workflow %s for %s" % (self.name,self.profile.name)
 
-
-
 class DataServiceTask(models.Model):
     workflow        = models.ForeignKey(DataServiceWorkflow,related_name="tasks")
     task_name       = models.CharField(max_length=200,choices=TASK_CHOICES)
     condition       = models.CharField(max_length=200,blank=True,null=True)
-    allowremote     = models.BooleanField(default=False)
-    remotecondition = models.CharField(max_length=200,blank=True,null=True)
     args            = models.TextField()
 
     def __unicode__(self):
@@ -596,6 +587,7 @@ class DataService(NamedBase):
     status    = models.CharField(max_length=200)
     starttime = models.DateTimeField(blank=True,null=True)
     endtime   = models.DateTimeField(blank=True,null=True)
+    priority  = models.BooleanField(default=False)
     
     methods = ["GET","POST","PUT","DELETE"]
     urls = {
@@ -1025,7 +1017,6 @@ class MFile(NamedBase):
 
             workflow_task_config = profiles[profile_name][name]
 
-
             in_tasks = []
 
             from jobservice.models import Job
@@ -1068,57 +1059,17 @@ class MFile(NamedBase):
                             output.save()
                             output_arr.append(output.id)
 
-                    task = subtask(task=task_name,args=[[self.id],output_arr,args])
-                    
-                    if workflow_task.allowremote:
+                    import random
 
-                        remoteconditionpassed = False
-                        if workflow_task.remotecondition != None:
-                            
-                            host = settings.HOSTNAME
-                            act = ins.active()
-                            if act != None:
-                                localname = "local.%s"%host
-                                numlocal = len(act[localname])
-                                numremote = len(act["remote.%s"%host])
-
-                                remotecondition = workflow_task.remotecondition
-
-                                remoteconditionpassed = eval(remotecondition,{"mfile":self,"numlocal":numlocal,"numremote":numremote})
-
-                                if remoteconditionpassed:
-                                    remote_task_name = "%s.remote" % task_name
-                                    logging.debug("Checking for %s" % remote_task_name )
-
-                                    reg = tasks.regular().keys()
-                                    if not remote_task_name in reg:
-                                        logging.info("No remote task for %s" % remote_task_name )
-                                    else:
-                                        try:
-
-                                            remoteservices = RemoteMServeService.objects.all()
-
-                                            if len(remoteservices) > 0:
-                                                url = remoteservices[0].url
-                                                task = subtask(task=remote_task_name,args=[[self.id,url],output_arr,args])
-                                                logging.info("Remote task  %s" % task)
-                                            else:
-                                                logging.info("No Remote service to use")
-
-                                            
-                                        except Exception as e:
-                                            logging.info("Error %s" % e)
-                                else:
-                                    logging.debug("Not creating remote task %s, condition failed %s " % (task_name,remotecondition))
-                            else:
-                                logging.warn("Celery Inspection returned None")
-                        else:
-                            logging.debug("Not creating remote task %s " % task_name )
-
+                    prioritise = self.service.priority
+                    q = "normal.tasks"
+                    if prioritise:
+                        q = "priority.%s"% (task_name)
+                    kwargs={"routing_key":q}
+                    task = subtask(task=task_name,args=[[self.id],output_arr,args],options=kwargs)
                     logging.info("Task created %s " % task )
 
                     in_tasks.append(task)
-
 
             logging.info("%s" % in_tasks)
 

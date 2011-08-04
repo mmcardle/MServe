@@ -65,8 +65,8 @@ urlpatterns = patterns('',
 
     url(r'^remoteservices/$', remote_mserve_handler),
 
-    url(r'^services/$', dataservice_handler ),
-    url(r'^services/(?P<id>[^/]+)/$', dataservice_handler ),
+    url(r'^services/$', dataservice_handler, name="dataservices" ),
+    url(r'^services/(?P<id>[^/]+)/$', dataservice_handler, name="dataservice" ),
     url(r'^services/(?P<serviceid>[^/]+)/properties/$', managementproperty_handler),
     url(r'^services/(?P<serviceid>[^/]+)/usages/$', usage_handler),
     url(r'^services/(?P<serviceid>[^/]+)/auths/$', auth_handler),

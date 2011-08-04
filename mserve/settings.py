@@ -28,10 +28,16 @@ TEMPLATE_DEBUG = DEBUG
 DEFAULT_CHARSET = 'utf-8'
 
 import os
-MSERVE_HOME='/opt/mserve'
-MSERVE_DATA='/var/opt/mserve-data'
-MSERVE_LOG='/var/log/mserve'
 
+try:
+    from settings_dev import *
+    print "Import Local Settings"
+except ImportError:
+    MSERVE_HOME='/opt/mserve'
+    MSERVE_DATA='/var/opt/mserve-data'
+    MSERVE_LOG='/var/log/mserve'
+    DBNAME='mservedb'
+    print "No local settings found, using defaults."
 
 import logging
 logging.basicConfig(
@@ -56,7 +62,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-	'NAME' : 'mservedb',             # Or path to database file if using sqlite3.
+	'NAME' : DBNAME,             # Or path to database file if using sqlite3.
 	'USER' : 'root',        # Not used with sqlite3.
 	'PASSWORD' : 'pass',       # Not used with sqlite3.
 	'HOST' : '',            # Set to empty string for localhost. Not used with sqlite3.
@@ -150,13 +156,13 @@ BROKER_USER = "myuser"
 BROKER_PASSWORD = "mypassword"
 BROKER_VHOST = "myvhost"
 
-CELERY_DEFAULT_QUEUE = "local_tasks"
+CELERY_DEFAULT_QUEUE = "normal_tasks"
 CELERY_QUEUES = {
-    "local_tasks": {
-        "binding_key": "local.#",
+    "normal_tasks": {
+        "binding_key": "normal.#",
     },
-    "remote_tasks": {
-        "binding_key": "remote.#",
+    "priority_tasks": {
+        "binding_key": "priority.#",
     },
 }
 CELERY_DEFAULT_EXCHANGE = "tasks"
@@ -164,18 +170,6 @@ CELERY_DEFAULT_EXCHANGE_TYPE = "topic"
 CELERY_DEFAULT_ROUTING_KEY = "task.default"
 CELERY_RESULT_BACKEND = "djcelery.backends.database.DatabaseBackend"
 
-class Router(object):
-
-    def route_for_task(self, task, args=None, kwargs=None):
-        if task.endswith(".remote"):
-            return {
-                    "exchange": "tasks",# Not Needed (will go to default)
-                    "exchange_type": "topic",# Not Needed (will go to default)
-                    "routing_key": "remote.1"
-                    }
-        return None
-
-CELERY_ROUTES = (Router(), )
 CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks", "prestoprime.tasks", "postmark.tasks" )
 
 import djcelery
@@ -196,7 +190,7 @@ INSTALLED_APPS = (
     'prestoprime',
     'postmark',
     'djcelery',
-    'request'
+    'request',
 )
 
 CACHES = {
