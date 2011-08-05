@@ -61,6 +61,13 @@ COMMAND=install
 
 date_stamp=$(date +%F)
 
+#check for embedded binary
+if [ "$MSERVE_ARCHIVE" != "NOTSET" ]; then
+	SELF_EXTRACT=1
+else
+	SELF_EXTRACT=0
+fi
+
 ##############
 # print usage
 usage_f() {
@@ -83,6 +90,11 @@ usage_f() {
 "
 }
 
+extract_payload () {
+	match=$(grep --text --line-number '^PAYLOAD:$' $0 | cut -d ':' -f 1)
+	payload_start=$((match + 1))
+	tail -n +$payload_start $0 > $MSERVE_ARCHIVE #| tar -tzvf -
+}
 
 ###################################
 # report fault and exit function
@@ -101,6 +113,12 @@ gen_password () {
 ##############################################
 # check for mserve archive argument provided
 check_mserve_archive () {
+	if [ $SELF_EXTRACT -eq 1 ]; then
+		echo "Self-extract binary file to $MSERVE_ARCHIVE"
+		extract_payload
+		sleep 1
+	fi
+
 	if [ $MSERVE_ARCHIVE != "NOTSET" ]; then
 
 		# check if archive exists
@@ -218,8 +236,17 @@ check_os_release () {
 	release=$(lsb_release -r | awk '{print $2}')
 	if [ "$release" != "10.04" ]; then
 		echo "this system is not Ubuntu 10.04 TLS"
-		exit 1
+		#exit 1
 	fi
+	case $release in
+		10.04) echo "Release 10.04 is supported"
+			;;
+		11.04) echo "Release 11.04 is supported"
+			;;
+		*) echo "MSERVE installer does not support this ($release)"
+			exit 1
+			;;
+	esac
 }
 
 
@@ -258,6 +285,8 @@ do
 		P) DATABASE_ADMIN_PASSWORD=$OPTARG
 			;;
 		t) MSERVE_ARCHIVE=$OPTARG
+			# override embedded
+			SELF_EXTRACT=0
 			;;
 		c) COMMAND=$OPTARG
 			;;	
@@ -452,7 +481,7 @@ echo "PART-I installing MServe prerequisites"
 
 #############################
 # update system repositories
-apt-get update || f_ "fail, could not update system repositories"
+#apt-get update || f_ "fail, could not update system repositories"
 
 apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
 apt-get -y install git-core mercurial ffmpegthumbnailer || \
@@ -473,7 +502,7 @@ rm rabbitmq.preseed
 # install other basic prerequisites
 
 install_mod_auth_token() {
-	apt-get -y install autoconf libtool apache2-threaded-dev || \
+	apt-get -y install autoconf libtool apache2-threaded-dev libapache2-mod-bw || \
 		f_ "failed to install autoconf libtool apache2-threaded-dev"
 	wget http://mod-auth-token.googlecode.com/files/mod_auth_token-1.0.5.tar.gz || \
 		f_ "failed to fetch mod_auth_token"
@@ -682,6 +711,26 @@ else
 	echo "django-piston found"
 fi
 
+#######################
+# install celery
+echo "import sys
+try:
+   import celery
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
+" | python
+if [ $? -ne 0 ]; then
+	echo "installing celery"
+	celery_url="https://github.com/ask/celery.git"
+	git clone $celery_url || f_ "failed to fetch celery from $celery_url"
+	cd celery
+	python setup.py install || f_ "failed to install celery"
+	cd ..
+	rm -rf celery
+else
+	echo "celery found OK"
+fi
 
 #######################
 # Install django-celery
@@ -701,10 +750,17 @@ if [ $? -ne 0 ]; then
 	echo "installing django-celery"
 	django_celery_url="https://github.com/ask/django-celery.git"
 	git clone $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
-	cd  django-celery
+	cd django-celery
 	python setup.py install || f_ "failed to install django-celery"
-	cd ..
+	cd  ..
 	rm -rf django-celery
+	#django_celery_url="http://pypi.python.org/packages/source/d/django-celery/django-celery-2.2.4.tar.gz"
+	#wget $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
+	#tar xfz django-celery-2.2.4.tar.gz || f_ "failed to untar django-celery-2.2.4.tar.gz"
+	#cd  django-celery-2.2.4
+	#python setup.py install || f_ "failed to install django-celery"
+	#cd ..
+	#rm -rf django-celery-2.2.4
 else
 	echo "django-celery found"
 fi
@@ -759,7 +815,7 @@ fi
 echo -n "installing mserve from"
 if [ "$MSERVE_ARCHIVE" == "NOTSET" ]; then
 	mserve_url="git://soave.it-innovation.soton.ac.uk/git/pp-dataservice"
-	echo " $mserve_rul"
+	echo "Installing MSERVE from repository $mserve_rul"
 	git clone $mserve_url || f_ "failed to fetch mserve from $mserve_url"
 	cd pp-dataservice
 
@@ -768,11 +824,18 @@ if [ "$MSERVE_ARCHIVE" == "NOTSET" ]; then
 
 	git submodule init || f_ "failed to init submodule"
 	git submodule update || f_ "failed to update submodule"
+
+	cd ..
+	
+	echo "cleaning up local repository copy"
+	mkdir mserve || f_ "failed could not create a temp mserve directory"
+	cp -a ./pp-dataservice/mserve/* mserve || f_ "failed to copy mserve files in temp dir"
+	cp -a ./pp-dataservice/{scripts,static,README.txt} mserve || f_ "failed to copy scripts, static in temp dir"
 else
 	# use the provided mserve archive, we assume tgz file
 	echo " $MSERVE_ARCHIVE"
-	tar xvfz $MSERVE_ARCHIVE || f_ "failed to untar MSERVE archive"
-	cd pp-dataservice || f_ "failed to cd pp-dataservice"
+	tar xvfz $MSERVE_ARCHIVE #|| f_ "failed to untar MSERVE archive"
+	[ -d mserve ] || f_ "failed to undtar MSERVE archive"
 fi
 
 
@@ -842,7 +905,6 @@ else
 	echo "No scripts/celeryd-service found"
 fi
 
-
 cd ..
 
 
@@ -904,11 +966,40 @@ configure_apache () {
 	RewriteRule ^/(\\/.*)$ /\$1 [QSA,L,PT]\n\
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
-	<Location /dl/>\n\
-	    AuthTokenSecret \'ugeaptuk6\'\n\
-	    AuthTokenPrefix /dl/\n\
-	    AuthTokenTimeout 60\n\
-	</Location>\n\n\
+        <LocationMatch "/dl/">\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenTimeout 60\n\
+        </LocationMatch>\n\n\
+        <Location /dl/100/>\n\
+            AuthTokenPrefix /dl/100/\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 100\n\
+        </Location>\n\n\
+        <Location /dl/1000/>\n\
+            AuthTokenPrefix /dl/1000/\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 1000\n\
+        </Location>\n\n\
+        <Location /dl/10000/>\n\
+            AuthTokenPrefix /dl/10000/\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 10000\n\
+        </Location>\n\n\
+        <Location /dl/100000/>\n\
+            AuthTokenPrefix /dl/100000/\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 100000\n\
+        </Location>\n\n\
+        <Location /dl/1000000/>\n\
+            AuthTokenPrefix /dl/1000000/\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 1000000\n\
+        </Location>\n\n\
 	@" > $_target || f_ "failed to create mserve site correctly"	
 
 	if [ ! -s $_target ]; then
@@ -958,11 +1049,11 @@ fi
 echo "copying mserve directory"
 cd
 mkdir ${MSERVE_HOME} || f_ "failed to create $MSERVE_HOME directory"
-#cp -r mserve$$/* ${MSERVE_HOME}
-cp -ar mserve$$/pp-dataservice/mserve/* ${MSERVE_HOME} || \
-	f_ "failed to deploy mserve files into ${MSERVE_HOME}"
-cp -ar mserve$$/pp-dataservice/{scripts,static,README.txt} ${MSERVE_HOME} || \
-	f_ "failed to deploy scripts, static into ${MSERVE_HOME}"
+cp -ar mserve$$/mserve/* ${MSERVE_HOME} || f_ "failed to copy mserve files in MSERVE_HOME location $MSERVE_HOME"
+#cp -ar mserve$$/pp-dataservice/mserve/* ${MSERVE_HOME} || \
+#	f_ "failed to deploy mserve files into ${MSERVE_HOME}"
+#cp -ar mserve$$/pp-dataservice/{scripts,static,README.txt} ${MSERVE_HOME} || \
+#	f_ "failed to deploy scripts, static into ${MSERVE_HOME}"
 chown -R www-data:www-data ${MSERVE_HOME} || f_ "failed to change ${MSERVE_HOME} permissions to www-data"
 rm -rf mserve$$ || f_ "failed to remove temporary mserve$$ directory"
 
@@ -1128,4 +1219,8 @@ fi
 printf "\033[01;32m\nMSERVE $COMMAND completed successfully.\n"
 tput sgr0
 
-exit
+exit 0
+
+
+
+

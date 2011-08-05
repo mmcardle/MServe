@@ -89,13 +89,13 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = os.path.join(MSERVE_DATA, 'mservemedia/') 
-THUMB_ROOT = os.path.join(MSERVE_DATA, 'www-root/mservethumbs/')
+MEDIA_ROOT = os.path.join(MSERVE_DATA, 'mservemedia') 
+THUMB_ROOT = os.path.join(MSERVE_DATA, 'www-root', 'mservethumbs')
 THUMB_PATH = "/mservethumbs/"
 
 # MServe Specific Settings
-STORAGE_ROOT = os.path.join(MSERVE_DATA, 'mservedata/')
-SECDOWNLOAD_ROOT = os.path.join(MSERVE_DATA+"/")
+STORAGE_ROOT = os.path.join(MSERVE_DATA, 'mservedata')
+SECDOWNLOAD_ROOT = os.path.join(MSERVE_DATA, 'www-root')
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).

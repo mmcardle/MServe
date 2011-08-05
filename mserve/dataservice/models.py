@@ -948,7 +948,7 @@ class MFile(NamedBase):
         if accessspeed == "unlimited":
             dlfoldername = "dl"
         else:
-            dlfoldername = "dl%s" % accessspeed
+            dlfoldername = os.path.join("dl" , accessspeed)
 
         path = unicode(file)
 
