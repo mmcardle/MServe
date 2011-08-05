@@ -956,7 +956,8 @@ configure_apache () {
 		s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
 	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/mserve-fcgi.sock\n\n\
         XSendFile On\nXSendFileAllowAbove On\n\
-	Alias /media ${MSERVE_DATA}/www-root/media\n\n\
+	Alias /media ${MSERVE_DATA}/www-root/media\n\
+        Alias /dl /var/opt/mserve-data/dl\n\n\
 	RewriteEngine On\n\
 	RewriteRule ^/(dl.*)$ /\$1 [QSA,L,PT]\n\
 	RewriteRule ^/(media.*)$ /\$1 [QSA,L,PT]\n\
@@ -971,32 +972,32 @@ configure_apache () {
             AuthTokenPrefix /dl/\n\
             AuthTokenTimeout 60\n\
         </Location>\n\n\
-        <Location /dl100/>\n\
-            AuthTokenPrefix /dl100/\n\
+        <Location /dl/100/>\n\
+            AuthTokenPrefix /dl/100/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100\n\
         </Location>\n\n\
-        <Location /dl1000/>\n\
-            AuthTokenPrefix /dl1000/\n\
+        <Location /dl/1000/>\n\
+            AuthTokenPrefix /dl/1000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000\n\
         </Location>\n\n\
-        <Location /dl10000/>\n\
-            AuthTokenPrefix /dl10000/\n\
+        <Location /dl/10000/>\n\
+            AuthTokenPrefix /dl/10000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 10000\n\
         </Location>\n\n\
-        <Location /dl100000/>\n\
-            AuthTokenPrefix /dl100000/\n\
+        <Location /dl/100000/>\n\
+            AuthTokenPrefix /dl/100000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100000\n\
         </Location>\n\n\
-        <Location /dl1000000/>\n\
-            AuthTokenPrefix /dl1000000/\n\
+        <Location /dl/1000000/>\n\
+            AuthTokenPrefix /dl/1000000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000000\n\
@@ -1010,7 +1011,7 @@ configure_apache () {
 	###############################################################
 	# create a link to dl, it does not exist at the moment but will
 	# become alive when mserve starts
-	sudo -u www-data ln -s ../dl  ${MSERVE_DATA}/www-root/dl
+	#sudo -u www-data ln -s ../dl  ${MSERVE_DATA}/www-root/dl
 
 	###################################################
 	# disable old site enable fast cgi, enable new site
