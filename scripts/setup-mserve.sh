@@ -974,30 +974,40 @@ configure_apache () {
         </Location>\n\n\
         <Location /dl/100/>\n\
             AuthTokenPrefix /dl/100/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenPrefix /dl/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100\n\
         </Location>\n\n\
         <Location /dl/1000/>\n\
             AuthTokenPrefix /dl/1000/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenPrefix /dl/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000\n\
         </Location>\n\n\
         <Location /dl/10000/>\n\
             AuthTokenPrefix /dl/10000/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenPrefix /dl/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 10000\n\
         </Location>\n\n\
         <Location /dl/100000/>\n\
             AuthTokenPrefix /dl/100000/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenPrefix /dl/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100000\n\
         </Location>\n\n\
         <Location /dl/1000000/>\n\
             AuthTokenPrefix /dl/1000000/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenPrefix /dl/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000000\n\
@@ -1007,11 +1017,6 @@ configure_apache () {
 	if [ ! -s $_target ]; then
 		f_ "failed to create successfully $_target (zero size mserve site detected)"
 	fi
-
-	###############################################################
-	# create a link to dl, it does not exist at the moment but will
-	# become alive when mserve starts
-	#sudo -u www-data ln -s ../dl  ${MSERVE_DATA}/www-root/dl
 
 	###################################################
 	# disable old site enable fast cgi, enable new site
