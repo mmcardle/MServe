@@ -967,7 +967,7 @@ configure_apache () {
 	RewriteRule ^/(\\/.*)$ /\$1 [QSA,L,PT]\n\
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
-        <Location "/dl/">\n\
+        <Location /dl/>\n\
             AuthTokenSecret 'ugeaptuk6'\n\
             AuthTokenPrefix /dl/\n\
             AuthTokenTimeout 60\n\
