@@ -975,7 +975,7 @@ configure_apache () {
         <Location /dl/100/>\n\
             AuthTokenPrefix /dl/100/\n\
             AuthTokenSecret 'ugeaptuk6'\n\
-            AuthTokenPrefix /dl/\n\
+            AuthTokenTimeout 60\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100\n\
@@ -983,7 +983,7 @@ configure_apache () {
         <Location /dl/1000/>\n\
             AuthTokenPrefix /dl/1000/\n\
             AuthTokenSecret 'ugeaptuk6'\n\
-            AuthTokenPrefix /dl/\n\
+            AuthTokenTimeout 60\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000\n\
@@ -991,7 +991,7 @@ configure_apache () {
         <Location /dl/10000/>\n\
             AuthTokenPrefix /dl/10000/\n\
             AuthTokenSecret 'ugeaptuk6'\n\
-            AuthTokenPrefix /dl/\n\
+            AuthTokenTimeout 60\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 10000\n\
@@ -999,7 +999,7 @@ configure_apache () {
         <Location /dl/100000/>\n\
             AuthTokenPrefix /dl/100000/\n\
             AuthTokenSecret 'ugeaptuk6'\n\
-            AuthTokenPrefix /dl/\n\
+            AuthTokenTimeout 60\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100000\n\
@@ -1007,7 +1007,7 @@ configure_apache () {
         <Location /dl/1000000/>\n\
             AuthTokenPrefix /dl/1000000/\n\
             AuthTokenSecret 'ugeaptuk6'\n\
-            AuthTokenPrefix /dl/\n\
+            AuthTokenTimeout 60\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000000\n\
@@ -1017,6 +1017,7 @@ configure_apache () {
 	if [ ! -s $_target ]; then
 		f_ "failed to create successfully $_target (zero size mserve site detected)"
 	fi
+
 
 	###################################################
 	# disable old site enable fast cgi, enable new site
