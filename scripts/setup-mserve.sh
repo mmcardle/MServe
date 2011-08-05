@@ -1022,7 +1022,7 @@ configure_apache () {
 	###################################################
 	# disable old site enable fast cgi, enable new site
 	a2dissite default || f_ "failed to disable apache default site"
-	a2enmod fastcgi rewrite || f_ "failed to enable fastcgi rewrite modules"
+	a2enmod fastcgi rewrite bw || f_ "failed to enable fastcgi rewrite bw modules"
 	a2ensite mserve	|| f_ "failed to enable mserve site"
 }
 
