@@ -236,7 +236,7 @@ check_os_release () {
 	release=$(lsb_release -r | awk '{print $2}')
 	if [ "$release" != "10.04" ]; then
 		echo "this system is not Ubuntu 10.04 TLS"
-		#exit 1
+		exit 1
 	fi
 	case $release in
 		10.04) echo "Release 10.04 is supported"
@@ -330,8 +330,8 @@ stop_mserve_processes () {
 
 	echo -e "\n\nStopping celeryd processes"
 	sudo -u www-data ${MSERVE_HOME}/manage.py celeryd_multi stop \
-		--logfile=${MSERVE_DATA}/celeryd%n.log -l DEBUG 2 -n:1 local.$hn \
-		-n:2 remote.$hn -Q:1 local_tasks -Q:2 remote_tasks -c 5 \
+		--logfile=${MSERVE_DATA}/celeryd%n.log -l DEBUG 2 -n:1 normal.$hn \
+		-n:2 priority.$hn -Q:1 normal_tasks -Q:2 priority_tasks -c 5 \
 		--pidfile=${MSERVE_DATA}/celeryd%n.pid
 }
 
@@ -481,7 +481,7 @@ echo "PART-I installing MServe prerequisites"
 
 #############################
 # update system repositories
-#apt-get update || f_ "fail, could not update system repositories"
+apt-get update || f_ "fail, could not update system repositories"
 
 apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
 apt-get -y install git-core mercurial ffmpegthumbnailer || \
@@ -1183,7 +1183,7 @@ if [ -x ${MSERVE_HOME}/scripts/mserve-service ]; then
 	service mserve-service start || f_ "service mserve-service start failed to start mserve"
 else
 	echo "no mserve init script found, starting mserve service manually"
-	${MSERVE_HOME}/restart.sh || f_ "failed to restart mserve"
+	${MSERVE_HOME}/restart.sh || f_ "failed to restart/etc mserve"
 fi
 
 # start celeryd
