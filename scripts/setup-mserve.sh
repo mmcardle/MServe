@@ -966,10 +966,10 @@ configure_apache () {
 	RewriteRule ^/(\\/.*)$ /\$1 [QSA,L,PT]\n\
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
-        <LocationMatch "/dl/">\n\
-            AuthTokenSecret 'ugeaptuk6'\n\
-            AuthTokenTimeout 60\n\
-        </LocationMatch>\n\n\
+        #<LocationMatch "/dl/">\n\
+        #    AuthTokenSecret 'ugeaptuk6'\n\
+        #    AuthTokenTimeout 60\n\
+        #</LocationMatch>\n\n\
         <Location /dl/100/>\n\
             AuthTokenPrefix /dl/100/\n\
             BandWidthModule On\n\
