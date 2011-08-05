@@ -1062,7 +1062,7 @@ class MFile(NamedBase):
                     import random
 
                     prioritise = self.service.priority
-                    q = "normal.tasks"
+                    q = "normal.%s"% (task_name)
                     if prioritise:
                         q = "priority.%s"% (task_name)
                     kwargs={"routing_key":q}
@@ -1217,8 +1217,7 @@ class ManagementProperty(models.Model):
 
     def values(self):
         if self.property == "accessspeed":
-            #return {"type" : "step", "min":50 , "max" : 5000, "step" : 50, "altchoices" : ["unlimited"]}
-            return {"type" : "enum", "choices" : ["100","1000","10000","100000","1000000", "100000000"] }
+            return {"type" : "enum", "choices" : ["100","1000","10000","100000","1000000", "100000000","unlimited"] }
         elif self.property == "profile":
             return {"type" : "enum", "choices" : profiles.keys() }
         else:

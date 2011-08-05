@@ -126,7 +126,13 @@ class JobHandler(BaseHandler):
             logging.info("Creating task %s inputs= %s outputs= %s options= %s" % (jobtype,inputs,outputs,options))
 
             # TODO : Submit to correct Q options={"queue":"%s"%job.id}
-            task = subtask(task=jobtype,args=[inputs,outputs,options],callbacks=callbacks)
+            prioritise = mfile.service.priority
+            q = "normal.%s"% (jobtype)
+            if prioritise:
+                q = "priority.%s"% (jobtype)
+            kwargs={"routing_key":q}
+            task = subtask(task=jobtype,args=[inputs,outputs,options],callbacks=callbacks,options=kwargs)
+            logging.info("Task created %s " % task )
 
             tasks = [task]
 
