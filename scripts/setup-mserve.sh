@@ -966,36 +966,37 @@ configure_apache () {
 	RewriteRule ^/(\\/.*)$ /\$1 [QSA,L,PT]\n\
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
-        #<LocationMatch "/dl/">\n\
-        #    AuthTokenSecret 'ugeaptuk6'\n\
-        #    AuthTokenTimeout 60\n\
-        #</LocationMatch>\n\n\
-        <Location /dl/100/>\n\
-            AuthTokenPrefix /dl/100/\n\
+        <Location "/dl/">\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenPrefix /dl/\n\
+            AuthTokenTimeout 60\n\
+        </Location>\n\n\
+        <Location /dl100/>\n\
+            AuthTokenPrefix /dl100/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100\n\
         </Location>\n\n\
-        <Location /dl/1000/>\n\
-            AuthTokenPrefix /dl/1000/\n\
+        <Location /dl1000/>\n\
+            AuthTokenPrefix /dl1000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000\n\
         </Location>\n\n\
-        <Location /dl/10000/>\n\
-            AuthTokenPrefix /dl/10000/\n\
+        <Location /dl10000/>\n\
+            AuthTokenPrefix /dl10000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 10000\n\
         </Location>\n\n\
-        <Location /dl/100000/>\n\
-            AuthTokenPrefix /dl/100000/\n\
+        <Location /dl100000/>\n\
+            AuthTokenPrefix /dl100000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 100000\n\
         </Location>\n\n\
-        <Location /dl/1000000/>\n\
-            AuthTokenPrefix /dl/1000000/\n\
+        <Location /dl1000000/>\n\
+            AuthTokenPrefix /dl1000000/\n\
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 1000000\n\
