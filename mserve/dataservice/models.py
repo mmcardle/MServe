@@ -1218,7 +1218,7 @@ class ManagementProperty(models.Model):
     def values(self):
         if self.property == "accessspeed":
             #return {"type" : "step", "min":50 , "max" : 5000, "step" : 50, "altchoices" : ["unlimited"]}
-            return {"type" : "enum", "choices" : ["10","100","1000","10000","100000","1000000"] }
+            return {"type" : "enum", "choices" : ["100","1000","10000","100000","1000000", "100000000"] }
         elif self.property == "profile":
             return {"type" : "enum", "choices" : profiles.keys() }
         else:

@@ -352,7 +352,7 @@ uninstall_mserve () {
 	echo -e "\n\nReconfiguring http server $_HTTP_SERVER"
 	if [ _HTTP_SERVER="apache" ]; then
 		a2dissite mserve
-		a2dismod fastcgi rewrite
+		a2dismod fastcgi rewrite bw
 		a2ensite default
 		/etc/init.d/apache2 force-reload
 	fi
@@ -502,7 +502,7 @@ rm rabbitmq.preseed
 # install other basic prerequisites
 
 install_mod_auth_token() {
-	apt-get -y install autoconf libtool apache2-threaded-dev libapache2-mod-bw || \
+	apt-get -y install autoconf libtool apache2-threaded-dev || \
 		f_ "failed to install autoconf libtool apache2-threaded-dev"
 	wget http://mod-auth-token.googlecode.com/files/mod_auth_token-1.0.5.tar.gz || \
 		f_ "failed to fetch mod_auth_token"
@@ -520,7 +520,7 @@ install_mod_auth_token() {
 #######################
 # install http server
 case $HTTP_SERVER in 
-	apache) apt-get -y install apache2 libapache2-mod-fastcgi libapache2-mod-xsendfile
+	apache) apt-get -y install apache2 libapache2-mod-fastcgi libapache2-mod-bw libapache2-mod-xsendfile
 		a2enmod auth_token
 		if [ $? -ne 0 ]; then
 			echo "mod_auth_token is not found, trying to install it"
@@ -1012,6 +1012,14 @@ configure_apache () {
             ForceBandWidthModule On\n\
             BandWidth all 1000000\n\
         </Location>\n\n\
+        <Location /dl/10000000/>\n\
+            AuthTokenPrefix /dl/10000000/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenTimeout 60\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 10000000\n\
+        </Location>\n\n\
 	@" > $_target || f_ "failed to create mserve site correctly"	
 
 	if [ ! -s $_target ]; then
@@ -1087,7 +1095,7 @@ fi
 # restart http server 
 echo "Restarting http server $HTTP_SERVER"
 case $HTTP_SERVER in
-	apache) /etc/init.d/apache2 force-reload || \
+	apache) /etc/init.d/apache2 restart || \
 		f_ "failed to reload correctly apache configuration"
 		;;
 	lighttpd) /etc/init.d/lighttpd force-reload || \
