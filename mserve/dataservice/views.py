@@ -59,9 +59,8 @@ mobile_ua_hints = [ 'SymbianOS', 'Opera Mini', 'iPhone', 'iPad' ]
 
 def append_dict(dict,request):
     mobile_browser = False
-    logging.info(request.META['HTTP_USER_AGENT'])
     ua = request.META['HTTP_USER_AGENT'].lower()[0:4]
-    logging.info(ua)
+    logging.debug("User Agent is %s " % ua)
     if (ua in mobile_uas):
         mobile_browser = True
     else:
@@ -70,7 +69,6 @@ def append_dict(dict,request):
                 mobile_browser = True
 
     dict['mobile_browser'] = mobile_browser
-    logging.info(dict)
     return dict
 
 def home(request,form=HostingContainerForm()):
