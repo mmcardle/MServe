@@ -308,7 +308,8 @@
                 <h3 class="red"><a href="#">Workflow ${workflow.name}</a></h3>
                 <div>
                 <table class="workflowtable" id="workflowtable-${id}" border="0" >
-                    <tr><th style="width: 16%">Tasks</th><th style="width: 20%">Condition</th><th style="width: 12%">Remote Execution</th><th style="width: 12%">Remote Trigger</th><th style="">Parameters</th></tr>
+                    <tr><th style="width: 16%">Tasks</th><th style="width: 20%">Condition</th>
+                        <!--th style="width: 12%">Remote Execution</th><th style="width: 12%">Remote Trigger</th--><th style="">Parameters</th></tr>
 
                         {%templatetag openvariable%}if workflow.tasks.length == 0 {%templatetag closevariable%}
                         <tr>
@@ -330,12 +331,12 @@
                             <td>
                                 <input type="text" style="width: 96%" value="" id="id_condition" name="condition" >
                             </td>
-                            <td>
+                            <!--td>
      
                             </td>
                             <td>
                                 <input type="text" style="width: 96%" value="" id="id_remotecondition" name="remotecondition" >
-                            </td>
+                            </td-->
                             <td>
                                 <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1" name="args">{}</textarea>
                             </td>
@@ -359,8 +360,8 @@
         <td>
             <input type="text" style="width: 96%" value="${condition}" >
         </td>
-        <td>
-            <div id="allowremotecheck-${id}">
+        <!--td>
+                <div id="allowremotecheck-${id}">
             {%templatetag openvariable%}if allowremote {%templatetag closevariable%}
                 <input style="display: inline-block" type="radio" name="radio-${id}" id="check-${id}-1" checked="checked" /><label for="check-${id}-1"></label>
                 <input style="display: inline-block" type="radio" name="radio-${id}" id="check-${id}-2" /><label for="check-${id}-2">No</label>
@@ -372,7 +373,7 @@
         </td>
         <td>
             <input type="text" style="width: 96%" value="${remotecondition}" >
-        </td>
+        </td-->
         <td>
             <textarea style="width: 96%;border: 1px dotted silver" NAME="comments" COLS=30 ROWS=1 id="id_args-${id}">${args}</textarea>
         </td>
