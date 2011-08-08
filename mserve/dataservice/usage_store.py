@@ -82,16 +82,19 @@ def _stoprecording_(usage, obj=None):
 
     usagedelta = float(lastUsage) + float(lastRate) * (t2 - t1)
 
-    if obj is not None:
-        obj.usages.add(usage)
-        obj.save()
+    finalTotal = usage.total + usage.rateCumulative + usagedelta
 
     usage.rateTime = now
-    usage.rateCumulative = usage.rateCumulative + usagedelta
+    usage.rateCumulative = 0
+    usage.total = finalTotal
     usage.rate = 0
     usage.nInProgress = 0
-    usage.save()
+    usage.base=None
+    u = usage.copy(obj,save=True)
 
+    if obj is not None:
+        obj.usages.add(u)
+        obj.save()
 
 def stoprecording(id,metric,report=True):
     logging.debug("Stop Recording "+id)

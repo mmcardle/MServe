@@ -198,9 +198,15 @@ class Usage(models.Model):
 
     def fmt_rtime(self):
         return self.rateTime.ctime()
-    
+
+    def copy(self,base,save=False):
+        u = Usage(base=base,metric=self.metric,total=self.total,reports=self.reports,nInProgress=self.nInProgress,rate=self.rate,rateTime=self.rateTime,
+            rateCumulative=self.rateCumulative)
+        if save:
+            u.save()
+        return u
+
     def __unicode__(self):
-        return "usage"
         object = ""
         if self.base:
             object = self.base
@@ -394,8 +400,10 @@ class NamedBase(Base):
         if not self.initial_usage_recorded:
             startusages = []
             for metric in self.metrics:
+                logging.info("Processing metric %s" %metric)
                 #  Recored Initial Values
                 v = self.get_value_for_metric(metric)
+                logging.info("Value for %s is %s" % (metric,v))
                 if v is not None:
                     logging.info("Recording usage for metric %s value= %s" % (metric,v) )
                     usage = usage_store.record(self.id,metric,v)
@@ -403,6 +411,7 @@ class NamedBase(Base):
 
                 # Start recording initial rates
                 r = self.get_rate_for_metric(metric)
+                logging.info("Rate for %s is %s" % (metric,r))
                 if r is not None:
                     logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
                     usage = usage_store.startrecording(self.id,metric,r)
@@ -1104,17 +1113,15 @@ class MFile(NamedBase):
     def get_rate_for_metric(self, metric):
         if metric == metric_mfile:
             return 1
+        if not self.empty:
+            if metric == metric_disc:
+                return self.file.size
 
     def get_value_for_metric(self, metric):
         if not self.empty:
             if metric == metric_disc_space:
                 return self.file.size
             if metric == metric_ingest:
-                return self.file.size
-
-    def get_rate_for_metric(self, metric):
-        if not self.empty:
-            if metric == metric_disc:
                 return self.file.size
 
     def thumburl(self):

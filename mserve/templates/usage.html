@@ -20,16 +20,17 @@ $('#tabs').bind('tabsshow', function(event, ui) {
 <div id="usagecontent" >
 {% if usagesummary %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
+        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Sum</th><th>Std. Dev</th><th>Variance</th></tr>
         {% for summary in usagesummary%}
             <tr>
                 <td style="text-align: left;"><b>{{summary.metric}}</b></td>
-                <td>{{summary.min}}</td>
-                <td>{{summary.max}}</td>
-                <td>{{summary.n}}</td>
-                <td>{{summary.avg}}</td>
-                <td>{{summary.stddev}}</td>
-                <td>{{summary.var}}</td>
+                <td><script>document.write(number_format({{summary.min}}, 2, '.', ','))</script></td>
+                <td><script>document.write(number_format({{summary.max}}, 2, '.', ','))</script></td>
+                <td><script>document.write(number_format({{summary.n}}, 0, '.', ','))</script></td>
+                <td><script>document.write(number_format({{summary.avg}}, 2, '.', ','))</script></td>
+                <td><script>document.write(number_format({{summary.sum}}, 2, '.', ','))</script></td>
+                <td><script>document.write(number_format({{summary.stddev}}, 2, '.', ','))</script></td>
+                <td><script>document.write(number_format({{summary.variance}}, 2, '.', ','))</script></td>
             </tr>
         {% endfor %}
     </table>
