@@ -246,10 +246,12 @@ class HostingContainerHandler(BaseHandler):
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE','PUT')
     model = DataService
-    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority')
+    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority','subservices_url')
     exclude = ('pk')
 
-    def read(self,request, id=None, containerid=None):
+    def read(self,request, id=None, containerid=None,serviceid=None):
+        if serviceid:
+            return self.model.objects.get(id=serviceid).subservices.all()
         if containerid:
             return HostingContainer.objects.get(pk=containerid).do("GET","services")
         if id:
@@ -278,20 +280,27 @@ class DataServiceHandler(BaseHandler):
         logging.info("Deleting Service %s " % id)
         return DataService.objects.get(id=id).do("DELETE")
 
-    def create(self, request):
-        logging.info(request.POST)
-        form = DataServiceForm(request.POST)
+    def create(self, request, serviceid=None):
+
+        service = None
+        if serviceid:
+            service = DataService.objects.get(id=serviceid)
+            form = SubServiceForm(request.POST)
+        else:
+            form = DataServiceForm(request.POST)
 
         if form.is_valid(): 
 
             logging.info("CREATE DATASERVICE %s" % request.POST)
 
             name = request.POST['name']
-            containerid = request.POST['container']
 
-            container = HostingContainer.objects.get(id=containerid)
-
-            dataservice = container.create_data_service(name)
+            if service:
+                dataservice = service.create_subservice(name)
+            else:
+                containerid = request.POST['container']
+                container = HostingContainer.objects.get(id=containerid)
+                dataservice = container.create_data_service(name)
 
             if request.POST.has_key('starttime'):
                 dataservice.starttime = request.POST['starttime']
@@ -421,7 +430,8 @@ class MFileHandler(BaseHandler):
 
     def delete(self, request, id):
         logging.info("Deleting mfile %s " % id)
-        MFile.objects.get(id=id).delete()
+        #MFile.objects.get(id=id).delete()
+        MFile.objects.get(id=id).do("DELETE")
         r = rc.DELETED
         return r
 

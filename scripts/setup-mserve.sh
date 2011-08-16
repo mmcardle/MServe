@@ -234,10 +234,10 @@ check_root_f() {
 
 check_os_release () {
 	release=$(lsb_release -r | awk '{print $2}')
-	if [ "$release" != "10.04" ]; then
-		echo "this system is not Ubuntu 10.04 TLS"
-		exit 1
-	fi
+	#if [ "$release" != "10.04" ]; then
+	#	echo "this system is not Ubuntu 10.04 TLS"
+	#	exit 1
+	#fi
 	case $release in
 		10.04) echo "Release 10.04 is supported"
 			;;

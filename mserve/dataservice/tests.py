@@ -99,7 +99,6 @@ class APITest(TestCase):
         auths = container.do("GET","auths")
         self.failUnlessEqual(len(auths), 1)
 
-
     def test_service(self):
         container = HostingContainer.create_container("HostingContainer1")
         service = container.create_data_service("Service1")
@@ -193,6 +192,55 @@ class APITest(TestCase):
 
         folders = service.do("GET","mfolders")
         self.failUnlessEqual(len(folders), 2)
+
+    def test_subservice(self):
+        container = HostingContainer.create_container("HostingContainer1")
+
+        service = container.create_data_service("Service1")
+        subservice =  service.create_subservice("SubService")
+
+        file1 = service.do("POST","mfiles",name="FullFile",file=ContentFile('new content'))
+
+        self.failUnlessEqual(len(service.do("GET","mfiles")), 1)
+        self.failUnlessEqual(len(service.do("GET","mfiles")), len(subservice.do("GET","mfiles")))
+
+        file2 = subservice.do("POST","mfiles",name="FullFile2",file=ContentFile('new content2'))
+
+        self.failUnlessEqual(len(service.do("GET","mfiles")), 2)
+        self.failUnlessEqual(len(service.do("GET","mfiles")), len(subservice.do("GET","mfiles")))
+
+        file1.file.open()
+        filecontents1 = file1.file.read()
+        self.failUnlessEqual(filecontents1, 'new content')
+        file1.file.close()
+
+        try:
+            wfile = open(file2.file.path,'r+b')
+            try:
+                wfile.write('XXX')
+            finally:
+                wfile.close()
+        except IOError:
+            logging.error("Error writing partial content to MFile '%s'" % file2)
+
+        file2.file.open()
+        filecontents1 = file2.file.read()
+        self.failUnlessEqual(filecontents1, 'XXX content2')
+        file2.file.close()
+
+        readfile = subservice.do("GET","mfiles")[1]
+        readfile.file.open()
+        filecontents3 = readfile.file.read()
+        self.failUnlessEqual(filecontents3, 'new content')
+        readfile.file.close()
+
+        file1.do("DELETE")
+        self.failUnlessEqual(len(service.do("GET","mfiles")), 1)
+        self.failUnlessEqual(len(subservice.do("GET","mfiles")), 1)
+
+        file2.do("DELETE")
+        self.failUnlessEqual(len(service.do("GET","mfiles")), 0)
+        self.failUnlessEqual(len(subservice.do("GET","mfiles")), 0)
 
     def test_serviceauth(self):
         container = HostingContainer.create_container("HostingContainer1")
@@ -418,10 +466,10 @@ class APITest(TestCase):
         self.failUnlessEqual(type(shouldbe_403), HttpResponseForbidden)
 
         usages = mfile.do("GET","usages")
-        self.failUnlessEqual(len(usages), 3)
+        self.failUnlessEqual(type(usages[0]), type(Usage()))
 
         auths = mfile.do("GET","auths")
-        self.failUnlessEqual(len(auths), 1)
+        self.failUnlessEqual(type(auths[0]), type(Auth()))
 
         # PUT container
         shouldbe_403_2 = mfile.do("PUT","properties",{"accesspeed":100})

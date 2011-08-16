@@ -34,7 +34,6 @@
 
     <ul>
         <li><a href="#tabs-1">Services</a></li>
-        <li><a href="#tabs-2">Actions</a></li>
         <li><a href="#tabs-3">Config</a></li>
         <li><a href="#tabs-usage">Usage</a></li>
         <li><a href="#tabs-5">Access Control</a></li>
@@ -54,12 +53,6 @@
         </script>
     </div>
 
-    <div id="tabs-2">
-        {% if user.is_staff %}
-            {% include "methods.html" %}
-        {% endif %}
-
-    </div>
     <div id="tabs-3">
          {% if user.is_staff %}
 

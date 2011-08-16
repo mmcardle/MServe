@@ -60,6 +60,13 @@ class DataServiceURLForm(ModelForm):
         exclude=['id','status','container','reportnum','initial_usage_recorded','usages']
         model = DataService
 
+class SubServiceForm(ModelForm):
+    #cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+    
+    class Meta:
+        exclude=['id', 'status', 'reportnum', 'initial_usage_recorded', 'usages','container','service','priority','parent']
+        model = DataService
+
 class DataServiceForm(ModelForm):
     #cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
     
@@ -69,14 +76,14 @@ class DataServiceForm(ModelForm):
 
 class MFileURLForm(ModelForm):
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','folder']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','folder','duplicate_of']
         model = MFile
 
 class MFileForm(ModelForm):
     sid = forms.CharField(max_length=ID_FIELD_LENGTH,widget=forms.HiddenInput,required=False)
 
     class Meta:
-        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy','folder']
+        exclude=['name','id','service','mimetype', 'checksum','size','thumb','poster','reportnum','initial_usage_recorded','usages','proxy','folder','duplicate_of']
         model = MFile
 
 class UpdateMFileForm(ModelForm):

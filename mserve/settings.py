@@ -31,13 +31,11 @@ import os
 
 try:
     from settings_dev import *
-    print "Import Local Settings"
 except ImportError:
     MSERVE_HOME='/opt/mserve'
     MSERVE_DATA='/var/opt/mserve-data'
     MSERVE_LOG='/var/log/mserve'
     DBNAME='mservedb'
-    print "No local settings found, using defaults."
 
 import logging
 logging.basicConfig(

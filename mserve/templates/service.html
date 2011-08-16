@@ -2,6 +2,10 @@
 
 {% block title %}MServe Service{% endblock %}
 
+{% block script %}
+<script type="text/javascript" src="/mservemedia/js/jquery-dateplustimepicker.min.js"></script>
+{% endblock %}
+
 {% block usages %}
     <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
     <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.jobs|length}}</em>&nbsp;&nbsp;&nbsp;</span>
@@ -51,6 +55,7 @@
 	<ul>
 		<li><a href="#tabs-1">Files</a></li>
 		<li><a href="#jobs-tab">Jobs</a></li>
+                <li><a href="#subservice-tab">Sub Services</a></li>
 		<li><a href="#tabs-4">Config</a></li>
 		<li><a href="#tabs-usage">Usage</a></li>
 		<li><a href="#tabs-6">Access Control</a></li>
@@ -68,6 +73,88 @@
         <div class="clr"></div>
 
         </div>
+
+    	<div id="subservice-tab">
+
+            <table>
+                <tr>
+                    <th>New Service</th>
+                    <th>Existing Services</th>
+                </tr>
+                <tr>
+                    <td style="width: 25%">
+
+                        <form id="subservice-form" style="width: 200px;height: 100%;" >
+                               {{ subserviceform.as_p }}
+                        </form>
+                        <button id="subservice-button">New Service</button>
+
+                    </td>
+                    <td style="width: 65%">
+                                <div id="subservicecontainer"></div>
+                    </td>
+                </tr>
+            </table>
+
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+
+                    $.ajax({
+                            type: "GET",
+                            url: '{{service.subservices_url}}',
+                            success: function(subservices){
+                                $("#serviceTemplate").tmpl(subservices).appendTo("#subservicecontainer")
+                            }
+                    });
+
+                    now = new Date()
+                    $('#id_starttime').dateplustimepicker({
+                        dateFormat: 'yy-mm-dd',
+                        timeFormat: 'hh:mm:ss',
+                        stepHour: 1,
+                        stepMinute: 15,
+                        numberOfMonths: 1,
+                        step: { minutes: 15 },
+                        show: 'fold',
+                        showButtonPanel: true,
+                        defaultTime: now
+                    });
+                    $('#id_starttime').dateplustimepicker("setTime",now);
+
+                    oneHour = new Date()
+                    oneHour.addHours(1)
+                    $('#id_endtime').dateplustimepicker({
+                        dateFormat: 'yy-mm-dd',
+                        timeFormat: 'hh:mm:ss',
+                        stepHour: 1,
+                        stepMinute: 15,
+                        numberOfMonths: 1,
+                        step: { minutes: 15 },
+                        show: 'fold',
+                        showButtonPanel: true,
+                        defaultTime: oneHour
+                    });
+                    $('#id_endtime').dateplustimepicker("setTime",oneHour);
+
+                    $("#subservice-button").button().click(function(){
+                        data = $("#subservice-form").serialize()
+                        $.ajax({
+                            type: "POST",
+                            data: data,
+                            url: '{{service.subservices_url}}',
+                            success: function(subservice){
+                                $("#serviceTemplate").tmpl(subservice).appendTo("#subservicecontainer")
+                            }
+                        });
+                    })
+                });
+            </script>
+
+        <div class="clr"></div>
+
+        </div>
+
         <div id="jobs-tab">
              <h3>Jobs</h3>
 

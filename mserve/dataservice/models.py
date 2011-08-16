@@ -47,6 +47,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
+from django.core.urlresolvers import reverse
 
 from dataservice.tasks import proxyvideo
 from dataservice.tasks import thumbimage
@@ -379,7 +380,6 @@ class Base(models.Model):
                     return HttpResponseBadRequest()
             return HttpResponseNotFound()
 
-
         logging.info("ERROR: 404 Pattern not matched for %s on %s" % (method,url))
 
         return rc.NOT_FOUND
@@ -592,7 +592,8 @@ class DataServiceTask(models.Model):
         return "Task %s for %s" % (self.task_name,self.workflow.name)
 
 class DataService(NamedBase):
-    container = models.ForeignKey(HostingContainer)
+    container = models.ForeignKey(HostingContainer,blank=True,null=True)
+    parent    = models.ForeignKey('DataService',blank=True,null=True,related_name="subservices")
     status    = models.CharField(max_length=200)
     starttime = models.DateTimeField(blank=True,null=True)
     endtime   = models.DateTimeField(blank=True,null=True)
@@ -612,6 +613,27 @@ class DataService(NamedBase):
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
         self.metrics = service_metrics
+
+    def subservices_url(self):
+        return reverse('subservices',args=[self.id])
+
+    def create_subservice(self,name,save=True):
+        if self.parent:
+            service = self.parent.create_subservice(name,save=False)
+            service.parent = self
+            service.save()
+            return service
+        elif self.container:
+            service = self.container.create_data_service(name)
+            service.parent = self
+            service.save()
+            for mfile in self.mfile_set.all():
+                newmfile = mfile.duplicate(save=False,service=service)
+                newmfile.service = service
+                newmfile.save()
+            return service
+        else:
+            return HttpResponseBadRequest()
 
     def thumbs(self):
         thumbs = []
@@ -651,15 +673,29 @@ class DataService(NamedBase):
         return Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
 
     def post(self,url, *args, **kwargs):
-        # TODO : Folders and Jobs
+        # TODO : Jobs
         logging.info("%s %s " % (args, kwargs))
         if url == "mfiles":
-            return self.create_mfile(kwargs['name'],file=kwargs['file'])
+            if self.parent:
+                return self.parent.post(url, *args, **kwargs)
+            mfile = self.create_mfile(kwargs['name'],file=kwargs['file'])
+            for subservice in self.subservices.all():
+                subservice.__duplicate__(mfile)
+            return mfile
         if url == "mfolders":
             return self.create_mfolder(kwargs['name'])
         return HttpResponseNotFound()
 
+    def __duplicate__(self,mfile):
+        newmfile = mfile.duplicate(save=False,service=self)
+        newmfile.service = self
+        newmfile.save()
+        for subservice in self.subservices.all():
+            subservice.__duplicate__(mfile)
+
     def put(self,url, *args, **kwargs):
+        if self.parent:
+            return self.parent.put(url, *args, **kwargs)
         logging.info("PUT SERVICE %s %s %s " % (url, args, kwargs))
         if url == "auths":
             for authname in kwargs.keys():
@@ -675,10 +711,14 @@ class DataService(NamedBase):
         return HttpResponseNotFound()
 
     def get_rate_for_metric(self, metric):
+        if self.parent:
+            return self.parent.get_rate_for_metric(metric)
         if metric == metric_service:
             return 1
 
     def get_profile(self):
+        if self.parent:
+            return self.parent.get_profile()
         try:
             mp = self.managementproperty_set.get(property="profile")
             return mp.value
@@ -696,6 +736,8 @@ class DataService(NamedBase):
             usage_store._stoprecording_(usage,obj=self.container)
 
     def create_mfolder(self,name,parent=None):
+        if self.parent:
+            return self.parent.create_mfolder(name,parent=None)
         try :
             MFolder.objects.get(name=name,service=self,parent=parent)
             r = rc.DUPLICATE_ENTRY
@@ -705,7 +747,10 @@ class DataService(NamedBase):
             folder.save()
             return folder
 
-    def create_mfile(self,name,file=None,post_process=True,folder=None):
+    def create_mfile(self,name,file=None,post_process=True,folder=None,duplicate_of=None):
+        #if self.parent:
+        #    return self.parent.create_mfile(name,file=None,post_process=True,folder=None)
+        logging.info("Create Mfile %s" % (self) )
         service = self
 
         # Check for duplicates
@@ -730,6 +775,9 @@ class DataService(NamedBase):
                 mfile.file.save(name, file)
             else:
                 mfile = MFile(name=name,service=service,file=file,empty=False)
+
+        if duplicate_of:
+            mfile.duplicate_of = duplicate_of
         mfile.save()
 
         logging.debug("MFile creation started '%s' "%mfile.name)
@@ -752,7 +800,6 @@ class DataService(NamedBase):
         logging.info("MFile PATH %s " % mfile.file.path)
         logging.info("MFile size %s " % mfile.size)
         
-
         if post_process:
             mfile.create_workflow_job("ingest")
 
@@ -801,18 +848,19 @@ class MFolder(NamedBase):
 
 class MFile(NamedBase):
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
-    empty    = models.BooleanField(default=False)
-    service  = models.ForeignKey(DataService)
-    folder   = models.ForeignKey(MFolder,null=True)
-    file     = models.FileField(upload_to=utils.mfile_upload_to,blank=True,null=True,storage=storage.getdiscstorage())
-    mimetype = models.CharField(max_length=200,blank=True,null=True)
-    checksum = models.CharField(max_length=32, blank=True, null=True)
-    size     = models.BigIntegerField(default=0)
-    thumb    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
-    poster   = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getposterstorage())
-    proxy    = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getproxystorage())
-    created  = models.DateTimeField(auto_now_add=True)
-    updated  = models.DateTimeField(auto_now=True)
+    empty           = models.BooleanField(default=False)
+    service         = models.ForeignKey(DataService)
+    folder          = models.ForeignKey(MFolder,null=True)
+    file            = models.FileField(upload_to=utils.mfile_upload_to,blank=True,null=True,storage=storage.getdiscstorage())
+    mimetype        = models.CharField(max_length=200,blank=True,null=True)
+    checksum        = models.CharField(max_length=32, blank=True, null=True)
+    size            = models.BigIntegerField(default=0)
+    thumb           = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
+    poster          = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getposterstorage())
+    proxy           = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getproxystorage())
+    created         = models.DateTimeField(auto_now_add=True)
+    updated         = models.DateTimeField(auto_now=True)
+    duplicate_of    = models.ForeignKey('MFile',null=True)
 
     methods = ["GET","POST","PUT","DELETE"]
     urls = {
@@ -832,6 +880,12 @@ class MFile(NamedBase):
 
     def __str__(self):
         return "MFile  %s" % (self.name.encode("utf-8"))
+
+    def delete(self):
+        if self.duplicate_of:
+            self.duplicate_of.delete()
+        else:
+            super(MFile, self).delete()
 
     def __init__(self, *args, **kwargs):
         super(MFile, self).__init__(*args, **kwargs)
@@ -997,9 +1051,13 @@ class MFile(NamedBase):
         job.save()
         return job
 
-    def duplicate(self):
-        new_mfile = self.service.create_mfile(self.name,file=self.file,folder=self.folder)
-        new_mfile.save()
+    def duplicate(self,save=True,service=None):
+        if service:
+            new_mfile = service.create_mfile(self.name,file=self.file,folder=self.folder,duplicate_of=self)
+        else:
+            new_mfile = self.service.create_mfile(self.name,file=self.file,folder=self.folder,duplicate_of=self)
+        if save:
+            new_mfile.save()
         return new_mfile
 
     def create_read_only_auth(self):
@@ -1170,10 +1228,22 @@ class MFile(NamedBase):
         for usage in self.usages.all():
             usage_store._stoprecording_(usage,obj=self.service)
 
+def pre_delete_handler_mfile( sender, instance=False, **kwargs):
+    mfiles = MFile.objects.filter(duplicate_of=instance.pk)
+    logging.info("%s %s Has duplicates %s" % (instance,instance.id, mfiles) )
+
+    if instance.duplicate_of:
+        logging.info("%s %s IS DUP OF %s" % (instance,instance.id, instance.duplicate_of.id) )
+    #mfiles.delete()
+    if instance.duplicate_of:
+        dup = MFile.objects.filter(duplicate_of=instance.duplicate_of.pk)
+        #dup.delete()
+    instance._delete_usage_()
+
 def pre_delete_handler( sender, instance=False, **kwargs):
     instance._delete_usage_()
 
-pre_delete.connect(pre_delete_handler, sender=MFile, dispatch_uid="dataservice.models")
+pre_delete.connect(pre_delete_handler_mfile, sender=MFile, dispatch_uid="dataservice.models")
 pre_delete.connect(pre_delete_handler, sender=DataService, dispatch_uid="dataservice.models")
 pre_delete.connect(pre_delete_handler, sender=HostingContainer, dispatch_uid="dataservice.models")
 

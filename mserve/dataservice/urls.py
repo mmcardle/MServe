@@ -72,6 +72,7 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/auths/$', auth_handler),
     url(r'^services/(?P<serviceid>[^/]+)/mfiles/$', mfile_handler),
     url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler),
+    url(r'^services/(?P<serviceid>[^/]+)/subservices/$', dataservice_handler, name="subservices"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/$', dataservice_task_handler),
 
