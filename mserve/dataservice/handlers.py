@@ -21,7 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from mserve.dataservice.models import RemoteMServeService
+from models import RemoteMServeService
 from django.http import Http404
 from django.http import HttpResponseForbidden
 from piston.handler import BaseHandler
@@ -54,6 +54,7 @@ metric_corruption = "http://mserve/corruption"
 metric_dataloss = "http://mserve/dataloss"
 
 class ProfileHandler(BaseHandler):
+    ''' Profile Handler '''
     allowed_methods = ('GET', 'PUT')
     model = MServeProfile
     fields = (('user', () ),'mfiles','mfolders', 'myauths' ,('dataservices', ('id', 'name','mfile_set')), ('containers', ('id', 'name')),   )

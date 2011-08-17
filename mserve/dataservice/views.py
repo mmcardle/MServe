@@ -22,8 +22,8 @@
 #
 ########################################################################
 from django.http import Http404
-from mserve.dataservice.models import *
-from mserve.dataservice.forms import *
+from models import *
+from forms import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render_to_response
 from django.template import RequestContext

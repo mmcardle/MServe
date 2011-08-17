@@ -21,7 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from mserve.dataservice.models import NamedBase
+from models import NamedBase
 from dataservice.models import *
 import utils as utils
 import datetime
