@@ -6,6 +6,18 @@
 <script type="text/javascript" src="/mservemedia/js/jquery-dateplustimepicker.min.js"></script>
 {% endblock %}
 
+{% block style %}
+<style type="text/css">
+#mfoldertreecontainer li { min-height:22px; line-height:22px; }
+#mfoldertreecontainer a { line-height:20px; height:20px; font-size:10px; }
+#mfoldertreecontainer a ins { height:20px; width:20px; background-position:-56px -17px; }
+
+#mfoldertreecontainer1 li.mfile { min-height:122px; line-height:122px;}
+#mfoldertreecontainer1 li.mfile a { line-height:120px; height:120px; font-size:10px;}
+#mfoldertreecontainer1 li.mfile a ins { height:120px; width:208px; background-position: center; }
+</style>
+{% endblock %}
+
 {% block usages %}
     <span>Number of Files:&nbsp;&nbsp;<em>{{service.mfile_set.all|length}}</em>&nbsp;&nbsp;&nbsp;</span>
     <span>Number of Jobs:&nbsp;&nbsp;<em>{{service.jobs|length}}</em>&nbsp;&nbsp;&nbsp;</span>
@@ -62,15 +74,34 @@
 	</ul>
 
 	<div id="tabs-1">
-            
-        <div class="paginator" id="mfilepaginator"></div>
 
-        <div id="mfilemessages"></div>
+            <div id="mfoldertree" style="min-height: 500px">
+            <div style="display: none" id="mfolderhiddencontainer"></div>
+            <table style="table-layout: fixed;width: 100%;" border="0">
+                    <tr>
+                        <td style="width: 20%"><div id="mfoldertreecontainer"></div></td>
+                        <td style="width: 60%"> <ul id="qscontainer" ></ul></td>
+                    </tr>
+                </table>
+            </div>
 
-        <div id="managedresourcesmfilescontent">
-        </div>
+            <ul id="mfilecontainer" style="display: block"></ul>
 
-        <div class="clr"></div>
+            <div class="paginator" id="mfilepaginator"></div>
+            <div id="mfilemessages"></div>
+
+            <ul id="managedresourcesmfilescontent" style="display: block" ></ul>
+
+            <div class="clr"></div>
+
+            <ul id="mfoldercontainer" style="display: block"></ul>
+
+
+            <div class="clr"></div>
+
+
+
+            <div class="clr"></div>
 
         </div>
 
@@ -164,8 +195,9 @@
 
             <script type="text/javascript">
                 $(document).ready(function() {
-                    loadMFiles('{{service.id}}');
+                    //loadMFiles('{{service.id}}');
                     loadJobs('{{service.id}}');
+                    loadMFolders('{{service.id}}');
                 });
             </script>
 

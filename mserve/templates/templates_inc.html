@@ -643,8 +643,54 @@
 </div>
 </script>
 
+<script id="mfolderTemplate" type="text/x-jquery-tmpl">
+
+ {%templatetag openvariable%}if parent {%templatetag closevariable%}
+    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline"  onclick="showfolder('${id}');"  >
+ {%templatetag openvariable%}else{%templatetag closevariable%}
+    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline"  onclick="showfolder('${id}');"  >
+ {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+    <div id="image-${id}" class='fluid'
+                  {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
+                    onmouseover="$('#id-${id}').show();"
+                    onmouseout="$('#id-${id}').hide();"
+                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+            >
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0'  class='thumb' style="background-image: url(/mservemedia/images/icon_generic_120x120.png)">
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr>
+                <td>
+                    <div class='title'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</li>
+</script>
+
 <script id="mfileTemplate" type="text/x-jquery-tmpl">
-<div class="infoholder" id="mfileholder-${id}" >
+    
+ {%templatetag openvariable%}if folder {%templatetag closevariable%}
+    <li class="infoholder ${folder.id} ${id}" data-id="mfileholder-${id}"  id="mfileholder-${id}" style="display: inline" >
+ {%templatetag openvariable%}else{%templatetag closevariable%}
+    <li class="infoholder rootfolder ${id}" data-id="mfileholder-${id}" id="mfileholder-${id}" style="display: inline" >
+ {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+        
     <div id="image-${id}" class='fluid'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
@@ -697,7 +743,7 @@
     {%templatetag openvariable%}/if{%templatetag closevariable%}
 
     
-</div>
+</li>
 </script>
 
 <script id="mfileNoActionTemplate" type="text/x-jquery-tmpl">

@@ -247,7 +247,7 @@ class HostingContainerHandler(BaseHandler):
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE','PUT')
     model = DataService
-    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority','subservices_url')
+    fields = ('name', 'id', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority','subservices_url','folder_structure')
     exclude = ('pk')
 
     def read(self,request, id=None, containerid=None,serviceid=None):
@@ -399,7 +399,7 @@ class InfoHandler(BaseHandler):
 class MFolderHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFolder
-    fields = ('name','id')
+    fields = ('name','id','parent')
 
     def read(self,request, id=None, serviceid=None, authid=None):
         if id:
@@ -415,7 +415,9 @@ class MFolderHandler(BaseHandler):
 class MFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFile
-    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'proxy', 'created' , 'updated', 'thumburl', 'posterurl', 'proxyurl', 'reportnum')
+    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'proxy', \
+                'created' , 'updated', 'thumburl', 'posterurl', 'proxyurl', 'reportnum',\
+                ('folder', ('id','name') ) )
 
     def read(self,request, id=None, serviceid=None, authid=None):
         logging.info(id)

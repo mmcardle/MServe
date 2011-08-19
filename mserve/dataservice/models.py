@@ -610,6 +610,32 @@ class DataService(NamedBase):
         "profiles":["GET"],
         }
 
+    def folder_structure(self):
+        structure = self.__subfolder_structure(None)
+        return {"data":structure}
+
+    def __subfolder_structure(self,mfolder):
+
+        dict = {}
+        if mfolder:
+            dict["data"] = mfolder.name
+            dict["attr"] = {"id":mfolder.id}
+        else:
+            dict["data"] = self.name
+
+        children = []
+
+        for mfile in self.mfile_set.filter(folder=mfolder):
+            children.append({"data": { "title":mfile.name , "icon" : mfile.thumburl() } ,"attr": { "id":mfile.id, "class" : "mfile"}  })
+
+        for _mfolder in self.mfolder_set.filter(parent=mfolder):
+            children.append(self.__subfolder_structure(_mfolder))
+
+        dict["children"] = children
+
+
+        return dict
+    
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
         self.metrics = service_metrics
@@ -1216,7 +1242,7 @@ class MFile(NamedBase):
                 if self.mimetype.startswith("text"):
                     return os.path.join(mediapath,"images","text-x-generic.png")
         return os.path.join(mediapath,"images","package-x-generic.png")
-
+    
     def save(self):
         if not self.id:
             self.id = utils.random_id()
