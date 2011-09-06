@@ -281,7 +281,7 @@ class DataServiceHandler(BaseHandler):
         logging.info("Deleting Service %s " % id)
         return DataService.objects.get(id=id).do("DELETE")
 
-    def create(self, request, serviceid=None):
+    def create(self, request, containerid=None, serviceid=None):
 
         service = None
         if serviceid:
@@ -299,7 +299,8 @@ class DataServiceHandler(BaseHandler):
             if service:
                 dataservice = service.create_subservice(name)
             else:
-                containerid = request.POST['container']
+                if not containerid:
+                    containerid = request.POST['container']
                 container = HostingContainer.objects.get(id=containerid)
                 dataservice = container.create_data_service(name)
 

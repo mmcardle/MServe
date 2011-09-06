@@ -69,6 +69,8 @@ class SubServiceForm(ModelForm):
 
 class DataServiceForm(ModelForm):
     #cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
+    containerid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
+    name        = forms.CharField(max_length=50,required=False,)
     
     class Meta:
         exclude=['id', 'status', 'reportnum', 'initial_usage_recorded', 'usages']#,'starttime','endtime']
