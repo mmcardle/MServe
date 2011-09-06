@@ -25,6 +25,7 @@ from django.db import models
 import storage
 import logging
 import datetime
+import time
 import os
 import shutil
 import utils as utils
@@ -286,7 +287,21 @@ class Base(models.Model):
             return self.auth_set.all()
 
         if method=="GET" and url=="usages":
-            logging.info("check for full usage")
+            logging.info("check for full usage %s" % kwargs)
+
+            base = self
+            if kwargs.has_key('last'):
+                last = int(kwargs.get('last')[0])
+                logging.info("last usage seen %s" % last)
+                if last is not -1:
+                    logging.info("base %s " %base)
+                    logging.info("base %s " %base.reportnum)
+                    logging.info("base %s " % ( last==base.reportnum ))
+                    while last == base.reportnum:
+                        logging.debug("Waiting for new usage lastreport=%s" % last)
+                        time.sleep(10)
+                        base = NamedBase.objects.get(id=base.id)
+
             if kwargs.has_key('full'):
                 
                 values = kwargs.get('full')
@@ -294,17 +309,17 @@ class Base(models.Model):
                 if 'true' in values or 'True' in values:
                     logging.info("full usage true")
                     import usage_store
-                    usages = usage_store.get_usage(self.id)
+                    usages = usage_store.get_usage(base.id)
 
                     result = {}
                     result["usages"] = usages
-                    result["reportnum"] = self.reportnum
+                    result["reportnum"] = base.reportnum
 
                     return result
                 else:
-                    return self.usages.all()
+                    return base.usages.all()
             else:
-                return self.usages.all()
+                return base.usages.all()
 
         if method=="GET" and url=="properties":
             if type(self) == Auth:
@@ -394,10 +409,10 @@ class NamedBase(Base):
     usages  = models.ManyToManyField("Usage")
     reportnum = models.IntegerField(default=1)
 
-    def save(self):
+    def save(self, updated=True):
         super(NamedBase, self).save()
         import usage_store as usage_store
-        if not self.initial_usage_recorded:
+        if not self.initial_usage_recorded:#or updated:
             startusages = []
             for metric in self.metrics:
                 logging.info("Processing metric %s" %metric)
@@ -421,6 +436,8 @@ class NamedBase(Base):
             self.reportnum=1
             self.initial_usage_recorded = True
             super(NamedBase, self).save()
+
+
 
     def get_value_for_metric(self, metric):
         #logging.info("Override this method to report usage for metric %s" % metric)

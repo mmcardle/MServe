@@ -317,6 +317,29 @@ class DataServiceHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
+class SubServiceHandler(BaseHandler):
+    allowed_methods = ('POST')
+
+    def create(self, request, containerid=None):
+
+        serviceid = request.POST['serviceid']
+        name      = request.POST['name']
+
+        if serviceid:
+            container = HostingContainer.objects.get(id=containerid)
+            service = container.dataservice_set.get(id=serviceid)
+            subservice = service.create_subservice(name=name)
+            if request.POST.has_key('starttime'):
+                subservice.starttime = request.POST['starttime']
+            if request.POST.has_key('endtime'):
+                subservice.endtime = request.POST['endtime']
+            subservice.save()
+            return subservice
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
+
 class DataServiceTaskHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = DataServiceTask
@@ -632,7 +655,7 @@ class UsageHandler(BaseHandler):
 class UsageSummaryHandler(BaseHandler):
     allowed_methods = ('GET')
 
-    def read(self,request, cid, last_report=-1):
+    def read(self,request, id, last_report=-1):
         last = int(last_report)
         try:
             base = NamedBase.objects.get(pk=id)
