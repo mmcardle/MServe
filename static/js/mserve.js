@@ -144,7 +144,6 @@ function update_service_request(requesturl,request,data){
        data: data,
        success: function(request){
             $("#request-"+request.id).remove()
-                console.log($("#pending-requests").html())
             if(!$("#pending-requests").html().trim()){
                 message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff })
                 message.appendTo( "#pending-requests" );
@@ -377,17 +376,49 @@ function get_mfile_thumb(mfile){
     window.setTimeout(f, 3000, 0);
 }
 
+
 function loadMFile(mfile){
     $("#nofiles").remove()
-    $("#mfileTemplate" ).tmpl( mfile ) .prependTo( "#managedresourcesmfilescontent" );
-    $("#image-"+mfile.id).show('drop');
+    var $mft = $("#mfileTemplate" ).tmpl( mfile )
+    $mft.appendTo( "#qscontainer" );
 
+    doMFileButtons(mfile)
+
+    //$allcontent = $('#qscontainer').clone(true);
+    $($allcontent[0]).append($mft);
+
+    console.log($allcontent)
+    console.log($mft)
+
+    doQuicksand(mfile.id)
+    pnode = $("#mfoldertreecontainer .service")
+
+    $("#mfoldertreecontainer").jstree("create", pnode, "first",
+        { "data" : {
+                "title" : mfile.name,
+                "icon" : mfile.thumburl
+                },
+            "attr" : {
+                "id": mfile.id,
+                "class" : "mfile"
+                }
+        }, null, true    );
+
+}
+
+function doMFileButtons(mfile){
     (function() {
         var gid = mfile.id;
         var gmfileid = mfile.id;
         mfile_buttons(gmfileid)
         get_mfile_thumb(mfile)
     })();
+}
+
+function showmfiledialog(gmfileid){
+        create_new_job_ui_dialog(gmfileid,true)
+        $("#mfileid").val(gmfileid);
+        $("#dialog-new-job-dialog-form").dialog( "open" );
 }
 
 function mfile_buttons(gmfileid){

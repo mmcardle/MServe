@@ -613,6 +613,7 @@ class DataService(NamedBase):
     def folder_structure(self):
         structure = self.__subfolder_structure(None)
         return {"data":structure}
+        #return {"data":structure,"attr":{"id":self.id}}
 
     def __subfolder_structure(self,mfolder):
 
@@ -622,17 +623,17 @@ class DataService(NamedBase):
             dict["attr"] = {"id":mfolder.id}
         else:
             dict["data"] = self.name
+            dict["attr"] = {"id":self.id,"class" : "service"}
 
         children = []
-
-        for mfile in self.mfile_set.filter(folder=mfolder):
-            children.append({"data": { "title":mfile.name , "icon" : mfile.thumburl() } ,"attr": { "id":mfile.id, "class" : "mfile"}  })
 
         for _mfolder in self.mfolder_set.filter(parent=mfolder):
             children.append(self.__subfolder_structure(_mfolder))
 
-        dict["children"] = children
+        for mfile in self.mfile_set.filter(folder=mfolder):
+            children.append({"data": { "title":mfile.name , "icon" : mfile.thumburl() } ,"attr": { "id":mfile.id, "class" : "mfile"}  })
 
+        dict["children"] = children
 
         return dict
     

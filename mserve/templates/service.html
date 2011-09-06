@@ -80,25 +80,14 @@
             <table style="table-layout: fixed;width: 100%;" border="0">
                     <tr>
                         <td style="width: 20%"><div id="mfoldertreecontainer"></div></td>
-                        <td style="width: 60%"> <ul id="qscontainer" ></ul></td>
+                        <td style="width: 60%"><ul id="qscontainer" ></ul></td>
                     </tr>
                 </table>
             </div>
-
-            <ul id="mfilecontainer" style="display: block"></ul>
-
             <div class="paginator" id="mfilepaginator"></div>
             <div id="mfilemessages"></div>
 
-            <ul id="managedresourcesmfilescontent" style="display: block" ></ul>
-
-            <div class="clr"></div>
-
             <ul id="mfoldercontainer" style="display: block"></ul>
-
-
-            <div class="clr"></div>
-
 
 
             <div class="clr"></div>
@@ -195,7 +184,7 @@
 
             <script type="text/javascript">
                 $(document).ready(function() {
-                    //loadMFiles('{{service.id}}');
+
                     loadJobs('{{service.id}}');
                     loadMFolders('{{service.id}}');
                 });

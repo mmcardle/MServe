@@ -646,9 +646,9 @@
 <script id="mfolderTemplate" type="text/x-jquery-tmpl">
 
  {%templatetag openvariable%}if parent {%templatetag closevariable%}
-    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline"  onclick="showfolder('${id}');"  >
+    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline"  onclick="doQuicksand('${id}');"  >
  {%templatetag openvariable%}else{%templatetag closevariable%}
-    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline"  onclick="showfolder('${id}');"  >
+    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline"  onclick="doQuicksand('${id}');"  >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
     <div id="image-${id}" class='fluid'
@@ -690,7 +690,6 @@
     <li class="infoholder rootfolder ${id}" data-id="mfileholder-${id}" id="mfileholder-${id}" style="display: inline" >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-        
     <div id="image-${id}" class='fluid'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
@@ -720,8 +719,8 @@
                           <div style='font-size: xx-small;'>Checksum:</div>
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
                     </a>
-                        <button id="newjobbutton-${id}" >New Job</button>
-                        <button id="deletemfilebutton-${id}" >Delete</button>
+                        <button id="newjobbutton-${id}" onclick="showmfiledialog('${id}')" >New Job</button>
+                        <button id="deletemfilebutton-${id}" onclick="mfile_delete('${id}')" >Delete</button>
                       </div>
                 </td></tr>
             </tbody>
