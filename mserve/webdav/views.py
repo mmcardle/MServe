@@ -885,7 +885,6 @@ class DavServer(object):
         else:
             return HttpResponseBadRequest("Error creating file")
 
-
         if created:
             return HttpResponse(status=201)
         else:

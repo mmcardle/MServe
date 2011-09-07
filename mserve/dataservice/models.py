@@ -49,6 +49,8 @@ from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
 from django.core.urlresolvers import reverse
+from django.core.files.temp import NamedTemporaryFile
+from django.core.files import File
 
 from dataservice.tasks import proxyvideo
 from dataservice.tasks import thumbimage
@@ -840,7 +842,7 @@ class DataService(NamedBase):
         service = self
 
         # Check for duplicates
-        done =False
+        done=False
         n=0
         fn,ext = os.path.splitext(name)
         while not done:
@@ -857,7 +859,6 @@ class DataService(NamedBase):
             ranged = False
             rangestart = -1
             rangeend = -1
-            created = False
 
             if request.META.has_key('CONTENT_LENGTH'):
                 length = request.META['CONTENT_LENGTH']
@@ -904,9 +905,7 @@ class DataService(NamedBase):
             
             input = request.META['wsgi.input']
             emptyfile = ContentFile('')
-            mfile = MFile(name=name,service=service,empty=True)
-
-            import django.core.files.temp.NamedTemporaryFile
+            
             temp = NamedTemporaryFile()
 
             if rangestart != -1:
@@ -933,20 +932,19 @@ class DataService(NamedBase):
                 except IOError:
                     logging.error("Error writing content to MFile '%s'" % temp.name)
                     pass
-
-            mfile.file.save(name, temp)
-
-            logging.info("Created MFile of size " % mfile.file.size)
+            
+            mfile = MFile(name=name,service=service,empty=True)
+            mfile.file.save(name, File(temp))
 
             # TODO : Need to check if file is done?
             # How? perhaps a special header is needed
             # X-MServe-Process
-            if not ranged:
+            if not ranged and post_process:
                 logging.info("Not ranged - post processing content")
                 mfile.post_process()
             if request.META.has_key('HTTP_X_MSERVE'):
                 encoding_header = request.META['HTTP_X_MSERVE']
-                if encoding_header.find('post-process') != -1:
+                if encoding_header.find('post-process') != -1 and post_process:
                     logging.info("X-MServe header found - post processing content")
                     mfile.post_process()
 
@@ -963,24 +961,17 @@ class DataService(NamedBase):
 
         if duplicate_of:
             mfile.duplicate_of = duplicate_of
+
+        mfile.folder = folder
+        mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
         mfile.save()
 
-        logging.debug("MFile creation started '%s' "%mfile.name)
-        logging.debug("Creating roles for '%s' "%mfile.name)
+        logging.debug("MFile creation started '%s' " % mfile.name)
+        logging.debug("Creating roles for '%s' " % mfile.name)
 
         mfileauth_owner = Auth(base=mfile,authname="owner")
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
-
-        mfile.folder = folder
-        # MIME type
-        mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
-
-        # record size
-        #if mfile.file:
-        #    mfile.size = mfile.file.size
-        #
-        #mfile.save()
 
         logging.info("MFile PATH %s " % mfile.file.path)
         logging.info("MFile size %s " % mfile.size)
