@@ -440,7 +440,6 @@ class NamedBase(Base):
                     usage = usage_store.startrecording(self.id,metric,r)
                     startusages.append(usage)
 
-            #self.usages = startusages
             self.reportnum=1
             self.initial_usage_recorded = True
             super(NamedBase, self).save()
@@ -1292,14 +1291,16 @@ class MFile(NamedBase):
                 if self.mimetype.startswith("text"):
                     return os.path.join(mediapath,"images","text-x-generic.png")
         return os.path.join(mediapath,"images","package-x-generic.png")
-    
-    def save(self):
+
+    def save(self, *args, **kwargs):
         if not self.id:
             self.id = utils.random_id()
         self.updated = datetime.datetime.now()
         if self.file:
             self.size = self.file.size
+            self.empty = False
         super(MFile, self).save()
+        self.update_usage()
 
     def _delete_usage_(self):
         import usage_store as usage_store

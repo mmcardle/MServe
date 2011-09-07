@@ -970,7 +970,6 @@ class DavServer(object):
                     md5value = trailersplit[1]
                     logging.info("Found Trailer header %s with value %s " % (header,md5value))
 
-        mfile.update_usage()
         mfile.save()
 
         # TODO : Need to check if file is done?
