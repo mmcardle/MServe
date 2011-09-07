@@ -481,7 +481,7 @@ echo "PART-I installing MServe prerequisites"
 
 #############################
 # update system repositories
-apt-get update || f_ "fail, could not update system repositories"
+#apt-get update || f_ "fail, could not update system repositories"
 
 apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
 apt-get -y install git-core mercurial ffmpegthumbnailer || \
@@ -954,7 +954,7 @@ configure_apache () {
 	# create a new site, e.g. copy the default one
 	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; \
 		s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
-	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/mserve-fcgi.sock\n\n\
+	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/mserve-fcgi.sock -idle-timeout 30\n\n\
         XSendFile On\nXSendFileAllowAbove On\n\
 	Alias /media ${MSERVE_DATA}/www-root/media\n\
         Alias /dl /var/opt/mserve-data/dl\n\n\
