@@ -89,6 +89,116 @@ function load_service_iframe(authid,url,consumerurl) {
      });
 }
 
+function create_new_service_ui_dialog(containerid) {
+        // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+        $( "#dialog:ui-dialog" ).dialog( "destroy" );
+
+        var name = $( "#name" ),
+                allFields = $( [] ).add( name ),
+                tips = $( ".validateTips" );
+
+        function updateTips( t ) {
+                tips
+                        .text( t )
+                        .addClass( "ui-state-highlight" );
+                setTimeout(function() {
+                        tips.removeClass( "ui-state-highlight", 1500 );
+                }, 500 );
+        }
+
+        $( "#service-dialog" ).dialog({
+                autoOpen: false,
+                height: 300,
+                width: 350,
+                modal: true,
+                buttons: {
+                        "Create Service": function() {
+                                var bValid = true;
+                                allFields.removeClass( "ui-state-error" );
+                                if ( bValid ) {
+                                        var data = $("#service-form").serialize()
+                                        $.ajax({
+                                           type: "POST",
+                                           url: '/containers/'+containerid+'/services/',
+                                           data: data,
+                                           success: function(service){
+                                                render_service(service,containerid)
+                                           },
+                                           error: function(msg){
+                                                showMessage("Error",msg.responseText)
+                                            }
+                                         });
+                                        $( this ).dialog( "close" );
+                                }
+                        },
+                        Cancel: function() {
+                                $( this ).dialog( "close" );
+                        }
+                },
+                close: function() {
+                        allFields.val( "" ).removeClass( "ui-state-error" );
+                }
+        });
+
+        $( "#service-dialog" ).dialog( "open" );
+}
+
+function create_new_subservice_ui_dialog(serviceid,containerid) {
+        // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+        $( "#dialog:ui-dialog" ).dialog( "destroy" );
+
+
+        var name = $( "#name" ),
+                allFields = $( [] ).add( name ),
+                tips = $( ".validateTips" );
+
+        function updateTips( t ) {
+                tips
+                        .text( t )
+                        .addClass( "ui-state-highlight" );
+                setTimeout(function() {
+                        tips.removeClass( "ui-state-highlight", 1500 );
+                }, 500 );
+        }
+
+
+        $( "#subservice-dialog" ).dialog({
+                autoOpen: false,
+                height: 300,
+                width: 350,
+                modal: true,
+                buttons: {
+                        "Create Service": function() {
+                                var bValid = true;
+                                allFields.removeClass( "ui-state-error" );
+                                if ( bValid ) {
+                                        var data = $("#subservice-form").serialize()
+                                        $.ajax({
+                                           type: "POST",
+                                           url: '/containers/'+containerid+'/subservices/',
+                                           data: data,
+                                           success: function(service){
+                                                render_service(service,containerid)
+                                           },
+                                           error: function(msg){
+                                                showMessage("Error",msg.responseText)
+                                            }
+                                         });
+                                        $( this ).dialog( "close" );
+                                }
+                        },
+                        Cancel: function() {
+                                $( this ).dialog( "close" );
+                        }
+                },
+                close: function() {
+                        allFields.val( "" ).removeClass( "ui-state-error" );
+                }
+        });
+
+        $( "#subservice-dialog" ).dialog( "open" );
+}
+
 
 function create_new_add_auth_ui_dialog(authid) {
 		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!

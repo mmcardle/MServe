@@ -1,19 +1,82 @@
 
 
 function create_service(containerid){
- $.ajax({
-   type: "POST",
-   data: "name=Service&container="+containerid,
-   url: '/services/',
-   success: function(msg){
-            loadServices(containerid)
-   },
-   error: function(msg){
-     showError("Error", ""+msg.responseText );
-   }
- });
+    form = $("#service-form")
+    form.find("input[name=name]").val("Service")
+
+    now = new Date()
+    form.find("input[name=starttime]").dateplustimepicker({
+        dateFormat: 'yy-mm-dd',
+        timeFormat: 'hh:mm:ss',
+        stepHour: 1,
+        stepMinute: 15,
+        numberOfMonths: 1,
+        step: { minutes: 15 },
+        show: 'fold',
+        showButtonPanel: true,
+        defaultTime: now
+    });
+    form.find("input[name=starttime]").dateplustimepicker("setTime",now);
+
+    oneHour = new Date()
+    oneHour.addHours(1)
+    form.find("input[name=endtime]").dateplustimepicker({
+        dateFormat: 'yy-mm-dd',
+        timeFormat: 'hh:mm:ss',
+        stepHour: 1,
+        stepMinute: 15,
+        numberOfMonths: 1,
+        step: { minutes: 15 },
+        show: 'fold',
+        showButtonPanel: true,
+        defaultTime: oneHour
+    });
+    form.find("input[name=endtime]").dateplustimepicker("setTime",oneHour);
+
+    create_new_service_ui_dialog(containerid)
 }
 
+function create_subservice(serviceid,containerid){
+    form = $("#subservice-form")
+    form.find("input[name=serviceid]").val(serviceid)
+    form.find("input[name=name]").val("SubService")
+
+    now = new Date()
+    form.find("input[name=starttime]").dateplustimepicker({
+        dateFormat: 'yy-mm-dd',
+        timeFormat: 'hh:mm:ss',
+        stepHour: 1,
+        stepMinute: 15,
+        numberOfMonths: 1,
+        step: { minutes: 15 },
+        show: 'fold',
+        showButtonPanel: true,
+        defaultTime: now
+    });
+    form.find("input[name=starttime]").dateplustimepicker("setTime",now);
+
+    oneHour = new Date()
+    oneHour.addHours(1)
+    form.find("input[name=endtime]").dateplustimepicker({
+        dateFormat: 'yy-mm-dd',
+        timeFormat: 'hh:mm:ss',
+        stepHour: 1,
+        stepMinute: 15,
+        numberOfMonths: 1,
+        step: { minutes: 15 },
+        show: 'fold',
+        showButtonPanel: true,
+        defaultTime: oneHour
+    });
+    form.find("input[name=endtime]").dateplustimepicker("setTime",oneHour);
+
+    create_new_subservice_ui_dialog(serviceid,containerid)
+}
+
+function render_service(service,containerid){
+    $("#serviceTemplate").tmpl( service, { containerid : containerid } ) .appendTo( "#servicepaginator" );
+    $("#newsubservicebutton-"+service.id).button()
+}
 
 function loadServices(containerid){
     $.ajax({
@@ -38,7 +101,8 @@ function loadServices(containerid){
                     end=services.length;
                 }
 
-                $( "#serviceTemplate" ).tmpl( services.slice(start,end) ) .appendTo( "#servicepaginator" );
+                var serviceslice = services.slice(start,end)
+                $(serviceslice).each( function(index,service){ render_service(service,containerid) } )
 
                 return false;
             }
@@ -46,7 +110,7 @@ function loadServices(containerid){
             // First Parameter: number of items
             // Second Parameter: options object
             $("#servicepaginator").pagination(services.length, {
-                    items_per_page:8,
+                    items_per_page:16,
                     callback:handlePaginationClick
             });
        }

@@ -157,6 +157,9 @@ def render_container(request,id,form=DataServiceForm()):
     managementpropertyform = ManagementPropertyForm()
     hcform = HostingContainerForm(instance=container)
 
+    subserviceform = SubServiceForm()
+    serviceform = DataServiceForm()
+
     dict = {}
     dict["container"] = container
     dict["hcform"] = hcform
@@ -164,6 +167,8 @@ def render_container(request,id,form=DataServiceForm()):
     dict["properties"] = properties
     dict["form"] = form
     dict["managementpropertyform"] = managementpropertyform
+    dict["subserviceform"] = subserviceform
+    dict["serviceform"] = serviceform
     dict["auths"] = auths
     dict["usage"] = usage
     dict["usagesummary"] = usagesummary

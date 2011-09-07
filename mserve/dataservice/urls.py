@@ -35,6 +35,7 @@ hosting_handler = Resource(HostingContainerHandler)
 remote_mserve_handler = Resource(RemoteMServeServiceHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
+subservice_handler = Resource(SubServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 dataservice_profile_handler = Resource(DataServiceProfileHandler)
 dataservice_task_handler = Resource(DataServiceTaskHandler)
@@ -62,6 +63,7 @@ urlpatterns = patterns('',
     url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler),
     url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler),
     url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler),
+    url(r'^containers/(?P<containerid>[^/]+)/subservices/$', subservice_handler),
 
     url(r'^remoteservices/$', remote_mserve_handler),
 

@@ -57,23 +57,21 @@ class ManagementPropertyForm(ModelForm):
 
 class DataServiceURLForm(ModelForm):
     class Meta:
-        exclude=['id','status','container','reportnum','initial_usage_recorded','usages']
+        exclude=['id','status','container','reportnum','initial_usage_recorded','usages','parent','priority']
         model = DataService
 
 class SubServiceForm(ModelForm):
-    #cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
-    
+    serviceid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
+
     class Meta:
         exclude=['id', 'status', 'reportnum', 'initial_usage_recorded', 'usages','container','service','priority','parent']
         model = DataService
 
 class DataServiceForm(ModelForm):
-    #cid = forms.CharField(max_length=50,widget=forms.HiddenInput)
-    containerid = forms.CharField(max_length=50,widget=forms.HiddenInput,required=False)
-    name        = forms.CharField(max_length=50,required=False,)
+    name = forms.CharField(max_length=50,required=False)
     
     class Meta:
-        exclude=['id', 'status', 'reportnum', 'initial_usage_recorded', 'usages']#,'starttime','endtime']
+        exclude=['id', 'status', 'reportnum', 'initial_usage_recorded', 'usages','parent','priority','container']#,'starttime','endtime']
         model = DataService
 
 class MFileURLForm(ModelForm):

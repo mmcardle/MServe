@@ -30,6 +30,18 @@
 
 {% block content %}
 
+<div id="service-dialog" title="Service dialog" style="display: none">
+    <form id="service-form" style="width: 200px;height: 100%;" >
+           {{ serviceform.as_p }}
+    </form>
+</div>
+
+<div id="subservice-dialog" title="Service dialog" style="display: none">
+    <form id="subservice-form" style="width: 200px;height: 100%;" >
+           {{ subserviceform.as_p }}
+    </form>
+</div>
+
 <div id="tabs">
 
     <ul>
