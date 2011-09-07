@@ -905,11 +905,13 @@ class DataService(NamedBase):
             input = request.META['wsgi.input']
             emptyfile = ContentFile('')
             mfile = MFile(name=name,service=service,empty=True)
-            mfile.file.save(name, emptyfile)
+
+            import django.core.files.temp.NamedTemporaryFile
+            temp = NamedTemporaryFile()
 
             if rangestart != -1:
                 try:
-                    mf = open(mfile.file.path,'r+b')
+                    mf = open(temp.name,'r+b')
                     try:
                         mf.seek(rangestart)
                         for chunk in fbuffer(input,length):
@@ -917,22 +919,24 @@ class DataService(NamedBase):
                     finally:
                         mf.close()
                 except IOError:
-                    logging.error("Error writing partial content to MFile '%s'" % mfile)
+                    logging.error("Error writing partial content to MFile '%s'" % temp.name)
                     pass
             else:
                 try:
-                    mf = open(mfile.file.path,'wb')
-                    logging.info(mfile.file.path)
+                    mf = open(temp.name,'wb')
+                    logging.info(temp.name)
                     try:
                         for chunk in fbuffer(input,length):
                             mf.write(chunk)
                     finally:
                         mf.close()
                 except IOError:
-                    logging.error("Error writing content to MFile '%s'" % mfile)
+                    logging.error("Error writing content to MFile '%s'" % temp.name)
                     pass
 
-            mfile.save()
+            mfile.file.save(name, temp)
+
+            logging.info("Created MFile of size " % mfile.file.size)
 
             # TODO : Need to check if file is done?
             # How? perhaps a special header is needed
