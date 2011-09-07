@@ -64,6 +64,8 @@ from dataservice.tasks import backup_mfile
 mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
 
 ID_FIELD_LENGTH = 200
+SLEEP_TIME = 10 #  in seconds
+SLEEP_TIMEOUT = 300 #  in seconds
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
 
@@ -297,9 +299,15 @@ class Base(models.Model):
                     logging.info("base %s " %base)
                     logging.info("base %s " %base.reportnum)
                     logging.info("base %s " % ( last==base.reportnum ))
+                    count = 0
                     while last == base.reportnum:
                         logging.debug("Waiting for new usage lastreport=%s" % last)
-                        time.sleep(10)
+
+                        time.sleep(SLEEP_TIME)
+                        count += 1
+                        if count*SLEEP_TIME >= SLEEP_TIMEOUT:
+                            logging.debug("Usage timeout reached, aborting.")
+                            return HttpResponseBadRequest()
                         base = NamedBase.objects.get(id=base.id)
 
             if kwargs.has_key('full'):
@@ -409,10 +417,10 @@ class NamedBase(Base):
     usages  = models.ManyToManyField("Usage")
     reportnum = models.IntegerField(default=1)
 
-    def save(self, updated=True):
+    def save(self):
         super(NamedBase, self).save()
         import usage_store as usage_store
-        if not self.initial_usage_recorded:#or updated:
+        if not self.initial_usage_recorded:
             startusages = []
             for metric in self.metrics:
                 logging.info("Processing metric %s" %metric)
@@ -432,11 +440,35 @@ class NamedBase(Base):
                     usage = usage_store.startrecording(self.id,metric,r)
                     startusages.append(usage)
 
-            self.usages = startusages
+            #self.usages = startusages
             self.reportnum=1
             self.initial_usage_recorded = True
             super(NamedBase, self).save()
 
+    def update_usage(self):
+        import usage_store as usage_store
+        updated_usage = []
+        for metric in self.metrics:
+            logging.info("Processing metric %s" %metric)
+            #  Recored Initial Values
+            v = self.get_value_for_metric(metric)
+            logging.info("Value for %s is %s" % (metric,v))
+            if v is not None:
+                logging.info("Recording usage for metric %s value= %s" % (metric,v) )
+                usage = usage_store.startrecording(self.id,metric,v)
+                updated_usage.append(usage)
+
+            # Start recording initial rates
+            r = self.get_rate_for_metric(metric)
+            logging.info("Rate for %s is %s" % (metric,r))
+            if r is not None:
+                logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
+                usage = usage_store.startrecording(self.id,metric,r)
+                updated_usage.append(usage)
+        #for usage in updated_usage:
+        #    logging.info("Adding usage %s" % usage)
+        #    self.usages.add(usage)
+        super(NamedBase, self).save()
 
 
     def get_value_for_metric(self, metric):
@@ -1265,6 +1297,8 @@ class MFile(NamedBase):
         if not self.id:
             self.id = utils.random_id()
         self.updated = datetime.datetime.now()
+        if self.file:
+            self.size = self.file.size
         super(MFile, self).save()
 
     def _delete_usage_(self):

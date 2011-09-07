@@ -60,6 +60,8 @@ def startrecording(id,metric,rate,report=True):
             usage.rateTime = now
             usage.rate = rate
             usage.save()
+            base.usages.add(usage)
+            base.save()
             if report:
                 reportusage(base)
             return usage
@@ -68,6 +70,8 @@ def startrecording(id,metric,rate,report=True):
         usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
         logging.info("created %s " % usage)
         usage.save()
+        base.usages.add(usage)
+        base.save()
         if report:
             reportusage(base)
         return usage
