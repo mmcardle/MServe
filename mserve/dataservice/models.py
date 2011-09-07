@@ -454,7 +454,7 @@ class NamedBase(Base):
             logging.info("Value for %s is %s" % (metric,v))
             if v is not None:
                 logging.info("Recording usage for metric %s value= %s" % (metric,v) )
-                usage = usage_store.startrecording(self.id,metric,v)
+                usage = usage_store.record(self.id,metric,v)
                 updated_usage.append(usage)
 
             # Start recording initial rates
@@ -464,9 +464,6 @@ class NamedBase(Base):
                 logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
                 usage = usage_store.startrecording(self.id,metric,r)
                 updated_usage.append(usage)
-        #for usage in updated_usage:
-        #    logging.info("Adding usage %s" % usage)
-        #    self.usages.add(usage)
         super(NamedBase, self).save()
 
 
