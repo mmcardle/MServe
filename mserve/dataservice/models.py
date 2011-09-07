@@ -428,6 +428,7 @@ class NamedBase(Base):
         if not self.initial_usage_recorded:
             logging.info("Processing %s " % (self))
             import usage_store as usage_store
+            startusages = []
             for metric in self.metrics:
                 logging.info("Processing metric %s" %metric)
                 #  Recored Initial Values
@@ -436,14 +437,16 @@ class NamedBase(Base):
                     logging.info("Value for %s is %s" % (metric,v))
                     logging.info("Recording usage for metric %s value= %s" % (metric,v) )
                     usage = usage_store.record(self.id,metric,v)
-
+                    startusages.append(usage)
                 # Start recording initial rates
                 r = self.get_rate_for_metric(metric)
                 if r is not None:
                     logging.info("Rate for %s is %s" % (metric,r))
                     logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
                     usage = usage_store.startrecording(self.id,metric,r)
+                    startusages.append(usage)
 
+            self.usages = startusages
             self.reportnum=1
             self.initial_usage_recorded = True
             super(NamedBase, self).save()
@@ -1104,7 +1107,7 @@ class MFile(NamedBase):
         if url == None:
             if kwargs.has_key('file'):
                 file = kwargs['file']
-                mfile.update_mfile(self.name,file=file,post_process=True,folder=self.folder)
+                self.update_mfile(self.name,file=file,post_process=True,folder=self.folder)
                 return self
             return HttpResponseBadRequest()
         return HttpResponseNotFound()
