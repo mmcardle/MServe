@@ -877,10 +877,10 @@ class DavServer(object):
 
         if isFi:
             mfile = object
-            # TODO Overwrite mfile
+            mfile.update_mfile(name,request=request,post_process=True,folder=parentfolder)
         elif not is_folder and ancestors_exist:
             created = True
-            mfile = self.service.create_mfile(name,request=request,post_process=False,folder=parentfolder)
+            mfile = self.service.create_mfile(name,request=request,folder=parentfolder)
             mfile.folder=parentfolder
         else:
             return HttpResponseBadRequest("Error creating file")

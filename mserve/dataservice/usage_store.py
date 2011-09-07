@@ -39,9 +39,24 @@ def record(id,metric,total,report=True):
         reportusage(base)
     return usage
 
+def update(id,metric,total,report=True):
+    base = NamedBase.objects.get(pk=id)
+    try:
+        usage = Usage.objects.get(base=base,metric=metric)
+        usage.total=total
+        usage.squares=total*total
+        usage.save()
+        base.usages.add(usage)
+        base.save()
+        if report:
+            reportusage(base)
+        return usage
+    except Usage.DoesNotExist:
+        logging.info("Usage DoesNotExist  ")
+
 def startrecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)
-    logging.info("base %s "% base)
+    logging.info("Start Recording base %s "% base)
 
     try:
         usage = Usage.objects.get(base=base,metric=metric)
@@ -75,6 +90,35 @@ def startrecording(id,metric,rate,report=True):
         if report:
             reportusage(base)
         return usage
+
+def updaterecording(id,metric,rate,report=True):
+    base = NamedBase.objects.get(pk=id)
+    logging.info("Update Recording base %s "% base)
+
+    try:
+        usage = Usage.objects.get(base=base,metric=metric)
+        if rate == usage.rate:
+            logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
+        else:
+            logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
+
+            now = datetime.datetime.now()
+            td = now-usage.rateTime
+            dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
+
+            amount = dif*usage.rate
+
+            usage.rateCumulative = usage.rateCumulative + amount
+            usage.rateTime = now
+            usage.rate = rate
+            usage.save()
+            #base.usages.add(usage)
+            #base.save()
+            if report:
+                reportusage(base)
+            return usage
+    except Usage.DoesNotExist:
+        logging.info("Usage DoesNotExist  ")
 
 def _stoprecording_(usage, obj=None):
 

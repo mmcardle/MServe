@@ -425,9 +425,9 @@ class NamedBase(Base):
 
     def save(self):
         super(NamedBase, self).save()
-        import usage_store as usage_store
         if not self.initial_usage_recorded:
-            logging.info("Processing %s (initial_usage_recoreded=%s)" % (self,self.initial_usage_recorded))
+            logging.info("Processing %s " % (self))
+            import usage_store as usage_store
             for metric in self.metrics:
                 logging.info("Processing metric %s" %metric)
                 #  Recored Initial Values
@@ -447,24 +447,27 @@ class NamedBase(Base):
             self.reportnum=1
             self.initial_usage_recorded = True
             super(NamedBase, self).save()
+        else:
+            self.update_usage()
 
     def update_usage(self):
         import usage_store as usage_store
         for metric in self.metrics:
             logging.info("Processing metric %s" %metric)
-            #  Recored Initial Values
-            #v = self.get_value_for_metric(metric)
-            #logging.info("Value for %s is %s" % (metric,v))
-            #if v is not None:
-            #    logging.info("Recording usage for metric %s value= %s" % (metric,v) )
-            #    usage = usage_store.record(self.id,metric,v)
+            #  Recorded updated values
+            v = self.get_updated_value_for_metric(metric)
+            logging.info("Value for %s is %s" % (metric,v))
+            if v is not None:
+                logging.info("Recording usage for metric %s value= %s" % (metric,v) )
+                usage = usage_store.update(self.id,metric,v)
 
-            # Start recording initial rates
-            r = self.get_rate_for_metric(metric)
+            # recording updated rates
+            r = self.get_updated_rate_for_metric(metric)
             logging.info("Rate for %s is %s" % (metric,r))
             if r is not None:
                 logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
-                usage = usage_store.startrecording(self.id,metric,r)
+                usage = usage_store.updaterecording(self.id,metric,r)
+
         super(NamedBase, self).save()
 
     def get_value_for_metric(self, metric):
@@ -472,6 +475,14 @@ class NamedBase(Base):
         return None
 
     def get_rate_for_metric(self, metric):
+        #logging.info("Override this method to report usage for metric %s" % metric)
+        return None
+
+    def get_updated_value_for_metric(self, metric):
+        #logging.info("Override this method to report usage for metric %s" % metric)
+        return None
+
+    def get_updated_rate_for_metric(self, metric):
         #logging.info("Override this method to report usage for metric %s" % metric)
         return None
 
@@ -836,12 +847,11 @@ class DataService(NamedBase):
             return folder
 
     def create_mfile(self,name,file=None,request=None,post_process=True,folder=None,duplicate_of=None):
-        #if self.parent:
-        #    return self.parent.create_mfile(name,file=None,post_process=True,folder=None)
+
         logging.info("Create Mfile %s" % (self) )
         service = self
 
-        # Check for duplicates
+        # Check for duplicate name
         done=False
         n=0
         fn,ext = os.path.splitext(name)
@@ -853,10 +863,9 @@ class DataService(NamedBase):
                 n=n+1
                 name = "%s-%s%s" % (fn,str(n),ext)
 
+        length = 0
+
         if request:
-            length = 0
-            chunked = False
-            ranged = False
             rangestart = -1
             rangeend = -1
 
@@ -876,7 +885,6 @@ class DataService(NamedBase):
                     rangestart = int(ranges[0])
                     rangeend = int(ranges[1])
                     length = rangeend - rangestart
-                    ranged = true
             elif request.META.has_key('HTTP_RANGE'):
                     range_header = request.META['HTTP_RANGE']
                     byte,range=range_header.split('=')
@@ -888,20 +896,6 @@ class DataService(NamedBase):
                     rangestart = int(ranges[0])
                     rangeend = int(ranges[1])
                     length = rangeend - rangestart
-                    ranged = True
-
-            if request.META.has_key('TRANSFER_ENCODING'):
-                encoding_header = request.META['TRANSFER_ENCODING']
-                if encoding_header.find('chunked') != -1:
-                    chunked = True
-
-            if request.META.has_key('HTTP_TRANSFER_ENCODING'):
-                encoding_header = request.META['HTTP_TRANSFER_ENCODING']
-                if encoding_header.find('chunked') != -1:
-                    chunked = True
-
-            if chunked:
-                return HttpResponseBadRequest("Chunking Not Supported")
             
             input = request.META['wsgi.input']
             emptyfile = ContentFile('')
@@ -939,14 +933,11 @@ class DataService(NamedBase):
             # TODO : Need to check if file is done?
             # How? perhaps a special header is needed
             # X-MServe-Process
-            if not ranged and post_process:
-                logging.info("Not ranged - post processing content")
-                mfile.post_process()
-            if request.META.has_key('HTTP_X_MSERVE'):
-                encoding_header = request.META['HTTP_X_MSERVE']
-                if encoding_header.find('post-process') != -1 and post_process:
-                    logging.info("X-MServe header found - post processing content")
-                    mfile.post_process()
+            #if request.META.has_key('HTTP_X_MSERVE'):
+            #    encoding_header = request.META['HTTP_X_MSERVE']
+            #    if encoding_header.find('post-process') != -1 and post_process:
+            #        logging.info("X-MServe header found - post processing content")
+            #        mfile.post_process()
 
         elif file==None:
             emptyfile = ContentFile('')
@@ -956,8 +947,11 @@ class DataService(NamedBase):
             if type(file) == django.core.files.base.ContentFile:
                 mfile = MFile(name=name,service=service)
                 mfile.file.save(name, file)
+                length = mfile.file.size
             else:
                 mfile = MFile(name=name,service=service,file=file,empty=False)
+                mfile.save()
+                length = mfile.file.size
 
         if duplicate_of:
             mfile.duplicate_of = duplicate_of
@@ -966,15 +960,15 @@ class DataService(NamedBase):
         mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
         mfile.save()
 
+        import usage_store as usage_store
+        usage_store.record(mfile.id,metric_ingest,int(length))
+
         logging.debug("MFile creation started '%s' " % mfile.name)
         logging.debug("Creating roles for '%s' " % mfile.name)
 
         mfileauth_owner = Auth(base=mfile,authname="owner")
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
-
-        logging.info("MFile PATH %s " % mfile.file.path)
-        logging.info("MFile size %s " % mfile.size)
         
         if post_process:
             mfile.create_workflow_job("ingest")
@@ -1110,12 +1104,7 @@ class MFile(NamedBase):
         if url == None:
             if kwargs.has_key('file'):
                 file = kwargs['file']
-                if type(file) == django.core.files.base.ContentFile:
-                    self.file.save(self.name, file)
-                else:
-                    mfile.file=file
-                self.save()
-                self.create_workflow_job("update")
+                mfile.update_mfile(self.name,file=file,post_process=True,folder=self.folder)
                 return self
             return HttpResponseBadRequest()
         return HttpResponseNotFound()
@@ -1221,6 +1210,116 @@ class MFile(NamedBase):
         redirecturl = os.path.join("/",redirecturl)
         return HttpResponseRedirect(redirecturl)
 
+    def update_mfile(self,name,file=None,request=None,post_process=True,folder=None,duplicate_of=None):
+        logging.info("Update Mfile %s" % (self) )
+        length = 0
+
+        if request:
+            chunked = False
+            ranged = False
+            rangestart = -1
+            rangeend = -1
+
+            if request.META.has_key('CONTENT_LENGTH'):
+                length = request.META['CONTENT_LENGTH']
+            elif request.META.has_key('HTTP_CONTENT_LENGTH'):
+                length = request.META['HTTP_CONTENT_LENGTH']
+
+            if request.META.has_key('RANGE'):
+                    range_header = request.META['RANGE']
+                    byte,range=range_header.split('=')
+                    ranges = range.split('-')
+
+                    if len(ranges) != 2:
+                        return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+
+                    rangestart = int(ranges[0])
+                    rangeend = int(ranges[1])
+                    length = rangeend - rangestart
+                    ranged = true
+            elif request.META.has_key('HTTP_RANGE'):
+                    range_header = request.META['HTTP_RANGE']
+                    byte,range=range_header.split('=')
+                    ranges = range.split('-')
+
+                    if len(ranges) != 2:
+                        return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+
+                    rangestart = int(ranges[0])
+                    rangeend = int(ranges[1])
+                    length = rangeend - rangestart
+                    ranged = True
+
+            if request.META.has_key('TRANSFER_ENCODING'):
+                encoding_header = request.META['TRANSFER_ENCODING']
+                if encoding_header.find('chunked') != -1:
+                    chunked = True
+
+            if request.META.has_key('HTTP_TRANSFER_ENCODING'):
+                encoding_header = request.META['HTTP_TRANSFER_ENCODING']
+                if encoding_header.find('chunked') != -1:
+                    chunked = True
+
+            if chunked:
+                return HttpResponseBadRequest("Chunking Not Supported")
+
+            input = request.META['wsgi.input']
+
+            if rangestart != -1:
+                try:
+                    mf = open(self.file.path,'r+b')
+                    try:
+                        mf.seek(rangestart)
+                        for chunk in fbuffer(input,length):
+                            mf.write(chunk)
+                    finally:
+                        mf.close()
+                except IOError:
+                    logging.error("Error writing partial content to MFile '%s'" % self.file.path)
+                    pass
+            else:
+                try:
+                    mf = open(self.file.path,'wb')
+                    logging.info(self.file.path)
+                    try:
+                        for chunk in fbuffer(input,length):
+                            mf.write(chunk)
+                    finally:
+                        mf.close()
+                except IOError:
+                    logging.error("Error writing content to MFile '%s'" % self.file.path)
+                    pass
+
+            self.save()
+
+        else:
+            if type(file) == django.core.files.base.ContentFile:
+                self.file.save(name, file)
+                length = file.size
+            else:
+                self.file.save(name, File(file))
+                length = file.size
+
+        if duplicate_of:
+            self.duplicate_of = duplicate_of
+
+        self.name = name
+        self.folder = folder
+        self.mimetype = mimefile([self.id],[],{})["mimetype"]
+        self.save()
+
+        import usage_store as usage_store
+        usage_store.record(self.id,metric_ingest,int(length))
+
+        logging.info("MFile update '%s' " % self.name)
+        logging.info("MFile PATH %s " % self.file.path)
+        logging.info("MFile size %s " % self.size)
+
+        if post_process:
+            self.create_workflow_job("update")
+
+        return self
+
     def create_job(self,name):
         from jobservice.models import Job
         job = Job(name=name,mfile=self)
@@ -1252,7 +1351,7 @@ class MFile(NamedBase):
 
             profile_name = self.service.get_profile()
 
-            logging.info(profile_name)
+            logging.info("Create workflow with profile %s " % profile_name)
 
             profile = self.service.profiles.get(service=self.service,name=profile_name)
 
@@ -1265,7 +1364,7 @@ class MFile(NamedBase):
             from jobservice.models import Job
             from jobservice.models import JobOutput
 
-            job = Job(name="%s Ingest Job"%(self.name),mfile=self)
+            job = Job(name="%s %s Job"%(self.name,name),mfile=self)
             job.save()
 
             ins = inspect()
@@ -1327,7 +1426,7 @@ class MFile(NamedBase):
 
         else:
             # Return a job with no tasks for an empty file
-            job = Job(name="%s Empty Ingest Job"%(self.name),mfile=self)
+            job = Job(name="%s Empty %s Job"%(self.name,name),mfile=self)
             job.save()
             ts = TaskSet(tasks=[])
             tsr.save()
@@ -1355,7 +1454,17 @@ class MFile(NamedBase):
         if not self.empty:
             if metric == metric_disc_space:
                 return self.file.size
-            if metric == metric_ingest:
+
+    def get_updated_value_for_metric(self, metric):
+        if not self.empty:
+            if metric == metric_disc_space:
+                return self.file.size
+
+    def get_updated_rate_for_metric(self, metric):
+        if metric == metric_mfile:
+            return 1
+        if not self.empty:
+            if metric == metric_disc:
                 return self.file.size
 
     def thumburl(self):
@@ -1401,7 +1510,6 @@ class MFile(NamedBase):
             self.size = self.file.size
             self.empty = False
         super(MFile, self).save()
-        #self.update_usage()
 
     def _delete_usage_(self):
         import usage_store as usage_store
