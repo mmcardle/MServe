@@ -868,121 +868,23 @@ class DavServer(object):
         if isFo:
             return HttpResponseBadRequest("File path specified is a directory")
 
-        length = 0
-        chunked = False
-        ranged = False
-        rangestart = -1
-        rangeend = -1
-        created = False
-
-        if request.META.has_key('CONTENT_LENGTH'):
-            length = request.META['CONTENT_LENGTH']
-        elif request.META.has_key('HTTP_CONTENT_LENGTH'):
-            length = request.META['HTTP_CONTENT_LENGTH']
-
-        if request.META.has_key('RANGE'):
-                range_header = request.META['RANGE']
-                byte,range=range_header.split('=')
-                ranges = range.split('-')
-
-                if len(ranges) != 2:
-                    return HttpResponseBadRequest("Do not support range '%s' "% range_header)
-
-                rangestart = int(ranges[0])
-                rangeend = int(ranges[1])
-                length = rangeend - rangestart
-                ranged = true
-        elif request.META.has_key('HTTP_RANGE'):
-                range_header = request.META['HTTP_RANGE']
-                byte,range=range_header.split('=')
-                ranges = range.split('-')
-
-                if len(ranges) != 2:
-                    return HttpResponseBadRequest("Do not support range '%s' "% range_header)
-
-                rangestart = int(ranges[0])
-                rangeend = int(ranges[1])
-                length = rangeend - rangestart
-                ranged = True
-
-        if request.META.has_key('TRANSFER_ENCODING'):
-            encoding_header = request.META['TRANSFER_ENCODING']
-            if encoding_header.find('chunked') != -1:
-                chunked = True
-
-        if request.META.has_key('HTTP_TRANSFER_ENCODING'):
-            encoding_header = request.META['HTTP_TRANSFER_ENCODING']
-            if encoding_header.find('chunked') != -1:
-                chunked = True
-
-        if chunked:
-            return HttpResponseBadRequest("Chunking Not Supported")
-
         is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
         mfile = None
 
+        created = False
+
         if isFi:
             mfile = object
+            # TODO Overwrite mfile
         elif not is_folder and ancestors_exist:
             created = True
-            mfile = self.service.create_mfile(name,post_process=False,folder=parentfolder)
+            mfile = self.service.create_mfile(name,request=request,post_process=False,folder=parentfolder)
             mfile.folder=parentfolder
         else:
             return HttpResponseBadRequest("Error creating file")
 
-        input = request.META['wsgi.input']
-        logging.info(input)
-        logging.info(dir(input))
-
-        if rangestart != -1:
-            try:
-                mf = open(mfile.file.path,'r+b')
-                try:
-                    mf.seek(rangestart)
-                    for chunk in fbuffer(input,length):
-                        mf.write(chunk)
-                finally:
-                    mf.close()
-            except IOError:
-                logging.error("Error writing partial content to MFile '%s'" % mfile)
-                pass
-        else:
-            try:
-                mf = open(mfile.file.path,'wb')
-                logging.info(mfile.file.path)
-                try:
-                    for chunk in fbuffer(input,length):
-                        mf.write(chunk)
-                finally:
-                    mf.close()
-            except IOError:
-                logging.error("Error writing content to MFile '%s'" % mfile)
-                pass
-
-        if chunked:
-            if request.META.has_key('TRAILER') or request.META.has_key('HTTP_TRAILER') :
-                trailer = input.readline()
-                trailersplit= trailer.split(':')
-                if len(trailersplit)>1:
-                    header = trailersplit[0]
-                    md5value = trailersplit[1]
-                    logging.info("Found Trailer header %s with value %s " % (header,md5value))
-
-        mfile.save()
-
-        # TODO : Need to check if file is done?
-        # How? perhaps a special header is needed
-        # X-MServe-Process
-        if not ranged:
-            logging.info("Not ranged - post processing content")
-            mfile.post_process()
-        if request.META.has_key('HTTP_X_MSERVE'):
-            encoding_header = request.META['HTTP_X_MSERVE']
-            if encoding_header.find('post-process') != -1:
-                logging.info("X-MServe header found - post processing content")
-                mfile.post_process()
 
         if created:
             return HttpResponse(status=201)
