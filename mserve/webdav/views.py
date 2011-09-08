@@ -236,9 +236,10 @@ class DavServer(object):
         if isFi:
             response = HttpResponse(mimetype=object.mimetype)
             response['Content-Length'] = object.file.size
-            fstat = os.stat(object.file.path)
-            response['Last-Modified'] = self.__get_localized_datetime(fstat.st_mtime).strftime("%a, %d %b %Y %H:%M:%S %Z")
-            response['ETag'] = "%s-%s" % (hex(int(fstat.st_mtime))[2:], fstat.st_size)
+            if os.path.exists(object):
+                fstat = os.stat(object.file.path)
+                response['Last-Modified'] = self.__get_localized_datetime(fstat.st_mtime).strftime("%a, %d %b %Y %H:%M:%S %Z")
+                response['ETag'] = "%s-%s" % (hex(int(fstat.st_mtime))[2:], fstat.st_size)
             return response
         elif isFo:
             response['Content-Length'] = "4096"
@@ -803,7 +804,7 @@ class DavServer(object):
 
         finfo = DavFileInfo(href=rel_path)
 
-        if not mfile.file:
+        if not mfile.file or not os.path.exists(mfile.file.path):
             return None
 
         fstat = os.stat(mfile.file.path)
