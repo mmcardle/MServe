@@ -162,7 +162,8 @@ default_roles = {
         "mfiles":["GET","POST","PUT","DELETE"],\
         "jobs":["GET","POST","PUT","DELETE"],\
         "mfolders":["GET","POST","PUT","DELETE"],\
-        "profiles":["GET"]
+        "profiles":["GET"],\
+        "base":["GET"],\
         }
     }
 ,
@@ -174,7 +175,8 @@ default_roles = {
         "usages":["GET"],\
         "mfiles":["GET","POST","PUT","DELETE"],\
         "jobs":["GET","POST","PUT","DELETE"],\
-        "mfolders":["GET","POST","PUT","DELETE"]\
+        "mfolders":["GET","POST","PUT","DELETE"],\
+        "base":["GET"],\
         }
     }
 ,

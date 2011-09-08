@@ -48,6 +48,17 @@ class Job(NamedBase):
     def __unicode__(self):
         return "%s" % (self.name);
 
+    def clean_base(self,authid):
+        jobdict = {}
+        jobdict["name"] = self.name
+        jobdict["tasks"] = self.tasks()
+        jobdict["joboutput_set"] = self.joboutput_set
+        jobdict["id"] = self.id
+        jobdict["taskset_id"] = self.taskset_id
+        jobdict["created"] = self.created
+
+        return jobdict
+
     def tasks(self):
         tsr = TaskSetResult.restore(self.taskset_id)
         dict = {}

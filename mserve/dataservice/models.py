@@ -297,14 +297,11 @@ class Base(models.Model):
         if method=="GET" and url=="usages":
             logging.info("check for full usage %s" % kwargs)
 
-            base = self
+            base = self.get_real_base()
             if kwargs.has_key('last'):
                 last = int(kwargs.get('last')[0])
                 logging.info("last usage seen %s" % last)
                 if last is not -1:
-                    logging.info("base %s " %base)
-                    logging.info("base %s " %base.reportnum)
-                    logging.info("base %s " % ( last==base.reportnum ))
                     count = 0
                     while last == base.reportnum:
                         logging.debug("Waiting for new usage lastreport=%s" % last)
@@ -412,6 +409,11 @@ class Base(models.Model):
         logging.info("ERROR: 404 Pattern not matched for %s on %s" % (method,url))
 
         return rc.NOT_FOUND
+
+    def clean_base(self,authid):
+        logging.info("Override this clean method %s" % self)
+        dict = {}
+        return dict
 
     class Meta:
         abstract = True
@@ -686,11 +688,15 @@ class DataService(NamedBase):
         }
 
     def folder_structure(self):
-        structure = self.__subfolder_structure(None)
-        return {"data":structure}
-        #return {"data":structure,"attr":{"id":self.id}}
+        return self._folder_structure(self.id)
 
-    def __subfolder_structure(self,mfolder):
+    def _folder_structure(self,id=None):
+        structure = self.__subfolder_structure(None,id=id)
+        return {"data":structure}
+
+    def __subfolder_structure(self,mfolder,id=None):
+
+        thisid = id or self.id
 
         dict = {}
         if mfolder:
@@ -698,7 +704,7 @@ class DataService(NamedBase):
             dict["attr"] = {"id":mfolder.id}
         else:
             dict["data"] = self.name
-            dict["attr"] = {"id":self.id,"class" : "service"}
+            dict["attr"] = {"id":thisid,"class" : "service"}
 
         children = []
 
@@ -831,6 +837,20 @@ class DataService(NamedBase):
         if not self.id:
             self.id = utils.random_id()
         super(DataService, self).save()
+
+    def clean_base(self,authid):
+        servicedict = {}
+        servicedict["name"] = self.name
+        servicedict["mfile_set"] = self.mfile_set
+        servicedict["mfolder_set"] = self.mfolder_set
+        servicedict["folder_structure"] = self._folder_structure(id=authid)
+
+        jobs = []
+        for j in self.jobs():
+            jobs.append(j.clean_base(authid))
+        servicedict["job_set"] = jobs
+
+        return servicedict
 
     def _delete_usage_(self):
         import usage_store as usage_store
@@ -1111,6 +1131,22 @@ class MFile(NamedBase):
                 return self
             return HttpResponseBadRequest()
         return HttpResponseNotFound()
+
+    def clean_base(self,authid):
+        mfiledict = {}
+        mfiledict["name"] = self.name
+        mfiledict["file"] = self.file
+        mfiledict["mimetype"] = self.mimetype
+        mfiledict["updated"] = self.updated
+        mfiledict["thumburl"] = self.thumburl()
+        mfiledict["thumb"] = self.thumb
+        mfiledict["created"] = self.created
+        mfiledict["checksum"] = self.checksum
+        mfiledict["posterurl"] = self.posterurl()
+        mfiledict["poster"] = self.poster
+        mfiledict["reportnum"] = self.reportnum
+        mfiledict["size"] = self.size
+        return mfiledict
 
     def __get_file(self):
         mfile = self
@@ -1645,6 +1681,7 @@ class Auth(Base):
                 else:
                     return False,HttpResponseForbidden()
         else:
+
             if self.base:
                 passed=False
                 if url != "base":
@@ -1673,9 +1710,7 @@ class Auth(Base):
         if not url:
             return self
         if url == "base":
-            if utils.is_mfile(self.base):
-                mfile = MFile.objects.get(id=self.base.id)
-                return utils.clean_mfile(mfile)
+            return self.get_real_base().clean_base(self.id)
         return self.base.get_real_base().do("GET",url)
 
     def put(self,url, *args, **kwargs):

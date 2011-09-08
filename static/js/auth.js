@@ -13,18 +13,19 @@ function load_auths(authid){
 function load_usage_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/auths/'+authid+'/usages/',
+       url: '/auths/'+authid+'/usages/?full=True',
        success: function(msg){
-           $( "#usageTemplate" ).tmpl( msg  ).appendTo( "#usagecontent" );
+
+           $( "#usageTemplate" ).tmpl( msg.usages  ).appendTo( "#usagecontent" );
        }
      });
 }
 function load_usagesummary_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/auths/'+authid+'/usagesummary/',
-       success: function(msg){
-           $( "#usageSummaryTemplate" ).tmpl( msg.usages  ).appendTo( "#usagesummarycontent" );
+       url: '/api/'+authid+'/getusagesummary/',
+       success: function(summary){
+           $( "#usageSummaryTemplate" ).tmpl( summary.usages ).appendTo( "#usagesummarycontent" );
        }
      });
 
@@ -54,53 +55,18 @@ function load_details_auth(authid){
 function load_mfiles_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/auths/'+authid+'/mfiles/',
-       success: function(msg){
-
-            mfiles = msg;
-
-            if(mfiles.length==0){
-                 $("#mfilemessages").append("<div id='nofiles' class='message' >No Files</div>");
-                return;
-            }else{
-                $("#nofiles").remove()
-            }
-
-            function handlePaginationClick(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
-                if(end>mfiles.length){
-                    end=mfiles.length;
-                }
-
-                $( "#managedresourcesmfilescontent" ).empty()
-                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#managedresourcesmfilescontent" );
-
-                for(var i=start; i<end; i++){
-                    (function() {
-                        var gid = i;
-                        var gmfileid = mfiles[gid].id;
-                        mfile_buttons(gmfileid)
-                    })();
-                }
-
-                return false;
-            }
-
-            // First Parameter: number of items
-            // Second Parameter: options object
-
-            // Render the template with the data and insert
-            // the rendered HTML under the "mfilepaginator" element
-            $("#managedresourcesmfilespaginator").pagination(mfiles.length, {
-                    items_per_page:12,
-                    callback:handlePaginationClick
-            });
-
+       url: "/auths/"+authid+"/base/",
+       success: function(auth){
+            $("#mservetree").mserveload({
+                    serviceid : authid ,
+                    mfolder_set : auth.mfolder_set,
+                    mfile_set : auth.mfile_set,
+                    folder_structure : auth.folder_structure
+                })
+            create_jobs_paginator(auth.job_set)
        }
      });
- }
+}
 
 function load_jobs_auth(authid){
      $.ajax({

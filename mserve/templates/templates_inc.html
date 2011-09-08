@@ -506,12 +506,13 @@
 <script id="usageSummaryTemplate" type="text/x-jquery-tmpl">
     <tr>
         <td>${metric}</td>
-        <td>${min}</td>
-        <td>${max}</td>
-        <td>${n}</td>
-        <td>${avg}</td>
-        <td>${stddev}</td>
-        <td>${variance}</td>
+        <td>${number_format(min, 2, '.', ',')}</td>
+        <td>${number_format(max, 2, '.', ',')}</td>
+        <td>${number_format(n, 0, '.', ',')}</td>
+        <td>${number_format(avg, 2, '.', ',')}</td>
+        <td>${number_format(sum, 2, '.', ',')}</td>
+        <td>${number_format(stddev, 2, '.', ',')}</td>
+        <td>${number_format(variance, 2, '.', ',')}</td>
     </tr>
 </script>
 

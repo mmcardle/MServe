@@ -78,6 +78,30 @@ function render_service(service,containerid){
     $("#newsubservicebutton-"+service.id).button()
 }
 
+function load_service_mfiles(serviceid,url){
+     $.ajax({
+       type: "GET",
+       url: url,
+       success: function(service){
+            $("#mservetree").mserve( "load", {
+                serviceid : service.id ,
+                mfolder_set : service.mfolder_set,
+                mfile_set : service.mfile_set,
+                folder_structure : service.folder_structure
+            } )
+       }
+    });
+}
+
+function create_mfolder_paginator(mfolders){
+        var mfoldercontainer = $("#mfoldercontainer")
+        $(mfolders).each( function(index,mfolder){
+            $("#mfolderTemplate").tmpl(mfolder).appendTo(mfoldercontainer)
+            $("#mfolderholder-"+mfolder.id).click( function(){ console.log(mfolder) } )
+        } )
+
+}
+
 function loadServices(containerid){
     $.ajax({
        type: "GET",

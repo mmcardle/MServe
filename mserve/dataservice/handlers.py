@@ -756,28 +756,9 @@ class AuthHandler(BaseHandler):
             return mfile.do("GET","auths")
         if authid:
             auth = Auth.objects.get(pk=authid)
-            logging.info("AUTH GET %s"%murl)
             return auth.do("GET",murl)
 
         return []
-
-    def read2(self, request, id):
-        try:
-            auth = Auth.objects.get(id=id)
-            return auth
-        except Auth.DoesNotExist:
-            pass
-
-        try:
-            base = NamedBase.objects.get(id=id)
-            return base.auth_set.all()
-        except NamedBase.DoesNotExist:
-            logging.debug("NamedBase does not exist")
-
-
-
-        return HttpResponseNotFound("Auth not found")
-
 
     def create(self, request, id):
 
@@ -786,9 +767,6 @@ class AuthHandler(BaseHandler):
 
         try:
             base = NamedBase.objects.get(id=id)
-
-            
-
         except NamedBase.DoesNotExist:
             logging.debug("NamedBase does not exist")
 

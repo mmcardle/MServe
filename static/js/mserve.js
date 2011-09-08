@@ -1,4 +1,138 @@
 
+(function( $ ){
+
+  var methods = {
+    init : function( options ) { 
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this), data = $this.data('mserve')
+
+                var $table = '<table style="table-layout: fixed;width: 100%;" border="0"><tr><td style="width: 20%"><div id="mfoldertreecontainer"></div></td><td style="width: 60%"><ul id="qscontainer" ></ul></td></tr></table>'
+                $(obj).append($table);
+
+                 // If the plugin hasn't been initialized yet
+
+                 if ( ! data ) {
+                   $(this).data('mserve', {
+                       target : $this,
+                       table : $table
+                   });
+                 }
+
+            });
+    },
+    add : function( mfile ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                mid = "#mfileholder-"+mfile.id
+
+                $(data.allcontent[0]).append($(mid))
+
+            });
+    },
+    load : function( options ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var serviceid = o.serviceid
+                var mfolder_set = o.mfolder_set
+                var mfile_set =  o.mfile_set
+                var folder_structure = o.folder_structure
+
+                $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#qscontainer")
+                $("#mfileTemplate").tmpl(mfile_set).appendTo("#qscontainer")
+
+                $(mfile_set).each( function(index,mfile) { doMFileButtons(mfile) } );
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                var allcontent = $('#qscontainer').clone(true)
+                data["allcontent"] = allcontent
+
+                var $filteredData = allcontent.find('li.rootfolder');
+                $('#qscontainer').quicksand($filteredData, {
+                  duration: 800,
+                  easing: 'easeInOutQuad'
+                });
+
+                $("#mfoldertreecontainer").jstree({
+                     "json_data" : folder_structure,
+                     "themes" : { "theme" : "default" },
+                     "plugins" : [ "themes", "json_data", "ui", "crrm"]
+                    }
+                ).bind("select_node.jstree", function (event, data) {
+                        id = data.rslt.obj.attr('id');
+
+                        if(id==serviceid){
+                            var $filteredData = allcontent.find('li.rootfolder');
+
+                            $('#qscontainer').quicksand($filteredData, {
+                              duration: 800,
+                              easing: 'easeInOutQuad'
+                            });
+                        }else{
+                            mfile = $("#mfileholder-"+id)
+                            if(mfile.length>0){
+                                var $filteredData = allcontent.find('li.'+id);
+
+                                $('#qscontainer').quicksand($filteredData, {
+                                  duration: 800,
+                                  easing: 'easeInOutQuad'
+                                });
+                            }else{
+                                mfolder = $("#mfolderholder-"+id)
+                                if(mfolder){
+                                    var $filteredData = allcontent.find('li.'+id);
+
+                                    $('#qscontainer').quicksand($filteredData, {
+                                      duration: 800,
+                                      easing: 'easeInOutQuad'
+                                    });
+                                }
+                            }
+                        }
+                }).bind("loaded.jstree", function (event, data) {
+                    $("#mfoldertreecontainer").jstree("open_all");
+                });
+
+            });
+    },
+  };
+
+  $.fn.mserve = function( method ) {
+
+    // Method calling logic
+    if ( methods[method] ) {
+      return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));
+    } else if ( typeof method === 'object' || ! method ) {
+      return methods.init.apply( this, arguments );
+    } else {
+      $.error( 'Method ' +  method + ' does not exist on jQuery.tooltip' );
+    }
+
+  };
+
+})( jQuery );
+
 function load_user(userurl,consumerurl,template){
      $.ajax({
        type: "GET",
@@ -384,13 +518,8 @@ function loadMFile(mfile){
 
     doMFileButtons(mfile)
 
-    //$allcontent = $('#qscontainer').clone(true);
-    $($allcontent[0]).append($mft);
+    $("#mservetree").mserve( 'add' , mfile );
 
-    console.log($allcontent)
-    console.log($mft)
-
-    doQuicksand(mfile.id)
     pnode = $("#mfoldertreecontainer .service")
 
     $("#mfoldertreecontainer").jstree("create", pnode, "first",

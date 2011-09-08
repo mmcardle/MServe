@@ -3,13 +3,14 @@
 <h3>Usage Summary</h3>
 
 <table class="table_usage" cellpadding="5" cellspacing="5">
-    <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Numbers</th><th>Average</th><th>Std. Dev</th><th>Variance</th></tr>
+    <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Sum</th><th>Std. Dev</th><th>Variance</th></tr>
+
     <tbody id="usagesummarycontent"></tbody>
 </table>
 
 <script type="text/javascript">
     $(document).ready(function() {
-        //load_usagesummary_auth('{{auth.id}}');
+        load_usagesummary_auth('{{auth.id}}');
     });
 </script>
 

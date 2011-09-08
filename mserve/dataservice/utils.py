@@ -86,23 +86,6 @@ def check_method_for_auth(authid,method):
     logging.info("Authority Check Failed for method '%s'  not in auth methods '%s'" % (method,methods)  )
     return False
 
-
-def clean_mfile(mfile):
-    mfiledict = {}
-    mfiledict["name"] = mfile.name
-    mfiledict["file"] = mfile.file
-    mfiledict["mimetype"] = mfile.mimetype
-    mfiledict["updated"] = mfile.updated
-    mfiledict["thumburl"] = mfile.thumburl()
-    mfiledict["thumb"] = mfile.thumb
-    mfiledict["created"] = mfile.created
-    mfiledict["checksum"] = mfile.checksum
-    mfiledict["posterurl"] = mfile.posterurl()
-    mfiledict["poster"] = mfile.poster
-    mfiledict["reportnum"] = mfile.reportnum
-    mfiledict["size"] = mfile.size
-    return mfiledict
-
 def mfile_upload_to(instance, filename):
     timeformat = time.strftime("%Y/%m/%d/")
     if instance.service.container.default_path != None and instance.service.container.default_path != "":
