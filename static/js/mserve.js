@@ -26,6 +26,26 @@
 
             });
     },
+    showFolder : function( mfolderid ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
+
+                $('#qscontainer').quicksand($filteredData, {
+                  duration: 800,
+                  easing: 'easeInOutQuad'
+                });
+            });
+    },
     add : function( mfile ) {
 
             var defaults = {};
@@ -510,6 +530,9 @@ function get_mfile_thumb(mfile){
     window.setTimeout(f, 3000, 0);
 }
 
+function showMFolder(mfolderid){
+    $("#mservetree").mserve( 'showFolder' , mfolderid);
+}
 
 function loadMFile(mfile){
     $("#nofiles").remove()

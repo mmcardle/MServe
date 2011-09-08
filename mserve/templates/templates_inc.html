@@ -650,9 +650,9 @@
 <script id="mfolderTemplate" type="text/x-jquery-tmpl">
 
  {%templatetag openvariable%}if parent {%templatetag closevariable%}
-    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline"  onclick="doQuicksand('${id}');"  >
+    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline"  onclick="showMFolder('${id}');"  >
  {%templatetag openvariable%}else{%templatetag closevariable%}
-    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline"  onclick="doQuicksand('${id}');"  >
+    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline"  onclick="showMFolder('${id}');"  >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
     <div id="image-${id}" class='fluid'
