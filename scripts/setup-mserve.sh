@@ -835,6 +835,7 @@ else
 	# use the provided mserve archive, we assume tgz file
 	echo " $MSERVE_ARCHIVE"
 	tar xvfz $MSERVE_ARCHIVE #|| f_ "failed to untar MSERVE archive"
+	cd pp-dataservice
 	[ -d mserve ] || f_ "failed to undtar MSERVE archive"
 fi
 
