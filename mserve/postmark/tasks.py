@@ -21,7 +21,7 @@
 #	Created for Project :		Postmark
 #
 ########################################################################
-from celery.decorators import task
+from celery.task import task
 from celery.task.sets import subtask
 from subprocess import Popen, PIPE
 import json

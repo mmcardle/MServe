@@ -23,7 +23,7 @@
 ########################################################################
 import os.path
 
-from celery.decorators import task
+from celery.task import task
 import logging
 import subprocess
 import tempfile
