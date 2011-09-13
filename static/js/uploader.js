@@ -2,6 +2,7 @@
 
 $(function () {
     $('#file_upload').fileUploadUI({
+        sequentialUploads : true,
         maxChunkSize:10000000,
         uploadTable: $('#files'),
         buildUploadRow: function (files, index) {
