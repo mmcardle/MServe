@@ -60,7 +60,8 @@
 
                 mid = "#mfileholder-"+mfile.id
 
-                $(data.allcontent[0]).append($(mid))
+                mc = $(mid)
+                $(data.allcontent[0]).append(mc.clone())
 
             });
     },
