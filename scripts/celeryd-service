@@ -37,10 +37,12 @@ do_start() {
 	#   0 if daemon has been started
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
+        log_daemon_msg "Starting celary monitor"
+        sudo -u www-data $DAEMON celerycam --detach -f celerycam.log --pidfile=${MSERVE_DATA}/celerycam.pid
 	log_daemon_msg "Starting celary server"
 	sudo -u www-data $DAEMON celeryd_multi restart --logfile=${MSERVE_LOG}/celeryd%n.log \
-		-l DEBUG 2 -n:1 normal.$hn -n:2 priority.$hn -Q:1 normal_tasks -Q:2 \
-		priority_tasks -c 5 --pidfile=${MSERVE_DATA}/celeryd%n.pid
+                    -l DEBUG 2 -n:1 normal.$hn -n:2 priority.$hn -Q:1 normal_tasks \
+                    -Q:2  priority_tasks -c 5 --pidfile=${MSERVE_DATA}/celeryd%n.pid
 	ret_val="$?"
 	echo "do_start return value: $ret_val"
 	return $ret_val
@@ -53,6 +55,8 @@ do_stop() {
 	#   2 if daemon could not be stopped
 	#   other if a failure occurred
 	log_daemon_msg "Stopping mserve processes"
+        sudo -u www-data kill `cat ${MSERVE_DATA}/celerycam.pid`
+        sudo -u www-data rm ${MSERVE_DATA}/celerycam.pid
 	sudo -u www-data $DAEMON celeryd_multi stop \
 		--logfile=${MSERVE_DATA}/celeryd%n.log -l DEBUG 2 -n:1 normal.$hn \
 		-n:2 priority.$hn -Q:1 normal_tasks -Q:2 priority_tasks -c 5 \

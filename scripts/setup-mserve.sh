@@ -408,6 +408,7 @@ update_mserve () {
 	DATABASE_ADMIN_USER=$_DATABASE_ADMIN_USER
 	DATABASE_ADMIN_PASSWORD=$_DATABASE_ADMIN_PASSWORD
 
+
 	MSERVE_DATABASE_USER=$_MSERVE_DATABASE_USER
 	MSERVE_DATABASE_PASSWORD=$_MSERVE_DATABASE_PASSWORD
 
@@ -481,7 +482,7 @@ echo "PART-I installing MServe prerequisites"
 
 #############################
 # update system repositories
-#apt-get update || f_ "fail, could not update system repositories"
+apt-get update || f_ "fail, could not update system repositories"
 
 apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
 apt-get -y install git-core mercurial ffmpegthumbnailer || \
@@ -837,6 +838,12 @@ else
 	tar xvfz $MSERVE_ARCHIVE #|| f_ "failed to untar MSERVE archive"
 	cd pp-dataservice
 	[ -d mserve ] || f_ "failed to undtar MSERVE archive"
+	cd ..
+
+	echo "cleaning up local repository copy"
+	mkdir mserve || f_ "failed could not create a temp mserve directory"
+	cp -a ./pp-dataservice/mserve/* mserve || f_ "failed to copy mserve files in temp dir"
+	cp -a ./pp-dataservice/{scripts,static,README.txt} mserve || f_ "failed to copy scripts, static in temp dir"
 fi
 
 
