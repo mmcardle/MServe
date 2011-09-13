@@ -1086,7 +1086,14 @@ rm -rf mserve$$ || f_ "failed to remove temporary mserve$$ directory"
 # create media links
 echo "creating media links"
 cd ${MSERVE_DATA}/www-root
-ln -s /usr/share/pyshared/django/contrib/admin/media
+
+DJANGO_HOME=`python -c "
+import django
+import os
+print os.path.dirname(django.__file__)
+"`
+
+ln -s ${DJANGO_HOME}/contrib/admin/media
 ln -s ${MSERVE_HOME}/static mservemedia
 
 
