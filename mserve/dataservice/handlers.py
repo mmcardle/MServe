@@ -444,7 +444,6 @@ class MFileHandler(BaseHandler):
                 ('folder', ('id','name') ) )
 
     def read(self,request, id=None, serviceid=None, authid=None):
-        logging.info(id)
         if id :
             return self.model.objects.get(id=id).do("GET")
         if serviceid:
@@ -669,7 +668,7 @@ class UsageSummaryHandler(BaseHandler):
                 time.sleep(sleeptime)
                 base = NamedBase.objects.get(id=id)
 
-        usages = usage_store.get_usage_summary(id)
+        usages = base.get_real_base().get_usage_summary()
 
         result = {}
         result["usages"] = usages

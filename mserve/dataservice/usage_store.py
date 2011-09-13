@@ -27,7 +27,6 @@ import utils as utils
 import datetime
 import time
 import logging
-from django.db.models import Count,Max,Min,Avg,Sum,StdDev,Variance
 
 def record(id,metric,total,report=True):
     base = NamedBase.objects.get(pk=id)
@@ -119,6 +118,14 @@ def updaterecording(id,metric,rate,report=True):
             return usage
     except Usage.DoesNotExist:
         logging.info("Usage DoesNotExist  ")
+        usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
+        logging.info("created %s " % usage)
+        usage.save()
+        #base.usages.add(usage)
+        #base.save()
+        if report:
+            reportusage(base)
+        return usage
 
 def _stoprecording_(usage, obj=None):
 
@@ -176,89 +183,3 @@ def reportusage(base):
     for ob in toreport:
         ob.reportnum += 1
         ob.save()
-
-def get_usage(id=None):
-    if id==None:
-        usages = Usage.objects.all()
-        return usages
-    else:
-        try:
-            base = NamedBase.objects.get(pk=id)
-            ids = []
-            if utils.is_container(base):
-                hc = HostingContainer.objects.get(id=id)
-                serviceids = [service.id for service in hc.dataservice_set.all()  ]
-                mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
-                ids = serviceids + mfileids + [base.id]
-
-            if utils.is_service(base):
-                service   = DataService.objects.get(id=id)
-                ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
-
-            if utils.is_mfile(base):
-                ids=[base.id]
-
-            usages = Usage.objects.filter(base__in=ids)
-            return usages
-        except NamedBase.DoesNotExist:
-
-            auth = Auth.objects.get(pk=id)
-            logging.info("Getting usage for auth %s " % auth)
-
-            base = utils.get_base_for_auth(auth)
-
-            return get_usage(id=base.id)
-
-def get_usage_summary(id=None):
-    
-    summary = []
-    usages = None
-    if id==None:
-        usages = Usage.objects.all()
-        
-    else:
-        try:
-            base = NamedBase.objects.get(pk=id)
-
-            ids = []
-
-            if utils.is_container(base):
-                hc = HostingContainer.objects.get(id=id)
-                serviceids = [service.id for service in hc.dataservice_set.all()  ]
-                mfileids   = [mfile.id for service in hc.dataservice_set.all() for mfile in service.mfile_set.all() ]
-                ids = serviceids + mfileids + [base.id]
-
-            if utils.is_service(base):
-                service   = DataService.objects.get(id=id)
-                ids = [mfile.id for mfile in service.mfile_set.all()] + [base.id]
-
-            if utils.is_mfile(base):
-                ids=[base.id]
-
-            usages = Usage.objects.filter(base__in=ids)
-        except NamedBase.DoesNotExist:
-
-            auth = Auth.objects.get(pk=id)
-            logging.info("Getting usage summary for auth %s " % auth)
-
-            base = utils.get_base_for_auth(auth)
-
-            return get_usage_summary(id=base.id)
-    
-    if not settings.DATABASES['default']['ENGINE'].endswith("sqlite3"):
-        summary += usages.values('metric') \
-            .annotate(n=Count('total')) \
-            .annotate(avg=Avg('total')) \
-            .annotate(max=Max('total')) \
-            .annotate(min=Min('total')) \
-            .annotate(sum=Sum('total')) \
-            .annotate(stddev=StdDev('total'))\
-            .annotate(variance=Variance('total'))
-
-    else:
-        # sqlite3 - No built-in variance and std deviation
-        summary += usages.values('metric') \
-            .annotate(sum=Sum('rate'))\
-            .annotate(sum=Sum('rateCumulative'))
-
-    return summary

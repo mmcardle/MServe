@@ -73,8 +73,7 @@ def append_dict(dict,request):
 
 def home(request,form=HostingContainerForm()):
     hostings = HostingContainer.objects.all()
-    usagesummary = usage_store.get_usage_summary(None)
-    usage = usage_store.get_usage(None)
+    usagesummary = Usage.usages_to_summary(Usage.objects.all())
     servicerequestform = ServiceRequestForm()
     dict = {}
     dict["servicerequestform"] = servicerequestform
@@ -128,8 +127,6 @@ def render_base(request,id):
         if utils.is_mfile(base):
             return render_mfile_auth(request,auth)
 
-
-
         dict = {}
         dict["error"] = "Error displaying the auth with id='%s' " % id
         return render_to_response('error.html', append_dict(dict,request), context_instance=RequestContext(request))
@@ -151,8 +148,8 @@ def render_container(request,id,form=DataServiceForm()):
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     #form.fields['cid'].initial = id
-    usage = usage_store.get_usage(id)
-    usagesummary = usage_store.get_usage_summary(container.id)
+    usage = container.get_usage()
+    usagesummary = container.get_usage_summary()
 
     managementpropertyform = ManagementPropertyForm()
     hcform = HostingContainerForm(instance=container)
@@ -183,9 +180,8 @@ def render_container_auth(request,authid):
     auths = hca.auth_set.all()
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
-    usage = usage_store.get_usage(container.id)
-    usagesummary = usage_store.get_usage_summary(container.id)
-
+    usage = hca.get_usage()
+    usagesummary = hca.get_usage_summary()
     managementpropertyform = ManagementPropertyForm()
     dict = {}
     dict["container"] = container
@@ -217,8 +213,8 @@ def render_service(request,id,form=MFileForm()):
     dict["mfiles"] = mfiles
     dict["auths"] = auths
     dict["form"] = form
-    dict["usage"] = usage_store.get_usage(id)
-    dict["usagesummary"] = usage_store.get_usage_summary(service.id)
+    dict["usage"] = service.get_usage()
+    dict["usagesummary"] = service.get_usage_summary()
     return render_to_response('service.html', append_dict(dict,request), context_instance=RequestContext(request))
 
 def render_service_auth(request,auth):
@@ -229,7 +225,7 @@ def render_service_auth(request,auth):
     
     dict = {}
     dict["auth"] = auth
-    dict["usagesummary"] = usage_store.get_usage_summary(base.id)
+    dict["usagesummary"] = auth.get_usage_summary()
     dict["service"] = DataService.objects.get(id=base.id)
     dict["form"] = form
     
@@ -266,8 +262,8 @@ def render_mfile(request, id, form=AuthForm(), show=False):
     dict["fullaccess"] = True
     dict["auths"] = auths
     dict["formtarget"] = "/mfileauth/"
-    dict["usage"] = usage_store.get_usage(id)
-    dict["usagesummary"] = usage_store.get_usage_summary(mfile.id)
+    dict["usage"] = mfile.get_usage()
+    dict["usagesummary"] = mfile.get_usage_summary()
     
     return render_to_response('mfile.html', append_dict(dict,request), context_instance=RequestContext(request))
 
@@ -278,13 +274,12 @@ def render_mfile_auth(request, auth):
 
 @staff_member_required
 def usage(request):
-    usagesummary = usage_store.get_usage_summary(None)
-    usage = Usage.objects.all()
+    usages = Usage.objects.all()
+    usagesummary = Usage.usages_to_summary(usages)
     dict = {}
-    dict["usage"] = usage
+    dict["usage"] = usages
     dict["usagesummary"] = usagesummary
     return render_to_response('allusage.html', append_dict(dict,request), context_instance=RequestContext(request))
-
 
 def render_error(request,error):
     dict = {}

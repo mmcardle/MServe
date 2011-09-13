@@ -125,7 +125,7 @@ class APITest(TestCase):
         auths = service.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),2)
-        self.failUnlessEqual(len(auths[0].geturls()),7)
+        self.failUnlessEqual(len(auths[0].geturls()),8)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = service.do("PUT","auths",**kwargs_2)
@@ -254,7 +254,7 @@ class APITest(TestCase):
         self.failUnlessEqual(len(props), 2)
 
         usages = service_auth.do("GET","usages")
-        self.failUnlessEqual(len(usages), 0)
+        self.failUnlessEqual(len(usages), 1)
 
         auths = service_auth.do("GET","auths")
         self.failUnlessEqual(len(auths), 0)
@@ -275,7 +275,7 @@ class APITest(TestCase):
         auths = service_auth.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),7)
+        self.failUnlessEqual(len(auths[0].geturls()),8)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = service_auth.do("PUT","auths",**kwargs_2)
@@ -376,7 +376,7 @@ class APITest(TestCase):
         self.failUnlessEqual(len(props), 2)
 
         usages = service_auth.do("GET","usages")
-        self.failUnlessEqual(len(usages), 0)
+        self.failUnlessEqual(len(usages), 1)
 
         auths = service_auth.do("GET","auths")
         self.failUnlessEqual(len(auths), 0)
@@ -397,7 +397,7 @@ class APITest(TestCase):
         auths = service_auth.do("PUT","auths",**kwargs)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),7)
+        self.failUnlessEqual(len(auths[0].geturls()),8)
 
         kwargs_2 = {"505authname":[]}
         shouldbe503_3 = service_auth.do("PUT","auths",**kwargs_2)
@@ -544,7 +544,7 @@ class APITest(TestCase):
         self.failUnlessEqual(type(shouldbe_403), HttpResponseForbidden)
 
         usages = mfileauth.do("GET","usages")
-        self.failUnlessEqual(len(usages), 0)
+        self.failUnlessEqual(len(usages), 4)
 
         auths = mfileauth.do("GET","auths")
         self.failUnlessEqual(len(auths), 0)

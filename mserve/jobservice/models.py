@@ -32,6 +32,10 @@ from celery.result import TaskSetResult
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
 
+metric_job = "http://mserve/job"
+
+job_metrics = [metric_job]
+
 class Job(NamedBase):
     mfile  = models.ForeignKey(MFile)
     created  = models.DateTimeField(auto_now_add=True)
@@ -39,6 +43,10 @@ class Job(NamedBase):
 
     class Meta:
         ordering = ('-created','name')
+
+    def __init__(self, *args, **kwargs):
+        super(Job, self).__init__(*args, **kwargs)
+        self.metrics = job_metrics
 
     def save(self):
         if not self.id:
@@ -48,6 +56,14 @@ class Job(NamedBase):
     def __unicode__(self):
         return "%s" % (self.name);
 
+    def get_rate_for_metric(self, metric):
+        if metric == metric_job:
+            return 1
+        pass
+
+    def get_updated_rate_for_metric(self, metric):
+        pass
+            
     def clean_base(self,authid):
         jobdict = {}
         jobdict["name"] = self.name

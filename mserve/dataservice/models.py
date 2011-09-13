@@ -33,12 +33,11 @@ import settings
 import static as static
 from piston.utils import rc
 import django.dispatch
-import urlparse
-from celery.task.control import inspect
 from celery.task.sets import TaskSet
 from celery.task.sets import subtask
 from celery.registry import tasks
-from django.shortcuts import redirect
+from celery.result import TaskSetResult
+from djcelery.models import TaskState
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
@@ -51,16 +50,9 @@ from django.db.models.signals import pre_delete
 from django.core.urlresolvers import reverse
 from django.core.files.temp import NamedTemporaryFile
 from django.core.files import File
-
-from dataservice.tasks import proxyvideo
-from dataservice.tasks import thumbimage
-from dataservice.tasks import thumbvideo
-from dataservice.tasks import posterimage
-from dataservice.tasks import postervideo
-from dataservice.tasks import transcodevideo
+from django.db.models import Count,Max,Min,Avg,Sum,StdDev,Variance
+from celery.result import TaskSetResult
 from dataservice.tasks import mimefile
-from dataservice.tasks import md5file
-from dataservice.tasks import backup_mfile
 
 # Declare Signals
 mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
@@ -86,11 +78,15 @@ metric_archived = "http://mserve/archived"
 metric_corruption = "http://mserve/corruption"
 metric_dataloss = "http://mserve/dataloss"
 
+# Metrics for jobs
+metric_jobruntime   = "http://mserve/jobruntime"
+metric_jobtask      = "http://mserve/task/"
+
 metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_disc_space,metric_ingest,metric_access,metric_archived]
 
 # What metric are reported fro each type
 container_metrics = metrics
-service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_disc_space]
+service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_disc_space,metric_jobruntime]
 mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_disc_space]
 backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
 
@@ -199,6 +195,114 @@ class Usage(models.Model):
     rate            = models.FloatField()                       # The current rate (change in value per second)
     rateCumulative  = models.FloatField()                       # Cumulative unreported usage before rateTime
 
+    @staticmethod
+    def usages_to_summary(usages):
+        summary = []
+        if not settings.DATABASES['default']['ENGINE'].endswith("sqlite3"):
+            summary += usages.values('metric') \
+                .annotate(n=Count('total')) \
+                .annotate(avg=Avg('total')) \
+                .annotate(max=Max('total')) \
+                .annotate(min=Min('total')) \
+                .annotate(sum=Sum('total')) \
+                .annotate(stddev=StdDev('total'))\
+                .annotate(variance=Variance('total'))
+
+        else:
+            # sqlite3 - No built-in variance and std deviation
+            summary += usages.values('metric') \
+                .annotate(sum=Sum('rate'))\
+                .annotate(sum=Sum('rateCumulative'))
+        return summary
+
+    @staticmethod
+    def get_job_usagesummary(jobs):
+        tasksets_ids    = [ job.tasks()["taskset_id"]  for job in jobs]
+        taskresults     = filter(None,[ TaskSetResult.restore(tasksetid) for tasksetid in tasksets_ids])
+        asyncs          = [ asyncresult for taskres in taskresults for asyncresult in taskres.subtasks ]
+        taskstates      = TaskState.objects.filter(task_id__in=asyncs)
+
+        jobtype_usage = taskstates.values("name").annotate(
+            n=Count('id'),
+            avg=Avg('runtime'),
+            sum=Sum('runtime'),
+            max=Max('runtime'),
+            min=Min('runtime'),
+            stddev=StdDev('runtime'),
+            variance=Variance('runtime')
+        )
+
+        for jobtype in jobtype_usage:
+            jobtype["metric"] = metric_jobtask+jobtype["name"]
+
+        jobtype_success_usage = taskstates.filter(state="SUCCESS").values("name").annotate(
+            n=Count('id'),
+            avg=Avg('runtime'),
+            sum=Sum('runtime'),
+            max=Max('runtime'),
+            min=Min('runtime'),
+            stddev=StdDev('runtime'),
+            variance=Variance('runtime')
+        )
+
+        for jobtype in jobtype_success_usage:
+            jobtype["metric"] = metric_jobtask+jobtype["name"]+"/success/"
+
+        jobtype_failed_usage = taskstates.filter(state="FAILURE").values("name").annotate(
+            n=Count('id'),
+            avg=Avg('runtime'),
+            sum=Sum('runtime'),
+            max=Max('runtime'),
+            min=Min('runtime'),
+            stddev=StdDev('runtime'),
+            variance=Variance('runtime')
+        )
+
+        for jobtype in jobtype_failed_usage:
+            jobtype["metric"] = metric_jobtask+jobtype["name"]+"/failed/"
+
+        runtime_usage = taskstates.aggregate(
+            n=Count('id'),
+            avg=Avg('runtime'),
+            sum=Sum('runtime'),
+            max=Max('runtime'),
+            min=Min('runtime'),
+            stddev=StdDev('runtime'),
+            variance=Variance('runtime')
+            )
+        runtime_usage["metric"] = metric_jobruntime
+
+        runtime_usage_success = taskstates.filter(state="SUCCESS").aggregate(
+            n=Count('id'),
+            avg=Avg('runtime'),
+            sum=Sum('runtime'),
+            max=Max('runtime'),
+            min=Min('runtime'),
+            stddev=StdDev('runtime'),
+            variance=Variance('runtime')
+            )
+        runtime_usage_success["metric"] = metric_jobruntime + "/success/"
+
+        runtime_usage_failed = taskstates.filter(state="FAILURE").aggregate(
+            n=Count('id'),
+            avg=Avg('runtime'),
+            sum=Sum('runtime'),
+            max=Max('runtime'),
+            min=Min('runtime'),
+            stddev=StdDev('runtime'),
+            variance=Variance('runtime')
+            )
+        runtime_usage_failed["metric"] = metric_jobruntime + "/failed/"
+
+        summary = []
+        summary.extend(jobtype_usage)
+        summary.extend(jobtype_success_usage)
+        summary.extend(jobtype_failed_usage)
+        summary.append(runtime_usage)
+        summary.append(runtime_usage_success)
+        summary.append(runtime_usage_failed)
+        return summary
+
     def save(self):
         super(Usage, self).save()
         logging.info("Saving Usage %s " % (self) )
@@ -255,6 +359,9 @@ class Base(models.Model):
 
         raise Exception("Dont know how to get real base for %s" % (self) )
 
+    def _usages_to_summary(self,usages):
+        return Usage.usages_to_summary(usages)
+
     def check(self, url , method):
         if url==None:
             if method in self.methods:
@@ -273,11 +380,12 @@ class Base(models.Model):
     def do(self, method, url=None, *args , **kwargs):
 
         if url==None:
-            logging.info("%s : on %s args=%s kwargs=%s" % (method,self,args,kwargs))
+            #logging.debug("%s : on %s args=%s kwargs=%s" % (method,self,args,kwargs))
             if method not in ["GET","PUT","POST","DELETE"]:
                 return HttpResponseForbidden()
         else:
-            logging.info("%s : /%s/ on %s args=%s kwargs=%s" % (method,url,self,args,kwargs))
+            #logging.debug("%s : /%s/ on %s args=%s kwargs=%s" % (method,url,self,args,kwargs))
+            pass
 
         passed,error = self.check(url,method)
 
@@ -320,7 +428,7 @@ class Base(models.Model):
                 if 'true' in values or 'True' in values:
                     logging.info("full usage true")
                     import usage_store
-                    usages = usage_store.get_usage(base.id)
+                    usages = self.get_usage()
 
                     result = {}
                     result["usages"] = usages
@@ -432,7 +540,7 @@ class NamedBase(Base):
             import usage_store as usage_store
             startusages = []
             for metric in self.metrics:
-                logging.info("Processing metric %s" %metric)
+                #logging.info("Processing metric %s" %metric)
                 #  Recored Initial Values
                 v = self.get_value_for_metric(metric)
                 if v is not None:
@@ -458,18 +566,18 @@ class NamedBase(Base):
     def update_usage(self):
         import usage_store as usage_store
         for metric in self.metrics:
-            logging.info("Processing metric %s" %metric)
+            #logging.info("Processing metric %s" %metric)
             #  Recorded updated values
             v = self.get_updated_value_for_metric(metric)
-            logging.info("Value for %s is %s" % (metric,v))
+
             if v is not None:
+                logging.info("Value for %s is %s" % (metric,v))
                 logging.info("Recording usage for metric %s value= %s" % (metric,v) )
                 usage = usage_store.update(self.id,metric,v)
-
             # recording updated rates
             r = self.get_updated_rate_for_metric(metric)
-            logging.info("Rate for %s is %s" % (metric,r))
             if r is not None:
+                logging.info("Rate for %s is %s" % (metric,r))
                 logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
                 usage = usage_store.updaterecording(self.id,metric,r)
 
@@ -551,6 +659,25 @@ class HostingContainer(NamedBase):
                     logging.info("PUT CONTAINER Auth '%s' does not exist "% (authname))
                     return HttpResponseBadRequest()
         return HttpResponseNotFound()
+
+    def get_usage(self):
+        serviceids = [service.id for service in self.dataservice_set.all()  ]
+        mfileids   = [mfile.id for service in self.dataservice_set.all() for mfile in service.mfile_set.all() ]
+        jobids   = [job.id for service in self.dataservice_set.all() for job in service.jobs() ]
+        ids = serviceids + mfileids + jobids + [self.id]
+        usages = Usage.objects.filter(base__in=ids)
+        return usages
+
+    def get_usage_summary(self):
+        from jobservice.models import Job
+        serviceids = [service.id for service in self.dataservice_set.all()  ]
+        mfileids   = [mfile.id for service in self.dataservice_set.all() for mfile in service.mfile_set.all() ]
+        jobids   = [job.id for service in self.dataservice_set.all() for job in service.jobs() ]
+        ids = serviceids + mfileids + jobids + [self.id]
+        usages = Usage.objects.filter(base__in=ids)
+        summary = self._usages_to_summary(usages)
+        summary.extend(Usage.get_job_usagesummary(Job.objects.filter(id__in=jobids)))
+        return summary
 
     @staticmethod
     def create_container(name):
@@ -721,6 +848,24 @@ class DataService(NamedBase):
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
         self.metrics = service_metrics
+
+    def get_usage(self):
+        tasksets_ids    = [ job.tasks()["taskset_id"]  for job in self.jobs()]
+        taskresults     = filter(None,[ TaskSetResult.restore(tasksetid) for tasksetid in tasksets_ids])
+        asyncs          = [ asyncresult for taskres in taskresults for asyncresult in taskres.subtasks ]
+        taskstates      = [ taskstate for taskstate in TaskState.objects.filter(task_id__in=asyncs).filter(state="SUCCESS") ]
+        usages          = [ Usage(base=self,metric=metric_jobruntime,total=taskstate.runtime,rate=0,rateCumulative=0,rateTime=taskstate.tstamp,nInProgress=0,reports=1,squares=(taskstate.runtime*taskstate.runtime)) for taskstate in taskstates ]
+
+        ids = [mfile.id for mfile in self.mfile_set.all()] + [job.id for job in self.jobs()] + [self.id]
+        usages.extend(Usage.objects.filter(base__in=ids))
+        return usages
+
+    def get_usage_summary(self):
+        ids = [mfile.id for mfile in self.mfile_set.all()] + [job.id for job in self.jobs()] + [self.id]
+        usages = Usage.objects.filter(base__in=ids)
+        summary = self._usages_to_summary(usages)
+        summary.extend(Usage.get_job_usagesummary(self.jobs()))
+        return summary
 
     def subservices_url(self):
         return reverse('subservices',args=[self.id])
@@ -1084,6 +1229,16 @@ class MFile(NamedBase):
         super(MFile, self).__init__(*args, **kwargs)
         self.metrics = mfile_metrics
 
+    def get_usage(self):
+        ids=[self.id]
+        usages = Usage.objects.filter(base__in=ids)
+        return usages
+
+    def get_usage_summary(self):
+        ids=[self.id]
+        usages = Usage.objects.filter(base__in=ids)
+        return self._usages_to_summary(usages)
+
     def get(self,url, *args, **kwargs):
         if url == "jobs":
             return self.job_set.all()
@@ -1406,8 +1561,6 @@ class MFile(NamedBase):
             job = Job(name="%s %s Job"%(self.name,name),mfile=self)
             job.save()
 
-            ins = inspect()
-
             for workflow_task in workflow_tasks:
                     task_name = workflow_task.task_name
                     logging.debug("Processing task %s " % task_name )
@@ -1704,6 +1857,14 @@ class Auth(Base):
                     return True,None
                 else:
                     return False,HttpResponseForbidden()
+
+    def get_usage(self):
+        base = self.get_real_base()
+        return base.get_usage()
+
+    def get_usage_summary(self):
+        base = self.get_real_base()
+        return base.get_usage_summary()
 
     def get(self,url, *args, **kwargs):
         logging.info("AUTH %s %s " % (self,url) )

@@ -24,13 +24,13 @@ $('#tabs').bind('tabsshow', function(event, ui) {
         {% for summary in usagesummary%}
             <tr>
                 <td style="text-align: left;"><b>{{summary.metric}}</b></td>
-                <td><script>document.write(number_format({{summary.min}}, 2, '.', ','))</script></td>
-                <td><script>document.write(number_format({{summary.max}}, 2, '.', ','))</script></td>
-                <td><script>document.write(number_format({{summary.n}}, 0, '.', ','))</script></td>
-                <td><script>document.write(number_format({{summary.avg}}, 2, '.', ','))</script></td>
-                <td><script>document.write(number_format({{summary.sum}}, 2, '.', ','))</script></td>
-                <td><script>document.write(number_format({{summary.stddev}}, 2, '.', ','))</script></td>
-                <td><script>document.write(number_format({{summary.variance}}, 2, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.min}}', 2, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.max}}', 2, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.n}}', 0, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.avg}}', 2, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.sum}}', 2, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.stddev}}', 2, '.', ','))</script></td>
+                <td><script>document.write(number_format('{{summary.variance}}', 2, '.', ','))</script></td>
             </tr>
         {% endfor %}
     </table>
