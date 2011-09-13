@@ -196,6 +196,14 @@ class Usage(models.Model):
     rateCumulative  = models.FloatField()                       # Cumulative unreported usage before rateTime
 
     @staticmethod
+    def get_full_usagesummary():
+        usages = Usage.objects.all()
+        usagesummary = Usage.usages_to_summary(usages)
+        from jobservice.models import Job
+        usagesummary.extend(Usage.get_job_usagesummary(Job.objects.all()))
+        return usagesummary
+
+    @staticmethod
     def usages_to_summary(usages):
         summary = []
         if not settings.DATABASES['default']['ENGINE'].endswith("sqlite3"):

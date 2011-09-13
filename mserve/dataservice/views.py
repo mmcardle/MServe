@@ -275,7 +275,7 @@ def render_mfile_auth(request, auth):
 @staff_member_required
 def usage(request):
     usages = Usage.objects.all()
-    usagesummary = Usage.usages_to_summary(usages)
+    usagesummary = Usage.get_full_usagesummary()
     dict = {}
     dict["usage"] = usages
     dict["usagesummary"] = usagesummary
