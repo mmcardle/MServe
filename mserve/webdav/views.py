@@ -236,7 +236,7 @@ class DavServer(object):
         if isFi:
             response = HttpResponse(mimetype=object.mimetype)
             response['Content-Length'] = object.file.size
-            if os.path.exists(object):
+            if os.path.exists(object.file.path):
                 fstat = os.stat(object.file.path)
                 response['Last-Modified'] = self.__get_localized_datetime(fstat.st_mtime).strftime("%a, %d %b %Y %H:%M:%S %Z")
                 response['ETag'] = "%s-%s" % (hex(int(fstat.st_mtime))[2:], fstat.st_size)
