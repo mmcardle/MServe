@@ -107,7 +107,7 @@ class JobHandler(BaseHandler):
             job = mfile.do("POST","jobs",**{"name":"Job"})
             job.save()
 
-            for i in range(1,nbinputs-1):
+            for i in range(1,nbinputs):
                 mfileid = request.POST['input-%s'%i]
                 mfile = MFile.objects.get(id=mfileid)
                 inputs.append(mfile.id)

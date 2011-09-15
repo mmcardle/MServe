@@ -222,3 +222,6 @@ FORCE_SCRIPT_NAME = ''
 # POSTMARK SPECIFIC
 DIGITAL_RAPIDS_INPUT_DIR = "/mnt/postmark/postmark/input/"
 DIGITAL_RAPIDS_OUTPUT_DIR = "/mnt/postmark/postmark/output/"
+R3D_HOST="r3dhost"
+R3D_USER="r3dusername"
+R3D_PASS="r3dpassword"

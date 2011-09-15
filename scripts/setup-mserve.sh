@@ -534,12 +534,12 @@ esac
 
 
 ##################
-# install erlang
+# install erlang and python
 echo "installing system packages for erlang and python libraries"
 apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
-	python-setuptools python-flup python-magic \
+	python-setuptools python-flup python-magic python-paramiko \
 	python-imaging python-pycurl python-openid python-crypto python-lxml || \
 	f_ "failed to install erlang packages and python libraries"
 

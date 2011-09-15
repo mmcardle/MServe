@@ -111,3 +111,12 @@ job_descriptions['digitalrapids'] = {
         "options":[],
         "results" : []
 }
+job_descriptions['r3d'] = {
+        "nbinputs" : 2,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "video" },
+        "input-1" : { "mimetype" : "video" },
+        "output-0" : { "mimetype" : "image/tiff" },
+        "options":[],
+        "results" : []
+}

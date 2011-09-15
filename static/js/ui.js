@@ -288,6 +288,7 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
        type: "GET",
        url: "/tasks/",
        success: function(jobdescriptions){
+
             jobtypes = jobdescriptions['regular']
 
             $("#jobtype").empty()
@@ -319,7 +320,12 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
                         $("#inputsmessage").append("<em>No inputs</em>")
                     }
 
-                    for (i=0;i<nbinputs;i++)
+                    $("#job-extra-input-preview").empty();
+                    ia = []
+                    for (var i=0;i<nbinputs;i++){
+                        ia.push(i)
+                    }
+                    $(ia).each(function(index,i)
                     {
                         inputkey = 'input-'+i
                         inputlabel = 'input-'+(i+1)
@@ -327,9 +333,46 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
                         initialvalue = ""
                         if(i==0){
                             value=mfileid
+                            $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
+                        }else{
+                            var $chooser = $( "#mfileChooserTemplate" ).tmpl( { "id" : "mfile-chooser-"+i } )
+                            $chooser.appendTo("#job-extra-input-preview");
+                            $chooser.find("button").button().click(function( ){
+                                $.ajax({
+                                   type: "GET",
+                                   url: "/users/",
+                                   success: function(user){
+                                        $("#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder").empty()
+                                        create_new_choose_mfile_ui_dialog()
+                                        $(user.mfiles).each(function(index,mfile){
+                                            tmpl = $( "#mfileNoActionTemplate" ).tmpl( mfile )
+                                            tmpl.appendTo( "#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder")
+                                            tmpl.click(function(){
+                                                $("#mfile-chooser-"+i).replaceWith(this)
+                                                $("#dialog-choose-mfile-dialog-form").dialog( "close" )
+                                                $("input[name='"+inputkey+"']").val(mfile.id)
+                                            })
+
+                                        })
+                                        $(user.myauths).each(function(index,auth){
+                                            tmpl = $( "#mfileNoActionTemplate" ).tmpl( auth )
+                                            tmpl.appendTo( "#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder")
+                                            tmpl.click(function(){
+                                                $("#mfile-chooser-"+i).replaceWith(this)
+                                                $( "#dialog-choose-mfile-dialog-form").dialog( "close" )
+                                                $("input[name='"+inputkey+"']").val(auth.id)
+                                            })
+
+                                        })
+
+
+                                    }
+                                });
+                            })
+                            $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value=''></input>")
                         }
-                        $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
-                    }
+
+                    });
                 }
              });
        }
@@ -346,7 +389,7 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
     $( "#dialog-new-job-dialog-form" ).dialog({
             autoOpen: false,
             height: 500,
-            width: 650,
+            width: 750,
             modal: true,
             buttons: {
                     "Create Task": function() {
@@ -371,11 +414,33 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
                     $("#argsmessage").empty();
                     $("#inputs").empty();
                     $("#inputsmessage").empty();
+                    $("#job-extra-input-preview").empty()
                     if(servicepage){
                         $("#job-input-preview").empty()
                     }
             }
     });
+}
+
+function create_new_choose_mfile_ui_dialog() {
+    // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+    $( "#dialog:ui-dialog" ).dialog( "destroy" );
+
+    $( "#dialog-choose-mfile-dialog-form" ).dialog({
+            autoOpen: false,
+            height: 600,
+            width: 800,
+            modal: true,
+            buttons: {
+                    Cancel: function() {
+                            $( this ).dialog( "close" );
+                    }
+            },
+            close: function() {
+
+            }
+    });
+    $( "#dialog-choose-mfile-dialog-form").dialog( "open" );
 }
 
 function create_new_add_method_ui_dialog(roleid) {

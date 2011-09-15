@@ -22,25 +22,91 @@
 #
 ########################################################################
 from celery.task import task
-from celery.task.sets import subtask
-from subprocess import Popen, PIPE
-import json
 import logging
-import hashlib
-import Image
-import tempfile
-import magic
-import urlparse
 import os
 import shutil
 import os.path
 import time
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files import File
-import pycurl
-import StringIO
+from django.core.files.uploadedfile import SimpleUploadedFile
 import dataservice.utils as utils
 import settings as settings
+import paramiko
+import os
+import uuid
+from ssh import MultiSSHClient
+from dataservice.models import MFile
+from jobservice.models import JobOutput
+
+def _ssh_r3d(left_eye_file,right_eye_file,tmpimage):
+
+    ssh = MultiSSHClient()
+
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(settings.R3D_HOST, username=settings.R3D_USER, password=settings.R3D_PASS)
+
+    export_file_path = ""
+    start_frame = ""
+    end_frame = ""
+    clip_settings_file = ""
+    output_file_dir,output_file_name = os.path.split(tmpimage)
+
+    command = "redline %s %s %s %s %s %s %s %s" % (left_eye_file,right_eye_file,output_file_dir,output_file_name,export_file_path,start_frame,end_frame,clip_settings_file)
+    command = "composite -blend 40 %s %s -alpha Set %s" % (left_eye_file,right_eye_file,tmpimage)
+
+    logging.info(command)
+
+    stdin, stdout, stderr = ssh.exec_command(command)
+
+    result = {}
+    result["stdout"] = stdout.readlines()
+    result["sdterr"] = stderr.readlines()
+
+    return result
+
+
+@task(name="r3d")
+def r3d(inputs,outputs,options={},callbacks=[]):
+
+    logging.info("Inputs %s"% (inputs))
+    if len(inputs) > 0:
+        left  = MFile.objects.get(id=inputs[0])
+        logging.info("Left %s" % left)
+        if len(inputs) > 1:
+            right = MFile.objects.get(id=inputs[1])
+            logging.info("Right %s" % right)
+
+            remote_mount = "/tmp"
+            local_mount = settings.MSERVE_DATA
+
+            tfile_uuid = "r3d-image-"+str(uuid.uuid4())
+            remoteimage = os.path.join(remote_mount,tfile_uuid)
+            localimage = os.path.join(local_mount,tfile_uuid)
+
+            result = _ssh_r3d(left.file.path,right.file.path,remoteimage)
+
+            logging.info(result)
+
+            # TODO: Change to local in deployment
+            #outputfile = open(localimage,'r')
+            outputfile = open(remoteimage,'r')
+
+            suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='image/tiff')
+
+            if len(outputs)>0:
+                jo = JobOutput.objects.get(id=outputs[0])
+                jo.file.save('image.jpg', suf, save=True)
+            else:
+                logging.error("Nowhere to save output")
+
+            outputfile.close()
+
+            return {"message":"R3D successful"}
+        else:
+            logging.error("No right eye input given")
+    else:
+        logging.error("No left eye input given")
+    raise
 
 def _drop_folder(filepath,inputfolder,outputfolder):
 
