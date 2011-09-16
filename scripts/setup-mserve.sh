@@ -533,15 +533,66 @@ case $HTTP_SERVER in
 esac
 
 
+
 ##################
 # install erlang and python
 echo "installing system packages for erlang and python libraries"
 apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
-	python-setuptools python-flup python-magic python-paramiko \
-	python-imaging python-pycurl python-openid python-crypto python-lxml || \
+	python-setuptools python-flup python-magic python-dev python-pythonmagick \
+	python-imaging python-pycurl python-openid python-lxml  || \
 	f_ "failed to install erlang packages and python libraries"
+
+
+######################
+#Install python-crypto
+#Remove any installed ubuntu version
+apt-get -y remove python-crypto
+# import crypto
+echo "import sys
+try:
+   import Crypto
+   from Crypto.Random import atfork
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
+" | python
+if [ $? -ne 0 ]; then
+	echo "installing python-crypto"
+	python_crypto_url="http://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.3.tar.gz"
+	wget $python_crypto_url || f_ "failed to get python-crypto from $python_crypto_url"
+	tar xzf pycrypto-2.3.tar.gz || f_ "failed to untar pycrypto-2.3.tar.gz"
+	cd pycrypto-2.3
+	python setup.py install || f_ "failed to install python-crypto"
+	cd ..
+	rm -rf pycrypto-2.3
+else
+	echo "python-crypto found"
+fi
+
+######################
+#Install paramiko
+# import paramiko
+echo "import sys
+try:
+   import paramiko
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
+" | python
+if [ $? -ne 0 ]; then
+	echo "installing paramiko"
+	paramiko_url="http://www.lag.net/paramiko/download/paramiko-1.7.7.1.tar.gz"
+	wget $paramiko_url || f_ "failed to get paramiko from $paramiko_url"
+	tar xzf paramiko-1.7.7.1.tar.gz || f_ "failed to untar paramiko-1.7.7.1.tar.gz"
+	cd paramiko-1.7.7.1
+	python setup.py install || f_ "failed to install paramiko"
+	cd ..
+	rm -rf paramiko-1.7.7.1
+else
+	echo "paramiko found"
+fi
 
 
 ####################################################################

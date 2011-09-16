@@ -44,15 +44,12 @@ def _ssh_r3d(left_eye_file,right_eye_file,tmpimage):
 
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(settings.R3D_HOST, username=settings.R3D_USER, password=settings.R3D_PASS)
-
-    export_file_path = ""
-    start_frame = ""
-    end_frame = ""
-    clip_settings_file = ""
+    start_frame = "4"
+    end_frame = "4"
+    clip_settings_file = "/Volumes/Media/masterRMD"
     output_file_dir,output_file_name = os.path.split(tmpimage)
 
-    command = "redline %s %s %s %s %s %s %s %s" % (left_eye_file,right_eye_file,output_file_dir,output_file_name,export_file_path,start_frame,end_frame,clip_settings_file)
-    command = "composite -blend 40 %s %s -alpha Set %s" % (left_eye_file,right_eye_file,tmpimage)
+    command = "redline -i3d %s %s -outDir %s -o %s --exportPreset 3Dtiff --makeSubDir --s  %s --e  %s --masterRMDFolder %s " % (left_eye_file,right_eye_file,output_file_dir,output_file_name,start_frame,end_frame,clip_settings_file)
 
     logging.info(command)
 
@@ -75,21 +72,38 @@ def r3d(inputs,outputs,options={},callbacks=[]):
         if len(inputs) > 1:
             right = MFile.objects.get(id=inputs[1])
             logging.info("Right %s" % right)
+            remote_mount = "/Volumes/ifs/mserve/"
 
-            remote_mount = "/tmp"
-            local_mount = settings.MSERVE_DATA
+            left_local_mount = os.path.join(settings.STORAGE_ROOT,left.service.container.default_path)
+            right_local_mount = os.path.join(settings.STORAGE_ROOT,right.service.container.default_path)
+
+            left_path=left.file.path
+            right_path=right.file.path
+
+            left_relative=left_path.replace(left_local_mount,remote_mount)
+            right_relative=right_path.replace(right_local_mount,remote_mount)
 
             tfile_uuid = "r3d-image-"+str(uuid.uuid4())
             remoteimage = os.path.join(remote_mount,tfile_uuid)
-            localimage = os.path.join(local_mount,tfile_uuid)
 
-            result = _ssh_r3d(left.file.path,right.file.path,remoteimage)
+            localimage = os.path.join(settings.STORAGE_ROOT,left.service.container.default_path,tfile_uuid,tfile_uuid+".000004.tif")
+
+            logging.info("left_local_mount %s" % left_local_mount)
+            logging.info("right_local_mount %s" % right_local_mount)
+            logging.info("left_path %s" % left_path)
+            logging.info("right_path %s" % right_path)
+            logging.info("left_relative %s" % left_relative)
+            logging.info("right_relative %s" % right_relative)
+            logging.info("remoteimage %s" % remoteimage)
+            logging.info("localimage %s" % localimage)
+
+            result = _ssh_r3d(left_relative,right_relative,remoteimage)
 
             logging.info(result)
 
             # TODO: Change to local in deployment
-            #outputfile = open(localimage,'r')
-            outputfile = open(remoteimage,'r')
+            outputfile = open(localimage,'r')
+            #outputfile = open(remoteimage,'r')
 
             suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='image/tiff')
 
