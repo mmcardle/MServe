@@ -39,6 +39,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files import File
 import pycurl
 import StringIO
+import PythonMagick
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
@@ -788,8 +789,17 @@ def _save_output_thumb(outputid,image):
 def _thumbimage(input,width,height):
     if not os.path.exists(input):
         raise Exception("Image %s does not exist" % input)
-    im = Image.open(input)
-    return _thumbimageinstance(im,width,height)
+    try:
+        im = Image.open(input)
+        return _thumbimageinstance(im,width,height)
+    except Exception as e:
+        logging.info("Error thumnailing image, trying ImageMagick, Error was : %s" %e)
+        img = PythonMagick.Image()
+        img.read(str(input))
+        tfile = tempfile.NamedTemporaryFile('wb',suffix=".png")
+        img.write(tfile.name)
+        im = Image.open(tfile.name)
+        return _thumbimageinstance(im,width,height)
 
 def _thumbimageinstance(im,width,height):
 
