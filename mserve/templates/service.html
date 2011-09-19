@@ -89,27 +89,17 @@
 
             <table>
                 <tr>
-                    <th>New Service</th>
                     <th>Existing Services</th>
                 </tr>
                 <tr>
-                    <td style="width: 25%">
-
-                        <form id="subservice-form" style="width: 200px;height: 100%;" >
-                               {{ subserviceform.as_p }}
-                        </form>
-                        <button id="subservice-button">New Service</button>
-
-                    </td>
-                    <td style="width: 65%">
-                                <div id="subservicecontainer"></div>
+                    <td style="width: 80%">
+                        <div id="subservicecontainer"></div>
                     </td>
                 </tr>
             </table>
 
             <script type="text/javascript">
                 $(document).ready(function() {
-
                     $.ajax({
                             type: "GET",
                             url: '{{service.subservices_url}}',
@@ -117,47 +107,6 @@
                                 $("#serviceTemplate").tmpl(subservices).appendTo("#subservicecontainer")
                             }
                     });
-
-                    now = new Date()
-                    $('#id_starttime').dateplustimepicker({
-                        dateFormat: 'yy-mm-dd',
-                        timeFormat: 'hh:mm:ss',
-                        stepHour: 1,
-                        stepMinute: 15,
-                        numberOfMonths: 1,
-                        step: { minutes: 15 },
-                        show: 'fold',
-                        showButtonPanel: true,
-                        defaultTime: now
-                    });
-                    $('#id_starttime').dateplustimepicker("setTime",now);
-
-                    oneHour = new Date()
-                    oneHour.addHours(1)
-                    $('#id_endtime').dateplustimepicker({
-                        dateFormat: 'yy-mm-dd',
-                        timeFormat: 'hh:mm:ss',
-                        stepHour: 1,
-                        stepMinute: 15,
-                        numberOfMonths: 1,
-                        step: { minutes: 15 },
-                        show: 'fold',
-                        showButtonPanel: true,
-                        defaultTime: oneHour
-                    });
-                    $('#id_endtime').dateplustimepicker("setTime",oneHour);
-
-                    $("#subservice-button").button().click(function(){
-                        data = $("#subservice-form").serialize()
-                        $.ajax({
-                            type: "POST",
-                            data: data,
-                            url: '{{service.subservices_url}}',
-                            success: function(subservice){
-                                $("#serviceTemplate").tmpl(subservice).appendTo("#subservicecontainer")
-                            }
-                        });
-                    })
                 });
             </script>
 
