@@ -1,4 +1,9 @@
 
+
+function mservetimeout(obj,mfileid,depth){
+    $(obj).mserve('get_mfile_thumb', mfileid , depth )
+}
+
 (function( $ ){
 
   var methods = {
@@ -26,7 +31,38 @@
 
             });
     },
-    showFolder : function( mfolderid ) {
+    get_mfile_thumb: function(mfileid, depth){
+
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+            var $this = $(this),
+            data = $this.data('mserve');
+
+            if(depth>3){
+               return
+            }else{
+               $.ajax({
+                   type: "GET",
+                   url: "/mfiles/"+mfileid+"/",
+                   success: function(newmfile){
+                        if(newmfile.thumb != ""){
+                            var mfilecache = $(data.allcontent[0]).find("#mfile-table-"+mfileid)
+                            mfilecache.css("background-image", "url('"+newmfile.thumburl+"')");
+                            $("#mfile-table-"+mfileid).css("background-image", "url('"+newmfile.thumburl+"')");
+                        }else{
+                            setTimeout(mservetimeout,3000 ,obj,mfileid, depth+1)
+                        }
+                   }
+               });
+            }
+
+        });
+    },
+    updatemfile : function( mfileid, options ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -38,11 +74,63 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
+                mfile_buttons(mfileid)
+                if(options.pollthumb){
+                    obj.mserve('get_mfile_thumb', mfileid, 1)
+                }
+            });
+    },
+    showFolder : function( mfolderid ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+
                 var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
 
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
+                });
+            });
+    },
+    delete : function(mfileid) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                $( '#dialog-mfile-dialog' ).dialog({
+                        resizable: false,
+                        modal: true,
+                        buttons: {
+                                "Delete mfile?": function() {
+                                     $.ajax({
+                                       type: "DELETE",
+                                       url: '/mfiles/'+mfileid+"/",
+                                       success: function(msg){
+                                            $(data.allcontent[0]).find("#mfileholder-"+mfileid).remove()
+                                            $("#mfileholder-"+mfileid).hide('slide')
+                                            $("#mfoldertreecontainer").jstree('delete_node',"#"+mfileid)
+                                       },
+                                       error: function(msg){
+                                            alert( "Failure On Delete " + msg );
+                                       }
+                                     });
+                                        $( this ).dialog( "close" );
+                                },
+                                Cancel: function() {
+                                        $( this ).dialog( "close" );
+                                }
+                        }
                 });
             });
     },
@@ -63,6 +151,8 @@
                 mc = $(mid)
                 $(data.allcontent[0]).append(mc.clone())
 
+                $(obj).mserve('updatemfile', mfile.id, {"pollthumb":"true"})
+
             });
     },
     load : function( options ) {
@@ -82,12 +172,15 @@
                 $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#qscontainer")
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#qscontainer")
 
-                $(mfile_set).each( function(index,mfile) { doMFileButtons(mfile) } );
                 var $this = $(this),
                 data = $this.data('mserve');
 
                 var allcontent = $('#qscontainer').clone(true)
                 data["allcontent"] = allcontent
+
+                $(mfile_set).each( function(index,mfile) {
+                    $(obj).mserve( 'updatemfile', mfile.id, { "pollthumb":"false" })
+                });
 
                 var $filteredData = allcontent.find('li.rootfolder');
                 $('#qscontainer').quicksand($filteredData, {
@@ -513,24 +606,6 @@ function reloadMFiles(newfileid){
      });
 }
 
-function get_mfile_thumb(mfile){
-    function f(depth) {
-       if(depth>3){ return }
-       $.ajax({
-           type: "GET",
-           url: "/mfiles/"+mfile.id+"/",
-           success: function(newmfile){
-                if(newmfile.thumb != ""){
-                    $("#mfile-table-"+mfile.id).css("background-image", "url('"+newmfile.thumburl+"')");
-                }else{
-                    window.setTimeout(f, 3000, depth+1);
-                }
-           }
-       });
-    }
-    window.setTimeout(f, 3000, 0);
-}
-
 function showMFolder(mfolderid){
     $("#mservetree").mserve( 'showFolder' , mfolderid);
 }
@@ -539,8 +614,6 @@ function loadMFile(mfile){
     $("#nofiles").remove()
     var $mft = $("#mfileTemplate" ).tmpl( mfile )
     $mft.appendTo( "#qscontainer" );
-
-    doMFileButtons(mfile)
 
     $("#mservetree").mserve( 'add' , mfile );
 
@@ -583,33 +656,12 @@ function mfile_buttons(gmfileid){
     });
     $("#deletemfilebutton-"+gmfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false });
     $('#deletemfilebutton-'+gmfileid).click(function(){
-        mfile_delete(gmfileid)
+        $("#mservetree").mserve('delete', gmfileid)
     });
 }
 
 function mfile_delete(mfileid){
-    $( '#dialog-mfile-dialog' ).dialog({
-            resizable: false,
-            modal: true,
-            buttons: {
-                    "Delete mfile?": function() {
-                         $.ajax({
-                           type: "DELETE",
-                           url: '/mfiles/'+mfileid+"/",
-                           success: function(msg){
-                                $("#mfileholder-"+mfileid).hide('slide')
-                           },
-                           error: function(msg){
-                             alert( "Failure On Delete " + msg );
-                           }
-                         });
-                            $( this ).dialog( "close" );
-                    },
-                    Cancel: function() {
-                            $( this ).dialog( "close" );
-                    }
-            }
-    });
+        $("#mservetree").mserve('delete', mfileid)
  }
 
 $(document).ready(function(){
