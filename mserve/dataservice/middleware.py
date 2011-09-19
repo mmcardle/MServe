@@ -67,26 +67,19 @@ class AuthMiddleware(object):
 class ResponseMiddleware(object):
 
     def process_response(self, request, response):
-        if request.META.has_key('REQUEST_URI'):
-            uri = request.META['REQUEST_URI']
-            if uri.startswith("/mfileapi/get/"):
-                match = re.search("[\w]{8}(-[\w]{4}){3}-[\w]{12}", uri)
-                if match is not None:
-                    mfileid = match.group(0)
-                    starttime = request.META["starttime"]
-                    endtime = datetime.datetime.now()
-                    timetaken = endtime - starttime
-                    tt = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
-                    usage_store.record(mfileid,metric_responsetime,tt)
+        match = re.search("\/mfiles\/(?P<id>.*)\/file\/", request.path)
+        if match is not None:
+            mfileid = match.group("id")
+            starttime = request.META["starttime"]
+            endtime = datetime.datetime.now()
+            timetaken = endtime - starttime
+            tt = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
+            usage_store.record(mfileid,metric_responsetime,tt)
         return response
 
     def process_request(self, request):
-        if request.META.has_key('REQUEST_URI'):
-            uri = request.META['REQUEST_URI']
-            if uri.startswith("/mfileapi/get/"):
-                match = re.search("[\w]{8}(-[\w]{4}){3}-[\w]{12}", uri)
-                if match is not None:
-                  request.META["starttime"] = datetime.datetime.now()
-                  mfileid = match.group(0)
+        match = re.search("\/mfiles\/(?P<id>.*)\/file\/", request.path)
+        if match is not None:
+          request.META["starttime"] = datetime.datetime.now()
         return
 
