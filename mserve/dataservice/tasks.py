@@ -45,7 +45,7 @@ import settings as settings
 def _get_mfile_path(mfileid):
     from models import MFile
     mf = MFile.objects.get(id=mfileid)
-    if not os.path.exists(mf.file.path):
+    if os.path.exists(mf.file.path):
         return mf.file.path
     else:
 
