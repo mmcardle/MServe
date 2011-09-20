@@ -678,7 +678,7 @@ if [ $COMMAND == "installation" ]; then
 	echo "Create mserve users and mservedb database"
 	echo "CREATE DATABASE mservedb; FLUSH PRIVILEGES;" | mysql -u root -p$MYSQL_ROOT_PWD || \
 		f_ "failed to create mservedb database, check manually your database and drop existing mservedb."
-	echo "CREATE USER '$MSERVE_DATABASE_USER'@'localhost' IDENTIFIED BY '$MSERVE_DATABASE_PASSWORD'; \
+	echo "CREATE USER '$MSERVE_DATABASE_USER'@'%' IDENTIFIED BY '$MSERVE_DATABASE_PASSWORD'; \
 		GRANT ALL ON mservedb.* TO '$MSERVE_DATABASE_USER';" | \
 		mysql -u root -p$MYSQL_ROOT_PWD || f_ "failed to create mserve database user, check database manually and drop existing $MSERVE_DATABASE_USER user."
 

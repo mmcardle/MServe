@@ -6,28 +6,28 @@ job_descriptions['thumbimage'] = {
         "options" : ['width','height'],
         "results" :[]
     }
-job_descriptions['dataservice.tasks.posterimage'] = {
+job_descriptions['posterimage'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "image/png" },
         "options" : ['width','height'],
         "results" :[]
     }
-job_descriptions['dataservice.tasks.thumbvideo'] = {
+job_descriptions['thumbvideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "video" },
         "options" : ['width','height'],
         "results" :[]
     }
-job_descriptions['dataservice.tasks.postervideo'] = {
+job_descriptions['.postervideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "video" },
         "options" : ['width','height'],
         "results" :[]
     }
-job_descriptions['dataservice.tasks.transcodevideo'] = {
+job_descriptions['transcodevideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "video" },
@@ -50,14 +50,14 @@ job_descriptions['jobservice.tasks.copyfromurl'] = {
         "options":['url'],
         "results" :[]
     }
-job_descriptions['dataservice.tasks.md5file'] = {
+job_descriptions['md5file'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "application/octet-stream" },
         "options": [] ,
         "results" : ['md5']
 }
-job_descriptions['dataservice.tasks.mimefile'] = {
+job_descriptions['mimefile'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
         "input-0" : { "mimetype" : "application/octet-stream" },

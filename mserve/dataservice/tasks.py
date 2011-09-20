@@ -54,13 +54,13 @@ def _get_mfile_path(mfileid):
             logging.debug("Trying transport %s" % name)
             try:
                 mfileresp = tempfile.NamedTemporaryFile('wb',suffix=mf.name,delete=False)
+                f = open(mfileresp.name,'w')
                 remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],transport["path"]%mfileid)
                 logging.debug("remotemfile %s" % remotemfile)
                                 
                 c = pycurl.Curl()
                 c.setopt(c.URL, str(remotemfile))
-
-                f = open(mfileresp.name,'w')
+                c.setopt(pycurl.FOLLOWLOCATION, 1)
                 c.setopt(c.WRITEFUNCTION, f.write)
                 c.perform()
                 status = c.getinfo(c.HTTP_CODE)
@@ -171,14 +171,12 @@ def _thumbvideo(videopath,width,height):
         logging.error("Could not import pyffmpeg, failing back to ffmpegthumbnailer")
         return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="thumbvideo")
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(id=mfileid)
-        videopath = mf.file.path
+        videopath = _get_mfile_path(mfileid)
 
         width=options["width"]
         height=options["height"]
@@ -197,14 +195,12 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with thumbvideo %s" % e)
         raise e
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="postervideo")
 def postervideo(inputs,outputs,options={},callbacks=[]):
 
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(id=mfileid)
-        videopath = mf.file.path
+        videopath = _get_mfile_path(mfileid)
 
         width=options["width"]
         height=options["height"]
@@ -223,13 +219,11 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with postervideo %s : %s" % (type(e),e))
         raise e
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="transcodevideo")
 def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
-    from mserve.dataservice.models import MFile
-    mf = MFile.objects.get(id=mfileid)
-    infile = mf.file.path
+    infile = _get_mfile_path(mfileid)
     _ffmpeg_args=options["ffmpeg_args"]
 
     _stdin = None
@@ -298,13 +292,11 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
         return {"success":True,"message":"Transcode  successful"}
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="proxyvideo")
 def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
-    from mserve.dataservice.models import MFile
-    mf = MFile.objects.get(id=mfileid)
-    infile = mf.file.path
+    infile = _get_mfile_path(mfileid)
     _ffmpeg_args=options["ffmpeg_args"]
 
     #_stdout = open('/var/mserve/mserve.log','a')
@@ -375,15 +367,14 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
         return {"success":True,"message":"Transcode successful"}
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="mimefile")
 def mimefile(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(id=mfileid)
+        path = _get_mfile_path(mfileid)
         m = magic.open(magic.MAGIC_MIME)
         m.load()
-        path = mf.file.path
+
         upath = path.encode("utf-8")
         result = m.file(upath)
         mimetype = result.split(';')[0]
@@ -401,6 +392,7 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
         import traceback
         traceback.print_exc(file=sys.stdout)
         raise e
+
 @task
 def backup_mfile(inputs,outputs,options={},callbacks=[]):
     """Backup MFile """
@@ -408,11 +400,12 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-        file = mf.file
+        path = _get_mfile_path(mfileid)
+        file = open(path,'r')
 
         from dataservice.models import BackupFile
 
-        backup = BackupFile(name="backup_%s"%file.name,mfile=mf,mimetype=mf.mimetype,checksum=mf.checksum,file=file)
+        backup = BackupFile(name="backup_%s"%mf.name,mfile=mf,mimetype=mf.mimetype,checksum=mf.checksum,file=file)
         backup.save()
 
         return {"success":True,"message":"Backup of '%s' successful"%mf.name}
@@ -426,7 +419,8 @@ def mfilefetch(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-        file = mf.file
+        path = _get_mfile_path(mfileid)
+        file = open(path,'r')
 
         outputid = outputs[0]
 
@@ -450,7 +444,8 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-        file = open(mf.file.path,'r')
+        path = _get_mfile_path(mfileid)
+        file = open(path,'r')
         md5 = hashlib.md5()
         while True:
             data = file.read(8192)  # multiple of 128 bytes is best
@@ -478,15 +473,14 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with mime %s" % e)
         raise e
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="md5file")
 def md5file(inputs,outputs,options={},callbacks=[]):
 
     """Return hex md5 digest for a Django FieldFile"""
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(id=mfileid)
-        file = open(mf.file.path,'r')
+        path = _get_mfile_path(mfileid)
+        file = open(path,'r')
         md5 = hashlib.md5()
         while True:
             data = file.read(8192)  # multiple of 128 bytes is best
@@ -505,12 +499,12 @@ def md5file(inputs,outputs,options={},callbacks=[]):
             logging.info("Running Callback %s" % callback)
             subtask(callback).delay()
 
-        return {"success":True,"message":"MD5 of '%s' successful"%mf, "md5" : md5string}
+        return {"success":True,"message":"MD5 successful", "md5" : md5string}
     except Exception as e:
         logging.info("Error with mime %s" % e)
         raise e
 
-@task(default_retry_delay=15,max_retries=3)
+@task(default_retry_delay=15,max_retries=3,name="posterimage_remote")
 def posterimage_remote(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -544,7 +538,7 @@ def posterimage_remote(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with posterimage %s" % e)
         raise e
 
-@task(default_retry_delay=15,max_retries=3)
+@task(default_retry_delay=15,max_retries=3,name="posterimage")
 def posterimage(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -579,7 +573,7 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with posterimage %s" % e)
         raise e
 
-@task
+@task(default_retry_delay=15,max_retries=3,name="thumbvideo")
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -620,8 +614,6 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
-        #from mserve.dataservice.models import MFile
-        #mf = MFile.objects.get(pk=inputid)
         path = _get_mfile_path(inputid)
 
         logging.info("Creating Remote %sx%s image for %s" % (width,height,inputid))
@@ -846,9 +838,7 @@ def _thumbimageinstance(im,width,height):
     if float(w)/h < float(width)/float(height):
             im = im.resize((width, h*width/w), Image.ANTIALIAS)
     else:
-            logging.info("Thumbnail 3 %s %s" % (w,h))
             im = im.resize((w*int(height)/h, int(height)), Image.ANTIALIAS)
-            logging.info("Thumbnail 3.5 %s %s" % (w,h))
     w, h = im.size
 
     im = im.crop(((w-width)/2, (h-height)/4, (w-width)/2+width, (h-height)/4+height))
