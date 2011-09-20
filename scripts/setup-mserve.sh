@@ -368,7 +368,7 @@ uninstall_mserve () {
 	echo -e "\n\nCleaning DB"
 	cat > .drop_mserve_db <<DROPDB
 	DROP DATABASE IF EXISTS mservedb;
-	DROP USER 'mserve'@'localhost';
+	DROP USER 'mserve'@'%';
 DROPDB
 	mysql -u root -p${_DATABASE_ADMIN_PASSWORD} < .drop_mserve_db
 	rm .drop_mserve_db
