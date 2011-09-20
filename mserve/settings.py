@@ -206,6 +206,12 @@ AUTH_PROFILE_MODULE = "dataservice.mserveprofile"
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL='/'
 
+# DATA CONFIG
+FILE_TRANSPORTS = {
+    "localhost": { "schema":"http","port":"8000", "netloc":"127.0.0.1", "path" : "/mfiles/%s/file/" },
+    HOSTNAME: { "schema":"http","port":"80", "netloc":HOSTNAME, "path" : "/mfiles/%s/file/" },
+}
+
 # JOB CONFIG
 USE_CELERY=True
 DEFAULT_ACCESS_SPEED = "unlimited"

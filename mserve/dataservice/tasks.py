@@ -40,6 +40,41 @@ from django.core.files import File
 import pycurl
 import StringIO
 import PythonMagick
+import settings as settings
+
+def _get_mfile_path(mfileid):
+    from models import MFile
+    mf = MFile.objects.get(id=mfileid)
+    if not os.path.exists(mf.file.path):
+        return mf.file.path
+    else:
+
+        for name in settings.FILE_TRANSPORTS.keys():
+            transport = settings.FILE_TRANSPORTS[name]
+            logging.debug("Trying transport %s" % name)
+            try:
+                mfileresp = tempfile.NamedTemporaryFile('wb',suffix=mf.name,delete=False)
+                remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],transport["path"]%mfileid)
+                logging.debug("remotemfile %s" % remotemfile)
+                                
+                c = pycurl.Curl()
+                c.setopt(c.URL, str(remotemfile))
+
+                f = open(mfileresp.name,'w')
+                c.setopt(c.WRITEFUNCTION, f.write)
+                c.perform()
+                status = c.getinfo(c.HTTP_CODE)
+                c.close()
+                f.close()
+
+                if status > 400:
+                    logging.warn("Transport %s return error status code '%s' " % (name,status))
+                else:
+                    return mfileresp.name
+            except Exception as e:
+                logging.warn("Could not get MFile from transport '%s'"%name)
+                logging.warn(e)
+        raise Exception("Could not get MFile any transports")
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
@@ -585,9 +620,9 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(pk=inputid)
-        path = mf.file.path
+        #from mserve.dataservice.models import MFile
+        #mf = MFile.objects.get(pk=inputid)
+        path = _get_mfile_path(inputid)
 
         logging.info("Creating Remote %sx%s image for %s" % (width,height,inputid))
 
@@ -623,9 +658,9 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(pk=inputid)
-        path = mf.file.path
+        #from mserve.dataservice.models import MFile
+        #mf = MFile.objects.get(pk=inputid)
+        path = _get_mfile_path(inputid)
 
         logging.info("Creating %sx%s image for %s" % (width,height,inputid))
 
