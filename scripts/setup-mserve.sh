@@ -765,6 +765,17 @@ fi
 
 #######################
 # install celery
+celery_min_version="2.3.0"
+install_celery () {
+	echo "installing celery"
+        celery_url="https://github.com/ask/celery.git"
+        git clone $celery_url || f_ "failed to fetch celery from $celery_url"
+        cd celery
+        python setup.py install || f_ "failed to install celery"
+        cd ..
+        rm -rf celery
+}
+
 echo "import sys
 try:
    import celery
@@ -773,15 +784,17 @@ except ImportError:
    sys.exit(1)
 " | python
 if [ $? -ne 0 ]; then
-	echo "installing celery"
-	celery_url="https://github.com/ask/celery.git"
-	git clone $celery_url || f_ "failed to fetch celery from $celery_url"
-	cd celery
-	python setup.py install || f_ "failed to install celery"
-	cd ..
-	rm -rf celery
+	install_celery
 else
-	echo "celery found OK"
+	echo "check existing celery version"
+	celery_version=$(echo "import celery
+print celery.__version__" | python) || f_ "failed to check celery version"
+	echo "celery version found: $celery_version"
+	
+	if [[ "$celery_version" < "$celery_min_version" ]] ; then
+		echo "found celery version is old, updating celery"
+		install_celery
+	fi	
 fi
 
 #######################
