@@ -1,3 +1,4 @@
+"""The Mserve dataservice models """
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -82,13 +83,16 @@ metric_dataloss = "http://mserve/dataloss"
 metric_jobruntime   = "http://mserve/jobruntime"
 metric_jobtask      = "http://mserve/task/"
 
-metrics = [metric_mfile,metric_service,metric_container,metric_disc,metric_disc_space,metric_ingest,metric_access,metric_archived]
+metrics = [metric_mfile, metric_service, metric_container, metric_disc, \
+        metric_disc_space, metric_ingest, metric_access, metric_archived]
 
 # What metric are reported fro each type
 container_metrics = metrics
-service_metrics = [metric_mfile,metric_service,metric_disc,metric_archived,metric_disc_space,metric_jobruntime]
-mfile_metrics = [metric_mfile,metric_disc,metric_ingest,metric_access,metric_archived,metric_disc_space]
-backupfile_metrics = [metric_archived,metric_backupfile,metric_disc_space]
+service_metrics = [metric_mfile, metric_service, metric_disc, metric_archived, \
+        metric_disc_space, metric_jobruntime]
+mfile_metrics = [metric_mfile, metric_disc, metric_ingest, metric_access,\
+        metric_archived, metric_disc_space]
+backupfile_metrics = [metric_archived, metric_backupfile, metric_disc_space]
 
 # Other Metric groups
 byte_metrics = [metric_disc_space]
@@ -107,8 +111,10 @@ for task in tasks.regular().keys():
 
 class MServeProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
-    bases = models.ManyToManyField('NamedBase', related_name='bases',null=True, blank=True)
-    auths = models.ManyToManyField('Auth', related_name='profileauths',null=True, blank=True)
+    bases = models.ManyToManyField('NamedBase', related_name='bases', \
+        null=True, blank=True)
+    auths = models.ManyToManyField('Auth', related_name='profileauths', \
+        null=True, blank=True)
 
     def myauths(self):
         ret = []
@@ -153,7 +159,8 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def __unicode__(self):
-        return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(),self.user.username)
+        return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(), \
+            self.user.username)
 
 SERVICEREQUEST_STATES = (
     ('P','PENDING'),
@@ -164,8 +171,10 @@ SERVICEREQUEST_STATES = (
 class ServiceRequest(models.Model):
     name        = models.CharField(max_length=200)
     reason      = models.TextField()
-    profile     = models.ForeignKey('MServeProfile',null=True, blank=True, related_name="servicerequests")
-    state       = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES, default='P')
+    profile     = models.ForeignKey('MServeProfile',null=True, blank=True, \
+                                        related_name="servicerequests")
+    state       = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES, \
+                                        default='P')
     time        = models.DateTimeField(auto_now_add=True)   # Time first recorded (shouldnt change)
     
     class Meta:
@@ -241,7 +250,11 @@ class Usage(models.Model):
         )
 
         for jobtype in jobtype_usage:
-            jobtype["metric"] = metric_jobtask+jobtype["name"]
+            if jobtype["name"]:
+                jobtype["metric"] = metric_jobtask+jobtype["name"]
+            else:
+                jobtype["metric"] = metric_jobtask+"unknown"
+
 
         jobtype_success_usage = taskstates.filter(state="SUCCESS").values("name").annotate(
             n=Count('id'),
@@ -254,7 +267,10 @@ class Usage(models.Model):
         )
 
         for jobtype in jobtype_success_usage:
-            jobtype["metric"] = metric_jobtask+jobtype["name"]+"/success/"
+            if jobtype["name"]:
+                jobtype["metric"] = metric_jobtask+jobtype["name"]+"/success/"
+            else:
+                jobtype["metric"] = metric_jobtask+"unknown/success/"
 
         jobtype_failed_usage = taskstates.filter(state="FAILURE").values("name").annotate(
             n=Count('id'),
@@ -267,7 +283,11 @@ class Usage(models.Model):
         )
 
         for jobtype in jobtype_failed_usage:
-            jobtype["metric"] = metric_jobtask+jobtype["name"]+"/failed/"
+            if jobtype["name"]:
+                jobtype["metric"] = metric_jobtask+jobtype["name"]+"/failed/"
+            else:
+                jobtype["metric"] = metric_jobtask+"unknown/failed/"
+
 
         runtime_usage = taskstates.aggregate(
             n=Count('id'),
@@ -1133,6 +1153,7 @@ class DataService(NamedBase):
             mfile.duplicate_of = duplicate_of
 
         mfile.folder = folder
+        mfile.size = length
         mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
         mfile.save()
 
@@ -1519,6 +1540,7 @@ class MFile(NamedBase):
 
         self.name = name
         self.folder = folder
+        self.size = length
         self.mimetype = mimefile([self.id],[],{})["mimetype"]
         self.save()
 
@@ -1559,8 +1581,6 @@ class MFile(NamedBase):
         if self.file:
 
             self.mimetype = mimefile([self.id],[],{})["mimetype"]
-            self.size = self.file.size
-
             self.save()
 
             profile_name = self.service.get_profile()
@@ -1660,24 +1680,24 @@ class MFile(NamedBase):
             return 1
         if not self.empty:
             if metric == metric_disc:
-                return self.file.size
+                return self.size
 
     def get_value_for_metric(self, metric):
         if not self.empty:
             if metric == metric_disc_space:
-                return self.file.size
+                return self.size
 
     def get_updated_value_for_metric(self, metric):
         if not self.empty:
             if metric == metric_disc_space:
-                return self.file.size
+                return self.size
 
     def get_updated_rate_for_metric(self, metric):
         if metric == metric_mfile:
             return 1
         if not self.empty:
             if metric == metric_disc:
-                return self.file.size
+                return self.size
 
     def thumburl(self):
         if self.thumb and self.thumb != "":
@@ -1719,7 +1739,8 @@ class MFile(NamedBase):
             self.id = utils.random_id()
         self.updated = datetime.datetime.now()
         if self.file:
-            self.size = self.file.size
+            if os.path.exists(self.file.path):
+                self.size = self.file.size
             self.empty = False
         super(MFile, self).save()
 

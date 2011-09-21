@@ -553,9 +553,9 @@ def md5file(inputs,outputs,options={},callbacks=[]):
             subtask(callback).delay()
 
         return {"success":True,"message":"MD5 successful", "md5" : md5string}
-    except Exception as e:
-        logging.info("Error with mime %s" % e)
-        raise e
+    except Exception, e:
+        logging.info("Error with md5 %s" % e)
+        raise
 
 @task(default_retry_delay=15,max_retries=3,name="posterimage_remote")
 def posterimage_remote(inputs,outputs,options={},callbacks=[]):
@@ -606,8 +606,9 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
         width  = int(widthS)
 
         logging.info("Creating %sx%s image for %s" % (width,height,input))
-
-        image = _thumbimage(mf.file.path,width,height)
+        
+        path = _get_mfile(mfileid)
+        image = _thumbimage(path,width,height)
 
         if image:
 
