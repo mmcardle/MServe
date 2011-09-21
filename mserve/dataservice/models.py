@@ -1227,6 +1227,18 @@ class MFile(NamedBase):
     def __str__(self):
         return "MFile  %s" % (self.name.encode("utf-8"))
 
+    def get_download_path(self):
+        return reverse('mfile_download',args=[self.id])
+    
+    def get_upload_thumb_path(self):
+        return reverse('mfile_upload_thumb',args=[self.id])
+
+    def get_upload_poster_path(self):
+        return reverse('mfile_upload_poster',args=[self.id])
+
+    def get_upload_proxy_path(self):
+        return reverse('mfile_upload_proxy',args=[self.id])
+    
     def delete(self):
         if self.duplicate_of:
             self.duplicate_of.delete()

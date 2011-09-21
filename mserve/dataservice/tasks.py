@@ -21,9 +21,6 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from celery.task import task
-from celery.task.sets import subtask
-from subprocess import Popen, PIPE
 import json
 import logging
 import subprocess
@@ -35,46 +32,114 @@ import urlparse
 import os
 import os.path
 import time
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.files import File
 import pycurl
 import StringIO
 import PythonMagick
 import settings as settings
+from celery.task import task
+from celery.task.sets import subtask
+from subprocess import Popen, PIPE
 
-def _get_mfile_path(mfileid):
+def _get_mfile(mfileid):
     from models import MFile
     mf = MFile.objects.get(id=mfileid)
     if os.path.exists(mf.file.path):
         return mf.file.path
     else:
+        return _get_path(mf.get_download_path(),suffix=mf.name)
 
-        for name in settings.FILE_TRANSPORTS.keys():
-            transport = settings.FILE_TRANSPORTS[name]
-            logging.debug("Trying transport %s" % name)
-            try:
-                mfileresp = tempfile.NamedTemporaryFile('wb',suffix=mf.name,delete=False)
-                f = open(mfileresp.name,'w')
-                remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],transport["path"]%mfileid)
-                logging.debug("remotemfile %s" % remotemfile)
-                                
-                c = pycurl.Curl()
-                c.setopt(c.URL, str(remotemfile))
-                c.setopt(pycurl.FOLLOWLOCATION, 1)
-                c.setopt(c.WRITEFUNCTION, f.write)
-                c.perform()
-                status = c.getinfo(c.HTTP_CODE)
-                c.close()
-                f.close()
+def _get_path(path,suffix=""):
+    for name in settings.FILE_TRANSPORTS.keys():
+        transport = settings.FILE_TRANSPORTS[name]
+        logging.debug("Trying transport %s" % name)
+        try:
+            mfileresp = tempfile.NamedTemporaryFile('wb',suffix=suffix,delete=False)
+            f = open(mfileresp.name,'w')
+            remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],path)
+            logging.debug("remotemfile %s" % remotemfile)
 
-                if status > 400:
-                    logging.warn("Transport %s return error status code '%s' " % (name,status))
-                else:
-                    return mfileresp.name
-            except Exception as e:
-                logging.warn("Could not get MFile from transport '%s'"%name)
-                logging.warn(e)
-        raise Exception("Could not get MFile any transports")
+            c = pycurl.Curl()
+            c.setopt(c.URL, str(remotemfile))
+            c.setopt(pycurl.FOLLOWLOCATION, 1)
+            c.setopt(c.WRITEFUNCTION, f.write)
+            c.perform()
+            status = c.getinfo(c.HTTP_CODE)
+            c.close()
+            f.close()
+
+            if status > 400:
+                logging.warn("Transport %s return error status code '%s' " % (name,status))
+            else:
+                return mfileresp.name
+        except Exception as e:
+            logging.warn("Could not get MFile from transport '%s'"%name)
+            logging.warn(e)
+    raise Exception("Could not get MFile any transports")
+
+def _save_joboutput_thumb(outputid,image):
+    from mserve.jobservice.models import JobOutput
+    joboutput = JobOutput.objects.get(id=outputid)
+    tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
+    image.save(tfile.name)
+    return _save_topath(tfile, joboutput.get_upload_thumb_path())
+
+def _save_joboutput(outputid,file):
+    from mserve.jobservice.models import JobOutput
+    joboutput = JobOutput.objects.get(id=outputid)
+    return _save_topath(file, joboutput.get_upload_path())
+
+def _save_thumb(mfileid,image):
+    from mserve.dataservice.models import MFile
+    mfile = MFile.objects.get(id=mfileid)
+    path = mfile.get_upload_thumb_path()
+    tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
+    image.save(tfile.name)
+    return _save_topath(tfile,path)
+
+def _save_poster(mfileid,image):
+    from mserve.dataservice.models import MFile
+    mfile = MFile.objects.get(id=mfileid)
+    path = mfile.get_upload_poster_path()
+    tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
+    image.save(tfile.name)
+    return _save_topath(tfile,path)
+
+def _save_proxy(mfileid,proxy):
+    from mserve.dataservice.models import MFile
+    mfile = MFile.objects.get(id=mfileid)
+    path = mfile.get_upload_proxy_path()
+    return _save_topath(proxy, path)
+
+def _save_topath(file,path):
+    for name in settings.FILE_TRANSPORTS.keys():
+        transport = settings.FILE_TRANSPORTS[name]
+        logging.debug("Trying transport %s" % name)
+        try:
+            resp = StringIO.StringIO()
+
+            remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],path)
+            logging.debug("remotemfile %s" % remotemfile)
+            resp = StringIO.StringIO()
+
+            f = open(file.name)
+            c = pycurl.Curl()
+            c.setopt(c.URL, str(remotemfile))
+            c.setopt(c.PUT, 1)
+            c.setopt(c.INFILE, f)
+            c.setopt(c.INFILESIZE, os.path.getsize(f.name))
+            c.setopt(c.WRITEFUNCTION, resp.write)
+            c.perform()
+            status = c.getinfo(c.HTTP_CODE)
+            c.close()
+
+            if status > 400:
+                logging.warn("Transport %s return error status code '%s' " % (name,status))
+            else:
+                return f.name
+        except Exception as e:
+            logging.warn("Could not put MFile to transport '%s'"%name)
+            logging.warn(e)
+    raise Exception("Could not put Mfile to any transports")
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
 
@@ -105,9 +170,9 @@ def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
     image4 = Image.open(tfile4.name)
 
     image.paste(image1, (0,0))
-    image.paste(image2, (hw,0))
-    image.paste(image3, (0,hh))
-    image.paste(image4, (hw,hh))
+    image.paste(image2, (int(hw),0))
+    image.paste(image3, (0,int(hh)))
+    image.paste(image4, (int(hw),int(hh)))
 
     return image
 
@@ -176,7 +241,7 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
     try:
         mfileid = inputs[0]
-        videopath = _get_mfile_path(mfileid)
+        videopath = _get_mfile(mfileid)
 
         width=options["width"]
         height=options["height"]
@@ -200,7 +265,7 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
 
     try:
         mfileid = inputs[0]
-        videopath = _get_mfile_path(mfileid)
+        videopath = _get_mfile(mfileid)
 
         width=options["width"]
         height=options["height"]
@@ -215,15 +280,15 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
             postervideo.retry([inputs,outputs,options,callbacks])
 
         return {"success":True,"message":"Poster '%sx%s' of video successful"%(width,height)}
-    except Exception as e:
+    except Exception, e:
         logging.info("Error with postervideo %s : %s" % (type(e),e))
-        raise e
+        raise
 
 @task(default_retry_delay=15,max_retries=3,name="transcodevideo")
 def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
-    infile = _get_mfile_path(mfileid)
+    infile = _get_mfile(mfileid)
     _ffmpeg_args=options["ffmpeg_args"]
 
     _stdin = None
@@ -271,17 +336,15 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         qt = Popen(qt_args, stdin=PIPE, close_fds=True)
         qt.communicate()
 
-        from mserve.jobservice.models import JobOutput
-        jo = JobOutput.objects.get(id=joboutput)
-        jo.file.save('transcode.mp4', File(toutfile), save=True)
+        _save_joboutput(joboutput,toutfile)
 
-        logging.info("Created file at : %s" % jo.file.path)
+        logging.info("Created file at : %s" % toutfile.name)
 
-    except Exception as e:
+    except Exception, e:
         logging.info("Error encoding video %s" % e)
         os.unlink(tmpfile)
         tfile.close()
-        raise e
+        raise
     else:
         logging.info("Proxy Video '%s' Done"% infile)
         os.unlink(tmpfile)
@@ -296,7 +359,7 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
 def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
-    infile = _get_mfile_path(mfileid)
+    infile = _get_mfile(mfileid)
     _ffmpeg_args=options["ffmpeg_args"]
 
     #_stdout = open('/var/mserve/mserve.log','a')
@@ -344,13 +407,7 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
         qt = Popen(qt_args, stdin=PIPE, close_fds=True)
         qt.communicate()
 
-        # Save to the thumbnail field
-        outfile.seek(0)
-        suf = SimpleUploadedFile("mfile",
-                outfile.read(), content_type='image/png')
-
-        _mf = MFile.objects.get(id=mfileid)
-        _mf.proxy.save(suf.name+'_proxy.mp4', suf, save=True)
+        _save_proxy(mfileid, outfile)
 
     except Exception as e:
         logging.info("Error encoding video %s" % e)
@@ -371,7 +428,7 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
 def mimefile(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
-        path = _get_mfile_path(mfileid)
+        path = _get_mfile(mfileid)
         m = magic.open(magic.MAGIC_MIME)
         m.load()
 
@@ -379,6 +436,8 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
         result = m.file(upath)
         mimetype = result.split(';')[0]
 
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=mfileid)
         mf.mimetype = mimetype
         mf.save()
 
@@ -400,7 +459,7 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-        path = _get_mfile_path(mfileid)
+        path = _get_mfile(mfileid)
         file = open(path,'r')
 
         from dataservice.models import BackupFile
@@ -419,17 +478,10 @@ def mfilefetch(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-        path = _get_mfile_path(mfileid)
+        path = _get_mfile(mfileid)
         file = open(path,'r')
-
         outputid = outputs[0]
-
-        from jobservice.models import JobOutput
-        output = JobOutput.objects.get(id=outputid)
-        output.file.save("JobOutput",File(file))
-        output.mimetype = mf.mimetype
-        output.save()
-
+        _save_joboutput(outputid, file)
         return {"message":"Retrieval of '%s' successful"%mf.name}
     except Exception as e:
         logging.info("Error with backup_mfile %s" % e)
@@ -444,7 +496,7 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
-        path = _get_mfile_path(mfileid)
+        path = _get_mfile(mfileid)
         file = open(path,'r')
         md5 = hashlib.md5()
         while True:
@@ -479,7 +531,7 @@ def md5file(inputs,outputs,options={},callbacks=[]):
     """Return hex md5 digest for a Django FieldFile"""
     try:
         mfileid = inputs[0]
-        path = _get_mfile_path(mfileid)
+        path = _get_mfile(mfileid)
         file = open(path,'r')
         md5 = hashlib.md5()
         while True:
@@ -491,6 +543,7 @@ def md5file(inputs,outputs,options={},callbacks=[]):
         md5string = md5.hexdigest()
         logging.info("MD5 calclated %s" % (md5string ))
 
+        from mserve.dataservice.models import MFile
         _mf = MFile.objects.get(id=mfileid)
         _mf.checksum = md5string
         _mf.save()
@@ -569,9 +622,9 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
             return {"success":True,"message":"Poster '%sx%s' successful"%(width,height)}
         else:
             raise Exception("Could not create image")
-    except Exception as e:
-        logging.info("Error with posterimage %s" % e)
-        raise e
+    except Exception ,e:
+        #logging.info("Error with posterimage %s" % e)
+        raise
 
 @task(default_retry_delay=15,max_retries=3,name="thumbvideo")
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
@@ -614,7 +667,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
-        path = _get_mfile_path(inputid)
+        path = _get_mfile(inputid)
 
         logging.info("Creating Remote %sx%s image for %s" % (width,height,inputid))
 
@@ -650,9 +703,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
-        #from mserve.dataservice.models import MFile
-        #mf = MFile.objects.get(pk=inputid)
-        path = _get_mfile_path(inputid)
+        path = _get_mfile(inputid)
 
         logging.info("Creating %sx%s image for %s" % (width,height,inputid))
 
@@ -697,7 +748,7 @@ def thumboutput(inputs,outputs,options={},callbacks=[]):
 
         if image:
 
-            if not _save_output_thumb(inputid,image):
+            if not _save_joboutput_thumb(inputid,image):
                 thumboutput.retry([inputs,outputs,options,callbacks])
 
             logging.info("Thumbnail created %s" % (image))
@@ -734,7 +785,7 @@ def thumbvideooutput(inputs,outputs,options={},callbacks=[]):
 
         if image:
 
-            if not _save_output_thumb(inputid,image):
+            if not _save_joboutput_thumb(inputid,image):
                 thumbvideooutput.retry([inputs,outputs,options,callbacks])
 
             logging.info("Thumbnail created %s" % (image))
@@ -749,69 +800,6 @@ def thumbvideooutput(inputs,outputs,options={},callbacks=[]):
     except Exception as e:
         logging.info("Error with thumbimage %s" % e)
         raise e
-
-def _save_poster(mfileid,image):
-
-    tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
-    image.save(tfile.name)
-    dfile = File(open(tfile.name))
-
-    from mserve.dataservice.models import MFile
-    _mf = MFile.objects.get(id=mfileid)
-    _mf.poster.save('poster.png', dfile, save=True)
-
-    mfcheck = MFile.objects.get(id=mfileid)
-
-    if mfcheck.poster == "":
-        return False
-
-    logging.info("MFile Check poster %s "%mfcheck.poster)
-    return True
-
-def _save_thumb(mfileid,image):
-
-    try:
-        tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
-        image.save(tfile.name)
-        dfile = File(open(tfile.name))
-
-        from mserve.dataservice.models import MFile
-        _mf = MFile.objects.get(pk=mfileid)
-        _mf.thumb.save('thumb.png', dfile, save=True)
-
-        mfcheck = MFile.objects.get(id=mfileid)
-
-        if mfcheck.thumb == "":
-            return False
-
-        return True
-    except IOError as e:
-        logging.info("MFile Check thumb error %s "%e)
-        raise e
-    except Exception as e:
-        logging.info("MFile Check thumb error %s "%e)
-        raise e
-
-def _save_output_thumb(outputid,image):
-
-    tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
-    image.save(tfile.name)
-    dfile = File(open(tfile.name))
-
-    from mserve.jobservice.models import JobOutput
-    _jo = JobOutput.objects.get(pk=outputid)
-    _jo.thumb.save('thumb.png', dfile, save=True)
-
-    logging.info("JobOutput thumb %s "%_jo.thumb)
-
-    jocheck = JobOutput.objects.get(id=outputid)
-
-    if jocheck.thumb == "":
-        return False
-
-    logging.info("JobOutput Check thumb %s "%jocheck.thumb)
-    return True
-
 
 def _thumbimage(input,width,height):
     if not os.path.exists(input):

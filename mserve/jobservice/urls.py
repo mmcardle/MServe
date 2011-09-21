@@ -41,7 +41,8 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<authid>[^/]+)/jobs/$', job_handler),
     url(r'^jobs/$', job_handler),
     url(r'^jobs/(?P<jobid>[^/]+)/$', job_handler),
-    url(r'^joboutputs/(?P<outputid>[^/]+)/contents/$', joboutput_handler),
+    url(r'^joboutputs/(?P<outputid>[^/]+)/contents/$', joboutput_handler, name="joboutput_upload"),
+    url(r'^joboutputs/(?P<outputid>[^/]+)/thumb/$', joboutput_handler, {"field":"thumb"}, name="joboutput_upload_thumb"),
 
     # Tasks
     url(r'^tasks/', 'jobservice.views.list_jobs'),

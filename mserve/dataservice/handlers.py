@@ -461,7 +461,19 @@ class MFileHandler(BaseHandler):
         r = rc.DELETED
         return r
 
-    def update(self, request, id):
+    def update(self, request, id, field=None):
+
+        mfile = MFile.objects.get(pk=id)
+        if field == "thumb":
+            mfile.thumb.save('thumb.png', ContentFile(request.raw_post_data), save=True)
+            return {"message":"updated thumb"}
+        if field == "poster":
+            mfile.poster.save('poster.png', ContentFile(request.raw_post_data), save=True)
+            return {"message":"updated poster"}
+        if field == "proxy":
+            mfile.proxy.save('proxy.mp4', ContentFile(request.raw_post_data), save=True)
+            return {"message":"updated proxy"}
+
         form = UpdateMFileForm(request.POST,request.FILES)
         if form.is_valid(): 
             
@@ -485,7 +497,7 @@ class MFileHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
-    def create(self, request, serviceid=None, authid=None):
+    def create(self, request, id=None ,serviceid=None, authid=None):
         logging.debug("Create MFile")
 
         form = MFileForm(request.POST,request.FILES)

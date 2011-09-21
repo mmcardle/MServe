@@ -153,7 +153,6 @@ class JobHandler(BaseHandler):
             r.write("Invalid Request! no jobtype in request.")
             return r
 
-
     def delete(self, request, jobid):
         job = Job.objects.get(id=jobid)
         job.delete()
@@ -186,7 +185,39 @@ class JobOutputHandler(BaseHandler):
     fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
 
 class JobOutputContentsHandler(BaseHandler):
-    allowed_methods = ('GET')
+    allowed_methods = ('GET','POST','PUT')
+
+    def update(self, request, outputid, field=None):
+        joboutput = JobOutput.objects.get(id=outputid)
+
+        if field == "thumb":
+            joboutput.thumb.save('thumb.png', ContentFile(request.raw_post_data), save=True)
+            return {"message":"updated job thumb"}
+
+        joboutput.file.save("joboutput", ContentFile(request.raw_post_data), save=True)
+        return {"message":"updated job"}
+
+    def create(self, request, outputid):
+        joboutput = JobOutput.objects.get(id=outputid)
+
+        logging.info(request.POST)
+        logging.info(request.FILES)
+
+        if request.POST.has_key("name"):
+            name = request.POST["name"]
+            if request.FILES.has_key("file"):
+                file = request.FILES["file"]
+                joboutput.thumb.save(name, file, save=True)
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! no file in request.")
+                return r
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request! no name in request.")
+            return r
+
+        return joboutput
 
     def read(self, request, outputid):
 

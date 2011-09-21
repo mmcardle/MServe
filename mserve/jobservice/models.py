@@ -124,6 +124,12 @@ class JobOutput(NamedBase):
     file  = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
     thumb = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
 
+    def get_upload_path(self):
+        return reverse('joboutput_upload',args=[self.id])
+
+    def get_upload_thumb_path(self):
+        return reverse('joboutput_upload_thumb',args=[self.id])
+
     def thumburl(self):
         if self.thumb and self.thumb != "":
             return "%s%s" % (thumbpath,self.thumb)

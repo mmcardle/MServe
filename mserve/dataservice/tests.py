@@ -224,11 +224,11 @@ class APITest(TestCase):
             logging.error("Error writing partial content to MFile '%s'" % file2)
 
         file2.file.open()
-        filecontents1 = file2.file.read()
-        self.failUnlessEqual(filecontents1, 'XXX content2')
+        filecontents2 = file2.file.read()
+        self.failUnlessEqual(filecontents2, 'XXX content2')
         file2.file.close()
 
-        readfile = subservice.do("GET","mfiles")[1]
+        readfile = subservice.do("GET","mfiles")[0]
         readfile.file.open()
         filecontents3 = readfile.file.read()
         self.failUnlessEqual(filecontents3, 'new content')
