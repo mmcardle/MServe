@@ -17,7 +17,13 @@ function mservetimeout(obj,mfileid,depth){
 
                 var $this = $(this), data = $this.data('mserve')
 
-                var $table = '<table style="table-layout: fixed;width: 100%;" border="0"><tr><td style="width: 20%"><div id="mfoldertreecontainer"></div></td><td style="width: 60%"><ul id="qscontainer" ></ul></td></tr></table>'
+                $table = $("#mserveTemplate").tmpl()
+                $table.find("#mserve-new-folder-button").button(
+                    { icons: { primary: "ui-icon-circle-plus"} }
+                ).click( function(){
+                    selected = $("#mfoldertreecontainer").jstree('get_selected')
+                    alert("TODO - Create folder at "+selected)
+                })
                 $(obj).append($table);
 
                  // If the plugin hasn't been initialized yet
@@ -74,7 +80,17 @@ function mservetimeout(obj,mfileid,depth){
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                mfile_buttons(mfileid)
+                $("#newjobbutton-"+mfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+                $('#newjobbutton-'+mfileid).click(function(){
+                    create_new_job_ui_dialog(mfile.id,true)
+                    $("#mfileid").val(mfileid);
+                    $("#dialog-new-job-dialog-form").dialog( "open" );
+                });
+                $("#deletemfilebutton-"+mfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false });
+                $('#deletemfilebutton-'+mfileid).click(function(){
+                    $("#mservetree").mserve('delete', mfileid)
+                });
+
                 if(options.pollthumb){
                     obj.mserve('get_mfile_thumb', mfileid, 1)
                 }
@@ -146,13 +162,10 @@ function mservetimeout(obj,mfileid,depth){
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                mid = "#mfileholder-"+mfile.id
-
-                mc = $(mid)
-                $(data.allcontent[0]).append(mc.clone())
-
+                // Update MFile before cloning
                 $(obj).mserve('updatemfile', mfile.id, {"pollthumb":"true"})
 
+                $(data.allcontent[0]).append($("#mfileholder-"+mfile.id).clone(true))
             });
     },
     load : function( options ) {
@@ -175,12 +188,13 @@ function mservetimeout(obj,mfileid,depth){
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                var allcontent = $('#qscontainer').clone(true)
-                data["allcontent"] = allcontent
-
+                // Update MFile before cloning
                 $(mfile_set).each( function(index,mfile) {
                     $(obj).mserve( 'updatemfile', mfile.id, { "pollthumb":"false" })
                 });
+
+                var allcontent = $('#qscontainer').clone(true)
+                data["allcontent"] = allcontent
 
                 var $filteredData = allcontent.find('li.rootfolder');
                 $('#qscontainer').quicksand($filteredData, {
