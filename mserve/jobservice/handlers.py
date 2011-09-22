@@ -283,7 +283,7 @@ class JobOutputContentsHandler(BaseHandler):
                 logging.info("Caught error linking file, trying copy. %s" % str(e))
                 shutil.copy(outputfilepath,fullfilepath)
 
-        usage_store.record(joboutput.id,models.metric_access,joboutput.file.size)
+        usage_store.record(joboutput.id,models.METRIC_ACCESS,joboutput.file.size)
 
         logging.info("Redirecting  to %s " % redirecturl)
         return redirect("/%s"%redirecturl)

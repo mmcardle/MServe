@@ -22,7 +22,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from django.db import models
+
 import storage
 import logging
 import datetime
@@ -32,8 +32,9 @@ import shutil
 import utils as utils
 import settings
 import static as static
-from piston.utils import rc
 import django.dispatch
+from piston.utils import rc
+from django.db import models
 from celery.task.sets import TaskSet
 from celery.task.sets import subtask
 from celery.registry import tasks
@@ -51,90 +52,89 @@ from django.db.models.signals import pre_delete
 from django.core.urlresolvers import reverse
 from django.core.files.temp import NamedTemporaryFile
 from django.core.files import File
-from django.db.models import Count,Max,Min,Avg,Sum,StdDev,Variance
-from celery.result import TaskSetResult
+from django.db.models import Count, Max, Min, Avg, Sum, StdDev, Variance
 from dataservice.tasks import mimefile
 
 # Declare Signals
-mfile_get_signal = django.dispatch.Signal(providing_args=["mfile"])
+MFILE_GET_SIGNAL = django.dispatch.Signal(providing_args=["mfile"])
 
 ID_FIELD_LENGTH = 200
-SLEEP_TIME = 10 #  in seconds
-SLEEP_TIMEOUT = 300 #  in seconds
-thumbpath = settings.THUMB_PATH
-mediapath = settings.MEDIA_URL
+SLEEP_TIME = 10  # in seconds
+SLEEP_TIMEOUT = 300  # in seconds
 
 # Metrics for objects
-metric_mfile = "http://mserve/file"
-metric_backupfile = "http://mserve/backupfile"
-metric_container = "http://mserve/container"
-metric_service = "http://mserve/service"
+METRIC_MFILE = "http://mserve/file"
+METRIC_BACKUPFILE = "http://mserve/backupfile"
+METRIC_CONTAINER = "http://mserve/container"
+METRIC_SERVICE = "http://mserve/service"
 
 # Metrics for mfiles
-metric_disc = "http://mserve/disc"
-metric_disc_space = "http://mserve/disc_space"
-metric_ingest = "http://mserve/ingest"
-metric_access = "http://mserve/access"
-metric_archived = "http://mserve/archived"
-metric_corruption = "http://mserve/corruption"
-metric_dataloss = "http://mserve/dataloss"
+METRIC_DISC = "http://mserve/disc"
+METRIC_DISC_SPACE = "http://mserve/disc_space"
+METRIC_INGEST = "http://mserve/ingest"
+METRIC_ACCESS = "http://mserve/access"
+METRIC_ARCHIVED = "http://mserve/archived"
+METRIC_CORRUPTION = "http://mserve/corruption"
+METRIC_DATALOSS = "http://mserve/dataloss"
 
 # Metrics for jobs
-metric_jobruntime   = "http://mserve/jobruntime"
-metric_jobtask      = "http://mserve/task/"
+METRIC_JOBRUNTIME = "http://mserve/jobruntime"
+METRIC_JOBTASK = "http://mserve/task/"
 
-metrics = [metric_mfile, metric_service, metric_container, metric_disc, \
-        metric_disc_space, metric_ingest, metric_access, metric_archived]
+METRICS = [METRIC_MFILE, METRIC_SERVICE, METRIC_CONTAINER, METRIC_DISC,
+        METRIC_DISC_SPACE, METRIC_INGEST, METRIC_ACCESS, METRIC_ARCHIVED]
 
 # What metric are reported fro each type
-container_metrics = metrics
-service_metrics = [metric_mfile, metric_service, metric_disc, metric_archived, \
-        metric_disc_space, metric_jobruntime]
-mfile_metrics = [metric_mfile, metric_disc, metric_ingest, metric_access,\
-        metric_archived, metric_disc_space]
-backupfile_metrics = [metric_archived, metric_backupfile, metric_disc_space]
+CONTAINER_METRICS = METRICS
+SERVICE_METRICS = [METRIC_MFILE, METRIC_SERVICE, METRIC_DISC, METRIC_ARCHIVED,
+        METRIC_DISC_SPACE, METRIC_JOBRUNTIME]
+MFILE_METRICS = [METRIC_MFILE, METRIC_DISC, METRIC_INGEST, METRIC_ACCESS,
+        METRIC_ARCHIVED, METRIC_DISC_SPACE]
+BACKUPFILE_METRICS = [METRIC_ARCHIVED, METRIC_BACKUPFILE, METRIC_DISC_SPACE]
 
 # Other Metric groups
-byte_metrics = [metric_disc_space]
+BYTE_METRICS = [METRIC_DISC_SPACE]
 
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 DEFAULT_PROFILE = "default"
-
-roles = static.default_roles
-profiles = static.default_profiles
 
 TASK_CHOICES = []
 
 #from celery.registry import tasks
 for task in tasks.regular().keys():
-    TASK_CHOICES.append( (task,task) )
+    TASK_CHOICES.append((task, task))
+
 
 class MServeProfile(models.Model):
+    '''A Profile for a MServe user '''
     user = models.ForeignKey(User, unique=True)
-    bases = models.ManyToManyField('NamedBase', related_name='bases', \
+    bases = models.ManyToManyField('NamedBase', related_name='bases',
         null=True, blank=True)
-    auths = models.ManyToManyField('Auth', related_name='profileauths', \
+    auths = models.ManyToManyField('Auth', related_name='profileauths',
         null=True, blank=True)
 
     def myauths(self):
+        '''Returns a users auths'''
         ret = []
         for auth in self.auths.all():
             ret.append(Auth.objects.get(id=auth.id))
         return set(ret)
 
     def mfiles(self):
+        '''Returns a users mfiles'''
         ret = []
         for base in self.bases.all():
             if utils.is_mfile(base):
                 ret.append(MFile.objects.get(id=base.id))
         for auth in self.auths.all():
             if utils.is_service(auth.base):
-                ds = DataService.objects.get(id=auth.base.id)
-                for mfile in ds.mfile_set.all():
+                dataservice = DataService.objects.get(id=auth.base.id)
+                for mfile in dataservice.mfile_set.all():
                     ret.append(mfile)
         return set(ret)
 
     def dataservices(self):
+        '''Returns a users data services'''
         ret = []
         for base in self.bases.all():
             if utils.is_service(base):
@@ -142,6 +142,7 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def mfolders(self):
+        '''Returns a users mfolders'''
         ret = []
         for base in self.bases.all():
             if utils.is_mfolder(base):
@@ -152,6 +153,7 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def containers(self):
+        '''Returns a users containers'''
         ret = []
         for base in self.bases.all():
             if utils.is_container(base):
@@ -159,24 +161,25 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def __unicode__(self):
-        return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(), \
+        return "Mserve Profile for '%s' (%s) " % (self.user.get_full_name(),
             self.user.username)
 
 SERVICEREQUEST_STATES = (
-    ('P','PENDING'),
-    ('A','ACCEPTED'),
-    ('R','REJECTED'),
+    ('P', 'PENDING'),
+    ('A', 'ACCEPTED'),
+    ('R', 'REJECTED'),
 )
 
+
 class ServiceRequest(models.Model):
-    name        = models.CharField(max_length=200)
-    reason      = models.TextField()
-    profile     = models.ForeignKey('MServeProfile',null=True, blank=True, \
+    name = models.CharField(max_length=200)
+    reason = models.TextField()
+    profile = models.ForeignKey('MServeProfile', null=True, blank=True,
                                         related_name="servicerequests")
-    state       = models.CharField(max_length=1, \
-                    choices=SERVICEREQUEST_STATES, default='P')
-    time        = models.DateTimeField(auto_now_add=True)
-    
+    state = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES,
+        default='P')
+    time = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         ordering = ["-time"]
 
@@ -184,7 +187,7 @@ class ServiceRequest(models.Model):
         return self.time.ctime()
 
     def status(self):
-        for index,word in SERVICEREQUEST_STATES:
+        for index, word in SERVICEREQUEST_STATES:
             if index == self.state:
                 return word
         return "unknown"
@@ -192,27 +195,28 @@ class ServiceRequest(models.Model):
     def __unicode__(self):
         return self.name
 
+
 class Usage(models.Model):
     '''The base object this report refers to'''
-    base            = models.ForeignKey('NamedBase',null=True, blank=True)
+    base = models.ForeignKey('NamedBase', null=True, blank=True)
     '''The metric this report is recording'''
-    metric          = models.CharField(max_length=4096)
+    metric = models.CharField(max_length=4096)
     '''Time first recorded (shouldnt change)'''
-    time            = models.DateTimeField(auto_now_add=True)
+    time = models.DateTimeField(auto_now_add=True)
     '''Number of reports'''
-    reports         = models.BigIntegerField(default=0)
+    reports = models.BigIntegerField(default=0)
     '''Sum of report values'''
-    total           = models.FloatField(default=0)
+    total = models.FloatField(default=0)
     '''Sum of squares of values'''
-    squares         = models.FloatField(default=0)
+    squares = models.FloatField(default=0)
     '''Sum of squares of values'''
-    nInProgress     = models.BigIntegerField(default=0)
+    nInProgress = models.BigIntegerField(default=0)
     '''Time the rate last changed'''
-    rateTime        = models.DateTimeField()
+    rateTime = models.DateTimeField()
     '''The current rate (change in value per second)'''
-    rate            = models.FloatField()
+    rate = models.FloatField()
     '''Cumulative unreported usage before rateTime'''
-    rateCumulative  = models.FloatField()
+    rateCumulative = models.FloatField()
 
     @staticmethod
     def get_full_usagesummary():
@@ -244,10 +248,12 @@ class Usage(models.Model):
 
     @staticmethod
     def get_job_usagesummary(jobs):
-        tasksets_ids    = [ job.tasks()["taskset_id"]  for job in jobs]
-        taskresults     = filter(None,[ TaskSetResult.restore(tasksetid) for tasksetid in tasksets_ids])
-        asyncs          = [ asyncresult for taskres in taskresults for asyncresult in taskres.subtasks ]
-        taskstates      = TaskState.objects.filter(task_id__in=asyncs)
+        tasksets_ids = [job.tasks()["taskset_id"] for job in jobs]
+        taskresults = filter(None, [TaskSetResult.restore(tasksetid)
+                                for tasksetid in tasksets_ids])
+        asyncs = [asyncresult for taskres in taskresults
+                                for asyncresult in taskres.subtasks]
+        taskstates = TaskState.objects.filter(task_id__in=asyncs)
 
         jobtype_usage = taskstates.values("name").annotate(
             n=Count('id'),
@@ -256,48 +262,47 @@ class Usage(models.Model):
             max=Max('runtime'),
             min=Min('runtime'),
             stddev=StdDev('runtime'),
-            variance=Variance('runtime')
-        )
+            variance=Variance('runtime'))
 
         for jobtype in jobtype_usage:
             if jobtype["name"]:
-                jobtype["metric"] = metric_jobtask+jobtype["name"]
+                jobtype["metric"] = METRIC_JOBTASK + jobtype["name"]
             else:
-                jobtype["metric"] = metric_jobtask+"unknown"
+                jobtype["metric"] = METRIC_JOBTASK + "unknown"
 
-
-        jobtype_success_usage = taskstates.filter(state="SUCCESS").values("name").annotate(
-            n=Count('id'),
-            avg=Avg('runtime'),
-            sum=Sum('runtime'),
-            max=Max('runtime'),
-            min=Min('runtime'),
-            stddev=StdDev('runtime'),
-            variance=Variance('runtime')
-        )
+        jobtype_success_usage = taskstates.filter(state="SUCCESS")\
+            .values("name").annotate(
+                n=Count('id'),
+                avg=Avg('runtime'),
+                sum=Sum('runtime'),
+                max=Max('runtime'),
+                min=Min('runtime'),
+                stddev=StdDev('runtime'),
+                variance=Variance('runtime'))
 
         for jobtype in jobtype_success_usage:
             if jobtype["name"]:
-                jobtype["metric"] = metric_jobtask+jobtype["name"]+"/success/"
+                jobtype["metric"] = METRIC_JOBTASK + jobtype["name"]\
+                                    + "/success/"
             else:
-                jobtype["metric"] = metric_jobtask+"unknown/success/"
+                jobtype["metric"] = METRIC_JOBTASK + "unknown/success/"
 
-        jobtype_failed_usage = taskstates.filter(state="FAILURE").values("name").annotate(
-            n=Count('id'),
-            avg=Avg('runtime'),
-            sum=Sum('runtime'),
-            max=Max('runtime'),
-            min=Min('runtime'),
-            stddev=StdDev('runtime'),
-            variance=Variance('runtime')
-        )
+        jobtype_failed_usage = taskstates.filter(state="FAILURE")\
+            .values("name").annotate(
+                n=Count('id'),
+                avg=Avg('runtime'),
+                sum=Sum('runtime'),
+                max=Max('runtime'),
+                min=Min('runtime'),
+                stddev=StdDev('runtime'),
+                variance=Variance('runtime'))
 
         for jobtype in jobtype_failed_usage:
             if jobtype["name"]:
-                jobtype["metric"] = metric_jobtask+jobtype["name"]+"/failed/"
+                jobtype["metric"] = METRIC_JOBTASK + jobtype["name"]\
+                                        + "/failed/"
             else:
-                jobtype["metric"] = metric_jobtask+"unknown/failed/"
-
+                jobtype["metric"] = METRIC_JOBTASK + "unknown/failed/"
 
         runtime_usage = taskstates.aggregate(
             n=Count('id'),
@@ -306,9 +311,8 @@ class Usage(models.Model):
             max=Max('runtime'),
             min=Min('runtime'),
             stddev=StdDev('runtime'),
-            variance=Variance('runtime')
-            )
-        runtime_usage["metric"] = metric_jobruntime
+            variance=Variance('runtime'))
+        runtime_usage["metric"] = METRIC_JOBRUNTIME
 
         runtime_usage_success = taskstates.filter(state="SUCCESS").aggregate(
             n=Count('id'),
@@ -317,9 +321,8 @@ class Usage(models.Model):
             max=Max('runtime'),
             min=Min('runtime'),
             stddev=StdDev('runtime'),
-            variance=Variance('runtime')
-            )
-        runtime_usage_success["metric"] = metric_jobruntime + "/success/"
+            variance=Variance('runtime'))
+        runtime_usage_success["metric"] = METRIC_JOBRUNTIME + "/success/"
 
         runtime_usage_failed = taskstates.filter(state="FAILURE").aggregate(
             n=Count('id'),
@@ -328,9 +331,8 @@ class Usage(models.Model):
             max=Max('runtime'),
             min=Min('runtime'),
             stddev=StdDev('runtime'),
-            variance=Variance('runtime')
-            )
-        runtime_usage_failed["metric"] = metric_jobruntime + "/failed/"
+            variance=Variance('runtime'))
+        runtime_usage_failed["metric"] = METRIC_JOBRUNTIME + "/failed/"
 
         summary = []
         summary.extend(jobtype_usage)
@@ -343,7 +345,7 @@ class Usage(models.Model):
 
     def save(self):
         super(Usage, self).save()
-        logging.info("Saving Usage %s " % (self) )
+        logging.info("Saving Usage %s ", self)
 
     def fmt_ctime(self):
         return self.created.ctime()
@@ -351,29 +353,34 @@ class Usage(models.Model):
     def fmt_rtime(self):
         return self.rateTime.ctime()
 
-    def copy(self,base,save=False):
-        u = Usage(base=base,metric=self.metric,total=self.total,reports=self.reports,nInProgress=self.nInProgress,rate=self.rate,rateTime=self.rateTime,
-            rateCumulative=self.rateCumulative)
+    def copy(self, base, save=False):
+        newusage = Usage(base=base, metric=self.metric, total=self.total,
+                    reports=self.reports, nInProgress=self.nInProgress,
+                    rate=self.rate, rateTime=self.rateTime,
+                    rateCumulative=self.rateCumulative)
         if save:
-            u.save()
-        return u
+            newusage.save()
+        return newusage
 
     def __unicode__(self):
         object = ""
         if self.base:
             object = self.base
-        return "Usage:%s metric=%s total=%f reports=%s nInProgress=%s rate=%s rateTime=%s rateCumulative=%s" \
-                % (object,self.metric,self.total,self.reports,self.nInProgress,self.rate,self.rateTime,self.rateCumulative);
+        return "Usage:%s metric=%s total=%f reports=%s nInProgress=%s rate=%s \
+                    rateTime=%s rateCumulative=%s"\
+                    % (object, self.metric, self.total, self.reports,
+                        self.nInProgress, self.rate, self.rateTime,
+                        self.rateCumulative)
+
 
 class Base(models.Model):
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
 
     methods = []
     urls = {
-        "auths":[],
-        "properties":[],
-        "usages":[]
-        }
+        "auths": [],
+        "properties": [],
+        "usages": []}
 
     def getmethods(self):
         return self.methods
@@ -395,72 +402,73 @@ class Base(models.Model):
         if self.parent:
             return self.parent.get_real_base()
 
-        raise Exception("Dont know how to get real base for %s" % (self) )
+        raise Exception("Dont know how to get real base for %s" % (self))
 
-    def _usages_to_summary(self,usages):
+    def _usages_to_summary(self, usages):
         return Usage.usages_to_summary(usages)
 
-    def check(self, url , method):
-        if url==None:
+    def check(self, url, method):
+        if url == None:
             if method in self.methods:
-                return True,None
+                return True, None
             else:
-                return False,HttpResponseForbidden()
+                return False, HttpResponseForbidden()
         else:
-            if self.urls.has_key(url):
+            if url in self.urls:
                 if method in self.urls[url]:
-                    return True,None
+                    return True, None
                 else:
-                    return False,HttpResponseForbidden()
+                    return False, HttpResponseForbidden()
             else:
-                return False,HttpResponseNotFound()
+                return False, HttpResponseNotFound()
 
-    def do(self, method, url=None, *args , **kwargs):
-
-        if url==None:
-            #logging.debug("%s : on %s args=%s kwargs=%s" % (method,self,args,kwargs))
-            if method not in ["GET","PUT","POST","DELETE"]:
+    def do(self, method, url=None, *args, **kwargs):
+        if url == None:
+            if method not in ["GET", "PUT", "POST", "DELETE"]:
                 return HttpResponseForbidden()
-        else:
-            #logging.debug("%s : /%s/ on %s args=%s kwargs=%s" % (method,url,self,args,kwargs))
-            pass
 
-        passed,error = self.check(url,method)
+        passed, error = self.check(url, method)
 
         if not passed:
             if url:
-                logging.info("Exception: %s Cannot do %s: /%s/ on %s urls are %s" % (error.status_code,method,url,self,self.geturls()))
+                logging.info("Exception: %s Cannot do %s: /%s/ on %s urls are \
+                                %s", error.status_code, method, url, \
+                                self.get_real_base(),\
+                                ",".join(self.geturls()))
             else:
-                logging.info("Exception: %s Cannot do %s: /%s/ on %s methods are %s" % (error.status_code,method,url,self,self.getmethods()))
+                logging.info("Exception: %s Cannot do %s: /%s/ on %s methods \
+                                are %s", error.status_code, method, url, \
+                                self.get_real_base(),\
+                                ",".join(self.getmethods()))
             return error
 
-        if method=="GET" and url==None:
+        if method == "GET" and url == None:
             return self.get(url)
 
-        if method=="GET" and url=="auths":
+        if method == "GET" and url == "auths":
             return self.auth_set.all()
 
-        if method=="GET" and url=="usages":
-            logging.info("check for full usage %s" % kwargs)
+        if method == "GET" and url == "usages":
+            logging.info("check for full usage %s", kwargs)
 
             base = self.get_real_base()
-            if kwargs.has_key('last'):
+            if 'last' in kwargs:
                 last = int(kwargs.get('last')[0])
-                logging.info("last usage seen %s" % last)
+                logging.info("last usage seen %s", last)
                 if last is not -1:
                     count = 0
                     while last == base.reportnum:
-                        logging.debug("Waiting for new usage lastreport=%s" % last)
+                        logging.debug("Waiting for new usage lastreport=%s",
+                                        last)
 
                         time.sleep(SLEEP_TIME)
                         count += 1
-                        if count*SLEEP_TIME >= SLEEP_TIMEOUT:
+                        if count * SLEEP_TIME >= SLEEP_TIMEOUT:
                             logging.debug("Usage timeout reached, aborting.")
                             return HttpResponseBadRequest()
                         base = NamedBase.objects.get(id=base.id)
 
-            if kwargs.has_key('full'):
-                
+            if 'full' in kwargs:
                 values = kwargs.get('full')
 
                 if 'true' in values or 'True' in values:
@@ -478,23 +486,25 @@ class Base(models.Model):
             else:
                 return base.usages.all()
 
-        if method=="GET" and url=="properties":
+        if method == "GET" and url == "properties":
             if type(self) == Auth:
                 return self.get_real_base().managementproperty_set.all()
             else:
                 return self.managementproperty_set.filter(base=self)
 
-        if method=="PUT" and url=="properties":
+        if method == "PUT" and url == "properties":
             for k in kwargs.keys():
                 try:
-                    mp = self.get_real_base().managementproperty_set.get(base=self, property=k)
+                    mp = self.get_real_base()\
+                        .managementproperty_set.get(
+                            base=self, property=k)
                     mp.value = kwargs[k]
                     mp.save()
                 except ManagementProperty.DoesNotExist:
                     return HttpResponseNotFound()
             return self.get_real_base().managementproperty_set.all()
 
-        if method=="PUT" and url=="auths":
+        if method == "PUT" and url == "auths":
             if url == "auths":
                 for authname in kwargs.keys():
                     try:
@@ -502,79 +512,82 @@ class Base(models.Model):
                         auth = self.auth_set.get(authname=authname)
                         auth.setroles(kwargs[authname]['roles'])
                         auth.save()
-                        logging.info("PUT AUTHS updated auth %s " % (auth))
+                        logging.info("PUT AUTHS updated auth %s ",
+                                        auth.authname)
                         return self.auth_set.all()
 
                     except Auth.DoesNotExist:
-                        logging.info("PUT AUTHS Auth '%s' does not exist "% (authname))
+                        logging.info("PUT AUTHS Auth '%s' does not exist ",
+                                        authname)
                         return HttpResponseBadRequest()
 
             return HttpResponseNotFound()
 
-        if method=="POST" and url=="auths":
-
-            if not kwargs.has_key('name') or not kwargs.has_key('roles'):
+        if method == "POST" and url == "auths":
+            if not 'name' in kwargs or not 'roles' in kwargs:
                 return HttpResponseBadRequest()
 
             if type(self) == Auth:
-                auth = Auth(authname=kwargs['name'],parent=self)
+                auth = Auth(authname=kwargs['name'], parent=self)
                 auth.setroles(kwargs['roles'])
                 auth.save()
                 self.auth_set.add(auth)
                 return auth
             else:
-                auth = Auth(authname=kwargs['name'],base=self)
+                auth = Auth(authname=kwargs['name'], base=self)
                 auth.setroles(kwargs['roles'])
                 auth.save()
                 self.auth_set.add(auth)
                 return auth
 
-        if method=="GET":
-            return self.get(url,*args,**kwargs)
-        if method=="POST":
-            return self.post(url,*args,**kwargs)
-        if method=="PUT":
-            return self.put(url,*args,**kwargs)
-        if method=="DELETE":
+        if method == "GET":
+            return self.get(url, *args, **kwargs)
+        if method == "POST":
+            return self.post(url, *args, **kwargs)
+        if method == "PUT":
+            return self.put(url, *args, **kwargs)
+        if method == "DELETE":
             if url == None:
                 r = self.delete()
-                logging.info("DELETE %s" % r)
+                logging.info("DELETE %s", r)
                 return r
             if url == "auths":
-                if kwargs.has_key('name'):
+                if 'name' in kwargs:
                     auth = self.auth_set.get(authname=kwargs['name'])
-                    logging.info("DELETE AUTH %s" % auth)
+                    logging.info("DELETE AUTH %s", auth.authname)
                     auth.delete()
                     r = rc.DELETED
-                    r.write("Deleted '%s'"%kwargs['name'])
+                    r.write("Deleted '%s'" % kwargs['name'])
                     return r
                 else:
                     return HttpResponseBadRequest()
             return HttpResponseNotFound()
 
-        logging.info("ERROR: 404 Pattern not matched for %s on %s" % (method,url))
+        logging.info("ERROR: 404 Pattern not matched for %s on %s",\
+                        method, url)
 
         return rc.NOT_FOUND
 
-    def clean_base(self,authid):
-        logging.info("Override this clean method %s" % self)
+    def clean_base(self, authid):
+        logging.info("Override this clean method %s", self)
         dict = {}
         return dict
 
     class Meta:
         abstract = True
 
+
 class NamedBase(Base):
     metrics = []
     initial_usage_recorded = models.BooleanField(default=False)
-    name    = models.CharField(max_length=200)
-    usages  = models.ManyToManyField("Usage")
+    name = models.CharField(max_length=200)
+    usages = models.ManyToManyField("Usage")
     reportnum = models.IntegerField(default=1)
 
     def save(self):
         super(NamedBase, self).save()
         if not self.initial_usage_recorded:
-            logging.info("Processing %s " % (self))
+            logging.info("Processing %s ", self)
             import usage_store as usage_store
             startusages = []
             for metric in self.metrics:
@@ -582,20 +595,22 @@ class NamedBase(Base):
                 #  Recored Initial Values
                 v = self.get_value_for_metric(metric)
                 if v is not None:
-                    logging.info("Value for %s is %s" % (metric,v))
-                    logging.info("Recording usage for metric %s value= %s" % (metric,v) )
-                    usage = usage_store.record(self.id,metric,v)
+                    logging.info("Value for %s is %s", metric, v)
+                    logging.info("Recording usage for metric %s value= %s",
+                                    metric, v)
+                    usage = usage_store.record(self.id, metric, v)
                     startusages.append(usage)
                 # Start recording initial rates
                 r = self.get_rate_for_metric(metric)
                 if r is not None:
-                    logging.info("Rate for %s is %s" % (metric,r))
-                    logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
-                    usage = usage_store.startrecording(self.id,metric,r)
+                    logging.info("Rate for %s is %s", metric, r)
+                    logging.info("Recording usage rate for metric %s value %s",
+                                    metric, r)
+                    usage = usage_store.startrecording(self.id, metric, r)
                     startusages.append(usage)
 
             self.usages = startusages
-            self.reportnum=1
+            self.reportnum = 1
             self.initial_usage_recorded = True
             super(NamedBase, self).save()
         else:
@@ -609,32 +624,34 @@ class NamedBase(Base):
             v = self.get_updated_value_for_metric(metric)
 
             if v is not None:
-                logging.info("Value for %s is %s" % (metric,v))
-                logging.info("Recording usage for metric %s value= %s" % (metric,v) )
-                usage = usage_store.update(self.id,metric,v)
+                logging.info("Value for %s is %s", metric, v)
+                logging.info("Recording usage for metric %s value= %s", \
+                                metric, v)
+                usage = usage_store.update(self.id, metric, v)
             # recording updated rates
             r = self.get_updated_rate_for_metric(metric)
             if r is not None:
-                logging.info("Rate for %s is %s" % (metric,r))
-                logging.info("Recording usage rate for metric %s value= %s" % (metric,r) )
-                usage = usage_store.updaterecording(self.id,metric,r)
+                logging.info("Rate for %s is %s", metric, r)
+                logging.info("Recording usage rate for metric %s value= %s",
+                                metric, r)
+                usage = usage_store.updaterecording(self.id, metric, r)
 
         super(NamedBase, self).save()
 
     def get_value_for_metric(self, metric):
-        #logging.info("Override this method to report usage for metric %s" % metric)
+        '''Override this method to report usage for metric'''
         return None
 
     def get_rate_for_metric(self, metric):
-        #logging.info("Override this method to report usage for metric %s" % metric)
+        '''Override this method to report usage for metric'''
         return None
 
     def get_updated_value_for_metric(self, metric):
-        #logging.info("Override this method to report usage for metric %s" % metric)
+        '''Override this method to report usage for metric'''
         return None
 
     def get_updated_rate_for_metric(self, metric):
-        #logging.info("Override this method to report usage for metric %s" % metric)
+        '''Override this method to report usage for metric'''
         return None
 
     def _delete_usage_(self):
@@ -643,145 +660,157 @@ class NamedBase(Base):
             usage_store._stoprecording_(usage)
 
     def __unicode__(self):
-        return self.name;
+        return self.name
+
 
 class HostingContainer(NamedBase):
-    status              = models.CharField(max_length=200)
-    default_profile     = models.CharField(max_length=200,blank=True,null=True)
-    default_path        = models.CharField(max_length=200,blank=True,null=True)
+    status = models.CharField(max_length=200)
+    default_profile = models.CharField(max_length=200, blank=True, null=True)
+    default_path = models.CharField(max_length=200, blank=True, null=True)
 
-    methods = ["GET","POST","PUT","DELETE"]
-    urls = {
-        "auths":["GET","PUT","POST","DELETE"],
-        "properties":["GET","PUT"],
-        "usages":["GET"],
-        "services":["GET","POST"],
-        }
+    methods = ["GET", "POST", "PUT", "DELETE"]
+    urls = {"auths": ["GET", "PUT", "POST", "DELETE"],
+        "properties": ["GET", "PUT"],
+        "usages": ["GET"],
+        "services": ["GET", "POST"]}
 
     def __init__(self, *args, **kwargs):
         super(HostingContainer, self).__init__(*args, **kwargs)
-        self.metrics = container_metrics
+        self.metrics = CONTAINER_METRICS
 
     def thumbs(self):
         thumbs = []
         for service in self.dataservice_set.all()[:4]:
             for mfile in service.mfile_set.exclude(thumb__exact='')[:4]:
                 thumbs.append(mfile.thumburl())
-        for i in range(len(thumbs),16):
-                thumbs.append(os.path.join(mediapath,"images","package-x-generic.png"))
+        for i in range(len(thumbs), 16):
+            thumbs.append(os.path.join(mediapath,
+                            "images", "package-x-generic.png"))
         return thumbs
 
-    def get(self,url, *args, **kwargs):
+    def get(self, url, *args, **kwargs):
         if url == "services":
             return self.dataservice_set.all()
         if not url:
             return self
 
-    def post(self,url, *args, **kwargs):
+    def post(self, url, *args, **kwargs):
         if url == "services":
             return self.create_data_service(kwargs['name'])
         else:
             return None
 
-    def put(self,url, *args, **kwargs):
-        logging.info("PUT CONTAINER %s %s %s " % (url, args, kwargs))
+    def put(self, url, *args, **kwargs):
+        logging.info("PUT CONTAINER %s %s %s ", url, args, kwargs)
         if url == "auths":
             for authname in kwargs.keys():
                 try:
                     auth = self.auth_set.get(authname=authname)
                     auth.setmethods(kwargs[authname])
                     auth.save()
-                    logging.info("PUT CONTAINER updated auth %s " % (auth))
+                    logging.info("PUT CONTAINER updated auth %s ", auth)
                     return self.auth_set.all()
                 except Auth.DoesNotExist:
-                    logging.info("PUT CONTAINER Auth '%s' does not exist "% (authname))
+                    logging.info("PUT CONTAINER Auth '%s' does not exist ",
+                                    authname)
                     return HttpResponseBadRequest()
         return HttpResponseNotFound()
 
     def get_usage(self):
-        serviceids = [service.id for service in self.dataservice_set.all()  ]
-        mfileids   = [mfile.id for service in self.dataservice_set.all() for mfile in service.mfile_set.all() ]
-        jobids   = [job.id for service in self.dataservice_set.all() for job in service.jobs() ]
+        serviceids = [service.id for service in self.dataservice_set.all()]
+        mfileids = [mfile.id for service in self.dataservice_set.all()
+                            for mfile in service.mfile_set.all()]
+        jobids = [job.id for service in self.dataservice_set.all()
+                            for job in service.jobs()]
         ids = serviceids + mfileids + jobids + [self.id]
         usages = Usage.objects.filter(base__in=ids)
         return usages
 
     def get_usage_summary(self):
         from jobservice.models import Job
-        serviceids = [service.id for service in self.dataservice_set.all()  ]
-        mfileids   = [mfile.id for service in self.dataservice_set.all() for mfile in service.mfile_set.all() ]
-        jobids   = [job.id for service in self.dataservice_set.all() for job in service.jobs() ]
+        serviceids = [service.id for service in self.dataservice_set.all()]
+        mfileids = [mfile.id for service in self.dataservice_set.all()
+                            for mfile in service.mfile_set.all()]
+        jobids = [job.id for service in self.dataservice_set.all()
+                            for job in service.jobs()]
         ids = serviceids + mfileids + jobids + [self.id]
         usages = Usage.objects.filter(base__in=ids)
         summary = self._usages_to_summary(usages)
-        summary.extend(Usage.get_job_usagesummary(Job.objects.filter(id__in=jobids)))
+        summary.extend(Usage.get_job_usagesummary(
+                    Job.objects.filter(id__in=jobids)))
         return summary
 
     @staticmethod
     def create_container(name):
         hostingcontainer = HostingContainer(name=name)
         hostingcontainer.save()
-        
-        managementproperty = ManagementProperty(property="accessspeed",base=hostingcontainer,value=settings.DEFAULT_ACCESS_SPEED)
+        managementproperty = ManagementProperty(property="accessspeed", \
+                base=hostingcontainer, value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
 
-        hostingcontainerauth = Auth(base=hostingcontainer,authname="full")
+        hostingcontainerauth = Auth(base=hostingcontainer, authname="full")
         hostingcontainerauth.setroles(['containeradmin'])
         hostingcontainerauth.save()
 
         return hostingcontainer
 
-    def create_data_service(self,name):
+    def create_data_service(self, name):
 
-        dataservice = DataService(name=name,container=self)
+        dataservice = DataService(name=name, container=self)
         dataservice.save()
 
-        serviceauth = Auth(base=dataservice,authname="full")
+        serviceauth = Auth(base=dataservice, authname="full")
         serviceauth.setroles(["serviceadmin"])
         serviceauth.save()
 
-        customerauth = Auth(base=dataservice,authname="customer")
+        customerauth = Auth(base=dataservice, authname="customer")
         customerauth.setroles(["servicecustomer"])
         customerauth.save()
 
-        managementproperty = ManagementProperty(property="accessspeed",base=dataservice,value=settings.DEFAULT_ACCESS_SPEED)
+        managementproperty = ManagementProperty(property="accessspeed",
+                                        base=dataservice,
+                                        value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
 
         pr = DEFAULT_PROFILE
         if self.default_profile != None and self.default_profile != "":
             pr = self.default_profile
 
-        managementproperty = ManagementProperty(property="profile",base=dataservice,value=pr)
+        managementproperty = ManagementProperty(property="profile",
+                                                base=dataservice, value=pr)
         managementproperty.save()
 
-        for profile_name in profiles.keys():
-            profile = profiles[profile_name]
-            dsp = DataServiceProfile(service=dataservice,name=profile_name)
+        for profile_name in static.default_profiles.keys():
+            profile = static.default_profiles[profile_name]
+            dsp = DataServiceProfile(service=dataservice, name=profile_name)
             dsp.save()
 
             ks = profile.keys()
             ks.sort()
             for workflow_name in ks:
                 workflow = profile[workflow_name]
-                wf = DataServiceWorkflow(profile=dsp,name=workflow_name)
+                wf = DataServiceWorkflow(profile=dsp, name=workflow_name)
                 wf.save()
 
                 for task in workflow:
                     task_name = task['task']
 
                     condition = ""
-                    if task.has_key('condition'): condition = task['condition']
+                    if 'condition' in task:
+                        condition = task['condition']
 
                     args = ""
-                    if task.has_key('args'): args = task['args']
+                    if 'args' in task:
+                        args = task['args']
 
-                    dst = DataServiceTask(workflow=wf,task_name=task_name,condition=condition,args=args)
+                    dst = DataServiceTask(workflow=wf, task_name=task_name,
+                                            condition=condition, args=args)
                     dst.save()
 
         return dataservice
 
     def get_rate_for_metric(self, metric):
-        if metric == metric_container:
+        if metric == METRIC_CONTAINER:
             return 1
 
     def save(self):
@@ -794,82 +823,84 @@ class HostingContainer(NamedBase):
         for usage in self.usages.all():
             usage_store._stoprecording_(usage)
 
+
 class DataServiceProfile(models.Model):
-    service = models.ForeignKey('DataService',related_name="profiles")
-    name    = models.CharField(max_length=200)
+    service = models.ForeignKey('DataService', related_name="profiles")
+    name = models.CharField(max_length=200)
 
     def __unicode__(self):
-        return "Profile %s for %s" % (self.name,self.service.name)
+        return "Profile %s for %s" % (self.name, self.service.name)
+
 
 class DataServiceWorkflow(models.Model):
-    profile = models.ForeignKey(DataServiceProfile,related_name="workflows")
-    name    = models.CharField(max_length=200)
+    profile = models.ForeignKey(DataServiceProfile, related_name="workflows")
+    name = models.CharField(max_length=200)
 
     def __unicode__(self):
-        return "Workflow %s for %s" % (self.name,self.profile.name)
+        return "Workflow %s for %s" % (self.name, self.profile.name)
+
 
 class DataServiceTask(models.Model):
-    workflow        = models.ForeignKey(DataServiceWorkflow,related_name="tasks")
-    task_name       = models.CharField(max_length=200,choices=TASK_CHOICES)
-    condition       = models.CharField(max_length=200,blank=True,null=True)
-    args            = models.TextField()
+    workflow = models.ForeignKey(DataServiceWorkflow,
+                                        related_name="tasks")
+    task_name = models.CharField(max_length=200, choices=TASK_CHOICES)
+    condition = models.CharField(max_length=200, blank=True, null=True)
+    args = models.TextField()
 
     def __unicode__(self):
-        return "Task %s for %s" % (self.task_name,self.workflow.name)
+        return "Task %s for %s" % (self.task_name, self.workflow.name)
 
 # Chunk Size - 50Mb
-chunk_size=1024*1024*50
+CHUNK_SIZE = 1024 * 1024 * 50
 
-def fbuffer(f, length , chunk_size=chunk_size):
 
-    #logging.info("reading %s in chunks of  %s "% (length,chunk_size))
-
+def fbuffer(f, length, chunk_size=CHUNK_SIZE):
     to_read = int(length)
-    while to_read > 0 :
+    while to_read > 0:
         chunk = f.read(chunk_size)
         to_read = to_read - chunk_size
-        #logging.info("read chunk - %s to go "% (to_read))
         if not chunk:
             break
         yield chunk
 
+
 class DataService(NamedBase):
-    container = models.ForeignKey(HostingContainer,blank=True,null=True)
-    parent    = models.ForeignKey('DataService',blank=True,null=True,related_name="subservices")
-    status    = models.CharField(max_length=200)
-    starttime = models.DateTimeField(blank=True,null=True)
-    endtime   = models.DateTimeField(blank=True,null=True)
-    priority  = models.BooleanField(default=False)
-    
-    methods = ["GET","POST","PUT","DELETE"]
+    container = models.ForeignKey(HostingContainer, blank=True, null=True)
+    parent = models.ForeignKey('DataService', blank=True, null=True,
+                                    related_name="subservices")
+    status = models.CharField(max_length=200)
+    starttime = models.DateTimeField(blank=True, null=True)
+    endtime = models.DateTimeField(blank=True, null=True)
+    priority = models.BooleanField(default=False)
+    methods = ["GET", "POST", "PUT", "DELETE"]
     urls = {
-        "auths":["GET","PUT","POST","DELETE"],
-        "properties":["GET","PUT"],
-        "usages":["GET"],
-        "mfiles":["GET","POST"],
-        "mfolders":["GET","POST"],
-        "jobs":["GET"],
-        "profiles":["GET"],
+        "auths": ["GET", "PUT", "POST", "DELETE"],
+        "properties": ["GET", "PUT"],
+        "usages": ["GET"],
+        "mfiles": ["GET", "POST"],
+        "mfolders": ["GET", "POST"],
+        "jobs": ["GET"],
+        "profiles": ["GET"],
         }
 
     def folder_structure(self):
         return self._folder_structure(self.id)
 
-    def _folder_structure(self,id=None):
-        structure = self.__subfolder_structure(None,id=id)
-        return {"data":structure}
+    def _folder_structure(self, id=None):
+        structure = self.__subfolder_structure(None, id=id)
+        return {"data": structure}
 
-    def __subfolder_structure(self,mfolder,id=None):
+    def __subfolder_structure(self, mfolder, id=None):
 
         thisid = id or self.id
 
         dict = {}
         if mfolder:
             dict["data"] = mfolder.name
-            dict["attr"] = {"id":mfolder.id}
+            dict["attr"] = {"id": mfolder.id}
         else:
             dict["data"] = self.name
-            dict["attr"] = {"id":thisid,"class" : "service"}
+            dict["attr"] = {"id": thisid, "class": "service"}
 
         children = []
 
@@ -877,40 +908,56 @@ class DataService(NamedBase):
             children.append(self.__subfolder_structure(_mfolder))
 
         for mfile in self.mfile_set.filter(folder=mfolder):
-            children.append({"data": { "title":mfile.name , "icon" : mfile.thumburl() } ,"attr": { "id":mfile.id, "class" : "mfile"}  })
+            children.append(
+                {"data": {
+                    "title": mfile.name,
+                    "icon": mfile.thumburl()},
+                    "attr": {"id": mfile.id,
+                    "class": "mfile"}})
 
         dict["children"] = children
-
         return dict
-    
+
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
-        self.metrics = service_metrics
+        self.metrics = SERVICE_METRICS
 
     def get_usage(self):
-        tasksets_ids    = [ job.tasks()["taskset_id"]  for job in self.jobs()]
-        taskresults     = filter(None,[ TaskSetResult.restore(tasksetid) for tasksetid in tasksets_ids])
-        asyncs          = [ asyncresult for taskres in taskresults for asyncresult in taskres.subtasks ]
-        taskstates      = [ taskstate for taskstate in TaskState.objects.filter(task_id__in=asyncs).filter(state="SUCCESS") ]
-        usages          = [ Usage(base=self,metric=metric_jobruntime,total=taskstate.runtime,rate=0,rateCumulative=0,rateTime=taskstate.tstamp,nInProgress=0,reports=1,squares=(taskstate.runtime*taskstate.runtime)) for taskstate in taskstates ]
+        tasksets_ids = [job.tasks()["taskset_id"] for job in self.jobs()]
+        taskresults = filter(None, [TaskSetResult.restore(tasksetid)
+                                for tasksetid in tasksets_ids])
+        asyncs = [asyncresult for taskres in taskresults
+                                for asyncresult in taskres.subtasks]
+        taskstates = [taskstate for taskstate in TaskState.objects
+                            .filter(task_id__in=asyncs)
+                            .filter(state="SUCCESS")]
+        usages = [Usage(base=self, metric=METRIC_JOBRUNTIME,
+                                total=taskstate.runtime, rate=0,
+                                rateCumulative=0, rateTime=taskstate.tstamp,
+                                nInProgress=0, reports=1,
+                                squares=(
+                                    taskstate.runtime * taskstate.runtime))
+                                for taskstate in taskstates]
 
-        ids = [mfile.id for mfile in self.mfile_set.all()] + [job.id for job in self.jobs()] + [self.id]
+        ids = [mfile.id for mfile in self.mfile_set.all()] \
+                + [job.id for job in self.jobs()] + [self.id]
         usages.extend(Usage.objects.filter(base__in=ids))
         return usages
 
     def get_usage_summary(self):
-        ids = [mfile.id for mfile in self.mfile_set.all()] + [job.id for job in self.jobs()] + [self.id]
+        ids = [mfile.id for mfile in self.mfile_set.all()] \
+                + [job.id for job in self.jobs()] + [self.id]
         usages = Usage.objects.filter(base__in=ids)
         summary = self._usages_to_summary(usages)
         summary.extend(Usage.get_job_usagesummary(self.jobs()))
         return summary
 
     def subservices_url(self):
-        return reverse('subservices',args=[self.id])
+        return reverse('subservices', args=[self.id])
 
-    def create_subservice(self,name,save=True):
+    def create_subservice(self, name, save=True):
         if self.parent:
-            service = self.parent.create_subservice(name,save=False)
+            service = self.parent.create_subservice(name, save=False)
             service.parent = self
             service.save()
             return service
@@ -919,7 +966,7 @@ class DataService(NamedBase):
             service.parent = self
             service.save()
             for mfile in self.mfile_set.all():
-                newmfile = mfile.duplicate(save=False,service=service)
+                newmfile = mfile.duplicate(save=False, service=service)
                 newmfile.service = service
                 newmfile.save()
             return service
@@ -930,25 +977,25 @@ class DataService(NamedBase):
         thumbs = []
         for mfile in self.mfile_set.exclude(thumb__exact='')[:4]:
             thumbs.append(mfile.thumburl())
-        for i in range(len(thumbs),4):
-            thumbs.append(os.path.join(mediapath,"images","package-x-generic.png"))
+        for i in range(len(thumbs), 4):
+            thumbs.append(os.path.join(mediapath,
+                            "images", "package-x-generic.png"))
         return thumbs
 
-    def get(self,url, *args, **kwargs):
+    def get(self, url, *args, **kwargs):
         if url == "mfiles":
             return self.mfile_set.all()
         if url == "mfolders":
             return self.mfolder_set.all()
         if url == "jobs":
             from jobservice.models import Job
-            jobs = Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
+            mfiles = MFile.objects.filter(service=self).all()
+            jobs = Job.objects.filter(mfile__in=mfiles)
             return jobs
         if url == "profiles":
             return self.profiles.all()
 
-            profiles = static.default_profiles
-            # TODO:
-            # Return any service specific workflow
+            # TODO: Return any service specific workflow
             ret = []
             for k in profiles.keys():
                 r = {}
@@ -961,15 +1008,16 @@ class DataService(NamedBase):
 
     def jobs(self):
         from jobservice.models import Job
-        return Job.objects.filter(mfile__in=MFile.objects.filter(service=self).all())
+        mfiles = MFile.objects.filter(service=self).all()
+        return Job.objects.filter(mfile__in=mfiles)
 
-    def post(self,url, *args, **kwargs):
+    def post(self, url, *args, **kwargs):
         # TODO : Jobs
-        logging.info("%s %s " % (args, kwargs))
+        logging.info("%s %s ", args, kwargs)
         if url == "mfiles":
             if self.parent:
                 return self.parent.post(url, *args, **kwargs)
-            mfile = self.create_mfile(kwargs['name'],file=kwargs['file'])
+            mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
             for subservice in self.subservices.all():
                 subservice.__duplicate__(mfile)
             return mfile
@@ -977,34 +1025,35 @@ class DataService(NamedBase):
             return self.create_mfolder(kwargs['name'])
         return HttpResponseNotFound()
 
-    def __duplicate__(self,mfile):
-        newmfile = mfile.duplicate(save=False,service=self)
+    def __duplicate__(self, mfile):
+        newmfile = mfile.duplicate(save=False, service=self)
         newmfile.service = self
         newmfile.save()
         for subservice in self.subservices.all():
             subservice.__duplicate__(mfile)
 
-    def put(self,url, *args, **kwargs):
+    def put(self, url, *args, **kwargs):
         if self.parent:
             return self.parent.put(url, *args, **kwargs)
-        logging.info("PUT SERVICE %s %s %s " % (url, args, kwargs))
+        logging.info("PUT SERVICE %s %s %s ", url, args, kwargs)
         if url == "auths":
             for authname in kwargs.keys():
                 try:
                     auth = self.auth_set.get(authname=authname)
                     auth.setmethods(kwargs[authname])
                     auth.save()
-                    logging.info("PUT SERVICE updated auth %s " % (auth))
+                    logging.info("PUT SERVICE updated auth %s ", auth)
                     return self.auth_set.all()
                 except Auth.DoesNotExist:
-                    logging.info("PUT SERVICE Auth '%s' does not exist "% (authname))
+                    logging.info("PUT SERVICE Auth '%s' does not exist ",
+                                    (authname))
                     return HttpResponseBadRequest()
         return HttpResponseNotFound()
 
     def get_rate_for_metric(self, metric):
         if self.parent:
             return self.parent.get_rate_for_metric(metric)
-        if metric == metric_service:
+        if metric == METRIC_SERVICE:
             return 1
 
     def get_profile(self):
@@ -1015,13 +1064,13 @@ class DataService(NamedBase):
             return mp.value
         except ManagementProperty.DoesNotExist:
             return DEFAULT_PROFILE
-        
+
     def save(self):
         if not self.id:
             self.id = utils.random_id()
         super(DataService, self).save()
 
-    def clean_base(self,authid):
+    def clean_base(self, authid):
         servicedict = {}
         servicedict["name"] = self.name
         servicedict["mfile_set"] = self.mfile_set
@@ -1038,36 +1087,38 @@ class DataService(NamedBase):
     def _delete_usage_(self):
         import usage_store as usage_store
         for usage in self.usages.all():
-            usage_store._stoprecording_(usage,obj=self.container)
+            usage_store._stoprecording_(usage, obj=self.container)
 
-    def create_mfolder(self,name,parent=None):
+    def create_mfolder(self, name, parent=None):
         if self.parent:
-            return self.parent.create_mfolder(name,parent=None)
-        try :
-            MFolder.objects.get(name=name,service=self,parent=parent)
+            return self.parent.create_mfolder(name, parent=None)
+        try:
+            MFolder.objects.get(name=name, service=self, parent=parent)
             r = rc.DUPLICATE_ENTRY
             return r
         except MFolder.DoesNotExist:
-            folder = MFolder(name=name,service=self,parent=parent)
+            folder = MFolder(name=name, service=self, parent=parent)
             folder.save()
             return folder
 
-    def create_mfile(self,name,file=None,request=None,post_process=True,folder=None,duplicate_of=None):
+    def create_mfile(self, name, file=None, request=None,
+                        post_process=True, folder=None, duplicate_of=None):
 
-        logging.info("Create Mfile %s" % (self) )
+        logging.info("Create Mfile %s", self)
         service = self
 
         # Check for duplicate name
-        done=False
-        n=0
-        fn,ext = os.path.splitext(name)
+        done = False
+        n = 0
+        fn, ext = os.path.splitext(name)
         while not done:
-            existing_files = MFile.objects.filter(name=name,folder=folder,service=service)
+            existing_files = MFile.objects.filter(name=name, folder=folder,
+                                                    service=service)
             if len(existing_files) == 0:
                 done = True
             else:
-                n=n+1
-                name = "%s-%s%s" % (fn,str(n),ext)
+                n = n + 1
+                name = "%s-%s%s" % (fn, str(n), ext)
 
         length = 0
 
@@ -1075,87 +1126,81 @@ class DataService(NamedBase):
             rangestart = -1
             rangeend = -1
 
-            if request.META.has_key('CONTENT_LENGTH'):
+            if 'CONTENT_LENGTH' in request.META:
                 length = request.META['CONTENT_LENGTH']
-            elif request.META.has_key('HTTP_CONTENT_LENGTH'):
+            elif 'HTTP_CONTENT_LENGTH' in request.META:
                 length = request.META['HTTP_CONTENT_LENGTH']
 
-            if request.META.has_key('RANGE'):
-                    range_header = request.META['RANGE']
-                    byte,range=range_header.split('=')
-                    ranges = range.split('-')
+            if 'RANGE' in request.META:
+                range_header = request.META['RANGE']
+                byte, range = range_header.split('=')
+                ranges = range.split('-')
 
-                    if len(ranges) != 2:
-                        return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+                if len(ranges) != 2:
+                    return HttpResponseBadRequest(
+                            "Do not support range '%s' ", range_header)
 
-                    rangestart = int(ranges[0])
-                    rangeend = int(ranges[1])
-                    length = rangeend - rangestart
-            elif request.META.has_key('HTTP_RANGE'):
-                    range_header = request.META['HTTP_RANGE']
-                    byte,range=range_header.split('=')
-                    ranges = range.split('-')
+                rangestart = int(ranges[0])
+                rangeend = int(ranges[1])
+                length = rangeend - rangestart
+            elif 'HTTP_RANGE' in request.META:
+                range_header = request.META['HTTP_RANGE']
+                byte, range = range_header.split('=')
+                ranges = range.split('-')
 
-                    if len(ranges) != 2:
-                        return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+                if len(ranges) != 2:
+                    return HttpResponseBadRequest(
+                            "Do not support range '%s' ", range_header)
 
-                    rangestart = int(ranges[0])
-                    rangeend = int(ranges[1])
-                    length = rangeend - rangestart
-            
+                rangestart = int(ranges[0])
+                rangeend = int(ranges[1])
+                length = rangeend - rangestart
             input = request.META['wsgi.input']
             emptyfile = ContentFile('')
-            
             temp = NamedTemporaryFile()
 
             if rangestart != -1:
                 try:
-                    mf = open(temp.name,'r+b')
+                    mf = open(temp.name, 'r+b')
                     try:
                         mf.seek(rangestart)
-                        for chunk in fbuffer(input,length):
+                        for chunk in fbuffer(input, length):
                             mf.write(chunk)
                     finally:
                         mf.close()
                 except IOError:
-                    logging.error("Error writing partial content to MFile '%s'" % temp.name)
+                    logging.error(
+                        "Error writing partial content to MFile '%s'",
+                            temp.name)
                     pass
             else:
                 try:
-                    mf = open(temp.name,'wb')
+                    mf = open(temp.name, 'wb')
                     logging.info(temp.name)
                     try:
-                        for chunk in fbuffer(input,length):
+                        for chunk in fbuffer(input, length):
                             mf.write(chunk)
                     finally:
                         mf.close()
                 except IOError:
-                    logging.error("Error writing content to MFile '%s'" % temp.name)
+                    logging.error(
+                        "Error writing content to MFile '%s'", temp.name)
                     pass
-            
-            mfile = MFile(name=name,service=service,empty=True)
+            mfile = MFile(name=name, service=service, empty=True)
             mfile.file.save(name, File(temp))
 
-            # TODO : Need to check if file is done?
-            # How? perhaps a special header is needed
-            # X-MServe-Process
-            #if request.META.has_key('HTTP_X_MSERVE'):
-            #    encoding_header = request.META['HTTP_X_MSERVE']
-            #    if encoding_header.find('post-process') != -1 and post_process:
-            #        logging.info("X-MServe header found - post processing content")
-            #        mfile.post_process()
-
-        elif file==None:
+        elif file == None:
             emptyfile = ContentFile('')
-            mfile = MFile(name=name,service=service,empty=True)
+            mfile = MFile(name=name, service=service, empty=True)
             mfile.file.save(name, emptyfile)
         else:
             if type(file) == django.core.files.base.ContentFile:
-                mfile = MFile(name=name,service=service)
+                mfile = MFile(name=name, service=service)
                 mfile.file.save(name, file)
                 length = mfile.file.size
             else:
-                mfile = MFile(name=name,service=service,file=file,empty=False)
+                mfile = MFile(name=name, service=service, file=file,
+                                empty=False)
                 mfile.save()
                 length = mfile.file.size
 
@@ -1164,46 +1209,49 @@ class DataService(NamedBase):
 
         mfile.folder = folder
         mfile.size = length
-        mfile.mimetype = mimefile([mfile.id],[],{})["mimetype"]
+        mfile.mimetype = mimefile([mfile.id], [], {})["mimetype"]
         mfile.save()
 
         import usage_store as usage_store
-        usage_store.record(mfile.id,metric_ingest,int(length))
+        usage_store.record(mfile.id, METRIC_INGEST, int(length))
 
-        logging.debug("MFile creation started '%s' " % mfile.name)
-        logging.debug("Creating roles for '%s' " % mfile.name)
+        logging.debug("MFile creation started '%s' ", mfile.name)
+        logging.debug("Creating roles for '%s' ", mfile.name)
 
-        mfileauth_owner = Auth(base=mfile,authname="owner")
+        mfileauth_owner = Auth(base=mfile, authname="owner")
         mfileauth_owner.setroles(['mfileowner'])
         mfileauth_owner.save()
-        
         if post_process:
             mfile.create_workflow_job("ingest")
 
         return mfile
 
+
 class RemoteMServeService(models.Model):
-    url     = models.URLField()
-    name    = models.CharField(max_length=200)
+    url = models.URLField()
+    name = models.CharField(max_length=200)
 
     def __unicode__(self):
         return "MServe : %s" % (self.name)
 
+
 class MFolder(NamedBase):
-    service  = models.ForeignKey(DataService)
-    parent   = models.ForeignKey('self',null=True)
+    service = models.ForeignKey(DataService)
+    parent = models.ForeignKey('self', null=True)
 
-    def duplicate(self,name,parent):
+    def duplicate(self, name, parent):
 
-        new_mfolder = MFolder(name=name,service=self.service,parent=parent)
+        new_mfolder = MFolder(name=name, service=self.service, parent=parent)
         new_mfolder.save()
 
         for mfile in self.mfile_set.all():
-            new_mfile = MFile(name=mfile.name, file=mfile.file, folder=new_mfolder, mimetype=mfile.mimetype, empty=False, service=mfile.service )
+            new_mfile = MFile(name=mfile.name, file=mfile.file,
+                                folder=new_mfolder, mimetype=mfile.mimetype,
+                                empty=False, service=mfile.service)
             new_mfile.save()
 
         for submfolder in self.mfolder_set.all():
-            new_submfolder = submfolder.duplicate(submfolder.name,new_mfolder)
+            new_submfolder = submfolder.duplicate(submfolder.name, new_mfolder)
             new_submfolder.save()
 
         new_mfolder.save()
@@ -1214,7 +1262,7 @@ class MFolder(NamedBase):
 
     def get_rel_path(self):
         if self.parent is not None:
-            return os.path.join(self.parent.get_rel_path(),self.name)
+            return os.path.join(self.parent.get_rel_path(), self.name)
         else:
             return self.name
 
@@ -1223,34 +1271,40 @@ class MFolder(NamedBase):
             self.id = utils.random_id()
         super(MFolder, self).save()
 
+
 class MFile(NamedBase):
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
-    empty           = models.BooleanField(default=False)
-    service         = models.ForeignKey(DataService)
-    folder          = models.ForeignKey(MFolder,null=True)
-    file            = models.FileField(upload_to=utils.mfile_upload_to,blank=True,null=True,storage=storage.getdiscstorage())
-    mimetype        = models.CharField(max_length=200,blank=True,null=True)
-    checksum        = models.CharField(max_length=32, blank=True, null=True)
-    size            = models.BigIntegerField(default=0)
-    thumb           = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
-    poster          = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getposterstorage())
-    proxy           = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getproxystorage())
-    created         = models.DateTimeField(auto_now_add=True)
-    updated         = models.DateTimeField(auto_now=True)
-    duplicate_of    = models.ForeignKey('MFile',null=True)
+    empty = models.BooleanField(default=False)
+    service = models.ForeignKey(DataService)
+    folder = models.ForeignKey(MFolder, null=True)
+    file = models.FileField(upload_to=utils.mfile_upload_to,
+                        blank=True, null=True,
+                        storage=storage.getdiscstorage())
+    mimetype = models.CharField(max_length=200, blank=True, null=True)
+    checksum = models.CharField(max_length=32, blank=True, null=True)
+    size = models.BigIntegerField(default=0)
+    thumb = models.ImageField(upload_to=utils.create_filename,
+                            null=True, storage=storage.getthumbstorage())
+    poster = models.ImageField(upload_to=utils.create_filename,
+                            null=True, storage=storage.getposterstorage())
+    proxy = models.ImageField(upload_to=utils.create_filename,
+                            null=True, storage=storage.getproxystorage())
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    duplicate_of = models.ForeignKey('MFile', null=True)
 
-    methods = ["GET","POST","PUT","DELETE"]
+    methods = ["GET", "POST", "PUT", "DELETE"]
     urls = {
-            "auths":["GET","PUT","POST","DELETE"],
-            "properties":[],
-            "usages":["GET"],
-            "file": ["GET","PUT","DELETE"],
-            "workflows": ["GET","POST"],
-            "jobs":["GET","POST"],
+            "auths": ["GET", "PUT", "POST", "DELETE"],
+            "properties": [],
+            "usages": ["GET"],
+            "file": ["GET", "PUT", "DELETE"],
+            "workflows": ["GET", "POST"],
+            "jobs": ["GET", "POST"],
             }
 
     class Meta:
-        ordering = ('-created','name')
+        ordering = ('-created', 'name')
 
     def __unicode__(self):
         return "MFile  %s" % (self.name.encode("utf-8"))
@@ -1259,17 +1313,17 @@ class MFile(NamedBase):
         return "MFile  %s" % (self.name.encode("utf-8"))
 
     def get_download_path(self):
-        return reverse('mfile_download',args=[self.id])
-    
-    def get_upload_thumb_path(self):
-        return reverse('mfile_upload_thumb',args=[self.id])
+        return reverse('mfile_download', args=[self.id])
+
+    def get_upload_settings(self):
+        return reverse('mfile_upload_thumb', args=[self.id])
 
     def get_upload_poster_path(self):
-        return reverse('mfile_upload_poster',args=[self.id])
+        return reverse('mfile_upload_poster', args=[self.id])
 
     def get_upload_proxy_path(self):
-        return reverse('mfile_upload_proxy',args=[self.id])
-    
+        return reverse('mfile_upload_proxy', args=[self.id])
+
     def delete(self):
         if self.duplicate_of:
             self.duplicate_of.delete()
@@ -1278,19 +1332,19 @@ class MFile(NamedBase):
 
     def __init__(self, *args, **kwargs):
         super(MFile, self).__init__(*args, **kwargs)
-        self.metrics = mfile_metrics
+        self.metrics = MFILE_METRICS
 
     def get_usage(self):
-        ids=[self.id]
+        ids = [self.id]
         usages = Usage.objects.filter(base__in=ids)
         return usages
 
     def get_usage_summary(self):
-        ids=[self.id]
+        ids = [self.id]
         usages = Usage.objects.filter(base__in=ids)
         return self._usages_to_summary(usages)
 
-    def get(self,url, *args, **kwargs):
+    def get(self, url, *args, **kwargs):
         if url == "jobs":
             return self.job_set.all()
         elif url == "file":
@@ -1302,25 +1356,24 @@ class MFile(NamedBase):
                 return HttpResponseNotFound()
         elif url == "" or url == None:
             return self
-
         return None
 
-    def post(self,url, *args, **kwargs):
+    def post(self, url, *args, **kwargs):
         if url == "jobs":
-            if kwargs.has_key('name'):
+            if 'name' in kwargs:
                 name = kwargs['name']
                 job = self.create_job(name)
                 return job
             return HttpResponseBadRequest()
         if url == "workflows":
-            if kwargs.has_key('name'):
+            if 'name' in kwargs:
                 name = kwargs['name']
                 job = self.create_workflow_job(name)
                 return job
             return HttpResponseBadRequest("No workflow name specified")
         return HttpResponseBadRequest()
 
-    def put(self,url, *args, **kwargs):
+    def put(self, url, *args, **kwargs):
         if url == "auths":
             for authname in kwargs.keys():
                 try:
@@ -1331,14 +1384,15 @@ class MFile(NamedBase):
                 except Auth.DoesNotExist:
                     return HttpResponseBadRequest()
         if url == None:
-            if kwargs.has_key('file'):
+            if 'file' in kwargs:
                 file = kwargs['file']
-                self.update_mfile(self.name,file=file,post_process=True,folder=self.folder)
+                self.update_mfile(self.name, file=file, post_process=True,
+                                    folder=self.folder)
                 return self
             return HttpResponseBadRequest()
         return HttpResponseNotFound()
 
-    def clean_base(self,authid):
+    def clean_base(self, authid):
         mfiledict = {}
         mfiledict["name"] = self.name
         mfiledict["file"] = self.file
@@ -1362,76 +1416,80 @@ class MFile(NamedBase):
 
         service = mfile.service
         container = service.container
-        logging.info("Finding limit for %s " % (mfile.name))
+        logging.info("Finding limit for %s ", mfile.name)
         accessspeed = DEFAULT_ACCESS_SPEED
         try:
-            prop = ManagementProperty.objects.get(base=service,property="accessspeed")
+            prop = ManagementProperty.objects.get(base=service,
+                                                    property="accessspeed")
             accessspeed = prop.value
-            logging.info("Limit set from service property to %s for %s " % (accessspeed,mfile.name))
+            logging.info("Limit set from service property to %s for %s",
+                            accessspeed, mfile.name)
         except ObjectDoesNotExist:
             try:
-                prop = ManagementProperty.objects.get(base=container,property="accessspeed")
+                prop = ManagementProperty.objects.get(base=container,
+                            property="accessspeed")
                 accessspeed = prop.value
-                logging.info("Limit set from container property to %s for %s " % (accessspeed,mfile.name))
+                logging.info("Limit set from container property to %s for %s",
+                                accessspeed, mfile.name)
             except ObjectDoesNotExist:
                 pass
-            
-        file=mfile.file
 
-        sigret = mfile_get_signal.send(sender=self, mfile=mfile)
+        file = mfile.file
 
-        for k,v in sigret:
-            logging.info("Signal %s returned %s " % (k,v))
+        sigret = MFILE_GET_SIGNAL.send(sender=self, mfile=mfile)
 
+        for k, v in sigret:
+            logging.info("Signal %s returned %s ", k, v)
 
         import usage_store as usage_store
-        
+
         check1 = mfile.checksum
 
         if check1 == "" or check1 == None:
-            logging.warn("Mfile %s has no checksum - will return file without check" % self )
+            logging.warn("Mfile %s has no checksum - will return file \
+                            without check", self)
         else:
             check2 = utils.md5_for_file(mfile.file)
             if check1 == check2:
-                logging.info("Verification of %s on read ok" % mfile)
+                logging.info("Verification of %s on read ok", mfile)
             else:
-                logging.info("Verification of %s on read FAILED" % mfile)
-                usage_store.record(mfile.id,metric_corruption,1)
+                logging.info("Verification of %s on read FAILED", mfile)
+                usage_store.record(mfile.id, metric_corruption, 1)
                 try:
                     backup = BackupFile.objects.get(mfile=mfile)
                     check3 = mfile.checksum
                     if os.path.exists(backup.file.path):
                         check4 = utils.md5_for_file(backup.file)
-                        if(check3==check4):
+                        if(check3 == check4):
                             shutil.copy(backup.file.path, mfile.file.path)
                             file = backup.file
                         else:
-                            logging.info("The file %s has been lost" % mfile)
-                            usage_store.record(mfile.id,metric_dataloss,mfile.size)
+                            logging.info("The file %s has been lost", mfile)
+                            usage_store.record(mfile.id,
+                                                METRIC_DATALOSS, mfile.size)
                             return rc.NOT_HERE
                 except BackupFile.DoesNotExist as e:
-                    logging.info("There is no backup file for %s "%mfile)
+                    logging.info("There is no backup file for %s ", mfile)
                     return rc.NOT_HERE
 
+        file = mfile.file
 
-        file=mfile.file
-
-        mfile_get_signal.send(sender=self, mfile=mfile)
+        MFILE_GET_SIGNAL.send(sender=self, mfile=mfile)
 
         if accessspeed == "unlimited":
             dlfoldername = "dl"
         else:
-            dlfoldername = os.path.join("dl",accessspeed)
+            dlfoldername = os.path.join("dl", accessspeed)
 
         path = unicode(file)
 
-        redirecturl = utils.gen_sec_link_orig(file.name,dlfoldername)
-        logging.info("%s %s "%(file.name,dlfoldername))
+        redirecturl = utils.gen_sec_link_orig(file.name, dlfoldername)
+        logging.info("%s %s ", file.name, dlfoldername)
         redirecturl = redirecturl[1:]
 
         SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
 
-        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,path)
+        fullfilepath = os.path.join(SECDOWNLOAD_ROOT, dlfoldername, path)
         fullfilepathfolder = os.path.dirname(fullfilepath)
         mfilefilepath = file.path
 
@@ -1440,23 +1498,25 @@ class MFile(NamedBase):
 
         if not os.path.exists(fullfilepath):
             logging.info("Linking ")
-            logging.info("   %s " % mfilefilepath )
-            logging.info("to %s " % fullfilepath )
+            logging.info("   %s ", mfilefilepath)
+            logging.info("to %s ", fullfilepath)
             try:
-                os.link(mfilefilepath,fullfilepath)
+                os.link(mfilefilepath, fullfilepath)
             except Exception as e:
-                logging.info("Caught error linking file, trying copy. %s" % str(e))
-                shutil.copy(mfilefilepath,fullfilepath)
+                logging.info("Caught error linking file, trying copy. %s", \
+                                str(e))
+                shutil.copy(mfilefilepath, fullfilepath)
 
         import dataservice.models as models
-        
-        usage_store.record(mfile.id,models.metric_access,mfile.size)
 
-        redirecturl = os.path.join("/",redirecturl)
+        usage_store.record(mfile.id, METRIC_ACCESS, mfile.size)
+
+        redirecturl = os.path.join("/", redirecturl)
         return HttpResponseRedirect(redirecturl)
 
-    def update_mfile(self,name,file=None,request=None,post_process=True,folder=None,duplicate_of=None):
-        logging.info("Update Mfile %s" % (self) )
+    def update_mfile(self, name, file=None, request=None, post_process=True,
+                        folder=None, duplicate_of=None):
+        logging.info("Update Mfile %s", self)
         length = 0
 
         if request:
@@ -1465,42 +1525,44 @@ class MFile(NamedBase):
             rangestart = -1
             rangeend = -1
 
-            if request.META.has_key('CONTENT_LENGTH'):
+            if 'CONTENT_LENGTH' in request.META:
                 length = request.META['CONTENT_LENGTH']
-            elif request.META.has_key('HTTP_CONTENT_LENGTH'):
+            elif 'HTTP_CONTENT_LENGTH' in request.META:
                 length = request.META['HTTP_CONTENT_LENGTH']
 
-            if request.META.has_key('RANGE'):
-                    range_header = request.META['RANGE']
-                    byte,range=range_header.split('=')
-                    ranges = range.split('-')
+            if 'RANGE' in request.META:
+                range_header = request.META['RANGE']
+                byte, range = range_header.split('=')
+                ranges = range.split('-')
 
-                    if len(ranges) != 2:
-                        return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+                if len(ranges) != 2:
+                    return HttpResponseBadRequest(
+                            "Do not support range '%s' ", range_header)
 
-                    rangestart = int(ranges[0])
-                    rangeend = int(ranges[1])
-                    length = rangeend - rangestart
-                    ranged = true
-            elif request.META.has_key('HTTP_RANGE'):
-                    range_header = request.META['HTTP_RANGE']
-                    byte,range=range_header.split('=')
-                    ranges = range.split('-')
+                rangestart = int(ranges[0])
+                rangeend = int(ranges[1])
+                length = rangeend - rangestart
+                ranged = true
+            elif 'HTTP_RANGE' in request.META:
+                range_header = request.META['HTTP_RANGE']
+                byte, range = range_header.split('=')
+                ranges = range.split('-')
 
-                    if len(ranges) != 2:
-                        return HttpResponseBadRequest("Do not support range '%s' "% range_header)
+                if len(ranges) != 2:
+                    return HttpResponseBadRequest(
+                            "Do not support range '%s' ", range_header)
 
-                    rangestart = int(ranges[0])
-                    rangeend = int(ranges[1])
-                    length = rangeend - rangestart
-                    ranged = True
+                rangestart = int(ranges[0])
+                rangeend = int(ranges[1])
+                length = rangeend - rangestart
+                ranged = True
 
-            if request.META.has_key('TRANSFER_ENCODING'):
+            if 'TRANSFER_ENCODING' in request.META:
                 encoding_header = request.META['TRANSFER_ENCODING']
                 if encoding_header.find('chunked') != -1:
                     chunked = True
 
-            if request.META.has_key('HTTP_TRANSFER_ENCODING'):
+            if 'HTTP_TRANSFER_ENCODING' in request.META:
                 encoding_header = request.META['HTTP_TRANSFER_ENCODING']
                 if encoding_header.find('chunked') != -1:
                     chunked = True
@@ -1512,27 +1574,30 @@ class MFile(NamedBase):
 
             if rangestart != -1:
                 try:
-                    mf = open(self.file.path,'r+b')
+                    mf = open(self.file.path, 'r+b')
                     try:
                         mf.seek(rangestart)
-                        for chunk in fbuffer(input,length):
+                        for chunk in fbuffer(input, length):
                             mf.write(chunk)
                     finally:
                         mf.close()
                 except IOError:
-                    logging.error("Error writing partial content to MFile '%s'" % self.file.path)
+                    logging.error(
+                        "Error writing partial content to MFile '%s'",
+                                    self.file.path)
                     pass
             else:
                 try:
-                    mf = open(self.file.path,'wb')
+                    mf = open(self.file.path, 'wb')
                     logging.info(self.file.path)
                     try:
-                        for chunk in fbuffer(input,length):
+                        for chunk in fbuffer(input, length):
                             mf.write(chunk)
                     finally:
                         mf.close()
                 except IOError:
-                    logging.error("Error writing content to MFile '%s'" % self.file.path)
+                    logging.error("Error writing content to MFile '%s'",
+                                    self.file.path)
                     pass
 
             self.save()
@@ -1551,128 +1616,139 @@ class MFile(NamedBase):
         self.name = name
         self.folder = folder
         self.size = length
-        self.mimetype = mimefile([self.id],[],{})["mimetype"]
+        self.mimetype = mimefile([self.id], [], {})["mimetype"]
         self.save()
 
         import usage_store as usage_store
-        usage_store.record(self.id,metric_ingest,int(length))
+        usage_store.record(self.id, METRIC_INGEST, int(length))
 
-        logging.info("MFile update '%s' " % self.name)
-        logging.info("MFile PATH %s " % self.file.path)
-        logging.info("MFile size %s " % self.size)
+        logging.info("MFile update '%s' ", self.name)
+        logging.info("MFile PATH %s ", self.file.path)
+        logging.info("MFile size %s ", self.size)
 
         if post_process:
             self.create_workflow_job("update")
 
         return self
 
-    def create_job(self,name):
+    def create_job(self, name):
         from jobservice.models import Job
-        job = Job(name=name,mfile=self)
+        job = Job(name=name, mfile=self)
         job.save()
         return job
 
-    def duplicate(self,save=True,service=None):
+    def duplicate(self, save=True, service=None):
         if service:
-            new_mfile = service.create_mfile(self.name,file=self.file,folder=self.folder,duplicate_of=self)
+            new_mfile = service.create_mfile(self.name, file=self.file,
+                                            folder=self.folder,
+                                            duplicate_of=self)
         else:
-            new_mfile = self.service.create_mfile(self.name,file=self.file,folder=self.folder,duplicate_of=self)
+            new_mfile = self.service.create_mfile(self.name, file=self.file,
+                                            folder=self.folder,
+                                            duplicate_of=self)
         if save:
             new_mfile.save()
         return new_mfile
 
     def create_read_only_auth(self):
-        mfileauth_ro = Auth(base=self,authname="%s Read Only"%self)
+        mfileauth_ro = Auth(base=self, authname="%s Read Only" % self)
         mfileauth_ro.setroles(["mfilereadonly"])
         mfileauth_ro.save()
         return mfileauth_ro
 
-    def create_workflow_job(self,name):
+    def create_workflow_job(self, name):
         if self.file:
 
-            self.mimetype = mimefile([self.id],[],{})["mimetype"]
+            self.mimetype = mimefile([self.id], [], {})["mimetype"]
             self.save()
 
             profile_name = self.service.get_profile()
 
-            logging.info("Create workflow with profile %s " % profile_name)
+            logging.info("Create workflow with profile %s ", profile_name)
 
-            profile = self.service.profiles.get(service=self.service,name=profile_name)
+            profile = self.service.profiles.get(service=self.service,
+                                                    name=profile_name)
 
             workflow_tasks = profile.workflows.get(name=name).tasks.all()
 
-            workflow_task_config = profiles[profile_name][name]
+            workflow_task_config = static.default_profiles[profile_name][name]
 
             in_tasks = []
 
             from jobservice.models import Job
             from jobservice.models import JobOutput
 
-            job = Job(name="%s %s Job"%(self.name,name),mfile=self)
+            job = Job(name="%s %s Job" % (self.name, name), mfile=self)
             job.save()
 
             for workflow_task in workflow_tasks:
-                    task_name = workflow_task.task_name
-                    logging.debug("Processing task %s " % task_name )
+                task_name = workflow_task.task_name
+                logging.debug("Processing task %s ", task_name)
 
-                    if workflow_task.condition != None and workflow_task.condition != "":
-                        condition = workflow_task.condition
-                        logging.debug("Task has condition %s " % condition )
+                if workflow_task.condition != None \
+                        and workflow_task.condition != "":
+                    condition = workflow_task.condition
+                    logging.debug("Task has condition %s ", condition)
 
-                        passed = eval(condition,{"mfile":self})
+                    passed = eval(condition, {"mfile": self})
 
-                        if not passed:
-                            continue
+                    if not passed:
+                        continue
 
-                    args = {}
-                    if workflow_task.args is not None and workflow_task.args != "":
-                        args = eval(workflow_task.args)
+                args = {}
+                if workflow_task.args is not None \
+                        and workflow_task.args != "":
+                    args = eval(workflow_task.args)
 
-                    output_arr = []
+                output_arr = []
 
-                    from jobservice.static import job_descriptions
+                from jobservice.static import job_descriptions
 
-                    if job_descriptions.has_key(task_name):
-                        job_description = job_descriptions[task_name]
+                if task_name in job_descriptions:
+                    job_description = job_descriptions[task_name]
 
-                        nboutputs = job_description['nboutputs']
+                    nboutputs = job_description['nboutputs']
 
-                        for i in range(0,nboutputs):
-                            outputmimetype = job_description["output-%s"%i]["mimetype"]
-                            output = JobOutput(name="Output%s-%s"%(i,task_name),job=job,mimetype=outputmimetype)
-                            output.save()
-                            output_arr.append(output.id)
+                    for i in range(0, nboutputs):
+                        outputmimetype = \
+                            job_description["output-%s" % i]["mimetype"]
+                        output = JobOutput(name="Output%s-%s" % (i, task_name),
+                                            job=job, mimetype=outputmimetype)
+                        output.save()
+                        output_arr.append(output.id)
 
-                    import random
+                import random
 
-                    prioritise = self.service.priority
-                    q = "normal.%s"% (task_name)
-                    if prioritise:
-                        q = "priority.%s"% (task_name)
-                    kwargs={"routing_key":q}
-                    task = subtask(task=task_name,args=[[self.id],output_arr,args],options=kwargs)
-                    logging.info("Task created %s " % task )
+                prioritise = self.service.priority
+                q = "normal.%s" % (task_name)
+                if prioritise:
+                    q = "priority.%s" % (task_name)
+                kwargs = {"routing_key": q}
+                task = subtask(task=task_name,
+                                args=[[self.id], output_arr, args],
+                                options=kwargs)
+                logging.info("Task created %s ", task)
 
-                    in_tasks.append(task)
+                in_tasks.append(task)
 
-            logging.info("%s" % in_tasks)
+            logging.info("%s", in_tasks)
 
             ts = TaskSet(tasks=in_tasks)
             tsr = ts.apply_async()
             tsr.save()
 
-            job.taskset_id=tsr.taskset_id
+            job.taskset_id = tsr.taskset_id
             job.save()
 
             return job
 
         else:
             # Return a job with no tasks for an empty file
-            job = Job(name="%s Empty %s Job"%(self.name,name),mfile=self)
+            job = Job(name="%s Empty %s Job" % (self.name, name), mfile=self)
             job.save()
             ts = TaskSet(tasks=[])
             tsr.save()
-            job.taskset_id=tsr.taskset_id
+            job.taskset_id = tsr.taskset_id
             job.save()
             return job
 
@@ -1681,68 +1757,72 @@ class MFile(NamedBase):
 
     def get_rel_path(self):
         if self.folder is not None:
-            return os.path.join(self.folder.get_rel_path(),self.name)
+            return os.path.join(self.folder.get_rel_path(), self.name)
         else:
             return self.name
 
     def get_rate_for_metric(self, metric):
-        if metric == metric_mfile:
+        if metric == METRIC_MFILE:
             return 1
         if not self.empty:
-            if metric == metric_disc:
+            if metric == METRIC_DISC:
                 return self.size
 
     def get_value_for_metric(self, metric):
         if not self.empty:
-            if metric == metric_disc_space:
+            if metric == METRIC_DISC_SPACE:
                 return self.size
 
     def get_updated_value_for_metric(self, metric):
         if not self.empty:
-            if metric == metric_disc_space:
+            if metric == METRIC_DISC_SPACE:
                 return self.size
 
     def get_updated_rate_for_metric(self, metric):
-        if metric == metric_mfile:
+        if metric == METRIC_MFILE:
             return 1
         if not self.empty:
-            if metric == metric_disc:
+            if metric == METRIC_DISC:
                 return self.size
 
     def thumburl(self):
         if self.thumb and self.thumb != "":
-            return "%s%s" % (thumbpath,self.thumb)
+            return "%s%s" % (settings.THUMBPATH, self.thumb)
         elif self.mimetype:
             if self.name.endswith(".blend"):
-                return os.path.join(mediapath,"images/blender.png")
+                return os.path.join(mediapath, "images/blender.png")
             if self.mimetype.startswith("image"):
-                return os.path.join(mediapath,"images","image-x-generic.png")
+                return os.path.join(mediapath, "images", "image-x-generic.png")
             if self.mimetype.startswith("text"):
-                return os.path.join(mediapath,"images","text-x-generic.png")
-        return os.path.join(mediapath,"images","package-x-generic.png")
+                return os.path.join(mediapath, "images", "text-x-generic.png")
+        return os.path.join(mediapath, "images", "package-x-generic.png")
 
     def posterurl(self):
         if self.poster and self.poster != "":
-            return "%s%s" % (thumbpath,self.poster)
+            return "%s%s" % (settings.THUMBPATH, self.poster)
         else:
             if self.mimetype:
                 if self.mimetype.startswith("image"):
-                    return os.path.join(mediapath,"images","image-x-generic.png")
+                    return os.path.join(mediapath,
+                                        "images", "image-x-generic.png")
                 if self.mimetype.startswith("text"):
-                    return os.path.join(mediapath,"images","text-x-generic.png")
-        return os.path.join(mediapath,"images","package-x-generic.png")
+                    return os.path.join(mediapath,
+                                        "images", "text-x-generic.png")
+        return os.path.join(mediapath, "images", "package-x-generic.png")
 
     def proxyurl(self):
         if self.proxy and self.proxy != "":
-            return "%s%s" % (thumbpath,self.proxy)
+            return "%s%s" % (settings.THUMBPATH, self.proxy)
         else:
             return ""
             if self.mimetype:
                 if self.mimetype.startswith("image"):
-                    return os.path.join(mediapath,"images","image-x-generic.png")
+                    return os.path.join(mediapath,
+                            "images", "image-x-generic.png")
                 if self.mimetype.startswith("text"):
-                    return os.path.join(mediapath,"images","text-x-generic.png")
-        return os.path.join(mediapath,"images","package-x-generic.png")
+                    return os.path.join(mediapath,
+                            "images", "text-x-generic.png")
+        return os.path.join(mediapath, "images", "package-x-generic.png")
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -1757,41 +1837,48 @@ class MFile(NamedBase):
     def _delete_usage_(self):
         import usage_store as usage_store
         for usage in self.usages.all():
-            usage_store._stoprecording_(usage,obj=self.service)
+            usage_store._stoprecording_(usage, obj=self.service)
 
-def pre_delete_handler_mfile( sender, instance=False, **kwargs):
+
+def pre_delete_handler_mfile(sender, instance=False, **kwargs):
     mfiles = MFile.objects.filter(duplicate_of=instance.pk)
-    logging.info("%s %s Has duplicates %s" % (instance,instance.id, mfiles) )
-
-    if instance.duplicate_of:
-        logging.info("%s %s IS DUP OF %s" % (instance,instance.id, instance.duplicate_of.id) )
-    #mfiles.delete()
+    logging.info("%s %s Has duplicates %s", instance, instance.id, mfiles)
     if instance.duplicate_of:
         dup = MFile.objects.filter(duplicate_of=instance.duplicate_of.pk)
         #dup.delete()
     instance._delete_usage_()
 
-def pre_delete_handler( sender, instance=False, **kwargs):
+
+def pre_delete_handler(sender, instance=False, **kwargs):
     instance._delete_usage_()
 
-pre_delete.connect(pre_delete_handler_mfile, sender=MFile, dispatch_uid="dataservice.models")
-pre_delete.connect(pre_delete_handler, sender=DataService, dispatch_uid="dataservice.models")
-pre_delete.connect(pre_delete_handler, sender=HostingContainer, dispatch_uid="dataservice.models")
+pre_delete.connect(pre_delete_handler_mfile, sender=MFile,
+                    dispatch_uid="dataservice.models")
+pre_delete.connect(pre_delete_handler, sender=DataService,
+                    dispatch_uid="dataservice.models")
+pre_delete.connect(pre_delete_handler, sender=HostingContainer,
+                    dispatch_uid="dataservice.models")
 
-def post_init_handler( sender, instance=False, **kwargs):
+
+def post_init_handler(sender, instance=False, **kwargs):
     pass
 
-post_init.connect(post_init_handler, sender=MFile, dispatch_uid="dataservice.models")
+post_init.connect(post_init_handler, sender=MFile,
+                    dispatch_uid="dataservice.models")
 
-def post_save_handler( sender, instance=False, **kwargs):
+
+def post_save_handler(sender, instance=False, **kwargs):
     pass
 
-post_save.connect(post_save_handler, sender=MFile, dispatch_uid="dataservice.models")
+post_save.connect(post_save_handler, sender=MFile,
+                    dispatch_uid="dataservice.models")
+
 
 class BackupFile(NamedBase):
     mfile = models.ForeignKey(MFile)
-    file = models.FileField(upload_to=utils.create_filename,storage=storage.gettapestorage())
-    mimetype = models.CharField(max_length=200,blank=True,null=True)
+    file = models.FileField(upload_to=utils.create_filename,
+                            storage=storage.gettapestorage())
+    mimetype = models.CharField(max_length=200, blank=True, null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
 
     def __init__(self, *args, **kwargs):
@@ -1799,18 +1886,18 @@ class BackupFile(NamedBase):
         self.metrics = backupfile_metrics
 
     def get_upload_path(self):
-        return reverse('backup_upload',args=[self.id])
+        return reverse('backup_upload', args=[self.id])
 
     def get_value_for_metric(self, metric):
-        if metric == metric_backupfile:
+        if metric == METRIC_BACKUPFILE:
             return 1
         if self.file:
-            if metric == metric_disc_space:
+            if metric == METRIC_DISC_SPACE:
                 return self.file.size
 
     def get_rate_for_metric(self, metric):
         if self.file:
-            if metric == metric_disc:
+            if metric == METRIC_DISC:
                 return self.file.size
 
     def save(self):
@@ -1818,28 +1905,35 @@ class BackupFile(NamedBase):
             self.id = utils.random_id()
         super(BackupFile, self).save()
 
+
 class ManagementProperty(models.Model):
-    base        = models.ForeignKey(NamedBase)
-    property    = models.CharField(max_length=200)
-    value       = models.CharField(max_length=200)
+    base = models.ForeignKey(NamedBase)
+    property = models.CharField(max_length=200)
+    value = models.CharField(max_length=200)
 
     def __unicode__(self):
-        return "Management Property %s:%s" % (self.property,self.value)
+        return "Management Property %s:%s" % (self.property, self.value)
 
     def values(self):
         if self.property == "accessspeed":
-            return {"type" : "enum", "choices" : ["100","1000","10000","100000","1000000", "100000000","unlimited"] }
+            return {
+                "type": "enum",
+                "choices":
+                    ["100", "1000", "10000",
+                        "100000", "1000000", "100000000", "unlimited"]}
         elif self.property == "profile":
-            return {"type" : "enum", "choices" : profiles.keys() }
+            return {"type": "enum",
+                    "choices": static.default_profiles.keys()}
         else:
             return {}
 
+
 class Auth(Base):
-    authname    = models.CharField(max_length=50)
-    base        = models.ForeignKey(NamedBase, blank=True, null=True)
-    parent      = models.ForeignKey('Auth', blank=True, null=True)
-    usages      = models.ManyToManyField("Usage")
-    roles_csv   = models.CharField(max_length=200)
+    authname = models.CharField(max_length=50)
+    base = models.ForeignKey(NamedBase, blank=True, null=True)
+    parent = models.ForeignKey('Auth', blank=True, null=True)
+    usages = models.ManyToManyField("Usage")
+    roles_csv = models.CharField(max_length=200)
 
     def __init__(self, *args, **kwargs):
         super(Auth, self).__init__(*args, **kwargs)
@@ -1847,7 +1941,7 @@ class Auth(Base):
     def geturls(self):
         urls = {}
         for rolename in self.getroles():
-            urls.update(roles[rolename]['urls'])
+            urls.update(static.default_roles[rolename]['urls'])
         return urls
 
     def basename(self):
@@ -1858,59 +1952,62 @@ class Auth(Base):
             ds = DataService.objects.get(id=self.base.id)
             if len(ds.mfile_set.all()) > 0:
                 return list(ds.mfile_set.all())[0].thumburl()
-        return os.path.join(mediapath,"images","package-x-generic.png")
-    
+        return os.path.join(mediapath, "images", "package-x-generic.png")
+
     def getroles(self):
         return self.roles_csv.split(",")
 
-    def setroles(self,new_roles):
+    def setroles(self, new_roles):
         for rolename in new_roles:
-            if rolename not in roles.keys():
-                raise Exception("Rolename '%s' not valid " %rolename)
+            if rolename not in static.default_roles.keys():
+                raise Exception("Rolename '%s' not valid " % rolename)
         self.roles_csv = ",".join(new_roles)
 
     def getmethods(self):
         methods = []
         for rolename in self.getroles():
-            methods = methods + roles[rolename]['methods']
+            methods = methods + static.default_roles[rolename]['methods']
         return methods
 
     def check(self, url, method):
-        if url==None:
+        if url == None:
             if self.base:
-                if method in self.getmethods() and self.base.get_real_base().check(url,method):
-                    return True,None
+                if method in self.getmethods() and self.base.get_real_base()\
+                        .check(url, method):
+                    return True, None
                 else:
-                    return False,HttpResponseForbidden()
+                    return False, HttpResponseForbidden()
             else:
-                if method in self.getmethods() and self.parent.get_real_base().check(url,method):
-                    return True,None
+                if method in self.getmethods() and self.parent.get_real_base()\
+                        .check(url, method):
+                    return True, None
                 else:
-                    return False,HttpResponseForbidden()
+                    return False, HttpResponseForbidden()
         else:
 
             if self.base:
-                passed=False
+                passed = False
                 if url != "base":
-                    passed,error = self.base.get_real_base().check(url,method)
+                    passed, error = self.base.get_real_base()\
+                                        .check(url, method)
                 else:
                     passed = True
 
-                if self.geturls().has_key(url)\
-                and method in self.geturls()[url]\
-                and passed:
-                    return True,None
+                if url in self.geturls()\
+                        and method in self.geturls()[url]\
+                        and passed:
+                    return True, None
                 else:
-                    return False,HttpResponseForbidden()
+                    return False, HttpResponseForbidden()
             else:
-                passed,error = self.parent.get_real_base().check(url,method)
+                passed, error = self.parent.get_real_base().check(url, method)
 
-                if self.geturls().has_key(url)\
-                and method in self.geturls()[url]\
-                and passed:
-                    return True,None
+                if url in  self.geturls()\
+                        and method in self.geturls()[url]\
+                        and passed:
+                    return True, None
                 else:
-                    return False,HttpResponseForbidden()
+                    return False, HttpResponseForbidden()
 
     def get_usage(self):
         base = self.get_real_base()
@@ -1920,19 +2017,19 @@ class Auth(Base):
         base = self.get_real_base()
         return base.get_usage_summary()
 
-    def get(self,url, *args, **kwargs):
-        logging.info("AUTH %s %s " % (self,url) )
+    def get(self, url, *args, **kwargs):
+        logging.info("AUTH %s %s ", self.authname, url)
         if not url:
             return self
         if url == "base":
             return self.get_real_base().clean_base(self.id)
-        return self.base.get_real_base().do("GET",url)
+        return self.base.get_real_base().do("GET", url)
 
-    def put(self,url, *args, **kwargs):
-        return self.get_real_base().do("PUT",url, *args, **kwargs)
+    def put(self, url, *args, **kwargs):
+        return self.get_real_base().do("PUT", url, *args, **kwargs)
 
-    def post(self,url, *args, **kwargs):
-        return self.get_real_base().do("POST",url, *args, **kwargs)
+    def post(self, url, *args, **kwargs):
+        return self.get_real_base().do("POST", url, *args, **kwargs)
 
     def save(self):
         if not self.id:
@@ -1942,10 +2039,16 @@ class Auth(Base):
         super(Auth, self).save()
 
     def __unicode__(self):
-        return "Auth: authname=%s base=%s roles=%s " % (self.authname,self.base,self.getroles());
+        return "Auth: authname=%s base=%s roles=%s ",\
+                    (self.authname, self.base, self.getroles())
         if self.base:
-            return "Auth: authname=%s base=%s methods=%s urls=%s" % (self.authname,self.base,self.getmethods(),self.geturls());
+            return "Auth: authname=%s base=%s methods=%s urls=%s",\
+                    (self.authname, self.base, self.getmethods(),\
+                        self.geturls())
         elif self.parent:
-            return "Auth: authname=%s parent=%s methods=%s urls=%s" % (self.authname,self.parent.authname,self.getmethods(),self.geturls());
+            return "Auth: authname=%s parent=%s methods=%s urls=%s",\
+                    (self.authname, self.parent.authname, self.getmethods(),\
+                        self.geturls())
         else:
-            return "Auth: authname=%s No Base/Parent methods=%s urls=%s" % (self.authname,self.getmethods(),self.geturls());
+            return "Auth: authname=%s No Base/Parent methods=%s urls=%s",\
+                    (self.authname, self.getmethods(), self.geturls())

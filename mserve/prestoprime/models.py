@@ -39,7 +39,7 @@ import os
 import settings as settings
 import dataservice.utils as utils
 import dataservice.storage as storage
-from dataservice.models import mfile_get_signal
+from dataservice.models import MFILE_GET_SIGNAL
 from cStringIO import StringIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -154,7 +154,7 @@ def mfile_get_handler( sender, mfile=False, **kwargs):
     logging.info("Done Prestoprime handler"  )
     return 
 
-mfile_get_signal.connect(mfile_get_handler, dispatch_uid="prestoprime.models")
+MFILE_GET_SIGNAL.connect(mfile_get_handler, dispatch_uid="prestoprime.models")
 
 def post_save_handler( sender, instance=False, **kwargs):
     try:

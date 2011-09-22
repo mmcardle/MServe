@@ -37,7 +37,7 @@ from django.http import HttpResponseNotFound
 import settings as settings
 from django.contrib.admin.views.decorators import staff_member_required
 import static as static
-from dataservice.models import mfile_get_signal
+from dataservice.models import MFILE_GET_SIGNAL
 import utils as utils
 import usage_store as usage_store
 import time
@@ -49,9 +49,6 @@ import os
 
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
-
-metric_corruption = "http://mserve/corruption"
-metric_dataloss = "http://mserve/dataloss"
 
 class ProfileHandler(BaseHandler):
     ''' Profile Handler '''

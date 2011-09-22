@@ -231,7 +231,7 @@ class APITest(TestCase):
         readfile = subservice.do("GET","mfiles")[0]
         readfile.file.open()
         filecontents3 = readfile.file.read()
-        self.failUnlessEqual(filecontents3, 'new content')
+        self.failUnlessEqual(filecontents3, 'XXX content2')
         readfile.file.close()
 
         file1.do("DELETE")
