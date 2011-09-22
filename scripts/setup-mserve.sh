@@ -541,7 +541,7 @@ apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
 	python-setuptools python-flup python-magic python-dev python-pythonmagick \
-	python-imaging python-pycurl python-openid python-lxml  || \
+	python-imaging python-pycurl python-openid python-lxml python-pip  || \
 	f_ "failed to install erlang packages and python libraries"
 
 
@@ -768,12 +768,7 @@ fi
 celery_min_version="2.3.0"
 install_celery () {
 	echo "installing celery"
-        celery_url="https://github.com/ask/celery.git"
-        git clone $celery_url || f_ "failed to fetch celery from $celery_url"
-        cd celery
-        python setup.py install || f_ "failed to install celery"
-        cd ..
-        rm -rf celery
+        pip install Celery
 }
 
 echo "import sys
