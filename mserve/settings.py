@@ -93,6 +93,7 @@ THUMB_PATH = "/mservethumbs/"
 
 # MServe Specific Settings
 STORAGE_ROOT = os.path.join(MSERVE_DATA, 'mservedata')
+BACKUP_ROOT = os.path.join(MSERVE_DATA, 'mservebackup')
 SECDOWNLOAD_ROOT = os.path.join(MSERVE_DATA)
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a

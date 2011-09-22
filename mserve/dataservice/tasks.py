@@ -88,6 +88,11 @@ def _save_joboutput(outputid,file):
     joboutput = JobOutput.objects.get(id=outputid)
     return _save_topath(file, joboutput.get_upload_path())
 
+def _save_backupfile(backupid,file):
+    from mserve.dataservice.models import BackupFile
+    backupfile = BackupFile.objects.get(id=backupid)
+    return _save_topath(file, backupfile.get_upload_path())
+
 def _save_thumb(mfileid,image):
     from mserve.dataservice.models import MFile
     mfile = MFile.objects.get(id=mfileid)
@@ -457,20 +462,23 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
     """Backup MFile """
     try:
         mfileid = inputs[0]
+
         from mserve.dataservice.models import MFile
+        from mserve.dataservice.models import BackupFile
+
         mf = MFile.objects.get(id=mfileid)
         path = _get_mfile(mfileid)
         file = open(path,'r')
 
-        from dataservice.models import BackupFile
-
-        backup = BackupFile(name="backup_%s"%mf.name,mfile=mf,mimetype=mf.mimetype,checksum=mf.checksum,file=file)
+        backup = BackupFile(name="backup_%s"%mf.name,mfile=mf,mimetype=mf.mimetype,checksum=mf.checksum)
         backup.save()
 
+        _save_backupfile(backup.id,file)
+
         return {"success":True,"message":"Backup of '%s' successful"%mf.name}
-    except Exception as e:
+    except Exception, e:
         logging.info("Error with backup_mfile %s" % e)
-        raise e
+        raise
 
 @task
 def mfilefetch(inputs,outputs,options={},callbacks=[]):
@@ -484,9 +492,8 @@ def mfilefetch(inputs,outputs,options={},callbacks=[]):
         _save_joboutput(outputid, file)
         return {"message":"Retrieval of '%s' successful"%mf.name}
     except Exception as e:
-        logging.info("Error with backup_mfile %s" % e)
+        logging.info("Error with mfilefetch %s" % e)
         raise e
-
 
 @task
 def md5fileverify(inputs,outputs,options={},callbacks=[]):

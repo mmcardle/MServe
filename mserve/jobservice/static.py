@@ -120,3 +120,12 @@ job_descriptions['r3d'] = {
         "options":[],
         "results" : []
 }
+job_descriptions_admin = {}
+
+job_descriptions_admin['dataservice.tasks.backup_mfile'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 0,
+        "input-0" : { "mimetype" : "application/octet-stream" },
+        "options":[],
+        "results" : []
+}

@@ -32,6 +32,10 @@ def list_jobs(request):
     """
 
     job_descriptions = static.job_descriptions
+
+    if request.user.is_staff:
+        job_descriptions.update(static.job_descriptions_admin)
+
     reg = tasks.regular().keys()
     per = tasks.periodic().keys()
 

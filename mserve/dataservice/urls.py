@@ -40,6 +40,7 @@ dataservice_url_handler = Resource(DataServiceURLHandler)
 dataservice_profile_handler = Resource(DataServiceProfileHandler)
 dataservice_task_handler = Resource(DataServiceTaskHandler)
 mfile_handler = Resource(MFileHandler)
+backupfile_handler = Resource(BackupFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
 mfile_workflow_handler = Resource(MFileWorkflowHandler)
@@ -99,6 +100,8 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<authid>[^/]+)/mfiles/$', mfile_handler),
     url(r'^auths/(?P<authid>[^/]+)/mfolders/$', mfolder_handler),
     url(r'^auths/(?P<authid>[^/]+)/file/$', mfile_contents_handler),
+
+    url(r'^backups/(?P<backupid>[^/]+)/$', backupfile_handler, name="backup_upload" ),
     
     # API V1
 

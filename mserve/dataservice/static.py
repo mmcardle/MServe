@@ -23,7 +23,7 @@ default_profiles = {
             "access" : [
 
                 # Standard Access Tasks
-                {"task":"mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
+                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
 
                 ],
             "update" : [

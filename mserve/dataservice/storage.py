@@ -33,7 +33,7 @@ class SimulateTapeFileSystemStorage(FileSystemStorage):
         return super(SimulateTapeFileSystemStorage, self)._open(name,mode);
 
 def gettapestorage():
-    return SimulateTapeFileSystemStorage(location='%s/backup/'%settings.STORAGE_ROOT)
+    return SimulateTapeFileSystemStorage(location=settings.BACKUP_ROOT)
 
 
 class DiskSystemStorage(FileSystemStorage):

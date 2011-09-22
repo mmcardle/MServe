@@ -420,6 +420,24 @@ class InfoHandler(BaseHandler):
             r = rc.BAD_REQUEST
             return r
 
+class BackupFileHandler(BaseHandler):
+    allowed_methods = ('GET','POST','PUT','DELETE')
+    model = BackupFile
+
+    def read(self, request, backupid=None):
+        if backupid:
+            return BackupFile.objects.get(id=backupid)
+        return {}
+
+    def update(self, request, backupid):
+        backupfile = BackupFile.objects.get(pk=backupid)
+        try:
+            backupfile.file.save("%s_%s"%("backup",backupfile.mfile.name), ContentFile(request.raw_post_data), save=True)
+            return {"message":"updated backup file"}
+        except Exception, e:
+            logging.info(e)
+            raise e
+
 class MFolderHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = MFolder

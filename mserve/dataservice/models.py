@@ -173,9 +173,9 @@ class ServiceRequest(models.Model):
     reason      = models.TextField()
     profile     = models.ForeignKey('MServeProfile',null=True, blank=True, \
                                         related_name="servicerequests")
-    state       = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES, \
-                                        default='P')
-    time        = models.DateTimeField(auto_now_add=True)   # Time first recorded (shouldnt change)
+    state       = models.CharField(max_length=1, \
+                    choices=SERVICEREQUEST_STATES, default='P')
+    time        = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ["-time"]
@@ -193,16 +193,26 @@ class ServiceRequest(models.Model):
         return self.name
 
 class Usage(models.Model):
+    '''The base object this report refers to'''
     base            = models.ForeignKey('NamedBase',null=True, blank=True)
+    '''The metric this report is recording'''
     metric          = models.CharField(max_length=4096)
-    time            = models.DateTimeField(auto_now_add=True)   # Time first recorded (shouldnt change)
-    reports         = models.BigIntegerField(default=0)         # Number of reports
-    total           = models.FloatField(default=0)              # Sum of report values
-    squares         = models.FloatField(default=0)              # Sum of squares of values
-    nInProgress     = models.BigIntegerField(default=0)         # Sum of squares of values
-    rateTime        = models.DateTimeField()                    # Time the rate last changed
-    rate            = models.FloatField()                       # The current rate (change in value per second)
-    rateCumulative  = models.FloatField()                       # Cumulative unreported usage before rateTime
+    '''Time first recorded (shouldnt change)'''
+    time            = models.DateTimeField(auto_now_add=True)
+    '''Number of reports'''
+    reports         = models.BigIntegerField(default=0)
+    '''Sum of report values'''
+    total           = models.FloatField(default=0)
+    '''Sum of squares of values'''
+    squares         = models.FloatField(default=0)
+    '''Sum of squares of values'''
+    nInProgress     = models.BigIntegerField(default=0)
+    '''Time the rate last changed'''
+    rateTime        = models.DateTimeField()
+    '''The current rate (change in value per second)'''
+    rate            = models.FloatField()
+    '''Cumulative unreported usage before rateTime'''
+    rateCumulative  = models.FloatField()
 
     @staticmethod
     def get_full_usagesummary():
@@ -1788,15 +1798,18 @@ class BackupFile(NamedBase):
         super(BackupFile, self).__init__(*args, **kwargs)
         self.metrics = backupfile_metrics
 
+    def get_upload_path(self):
+        return reverse('backup_upload',args=[self.id])
+
     def get_value_for_metric(self, metric):
         if metric == metric_backupfile:
             return 1
-        if file:
+        if self.file:
             if metric == metric_disc_space:
                 return self.file.size
 
     def get_rate_for_metric(self, metric):
-        if file:
+        if self.file:
             if metric == metric_disc:
                 return self.file.size
 
