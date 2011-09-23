@@ -30,9 +30,9 @@ import time
 import os
 import shutil
 import utils as utils
-import settings
 import static as static
 import django.dispatch
+import settings
 from piston.utils import rc
 from django.db import models
 from celery.task.sets import TaskSet
@@ -684,7 +684,7 @@ class HostingContainer(NamedBase):
             for mfile in service.mfile_set.exclude(thumb__exact='')[:4]:
                 thumbs.append(mfile.thumburl())
         for i in range(len(thumbs), 16):
-            thumbs.append(os.path.join(mediapath,
+            thumbs.append(os.path.join(settings.MEDIA_URL,
                             "images", "package-x-generic.png"))
         return thumbs
 
@@ -978,7 +978,7 @@ class DataService(NamedBase):
         for mfile in self.mfile_set.exclude(thumb__exact='')[:4]:
             thumbs.append(mfile.thumburl())
         for i in range(len(thumbs), 4):
-            thumbs.append(os.path.join(mediapath,
+            thumbs.append(os.path.join(settings.MEDIA_URL,
                             "images", "package-x-generic.png"))
         return thumbs
 
@@ -1787,42 +1787,42 @@ class MFile(NamedBase):
 
     def thumburl(self):
         if self.thumb and self.thumb != "":
-            return "%s%s" % (settings.THUMBPATH, self.thumb)
+            return "%s%s" % (settings.THUMB_PATH, self.thumb)
         elif self.mimetype:
             if self.name.endswith(".blend"):
-                return os.path.join(mediapath, "images/blender.png")
+                return os.path.join(settings.MEDIA_URL, "images/blender.png")
             if self.mimetype.startswith("image"):
-                return os.path.join(mediapath, "images", "image-x-generic.png")
+                return os.path.join(settings.MEDIA_URL, "images", "image-x-generic.png")
             if self.mimetype.startswith("text"):
-                return os.path.join(mediapath, "images", "text-x-generic.png")
-        return os.path.join(mediapath, "images", "package-x-generic.png")
+                return os.path.join(settings.MEDIA_URL, "images", "text-x-generic.png")
+        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
 
     def posterurl(self):
         if self.poster and self.poster != "":
-            return "%s%s" % (settings.THUMBPATH, self.poster)
+            return "%s%s" % (settings.THUMB_PATH, self.poster)
         else:
             if self.mimetype:
                 if self.mimetype.startswith("image"):
-                    return os.path.join(mediapath,
+                    return os.path.join(settings.MEDIA_URL,
                                         "images", "image-x-generic.png")
                 if self.mimetype.startswith("text"):
-                    return os.path.join(mediapath,
+                    return os.path.join(settings.MEDIA_URL,
                                         "images", "text-x-generic.png")
-        return os.path.join(mediapath, "images", "package-x-generic.png")
+        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
 
     def proxyurl(self):
         if self.proxy and self.proxy != "":
-            return "%s%s" % (settings.THUMBPATH, self.proxy)
+            return "%s%s" % (settings.THUMB_PATH, self.proxy)
         else:
             return ""
             if self.mimetype:
                 if self.mimetype.startswith("image"):
-                    return os.path.join(mediapath,
+                    return os.path.join(settings.MEDIA_URL,
                             "images", "image-x-generic.png")
                 if self.mimetype.startswith("text"):
-                    return os.path.join(mediapath,
+                    return os.path.join(settings.MEDIA_URL,
                             "images", "text-x-generic.png")
-        return os.path.join(mediapath, "images", "package-x-generic.png")
+        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -1952,7 +1952,7 @@ class Auth(Base):
             ds = DataService.objects.get(id=self.base.id)
             if len(ds.mfile_set.all()) > 0:
                 return list(ds.mfile_set.all())[0].thumburl()
-        return os.path.join(mediapath, "images", "package-x-generic.png")
+        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
 
     def getroles(self):
         return self.roles_csv.split(",")
