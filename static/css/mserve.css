@@ -836,3 +836,21 @@ ol li {
     border: 1px outset brown;
     font-weight: bold;
 }
+.graphtable{
+    float: left;
+}
+.graph {
+    width: 300px;
+    height: 200px;
+    border: 1px dashed gainsboro;
+    padding:6px;
+    margin:6px;
+}
+.graph-small {
+    width: 150px;
+    height: 100px;
+}
+.graph-wide {
+    width: 800px;
+    height: 300px;
+}

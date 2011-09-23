@@ -1,20 +1,34 @@
+
+{% block script %}
+<script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.pie.js"></script>
+{% endblock %}
+
 {% load mservetags %}
 <h3>Usage Summary</h3>
 
 {% if user.is_staff %}
 <h4>Traffic</h4>
-<div id="chart_div" style="width: 80%; height: 200px;margin-top: 16px;"></div>
-<script>
+<div id="traffic" style="width: 80%; height: 200px;margin-top: 16px;"></div>
+<script type="text/javascript">
 
 $('#tabs').bind('tabsshow', function(event, ui) {
   if (ui.panel.id == "tabs-usage") {
-    load_traffic_plot();
+    $("#traffic").mserveusage('traffic' )
   }
 });
+$("#traffic").mserveusage('traffic' )
 
 </script>
 
 {% endif %}
+
+<div id="mserveusage" style="margin-top: 30px"></div>
+
+<script type="text/javascript">
+
+$("#mserveusage").mserveusage('stats')
+
+</script>
 
 <h4>Statistics</h4>
 <div id="usagecontent" >

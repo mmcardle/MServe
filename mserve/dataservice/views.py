@@ -72,7 +72,6 @@ def append_dict(_dict, request):
     """Detect and append mobile user agents to a dict """
     mobile_browser = False
     uagent = request.META['HTTP_USER_AGENT'].lower()[0:4]
-    logging.debug("User Agent is %s " , uagent )
     if (uagent in MOBILE_UAS):
         mobile_browser = True
     else:
@@ -97,13 +96,22 @@ def home(request, form=HostingContainerForm()):
     return render_to_response('home.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
 
+
 @staff_member_required
 def stats(request):  
     """Render the json stats for graphing """
-    days = [date.today() - timedelta(day) for day in range(10)]
-    days_qs = [(day, Request.objects.day(date=day)) for day in days]
-    _json = simplejson.dumps(modules.graph(days_qs))
+    if "traffic" in request.GET:
+        days = [date.today() - timedelta(day) for day in range(10)]
+        days_qs = [(day, Request.objects.day(date=day)) for day in days]
+        _json = simplejson.dumps(modules.graph(days_qs))
+        return HttpResponse(_json, mimetype="application/json")
+
+    json = Usage.get_job_plots(request.GET)
+
+    _json = simplejson.dumps(json)
+
     return HttpResponse(_json, mimetype="application/json")
+
 
 def render_base(request, baseid):
     """Render a specified base """
