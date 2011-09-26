@@ -1,6 +1,7 @@
 
 {% block script %}
 <script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.pie.js"></script>
+<script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.resize.min.js"></script>
 {% endblock %}
 
 {% load mservetags %}
@@ -8,7 +9,7 @@
 
 {% if user.is_staff %}
 <h4>Traffic</h4>
-<div id="traffic" style="width: 80%; height: 200px;margin-top: 16px;"></div>
+<div id="traffic" style="width: 95%; height: 200px;margin-top: 16px;"></div>
 <script type="text/javascript">
 
 $('#tabs').bind('tabsshow', function(event, ui) {
@@ -22,11 +23,21 @@ $("#traffic").mserveusage('traffic' )
 
 {% endif %}
 
-<div id="mserveusage" style="margin-top: 30px"></div>
+<div id="mservelast24" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+<div id="mservelast1" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+<div id="mservejobs" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+<div id="mservejobstype" style="margin-top: 20px;"></div>
+<div class="clr"></div>
 
 <script type="text/javascript">
 
-$("#mserveusage").mserveusage('stats')
+$("#mservelast24").mserveusage('stats', ["last24"] )
+$("#mservelast1").mserveusage('stats', ["last1"] )
+$("#mservejobs").mserveusage('stats', ["jobs"] )
+$("#mservejobstype").mserveusage('stats', ["jobsbytype"] )
 
 </script>
 

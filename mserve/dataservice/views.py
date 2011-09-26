@@ -106,7 +106,8 @@ def stats(request):
         _json = simplejson.dumps(modules.graph(days_qs))
         return HttpResponse(_json, mimetype="application/json")
 
-    json = Usage.get_job_plots(request.GET)
+    from jobservice.models import Job
+    json = Job.get_job_plots(request.GET)
 
     _json = simplejson.dumps(json)
 

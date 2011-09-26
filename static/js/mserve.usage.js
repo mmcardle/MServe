@@ -3,6 +3,49 @@ $(document).ready(function() {
     $(".relatize").relatizeDate();
 });
 
+var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+var previousPoint = null;
+var date = new Date();
+
+FLOT_OPTIONS = {
+    legend: {
+        show: false
+    }
+}
+FLOT_TIME_OPTIONS = {
+    "type" : "time",
+    "size" : "wide",
+    "label" : "Last 24 Hours",
+    xaxis:{mode:'time'},
+    points:{show:true},
+    lines:{show:true},
+    grid:{hoverable:true},
+    legend: { show :true, position: "nw" }
+}
+FLOT_PIE_OPTIONS = {
+    series: {
+        pie: {
+            show: true,
+            radius: 1,
+            label: {
+                show: true,
+                radius: 2/3,
+                formatter: function(label, series){
+                    return $("#graphLabelTemplate").tmpl( { "label" :  label,  "series" : series } ).html();
+                },
+                threshold: 0.1,
+                background: {
+                    opacity: 0.5,
+                    color: '#FFF'
+                }
+            }
+        }
+    },
+    legend: {
+        show: true
+    }
+}
+
 function showTooltip(x, y, contents) {
     $("#tooltip").remove();
 
@@ -77,9 +120,7 @@ function showTooltip(x, y, contents) {
                         };
 
                         var plot = $.plot($this, plotdata, plotoptions );
-                        var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                        var previousPoint = null;
-                        var date = new Date();
+
 
                         $this.bind("plothover", function (event, pos, item) {
                             if (item) {
@@ -101,7 +142,7 @@ function showTooltip(x, y, contents) {
                  })
         });
     },
-    stats: function(){
+    stats: function(types){
 
         var defaults = {};
         var options = $.extend(defaults, options);
@@ -113,42 +154,32 @@ function showTooltip(x, y, contents) {
             data = $this.data('mserve');
             $.ajax({
                type: "GET",
-               url: "/stats/?jobs&jobtype",
+               url: "/stats/?"+types.join('&'),
                success: function(msg){
                     $(msg).each( function(index, plot){
-                        $holder = $("#graphTemplate").tmpl( plot.options )
+                        $holder = $("#graphTemplate").tmpl( plot )
                         $this.append($holder)
                         $graph = $holder.find(".graph")
-                        if(plot.options.type=="pie"){
-                            $.plot($graph, plot.data,
-                                {
-                                    fillColor: "#FF0000",
-                                    series: {
-                                        pie: {
-                                            show: true,
-                                            radius: 1,
-                                            label: {
-                                                show: true,
-                                                radius: 2/3,
-                                                formatter: function(label, series){
-                                                    return '<div class="ui-widget-content ui-corner-all" style="font-size:8pt;text-align:center;padding:2px;color:black;">'+label+'<br/>'+Math.round(series.percent)+'%</div>';
-                                                },
-                                                threshold: 0.01,
-                                                background: { opacity: 0.8, }
-                                            },
-                                            combine: {
-                                                threshold: 0.01
-                                            }
-                                        },
-                                    legend: {
-                                        show: false
+                        if(plot.type == "pie"){
+                            $.plot($graph, plot.data , FLOT_PIE_OPTIONS );
+                        }else if (plot.type == "time"){
+                            $.plot($graph, plot.data , FLOT_TIME_OPTIONS );
+                            $graph.bind("plothover", function (event, pos, item) {
+                                if (item) {
+                                    if (previousPoint != item.datapoint) {
+                                        previousPoint = item.datapoint;
+                                        date.setTime(item.datapoint[0]).toString;
+                                        showTooltip(item.pageX, item.pageY, 'Value at ' + date + ' is ' + item.datapoint[1]);
                                     }
+                                } else {
+                                    $("#tooltip").remove();
+                                    previousPoint = null;
                                 }
-                           });
+                            });
                         }else{
-                            $.plot($graph, [plot.data] , plot.options );
+                            $.plot($graph, plot.data , FLOT_OPTIONS );
                         }
-                    })
+                    });
                }
             });
         });

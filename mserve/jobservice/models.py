@@ -21,6 +21,9 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+import time
+import datetime
+import logging
 from django.db import models
 from dataservice.models import *
 from dataservice import utils
@@ -28,6 +31,7 @@ from dataservice import storage
 from dataservice.tasks import thumboutput
 from dataservice.tasks import thumbvideooutput
 from celery.result import TaskSetResult
+from djcelery.models import TaskState
 
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
@@ -47,6 +51,92 @@ class Job(NamedBase):
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
         self.metrics = job_metrics
+
+    @staticmethod
+    def get_job_plots(types):
+        taskstates = TaskState.objects.all()
+        plots = []
+
+        for type in types:
+
+            if type == "last24":
+                now = datetime.datetime.now()
+                count = now - datetime.timedelta(days=1)
+                step = datetime.timedelta(hours=1)
+                prev = count - step
+                taskplot = {}
+                data = []
+                while count <= now:
+                    tasks = TaskState.objects.filter(tstamp__lt=count,tstamp__gt=prev)
+                    prev = count
+                    count = count + step
+                    data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
+
+                taskplot["data"] = [data]
+                taskplot["type"] = "time"
+                taskplot["label"] = "Tasks in last 24 hours"
+                plots.append(taskplot)
+
+            if type == "last1":
+                now = datetime.datetime.now()
+                count = now - datetime.timedelta(hours=1)
+                step = datetime.timedelta(minutes=5)
+                prev = count - step
+                taskplot = {}
+                data = []
+                while count <= now:
+                    tasks = TaskState.objects.filter(tstamp__lt=count,tstamp__gt=prev)
+                    logging.info("count for %s is %s ", count, len(tasks))
+                    prev = count
+                    count = count + step
+                    data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
+                taskplot["data"] = [data]
+                taskplot["type"] = "time"
+                taskplot["label"] = "Tasks in last hour"
+                plots.append(taskplot)
+
+            if type == "jobsbytype":
+                jobplot = {}
+                jobplot["type"] = "pie"
+                jobplot["label"] = "Jobs by Type",
+                query = taskstates.values("name").annotate(n=Count("name"))
+                for val in query:
+                    val["label"] = val["name"].split(".")[-1]
+                    val["data"] = val["n"]
+                jobplot["data"] = [item for item in query]
+                plots.append(jobplot)
+
+            if type == "jobs":
+                jobplot = {}
+                jobplot["type"] = "pie"
+                jobplot["size"] = "small"
+                jobplot["label"] = "All Jobs"
+                jobplot["data"] = [
+                    {"label":"Success" , "data": taskstates.filter(state="SUCCESS").count(), "color" : "#00CC00"  },
+                    {"label":"Failed" , "data": taskstates.filter(state="FAILURE").count(), "color" : "#CC0000",  }
+                ]
+
+                plots.append(jobplot)
+
+                for taskname in set(taskstates.values_list("name",flat=True).distinct()):
+                    logging.info(taskname)
+                    subplot = {}
+                    subplot["type"] = "pie"
+                    subplot["size"] = "small"
+                    subplot["label"] = "Job %s" % taskname.split(".")[-1]
+                    tasks = taskstates.filter(name=taskname)
+                    success = tasks.filter(state="SUCCESS").aggregate(success=Count('name'))["success"]
+                    failure = tasks.filter(state="FAILURE").aggregate(failure=Count('name'))["failure"]
+                    data = []
+                    data.append({ "label" : "Failed" , "data" : failure, "color" : "#CC0000"})
+                    data.append({ "label" : "Success" , "data" : success, "color" : "#00CC00"})
+                    subplot["data"] = data
+                    plots.append(subplot)
+
+
+
+        logging.info(plots)
+        return plots
 
     def save(self):
         if not self.id:

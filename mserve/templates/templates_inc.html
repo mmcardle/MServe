@@ -531,10 +531,19 @@
     </tr>
 </script>
 
+<script id="graphLabelTemplate" type="text/x-jquery-tmpl">
+    <div>
+    <div class="graphlabel ui-widget-content ui-corner-all" >
+        ${label}<br/>
+        ${Math.round( series.percent) }%
+    </div>
+    </div>
+</script>
+
 <script id="graphTemplate" type="text/x-jquery-tmpl">
-    <table class="graphtable">
+    <table class="graphtable graphtable-${type} graphtable-${size}">
         <tr><th>${label}</th></tr>
-        <tr><td><div class='graph graph-${size}' ></div></td></tr>
+        <tr><td><div class='graph' style="width:95%;height:200px;"></div></td></tr>
     </table>
 </script>
 
