@@ -133,9 +133,6 @@ class Job(NamedBase):
                     subplot["data"] = data
                     plots.append(subplot)
 
-
-
-        logging.info(plots)
         return plots
 
     def save(self):
