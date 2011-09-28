@@ -63,19 +63,7 @@ def startrecording(id,metric,rate,report=True):
             logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
             logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
-
-            now = datetime.datetime.now()
-            td = now-usage.rateTime
-            dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
-
-            amount = dif*usage.rate
-
-            usage.rateCumulative = usage.rateCumulative + amount
-            usage.rateTime = now
-            usage.rate = rate
-            usage.save()
-            #base.usages.add(usage)
-            #base.save()
+            _update_usage(usage,rate=rate)
             if report:
                 reportusage(base)
             return usage
@@ -84,11 +72,25 @@ def startrecording(id,metric,rate,report=True):
         usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
         logging.info("created %s " % usage)
         usage.save()
-        #base.usages.add(usage)
-        #base.save()
         if report:
             reportusage(base)
         return usage
+
+def _update_usage(usage,rate=None):
+    if rate == None:
+        rate = usage.rate
+    now = datetime.datetime.now()
+    td = now-usage.rateTime
+    dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
+
+    amount = dif*rate*usage.nInProgress
+
+    usage.rateCumulative = usage.rateCumulative + amount
+    usage.rateTime = now
+    usage.rate = rate
+    usage.squares = usage.rateCumulative*usage.rateCumulative
+    usage.save()
+    return usage
 
 def updaterecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)
@@ -100,19 +102,7 @@ def updaterecording(id,metric,rate,report=True):
             logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
             logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
-
-            now = datetime.datetime.now()
-            td = now-usage.rateTime
-            dif = (td.days*24*60*60)+ td.seconds + (td.microseconds/1000000.0)
-
-            amount = dif*usage.rate
-
-            usage.rateCumulative = usage.rateCumulative + amount
-            usage.rateTime = now
-            usage.rate = rate
-            usage.save()
-            #base.usages.add(usage)
-            #base.save()
+            _update_usage(usage,rate=rate)
             if report:
                 reportusage(base)
             return usage
@@ -121,8 +111,6 @@ def updaterecording(id,metric,rate,report=True):
         usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
         logging.info("created %s " % usage)
         usage.save()
-        #base.usages.add(usage)
-        #base.save()
         if report:
             reportusage(base)
         return usage

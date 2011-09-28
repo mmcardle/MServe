@@ -227,6 +227,22 @@ class Usage(models.Model):
         return usagesummary
 
     @staticmethod
+    def aggregate(usages):
+        import usage_store as usage_store
+        for usage in usages:
+            if usage.nInProgress > 0:
+                usage_store._update_usage(usage)
+
+        return usages.values('metric') \
+                .annotate(reports=Count('reports')) \
+                .annotate(total=Sum('total')) \
+                .annotate(squares=Sum('squares')) \
+                .annotate(nInProgress=Sum('nInProgress')) \
+                .annotate(rate=Sum('rate')) \
+                .annotate(rateTime=Max('rateTime')) \
+                .annotate(rateCumulative=Sum('rateCumulative'))
+
+    @staticmethod
     def usages_to_summary(usages):
         summary = []
         if not settings.DATABASES['default']['ENGINE'].endswith("sqlite3"):
@@ -482,13 +498,16 @@ class Base(models.Model):
                     usages = base.usages.all()
             else:
                 usages = base.usages.all()
+                
+            if 'aggregate' in kwargs:
+                values = kwargs.get('aggregate')
+                if 'true' in values or 'True' in values:
+                    usages = Usage.aggregate(usages)
 
             usageresult = {}
             usageresult["usages"] = usages
             usageresult["reportnum"] = base.reportnum
-
             return usageresult
-
 
         if method == "GET" and url == "properties":
             if type(self) == Auth:
@@ -943,10 +962,14 @@ class DataService(NamedBase):
                                     taskstate.runtime * taskstate.runtime))
                                 for taskstate in taskstates]
 
+        combine = Usage.objects.none()
+        for usa in usages:
+            combine = combine & usa
+        
         ids = [mfile.id for mfile in self.mfile_set.all()] \
                 + [job.id for job in self.jobs()] + [self.id]
-        usages.extend(Usage.objects.filter(base__in=ids))
-        return usages
+        thisusage = Usage.objects.filter(base__in=ids)
+        return combine | thisusage
 
     def get_usage_summary(self):
         ids = [mfile.id for mfile in self.mfile_set.all()] \

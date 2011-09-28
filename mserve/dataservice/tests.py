@@ -30,6 +30,27 @@ from django.http import HttpResponseNotFound
 from django.http import HttpResponseBadRequest
 from django.core.files.base import ContentFile
 import simplejson
+from django.test.client import Client
+
+class ClientTest(TestCase):
+
+    def test_client_containers(self):
+        container = HostingContainer.create_container("HostingContainer")
+        c = Client()
+        response = c.get('/containers/%s/' % (container.id))
+        print response.content
+
+        response = c.get('/containers/%s/usages/' % (container.id))
+        print response.content
+
+        response = c.get('/containers/%s/usages/?full=True' % (container.id))
+        print response.content
+
+        response = c.get('/containers/%s/usages/?aggregate=True' % (container.id))
+        print response.content
+
+        response = c.get('/containers/%s/usages/?full=True&aggregate=True' % (container.id))
+        print response.content
 
 class APITest(TestCase):
 
