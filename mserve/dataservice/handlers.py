@@ -625,7 +625,7 @@ class RoleHandler(BaseHandler):
             roles = []
             for containerauth in containerauths:
                 roledict = []
-                for role in containerauth.roles.all():
+                for role in containerauth.getroles():
                     roles.append(role)
                 roledict.append(roles)
 
@@ -637,7 +637,7 @@ class RoleHandler(BaseHandler):
             serviceauths = Auth.objects.filter(base=base.id)
             roles = []
             for serviceauth in serviceauths:
-                for role in serviceauth.roles.all():
+                for role in serviceauth.getroles():
                     roles.append(role)
 
             dict = {}
@@ -648,7 +648,7 @@ class RoleHandler(BaseHandler):
             mfileauths = Auth.objects.filter(base=base.id)
             roles = []
             for mfileauth in mfileauths:
-                for a in mfileauth.roles.all():
+                for a in mfileauth.getroles():
                     roles.append(a)
 
             dict = {}
