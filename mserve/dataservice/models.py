@@ -468,6 +468,7 @@ class Base(models.Model):
                             return HttpResponseBadRequest()
                         base = NamedBase.objects.get(id=base.id)
 
+            usages = []
             if 'full' in kwargs:
                 values = kwargs.get('full')
 
@@ -476,15 +477,18 @@ class Base(models.Model):
                     import usage_store
                     usages = self.get_usage()
 
-                    result = {}
-                    result["usages"] = usages
-                    result["reportnum"] = base.reportnum
-
-                    return result
+                    usages = usages
                 else:
-                    return base.usages.all()
+                    usages = base.usages.all()
             else:
-                return base.usages.all()
+                usages = base.usages.all()
+
+            usageresult = {}
+            usageresult["usages"] = usages
+            usageresult["reportnum"] = base.reportnum
+
+            return usageresult
+
 
         if method == "GET" and url == "properties":
             if type(self) == Auth:

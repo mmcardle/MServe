@@ -32,7 +32,23 @@ from django.core.files.base import ContentFile
 import simplejson
 
 class APITest(TestCase):
-    
+
+    def test_roles(self):
+        container = HostingContainer.create_container("HostingContainer")
+        for auth in container.auth_set.all():
+            roles = auth.getroles()
+            print roles
+
+        service = container.create_data_service("Service1")
+        for auth in service.auth_set.all():
+            roles = auth.getroles()
+            print roles
+
+        mfile = service.do("POST","mfiles",name="FullFile",file=ContentFile('new content'))
+        for auth in mfile.auth_set.all():
+            roles = auth.getroles()
+            print roles
+            
     def test_container(self):
         container = HostingContainer.create_container("HostingContainer1")
 
@@ -40,8 +56,8 @@ class APITest(TestCase):
         props = container.do("GET","properties")
         self.failUnlessEqual(len(props), 1)
 
-        usages = container.do("GET","usages")
-        self.failUnlessEqual(len(usages), 1)
+        usagesresult = container.do("GET","usages")
+        self.failUnlessEqual(len(usagesresult["usages"]), 1)
 
         auths = container.do("GET","auths")
         self.failUnlessEqual(len(auths), 1)
@@ -107,8 +123,8 @@ class APITest(TestCase):
         props = service.do("GET","properties")
         self.failUnlessEqual(len(props), 2)
 
-        usages = service.do("GET","usages")
-        self.failUnlessEqual(len(usages), 1)
+        usagesresult = service.do("GET","usages")
+        self.failUnlessEqual(len(usagesresult["usages"]), 1)
 
         auths = service.do("GET","auths")
         self.failUnlessEqual(len(auths), 2)
@@ -253,8 +269,8 @@ class APITest(TestCase):
         props = service_auth.do("GET","properties")
         self.failUnlessEqual(len(props), 2)
 
-        usages = service_auth.do("GET","usages")
-        self.failUnlessEqual(len(usages), 1)
+        usagesresult = service_auth.do("GET","usages")
+        self.failUnlessEqual(len(usagesresult["usages"]), 1)
 
         auths = service_auth.do("GET","auths")
         self.failUnlessEqual(len(auths), 0)
@@ -375,8 +391,8 @@ class APITest(TestCase):
         props = service_auth.do("GET","properties")
         self.failUnlessEqual(len(props), 2)
 
-        usages = service_auth.do("GET","usages")
-        self.failUnlessEqual(len(usages), 1)
+        usagesresult = service_auth.do("GET","usages")
+        self.failUnlessEqual(len(usagesresult["usages"]), 1)
 
         auths = service_auth.do("GET","auths")
         self.failUnlessEqual(len(auths), 0)
@@ -465,8 +481,8 @@ class APITest(TestCase):
         shouldbe_403 = mfile.do("GET","properties")
         self.failUnlessEqual(type(shouldbe_403), HttpResponseForbidden)
 
-        usages = mfile.do("GET","usages")
-        self.failUnlessEqual(type(usages[0]), type(Usage()))
+        usageresult = mfile.do("GET","usages")
+        self.failUnlessEqual(type(usageresult["usages"][0]), type(Usage()))
 
         auths = mfile.do("GET","auths")
         self.failUnlessEqual(type(auths[0]), type(Auth()))
@@ -543,8 +559,8 @@ class APITest(TestCase):
         shouldbe_403 = mfileauth.do("GET","properties")
         self.failUnlessEqual(type(shouldbe_403), HttpResponseForbidden)
 
-        usages = mfileauth.do("GET","usages")
-        self.failUnlessEqual(len(usages), 4)
+        usagesresult = mfileauth.do("GET","usages")
+        self.failUnlessEqual(len(usagesresult["usages"]), 4)
 
         auths = mfileauth.do("GET","auths")
         self.failUnlessEqual(len(auths), 0)
