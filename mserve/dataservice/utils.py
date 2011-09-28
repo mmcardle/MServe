@@ -26,12 +26,10 @@ import hashlib
 import time
 import uuid
 import os
-import pickle
 import base64
 import logging
 from Crypto.Cipher import AES
 import base64
-import urllib
 import random
 import os
 import sys
@@ -46,45 +44,6 @@ def get_class( kls ):
     for comp in parts[1:]:
         m = getattr(m, comp)
     return m
-
-def get_methods_for_auth(auth):
-    methodslist = [ pickle.loads(base64.b64decode(method_enc)) for method_enc in auth.roles.all().values_list('methods_encoded',flat=True) ]
-    methods = [item for sublist in methodslist for item in sublist]
-    return set(methods)
-
-def get_methods_for_base(baseid):
-    from dataservice.models import NamedBase
-    base = NamedBase.objects.get(id=baseid)
-    methods = []
-    for auth in base.auth_set.all():
-         ms = get_methods_for_auth(auth)
-         methods += ms
-    return set(methods)
-  
-def check_method_for_auth(authid,method):
-    from dataservice.models import Auth
-    from dataservice.models import NamedBase
-    # Find the Authority with id
-    auth = Auth.objects.get(id=authid)
-
-    # Find the methods this auth has
-    methods = get_methods_for_auth(auth)
-
-    if auth.base is not None:
-        # This auth is a direct sub auth of a base class
-        basemethods = get_methods_for_base(auth.base.id)
-        if method in methods and method in basemethods:
-            logging.info("Authority Check OK for method '%s' in auth methods '%s' and basemethods '%s' " % (method,methods,basemethods)  )
-            return True
-        else:
-            logging.info("Authority Check Failed for method '%s'  not in auth methods '%s' and not in base methods '%s'" % (method,methods,basemethods)  )
-    else:
-        # This auth is a sub authority of another auth
-        authparent = auth.parent
-        return check_method_for_auth(authparent.id,method) and method in methods
-
-    logging.info("Authority Check Failed for method '%s'  not in auth methods '%s'" % (method,methods)  )
-    return False
 
 def mfile_upload_to(instance, filename):
     timeformat = time.strftime("%Y/%m/%d/")
