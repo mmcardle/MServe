@@ -21,6 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+import simplejson
 from django.http import HttpResponseRedirect
 from django.test import TestCase
 from dataservice.models import *
@@ -29,29 +30,50 @@ from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseBadRequest
 from django.core.files.base import ContentFile
-import simplejson
+from django.core.urlresolvers import reverse
 from django.test.client import Client
 
 class ClientTest(TestCase):
 
     def test_client_containers(self):
         container = HostingContainer.create_container("HostingContainer")
+
+        hc_url = reverse('hostingcontainer', args=[container.id])
+        hc_url_usage = reverse('hostingcontainer_usages', args=[container.id])
+        hc_url_properties = reverse('hostingcontainer_properties', args=[container.id])
+        hc_url_auths = reverse('hostingcontainer_auths', args=[container.id])
+        hc_url_services = reverse('hostingcontainer_sservices', args=[container.id])
+        hc_url_subservices = reverse('hostingcontainer_subservices', args=[container.id])
+
         c = Client()
-        response = c.get('/containers/%s/' % (container.id))
-        print response.content
+        response = c.get(hc_url)
+        self.failUnlessEqual(response.status_code,200)
 
-        response = c.get('/containers/%s/usages/' % (container.id))
-        print response.content
+        response = c.get(hc_url_usage)
+        self.failUnlessEqual(response.status_code,200)
 
-        response = c.get('/containers/%s/usages/?full=True' % (container.id))
-        print response.content
+        response = c.get(hc_url_usage, {"full":"True"} )
+        self.failUnlessEqual(response.status_code,200)
 
-        response = c.get('/containers/%s/usages/?aggregate=True' % (container.id))
-        print response.content
+        response = c.get(hc_url_usage, {"aggregate":"True"} )
+        self.failUnlessEqual(response.status_code,200)
 
-        response = c.get('/containers/%s/usages/?full=True&aggregate=True' % (container.id))
-        print response.content
+        response = c.get(hc_url_usage, {"full":"True","aggregate":"True"} )
+        self.failUnlessEqual(response.status_code,200)
 
+        response = c.get(hc_url_auths)
+        self.failUnlessEqual(response.status_code,200)
+
+        response = c.get(hc_url_services)
+        self.failUnlessEqual(response.status_code,200)
+
+        response = c.get(hc_url_subservices)
+        self.failUnlessEqual(response.status_code,200)
+
+        response = c.get(hc_url_properties)
+        self.failUnlessEqual(response.status_code,200)
+
+        
 class APITest(TestCase):
 
     def test_roles(self):

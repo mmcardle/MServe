@@ -60,11 +60,11 @@ urlpatterns = patterns('',
     # API v2
     url(r'^containers/$', hosting_handler),
     url(r'^containers/(?P<id>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
-    url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler ),
-    url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler),
-    url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler),
-    url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler),
-    url(r'^containers/(?P<containerid>[^/]+)/subservices/$', subservice_handler),
+    url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler, name="hostingcontainer_properites" ),
+    url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler ,name="hostingcontainer_usages"),
+    url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler ,name="hostingcontainer_auths"),
+    url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler ,name="hostingcontainer_services"),
+    url(r'^containers/(?P<containerid>[^/]+)/subservices/$', subservice_handler ,name="hostingcontainer_subservices"),
 
     url(r'^remoteservices/$', remote_mserve_handler),
 
