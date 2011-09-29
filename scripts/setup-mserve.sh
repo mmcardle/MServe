@@ -50,6 +50,7 @@ MSERVE_ADMIN_PASSWD=
 MSERVE_DATABASE_USER=mserve
 MSERVE_DATABASE_PASSWORD=
 HTTP_SERVER=apache
+HTTP_SCHEMA=http
 VERBOSE=
 MSERVE_ARCHIVE=NOTSET
 DATABASE_ADMIN_USER=root
@@ -84,6 +85,7 @@ usage_f() {
 	-U <Database admin user>	# Database admin user, default root
 	-P <Database admin password>	# Database admin password
 	-t <mserve tarball>  		# MSERVE distribution archive
+	-x <schema>       		# Schema (http/https)
 	-v verbose mode
 
 	example: $0 -s apache
@@ -207,6 +209,7 @@ _MSERVE_DATA=$MSERVE_DATA
 _MSERVE_LOG=$MSERVE_LOG
 
 _HTTP_SERVER=$HTTP_SERVER
+_HTTP_SCHEMA=$HTTP_SCHEMA
 
 _MSERVE_ADMIN_USER=$MSERVE_ADMIN_USER
 _MSERVE_ADMIN_PASSWD=$MSERVE_ADMIN_PASSWD
@@ -254,7 +257,7 @@ check_os_release () {
 
 ####################################
 # parse input options arguments
-while getopts 'm:d:s:l:u:e:p:U:P:t:c:hv' OPTION
+while getopts 'm:d:s:l:u:e:p:U:P:t:c:hv:x' OPTION
 do
 	case $OPTION in
 		m) MSERVE_HOME=$OPTARG
@@ -270,6 +273,17 @@ do
 				lightttpd) HTTP_SERVER=$OPTARG
 					;;
 				*) echo "HTTP server $OPTARG is not supported"
+					usage_f >&2
+					;;
+			esac
+			;;
+		x) HTTP_SCHEMA=$OPTARG
+			case $OPTARG in
+				http) HTTP_SCHEMA=$OPTARG
+					;;
+				https) HTTP_SCHEMA=$OPTARG
+					;;
+				*) echo "HTTP schema $OPTARG is not supported"
 					usage_f >&2
 					;;
 			esac
@@ -353,6 +367,9 @@ uninstall_mserve () {
 	if [ _HTTP_SERVER="apache" ]; then
 		a2dissite mserve
 		a2dismod fastcgi rewrite bw
+                if [ _HTTP_SCHEMA="https" ]; then
+                    a2dismod ssl
+                fi
 		a2ensite default
 		/etc/init.d/apache2 force-reload
 	fi
@@ -400,6 +417,7 @@ update_mserve () {
 	MSERVE_LOG=$_MSERVE_LOG
 
 	HTTP_SERVER=$_HTTP_SERVER
+	HTTP_SCHEMA=$_HTTP_SCHEMA
 
 	MSERVE_ADMIN_USER=$_MSERVE_ADMIN_USER
 	MSERVE_ADMIN_PASSWD=$_MSERVE_ADMIN_PASSWD
@@ -527,6 +545,9 @@ case $HTTP_SERVER in
 			echo "mod_auth_token is not found, trying to install it"
 	        	install_mod_auth_token
 		fi
+                if [ _HTTP_SCHEMA="https" ]; then
+                    a2enmod ssl
+                fi
 		;;
         lighttpd) apt-get -y install lighttpd
                 ;;
@@ -1017,6 +1038,16 @@ configure_lighttpd () {
 # configure apache
 configure_apache () {
 	local _source=/etc/apache2/sites-available/default
+        if [ _HTTP_SCHEMA="https" ]; then
+            local _source=/etc/apache2/sites-available/default-ssl
+            local _redirect=/etc/apache2/sites-available/mserve-redir
+            echo "<VirtualHost *:80>
+            ServerAdmin webmaster@localhost
+            RewriteEngine On
+            RewriteCond %{HTTPS} !=on
+            RewriteRule ^(.*) https://%{SERVER_NAME}/$1 [R,L]
+            </VirtualHost>" > $_redirect || f_ "failed to create mserve http to https redirect correctly"
+        fi
 	local _target=/etc/apache2/sites-available/mserve
 	# create a new site, e.g. copy the default one
 	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; \
@@ -1093,11 +1124,14 @@ configure_apache () {
 		f_ "failed to create successfully $_target (zero size mserve site detected)"
 	fi
 
-
 	###################################################
 	# disable old site enable fast cgi, enable new site
 	a2dissite default || f_ "failed to disable apache default site"
 	a2enmod fastcgi rewrite bw || f_ "failed to enable fastcgi rewrite bw modules"
+        if [ _HTTP_SCHEMA="https" ]; then
+            a2enmod ssl || f_ "failed to enable ssl mod"
+            a2ensite mserve-redir || f_ "failed to enable redirect to https site"
+        fi
 	a2ensite mserve	|| f_ "failed to enable mserve site"
 }
 
