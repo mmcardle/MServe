@@ -78,14 +78,14 @@ usage_f() {
 	-m <MSERVE home directory>	# default: /var/opt/mserve
 	-d <MSERVE data directory>	# default: /var/opt/mserve-data
 	-l <MSERVE log directory>	# defautl: /var/log/mserve
-	-s <MSERVE HTTP server>     	# [apache|lighttpd] default: apache
+	-t <MSERVE HTTP server>     	# [apache|lighttpd] default: apache
 	-u <MSERVE admin user name> 	# administrtor user name, default: admin
 	-p <MSERVE admin password>	# admin password
 	-e <MSERVE admin email>		# administrator email, default: admin@my.email.com
 	-U <Database admin user>	# Database admin user, default root
 	-P <Database admin password>	# Database admin password
-	-t <mserve tarball>  		# MSERVE distribution archive
-	-x <schema>       		# Schema (http/https)
+	-a <mserve tarball>  		# MSERVE distribution archive
+	-s <schema>       		# Schema (http/https)
 	-v verbose mode
 
 	example: $0 -s apache
@@ -257,7 +257,7 @@ check_os_release () {
 
 ####################################
 # parse input options arguments
-while getopts 'm:d:s:l:u:e:p:U:P:t:c:hv:x' OPTION
+while getopts 'm:d:s:l:u:e:p:U:P:a:c:hv:x:' OPTION
 do
 	case $OPTION in
 		m) MSERVE_HOME=$OPTARG
@@ -266,7 +266,7 @@ do
 			;;
 		l) MSERVE_LOG=$OPTARG
 			;;
-		s) HTTP_SERVER=$OPTARG
+		t) HTTP_SERVER=$OPTARG
 			case $OPTARG in
 				apache) HTTP_SERVER=$OPTARG
 					;;
@@ -277,7 +277,7 @@ do
 					;;
 			esac
 			;;
-		x) HTTP_SCHEMA=$OPTARG
+		s) HTTP_SCHEMA=$OPTARG
 			case $OPTARG in
 				http) HTTP_SCHEMA=$OPTARG
 					;;
@@ -298,7 +298,7 @@ do
 			;;
 		P) DATABASE_ADMIN_PASSWORD=$OPTARG
 			;;
-		t) MSERVE_ARCHIVE=$OPTARG
+		a) MSERVE_ARCHIVE=$OPTARG
 			# override embedded
 			SELF_EXTRACT=0
 			;;
@@ -364,14 +364,16 @@ uninstall_mserve () {
 	rm -f /etc/init.d/celeryd-service 
 
 	echo -e "\n\nReconfiguring http server $_HTTP_SERVER"
-	if [ _HTTP_SERVER="apache" ]; then
+	if [ _HTTP_SERVER == "apache" ]; then
 		a2dissite mserve
 		a2dismod fastcgi rewrite bw
-                if [ _HTTP_SCHEMA="https" ]; then
+                if [ "${HTTP_SCHEMA}" == "https" ]; then
+                    a2dissite mserve-redir
                     a2dismod ssl
                 fi
 		a2ensite default
 		/etc/init.d/apache2 force-reload
+		/etc/init.d/apache2 restart
 	fi
 
 	# remove mserve data
@@ -545,7 +547,7 @@ case $HTTP_SERVER in
 			echo "mod_auth_token is not found, trying to install it"
 	        	install_mod_auth_token
 		fi
-                if [ _HTTP_SCHEMA="https" ]; then
+                if [ "${HTTP_SCHEMA}" == "https" ]; then
                     a2enmod ssl
                 fi
 		;;
@@ -1038,7 +1040,8 @@ configure_lighttpd () {
 # configure apache
 configure_apache () {
 	local _source=/etc/apache2/sites-available/default
-        if [ _HTTP_SCHEMA="https" ]; then
+        if [ "${HTTP_SCHEMA}" == "https" ]; then
+            echo "SCHEMA IS $HTTP_SCHEMA"
             local _source=/etc/apache2/sites-available/default-ssl
             local _redirect=/etc/apache2/sites-available/mserve-redir
             echo "<VirtualHost *:80>
@@ -1128,7 +1131,7 @@ configure_apache () {
 	# disable old site enable fast cgi, enable new site
 	a2dissite default || f_ "failed to disable apache default site"
 	a2enmod fastcgi rewrite bw || f_ "failed to enable fastcgi rewrite bw modules"
-        if [ _HTTP_SCHEMA="https" ]; then
+        if [ "${HTTP_SCHEMA}" == "https" ]; then
             a2enmod ssl || f_ "failed to enable ssl mod"
             a2ensite mserve-redir || f_ "failed to enable redirect to https site"
         fi
