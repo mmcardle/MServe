@@ -58,9 +58,9 @@ auth_contents_handler = Resource(AuthContentsHandler)
 urlpatterns = patterns('',
 
     # API v2
-    url(r'^containers/$', hosting_handler),
+    url(r'^containers/$', hosting_handler, name="hostingcontainers" ),
     url(r'^containers/(?P<id>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
-    url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler, name="hostingcontainer_properites" ),
+    url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler, name="hostingcontainer_props" ),
     url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler ,name="hostingcontainer_usages"),
     url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler ,name="hostingcontainer_auths"),
     url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler ,name="hostingcontainer_services"),
@@ -158,7 +158,7 @@ urlpatterns = patterns('',
     url(r'^stats/$',  'dataservice.views.stats'),
     url(r'^browse/(?P<baseid>[^/]+)/$', "dataservice.views.render_base"),
 
-    url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
+    url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),
     url(r'^accounts/profile/$', 'dataservice.views.profile'),
 )

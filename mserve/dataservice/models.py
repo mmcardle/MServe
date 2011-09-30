@@ -531,7 +531,6 @@ class Base(models.Model):
             if url == "auths":
                 for authname in kwargs.keys():
                     try:
-
                         auth = self.auth_set.get(authname=authname)
                         auth.setroles(kwargs[authname]['roles'])
                         auth.save()
@@ -550,14 +549,15 @@ class Base(models.Model):
             if not 'name' in kwargs or not 'roles' in kwargs:
                 return HttpResponseBadRequest()
 
+            name = kwargs['name']
             if type(self) == Auth:
-                auth = Auth(authname=kwargs['name'], parent=self)
+                auth = Auth(authname=name, parent=self)
                 auth.setroles(kwargs['roles'])
                 auth.save()
                 self.auth_set.add(auth)
                 return auth
             else:
-                auth = Auth(authname=kwargs['name'], base=self)
+                auth = Auth(authname=name, base=self)
                 auth.setroles(kwargs['roles'])
                 auth.save()
                 self.auth_set.add(auth)
@@ -571,8 +571,8 @@ class Base(models.Model):
             return self.put(url, *args, **kwargs)
         if method == "DELETE":
             if url == None:
-                r = self.delete()
-                logging.info("DELETE %s", r)
+                self.delete()
+                r = rc.DELETED
                 return r
             if url == "auths":
                 if 'name' in kwargs:
@@ -725,6 +725,17 @@ class HostingContainer(NamedBase):
 
     def put(self, url, *args, **kwargs):
         logging.info("PUT CONTAINER %s %s %s ", url, args, kwargs)
+        if url == None:
+            from forms import HostingContainerForm
+            form = HostingContainerForm(kwargs["request"].POST,instance=self)
+            if form.is_valid():
+                hostingcontainer = form.save()
+                return hostingcontainer
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! ")
+                return r
+
         if url == "auths":
             for authname in kwargs.keys():
                 try:
@@ -1971,6 +1982,12 @@ class Auth(Base):
             urls.update(static.default_roles[rolename]['urls'])
         return urls
 
+    def urls(self):
+        urls = {}
+        for rolename in self.getroles():
+            urls.update(static.default_roles[rolename]['urls'])
+        return urls
+
     def basename(self):
         return self.base.name
 
@@ -1982,6 +1999,9 @@ class Auth(Base):
         return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
 
     def getroles(self):
+        return self.roles_csv.split(",")
+
+    def roles(self):
         return self.roles_csv.split(",")
 
     def setroles(self, new_roles):

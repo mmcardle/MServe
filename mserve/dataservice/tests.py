@@ -21,7 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-import simplejson
+import simplejson as json
 from django.http import HttpResponseRedirect
 from django.test import TestCase
 from dataservice.models import *
@@ -32,20 +32,36 @@ from django.http import HttpResponseBadRequest
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
 from django.test.client import Client
+from django.contrib.auth.models import User
 
 class ClientTest(TestCase):
 
     def test_client_containers(self):
-        container = HostingContainer.create_container("HostingContainer")
-
-        hc_url = reverse('hostingcontainer', args=[container.id])
-        hc_url_usage = reverse('hostingcontainer_usages', args=[container.id])
-        hc_url_properties = reverse('hostingcontainer_properties', args=[container.id])
-        hc_url_auths = reverse('hostingcontainer_auths', args=[container.id])
-        hc_url_services = reverse('hostingcontainer_sservices', args=[container.id])
-        hc_url_subservices = reverse('hostingcontainer_subservices', args=[container.id])
-
         c = Client()
+
+        password = 'mypassword'
+        User.objects.create_superuser('mm', 'myemail@tempuri.com', password)
+
+        hc_post_url = reverse('hostingcontainers')
+
+        response = c.post(hc_post_url)
+        self.failUnlessEqual(response.status_code,403)
+
+        c.login(username='mm', password=password)
+
+        response = c.post(hc_post_url, {"name":"testingcontainer"})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        containerid = js["id"]
+
+        hc_url = reverse('hostingcontainer', args=[containerid])
+        hc_url_usage =  reverse('hostingcontainer_usages', args=[containerid])
+        hc_url_properties = reverse('hostingcontainer_props', args=[containerid])
+        hc_url_auths = reverse('hostingcontainer_auths', args=[containerid])
+        hc_url_services = reverse('hostingcontainer_services', args=[containerid])
+        hc_url_subservices = reverse('hostingcontainer_subservices', args=[containerid])
+
+        # Test GET Methods
         response = c.get(hc_url)
         self.failUnlessEqual(response.status_code,200)
 
@@ -73,24 +89,61 @@ class ClientTest(TestCase):
         response = c.get(hc_url_properties)
         self.failUnlessEqual(response.status_code,200)
 
+        # Test POST Methods
+        response = c.post(hc_url)
+        self.failUnlessEqual(response.status_code,400)
+
+        response = c.post(hc_url_usage)
+        self.failUnlessEqual(response.status_code,405)
+
+        # Test POST Methods
+        response = c.post(hc_url_auths,{"name":"newcontaineradminrole","roles":"containeradmin"})
+        self.failUnlessEqual(response.status_code,200)
+
+        response = c.post(hc_url_services, {"name": "testservice"})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        serviceid= js["id"]
+
+        response = c.post(hc_url_subservices, {"name": "testsubservice", "serviceid": serviceid})
+        self.failUnlessEqual(response.status_code,200)
+
+        # Test PUT Methods
+        newname = "newcontainername"
+        response = c.put(hc_url, {"name": "newcontainername"})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        jsname = js["name"]
+        self.failUnlessEqual(jsname, newname)
+
+        newprofile = "newprofile"
+        response = c.put(hc_url, {"name": "newcontainername","default_profile": newprofile})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        jsprofile = js["default_profile"]
+        self.failUnlessEqual(jsprofile, newprofile)
+
+        # Test DELETE Methods
+        response = c.delete(hc_url)
+        self.failUnlessEqual(response.status_code,204)
         
+        response = c.get(hc_url)
+        self.failUnlessEqual(response.status_code,404)
+
 class APITest(TestCase):
 
     def test_roles(self):
         container = HostingContainer.create_container("HostingContainer")
         for auth in container.auth_set.all():
             roles = auth.getroles()
-            print roles
 
         service = container.create_data_service("Service1")
         for auth in service.auth_set.all():
             roles = auth.getroles()
-            print roles
 
         mfile = service.do("POST","mfiles",name="FullFile",file=ContentFile('new content'))
         for auth in mfile.auth_set.all():
             roles = auth.getroles()
-            print roles
             
     def test_container(self):
         container = HostingContainer.create_container("HostingContainer1")
@@ -153,6 +206,7 @@ class APITest(TestCase):
         kwargs = {"name":"newauth"}
         auths = container.do("GET","auths")
         self.failUnlessEqual(len(auths), 2)
+
         delauth = container.do("DELETE","auths",**kwargs)
         self.failUnlessEqual(delauth.status_code,204)
         auths = container.do("GET","auths")

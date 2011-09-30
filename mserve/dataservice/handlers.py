@@ -31,6 +31,7 @@ from dataservice.forms import *
 from django.conf import settings
 from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.conf import settings
 from django.http import HttpResponseNotFound
@@ -187,20 +188,12 @@ class ServiceRequestHandler(BaseHandler):
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE','PUT')
     model = HostingContainer
-    fields = ('name', 'id', ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  ) ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
+    fields = ('name', 'id', 'default_profile', ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  ) ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
     exclude = ()
 
     def update(self, request, id):
         if request.user.is_staff:
-            hostingcontainer   =  HostingContainer.objects.get(id=id)
-            form = HostingContainerForm(request.POST,instance=hostingcontainer)
-            if form.is_valid():
-                hostingcontainer = form.save()
-                return hostingcontainer
-            else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request! ")
-                return r
+            return HostingContainer.objects.get(id=id).do("PUT", **{"request":request})
         else:
             return HttpResponseForbidden()
 
@@ -209,19 +202,17 @@ class HostingContainerHandler(BaseHandler):
         if id == None and request.user.is_staff:
             return super(HostingContainerHandler, self).read(request)
 
-        hc =  HostingContainer.objects.get(id=str(id))
-        if murl:
+        if murl and id:
+            hc =  get_object_or_404(HostingContainer)
             r = hc.do(request.method,murl)
             return r
 
-        if id == None and request.user.is_staff:
-            return super(HostingContainerHandler, self).read(request)
+        if id == None and not request.user.is_staff:
+            r = rc.FORBIDDEN
+            return r
         else:
-            if id == None and not request.user.is_staff:
-                r = rc.FORBIDDEN
-                return r
-            else:
-                return HostingContainer.objects.get(id=str(id)).do("GET")
+            hc = get_object_or_404(HostingContainer)
+            return hc.do("GET")
 
     def delete(self, request, id):
         logging.info("Deleting Container %s " % id)
@@ -315,14 +306,20 @@ class DataServiceHandler(BaseHandler):
             return r
 
 class SubServiceHandler(BaseHandler):
-    allowed_methods = ('POST')
+    allowed_methods = ('GET','POST')
+
+    def read(self, request, containerid=None):
+
+        if containerid and request.user.is_staff:
+            return DataService.objects.filter(parent__container=containerid)
+        else:
+            r = rc.FORBIDDEN
+            return r
 
     def create(self, request, containerid=None):
-
-        serviceid = request.POST['serviceid']
-        name      = request.POST['name']
-
-        if serviceid:
+        if "serviceid" in request.POST and "name" in request.POST :
+            serviceid = request.POST['serviceid']
+            name = request.POST['name']
             container = HostingContainer.objects.get(id=containerid)
             service = container.dataservice_set.get(id=serviceid)
             subservice = service.create_subservice(name=name)
@@ -334,7 +331,7 @@ class SubServiceHandler(BaseHandler):
             return subservice
         else:
             r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
+            r.write("Invalid Request! %s not valid " % request.POST)
             return r
 
 class DataServiceTaskHandler(BaseHandler):
@@ -786,37 +783,24 @@ class AuthHandler(BaseHandler):
 
         return []
 
-    def create(self, request, id):
+    def create(self, request, id=None, containerid=None):
 
-        methods_string = request.POST['methods']
-        methods = methods_string.split(",")
+        if containerid:
+            container = HostingContainer.objects.get(id=containerid)
+            return container.do("POST", "auths", **request.POST)
+        elif serviceid:
+            dataservice = DataService.objects.get(id=serviceid)
+            return dataservice.do("POST", "auths", **request.POST)
+        elif mfileid:
+            mf = MFile.objects.get(id=mfileid)
+            return mf.do("POST", "auths", **request.POST)
+        elif authid:
+            auth = Auth.objects.get(id=authid)
+            return auth.do("POST", "auths", **request.POST)
+        else:
+            resp = rc.BAD_REQUEST
+            return resp
 
-        try:
-            base = NamedBase.objects.get(id=id)
-        except NamedBase.DoesNotExist:
-            logging.debug("NamedBase does not exist")
-
-        try:
-            auth = Auth.objects.get(id=id)
-
-            subauth = Auth(parent=auth,authname="New Auth")
-            subauth.save()
-
-            role = Role(rolename="newrole")
-            role.setmethods(methods)
-            role.description = "New Role"
-            role.save()
-
-            subauth.roles.add(role)
-
-            logging.debug("create subauth %s for %s with methods %s " % (subauth,auth,methods) )
-
-            return subauth
-        except Auth.DoesNotExist:
-            logging.debug("Auth does not exist")
-
-        return []
-        
 
 class ResourcesHandler(BaseHandler):
     allowed_methods = ('GET')
