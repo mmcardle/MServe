@@ -203,16 +203,20 @@ class HostingContainerHandler(BaseHandler):
             return super(HostingContainerHandler, self).read(request)
 
         if murl and id:
-            hc =  get_object_or_404(HostingContainer)
+            hc =  get_object_or_404(HostingContainer,id=id)
             r = hc.do(request.method,murl)
             return r
 
         if id == None and not request.user.is_staff:
             r = rc.FORBIDDEN
             return r
-        else:
-            hc = get_object_or_404(HostingContainer)
+
+        if id:
+            hc = get_object_or_404(HostingContainer,id=id)
             return hc.do("GET")
+        else:
+            r = rc.FORBIDDEN
+            return r
 
     def delete(self, request, id):
         logging.info("Deleting Container %s " % id)
@@ -787,16 +791,16 @@ class AuthHandler(BaseHandler):
 
         if containerid:
             container = HostingContainer.objects.get(id=containerid)
-            return container.do("POST", "auths", **request.POST)
+            return container.do("POST", "auths", **{"request":request.POST} )
         elif serviceid:
             dataservice = DataService.objects.get(id=serviceid)
-            return dataservice.do("POST", "auths", **request.POST)
+            return dataservice.do("POST", "auths", **{"request":request.POST} )
         elif mfileid:
             mf = MFile.objects.get(id=mfileid)
-            return mf.do("POST", "auths", **request.POST)
+            return mf.do("POST", "auths", **{"request":request.POST} )
         elif authid:
             auth = Auth.objects.get(id=authid)
-            return auth.do("POST", "auths", **request.POST)
+            return auth.do("POST", "auths", **{"request":request.POST} )
         else:
             resp = rc.BAD_REQUEST
             return resp

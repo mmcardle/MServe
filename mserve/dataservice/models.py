@@ -546,19 +546,21 @@ class Base(models.Model):
             return HttpResponseNotFound()
 
         if method == "POST" and url == "auths":
-            if not 'name' in kwargs or not 'roles' in kwargs:
+            request_args = kwargs["request"]
+            if not 'name' in request_args or not 'roles' in request_args:
                 return HttpResponseBadRequest()
 
-            name = kwargs['name']
+            name = request_args['name']
+            roles = request_args['roles'].split(',')
             if type(self) == Auth:
                 auth = Auth(authname=name, parent=self)
-                auth.setroles(kwargs['roles'])
+                auth.setroles(roles)
                 auth.save()
                 self.auth_set.add(auth)
                 return auth
             else:
                 auth = Auth(authname=name, base=self)
-                auth.setroles(kwargs['roles'])
+                auth.setroles(roles)
                 auth.save()
                 self.auth_set.add(auth)
                 return auth
@@ -2086,16 +2088,4 @@ class Auth(Base):
         super(Auth, self).save()
 
     def __unicode__(self):
-        return "Auth: authname=%s base=%s roles=%s ",\
-                    (self.authname, self.base, self.getroles())
-        if self.base:
-            return "Auth: authname=%s base=%s methods=%s urls=%s",\
-                    (self.authname, self.base, self.getmethods(),\
-                        self.geturls())
-        elif self.parent:
-            return "Auth: authname=%s parent=%s methods=%s urls=%s",\
-                    (self.authname, self.parent.authname, self.getmethods(),\
-                        self.geturls())
-        else:
-            return "Auth: authname=%s No Base/Parent methods=%s urls=%s",\
-                    (self.authname, self.getmethods(), self.geturls())
+        return "Auth: authname=%s base=%s roles=%s " % (self.authname, self.base, ",".join(self.getroles()))

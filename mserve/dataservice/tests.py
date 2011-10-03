@@ -21,13 +21,12 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+from mserve.dataservice.models import HostingContainer
 import simplejson as json
-from django.http import HttpResponseRedirect
 from django.test import TestCase
 from dataservice.models import *
 from jobservice.models import *
 from django.http import HttpResponseForbidden
-from django.http import HttpResponseNotFound
 from django.http import HttpResponseBadRequest
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
@@ -36,98 +35,201 @@ from django.contrib.auth.models import User
 
 class ClientTest(TestCase):
 
-    def test_client_containers(self):
-        c = Client()
+    def setUp(self):
+        self.password = 'mypassword'
+        self.username = 'myuser'
+        self.container_name = "testingcontainer"
+        self.c = Client()
+        User.objects.create_superuser(self.username, 'myemail@tempuri.com', self.password)
+        self.c.login(username=self.username, password=self.password)
+        hc = HostingContainer.create_container(self.container_name)
+        hc.save()
+        self.hc = hc
+        self.hc_post_url = reverse('hostingcontainers')
 
-        password = 'mypassword'
-        User.objects.create_superuser('mm', 'myemail@tempuri.com', password)
+    def test_create_container(self):
 
-        hc_post_url = reverse('hostingcontainers')
-
-        response = c.post(hc_post_url)
+        unauthclient = Client()
+        response = unauthclient.post(self.hc_post_url)
         self.failUnlessEqual(response.status_code,403)
 
-        c.login(username='mm', password=password)
+        self.c.login(username='mm', password=self.password)
+        response = self.c.post(self.hc_post_url, {"name":self.container_name})
+        self.failUnlessEqual(response.status_code,200)
 
-        response = c.post(hc_post_url, {"name":"testingcontainer"})
+    def test_get_container(self):
+
+        # Test GET Methods
+        response = self.c.get(self.hc_post_url)
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
-        containerid = js["id"]
+        self.failUnlessEqual(len(js),1)
 
-        hc_url = reverse('hostingcontainer', args=[containerid])
+        hc_url =  reverse('hostingcontainer', args=[self.hc.id])
+        response = self.c.get(hc_url)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],self.container_name)
+        self.failUnlessEqual(len(js["dataservice_set"]),0)
+
+    def test_get_container_urls(self):
+        containerid = self.hc.id
+        hc_url =  reverse('hostingcontainer', args=[containerid])
         hc_url_usage =  reverse('hostingcontainer_usages', args=[containerid])
         hc_url_properties = reverse('hostingcontainer_props', args=[containerid])
         hc_url_auths = reverse('hostingcontainer_auths', args=[containerid])
         hc_url_services = reverse('hostingcontainer_services', args=[containerid])
         hc_url_subservices = reverse('hostingcontainer_subservices', args=[containerid])
 
-        # Test GET Methods
-        response = c.get(hc_url)
+        response = self.c.get(hc_url_usage)
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
 
-        response = c.get(hc_url_usage)
+        response = self.c.get(hc_url_usage, {"full":"True"} )
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
 
-        response = c.get(hc_url_usage, {"full":"True"} )
+        response = self.c.get(hc_url_usage, {"aggregate":"True"} )
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+        metrics = [m["metric"] for m in js["usages"] ]
+        self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
 
-        response = c.get(hc_url_usage, {"aggregate":"True"} )
+        response = self.c.get(hc_url_usage, {"full":"True","aggregate":"True"} )
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+        metrics = [m["metric"] for m in js["usages"] ]
+        self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
 
-        response = c.get(hc_url_usage, {"full":"True","aggregate":"True"} )
+        response = self.c.get(hc_url_usage, {"full":"True","aggregate":"True","last":"-1"} )
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
 
-        response = c.get(hc_url_auths)
-        self.failUnlessEqual(response.status_code,200)
+        metrics = [m["metric"] for m in js["usages"] ]
+        self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
 
-        response = c.get(hc_url_services)
+        response = self.c.get(hc_url_auths)
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js[0]["roles"]),list)
+        self.failUnlessEqual(type(js[0]["thumburl"]),str)
+        self.failUnlessEqual(type(js[0]["basename"]),str)
+        self.failUnlessEqual(type(js[0]["auth_set"]),list)
+        self.failUnlessEqual(type(js[0]["urls"]),dict)
+        self.failUnlessEqual(type(js[0]["id"]),str)
+        self.failUnlessEqual(type(js[0]["authname"]),str)
+        self.failUnlessEqual(js[0]["authname"],"full")
 
-        response = c.get(hc_url_subservices)
+        response = self.c.get(hc_url_services)
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js),list)
+        self.failUnlessEqual(len(js),0)
 
-        response = c.get(hc_url_properties)
+        response = self.c.get(hc_url_subservices)
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js),list)
+        self.failUnlessEqual(len(js),0)
+
+        response = self.c.get(hc_url_properties)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js[0]["property"]),str)
+        self.failUnlessEqual(type(js[0]["value"]),str)
 
         # Test POST Methods
-        response = c.post(hc_url)
+        response = self.c.post(hc_url)
         self.failUnlessEqual(response.status_code,400)
 
-        response = c.post(hc_url_usage)
+        response = self.c.post(hc_url_usage)
         self.failUnlessEqual(response.status_code,405)
 
         # Test POST Methods
-        response = c.post(hc_url_auths,{"name":"newcontaineradminrole","roles":"containeradmin"})
-        self.failUnlessEqual(response.status_code,200)
-
-        response = c.post(hc_url_services, {"name": "testservice"})
+        response = self.c.post(hc_url_auths,{"name":"newcontainerauthname","roles":"containeradmin"})
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
-        serviceid= js["id"]
+        self.failUnlessEqual(js["authname"],"newcontainerauthname")
+        self.failUnlessEqual(js["roles"],["containeradmin"])
 
-        response = c.post(hc_url_subservices, {"name": "testsubservice", "serviceid": serviceid})
+        response = self.c.post(hc_url_services, {"name": "testservice"})
         self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],"testservice")
+        self.failUnlessEqual(len(js["mfile_set"]),0)
+        serviceid = js["id"]
 
+        response = self.c.post(hc_url_subservices, {"name": "testsubservice", "serviceid": serviceid})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],"testsubservice")
+        self.failUnlessEqual(len(js["mfile_set"]),0)
+        
         # Test PUT Methods
         newname = "newcontainername"
-        response = c.put(hc_url, {"name": "newcontainername"})
+        response = self.c.put(hc_url, {"name": newname})
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         jsname = js["name"]
         self.failUnlessEqual(jsname, newname)
 
         newprofile = "newprofile"
-        response = c.put(hc_url, {"name": "newcontainername","default_profile": newprofile})
+        response = self.c.put(hc_url, {"name": "newcontainername","default_profile": newprofile})
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         jsprofile = js["default_profile"]
         self.failUnlessEqual(jsprofile, newprofile)
 
         # Test DELETE Methods
-        response = c.delete(hc_url)
+        response = self.c.delete(hc_url)
         self.failUnlessEqual(response.status_code,204)
         
-        response = c.get(hc_url)
+        response = self.c.get(hc_url)
         self.failUnlessEqual(response.status_code,404)
 
 class APITest(TestCase):
