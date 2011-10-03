@@ -190,9 +190,9 @@ class DavServer(object):
 
     def _handle_get(self, request):
         logging.info("GET on %s" % self.service)
-        response = self._handle_head(request)
-        if response.status_code != 404:
-
+        head_response = self._handle_head(request)
+        if head_response.status_code != 404:
+            response = HttpResponse()
             isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
             if isFi:
