@@ -528,16 +528,16 @@ class Base(models.Model):
             return self.get_real_base().managementproperty_set.all()
 
         if method == "PUT" and url == "auths":
-            if url == "auths":
-                for authname in kwargs.keys():
+            if "request" in kwargs:
+                for authname in kwargs["request"].POST.keys():
                     try:
                         auth = self.auth_set.get(authname=authname)
-                        auth.setroles(kwargs[authname]['roles'])
+                        roles = kwargs["request"].POST[authname]['roles']
+                        auth.setroles(roles.split(","))
                         auth.save()
                         logging.info("PUT AUTHS updated auth %s ",
                                         auth.authname)
                         return self.auth_set.all()
-
                     except Auth.DoesNotExist:
                         logging.info("PUT AUTHS Auth '%s' does not exist ",
                                         authname)
@@ -546,25 +546,27 @@ class Base(models.Model):
             return HttpResponseNotFound()
 
         if method == "POST" and url == "auths":
-            request_args = kwargs["request"]
-            if not 'name' in request_args or not 'roles' in request_args:
-                return HttpResponseBadRequest()
+            if "request" in kwargs:
+                request_args = kwargs["request"].POST
+                if not 'name' in request_args or not 'roles' in request_args:
+                    return HttpResponseBadRequest()
 
-            name = request_args['name']
-            roles = request_args['roles'].split(',')
-            if type(self) == Auth:
-                auth = Auth(authname=name, parent=self)
-                auth.setroles(roles)
-                auth.save()
-                self.auth_set.add(auth)
-                return auth
+                name = request_args['name']
+                roles = request_args['roles'].split(',')
+                if type(self) == Auth:
+                    auth = Auth(authname=name, parent=self)
+                    auth.setroles(roles)
+                    auth.save()
+                    self.auth_set.add(auth)
+                    return auth
+                else:
+                    auth = Auth(authname=name, base=self)
+                    auth.setroles(roles)
+                    auth.save()
+                    self.auth_set.add(auth)
+                    return auth
             else:
-                auth = Auth(authname=name, base=self)
-                auth.setroles(roles)
-                auth.save()
-                self.auth_set.add(auth)
-                return auth
-
+                return HttpResponseBadRequest()
         if method == "GET":
             return self.get(url, *args, **kwargs)
         if method == "POST":
@@ -577,13 +579,17 @@ class Base(models.Model):
                 r = rc.DELETED
                 return r
             if url == "auths":
-                if 'name' in kwargs:
-                    auth = self.auth_set.get(authname=kwargs['name'])
-                    logging.info("DELETE AUTH %s", auth.authname)
-                    auth.delete()
-                    r = rc.DELETED
-                    r.write("Deleted '%s'" % kwargs['name'])
-                    return r
+                if 'request' in kwargs:
+                    if 'name' in kwargs["request"].POST:
+                        name = kwargs["request"].POST["name"]
+                        auth = self.auth_set.get(authname=name)
+                        logging.info("DELETE AUTH %s", auth.authname)
+                        auth.delete()
+                        r = rc.DELETED
+                        r.write("Deleted '%s'" % name)
+                        return r
+                    else:
+                        return HttpResponseBadRequest()
                 else:
                     return HttpResponseBadRequest()
             return HttpResponseNotFound()
@@ -737,19 +743,6 @@ class HostingContainer(NamedBase):
                 r = rc.BAD_REQUEST
                 r.write("Invalid Request! ")
                 return r
-
-        if url == "auths":
-            for authname in kwargs.keys():
-                try:
-                    auth = self.auth_set.get(authname=authname)
-                    auth.setmethods(kwargs[authname])
-                    auth.save()
-                    logging.info("PUT CONTAINER updated auth %s ", auth)
-                    return self.auth_set.all()
-                except Auth.DoesNotExist:
-                    logging.info("PUT CONTAINER Auth '%s' does not exist ",
-                                    authname)
-                    return HttpResponseBadRequest()
         return HttpResponseNotFound()
 
     def get_usage(self):
@@ -1076,18 +1069,6 @@ class DataService(NamedBase):
         if self.parent:
             return self.parent.put(url, *args, **kwargs)
         logging.info("PUT SERVICE %s %s %s ", url, args, kwargs)
-        if url == "auths":
-            for authname in kwargs.keys():
-                try:
-                    auth = self.auth_set.get(authname=authname)
-                    auth.setmethods(kwargs[authname])
-                    auth.save()
-                    logging.info("PUT SERVICE updated auth %s ", auth)
-                    return self.auth_set.all()
-                except Auth.DoesNotExist:
-                    logging.info("PUT SERVICE Auth '%s' does not exist ",
-                                    (authname))
-                    return HttpResponseBadRequest()
         return HttpResponseNotFound()
 
     def get_rate_for_metric(self, metric):
@@ -1414,15 +1395,6 @@ class MFile(NamedBase):
         return HttpResponseBadRequest()
 
     def put(self, url, *args, **kwargs):
-        if url == "auths":
-            for authname in kwargs.keys():
-                try:
-                    auth = self.auth_set.get(authname=authname)
-                    auth.setmethods(kwargs[authname])
-                    auth.save()
-                    return self.auth_set.all()
-                except Auth.DoesNotExist:
-                    return HttpResponseBadRequest()
         if url == None:
             if 'file' in kwargs:
                 file = kwargs['file']
@@ -1699,7 +1671,8 @@ class MFile(NamedBase):
     def create_workflow_job(self, name):
         if self.file:
 
-            self.mimetype = mimefile([self.id], [], {})["mimetype"]
+            if not self.mimetype:
+                self.mimetype = mimefile([self.id], [], {})["mimetype"]
             self.save()
 
             profile_name = self.service.get_profile()
@@ -1784,6 +1757,7 @@ class MFile(NamedBase):
 
         else:
             # Return a job with no tasks for an empty file
+            from jobservice.models import Job
             job = Job(name="%s Empty %s Job" % (self.name, name), mfile=self)
             job.save()
             ts = TaskSet(tasks=[])

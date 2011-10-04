@@ -43,6 +43,13 @@ job_descriptions['dataservice.tasks.mfilefetch'] = {
     "options" : [],
     "results" :[],
 }
+job_descriptions['dataservice.tasks.md5fileverify'] = {
+    "nbinputs" : 1,
+    "nboutputs" : 0,
+    "input-0" : { "mimetype" : "application/octet-stream" },
+    "options" : [],
+    "results" :[],
+}
 job_descriptions['jobservice.tasks.copyfromurl'] = {
         "nbinputs" : 0,
         "nboutputs" : 1,

@@ -193,7 +193,7 @@ class HostingContainerHandler(BaseHandler):
 
     def update(self, request, id):
         if request.user.is_staff:
-            return HostingContainer.objects.get(id=id).do("PUT", **{"request":request})
+            return HostingContainer.objects.get(id=id).do("PUT", request=request)
         else:
             return HttpResponseForbidden()
 
@@ -791,16 +791,16 @@ class AuthHandler(BaseHandler):
 
         if containerid:
             container = HostingContainer.objects.get(id=containerid)
-            return container.do("POST", "auths", **{"request":request.POST} )
+            return container.do("POST", "auths", request=request)
         elif serviceid:
             dataservice = DataService.objects.get(id=serviceid)
-            return dataservice.do("POST", "auths", **{"request":request.POST} )
+            return dataservice.do("POST", "auths", request=request)
         elif mfileid:
             mf = MFile.objects.get(id=mfileid)
-            return mf.do("POST", "auths", **{"request":request.POST} )
+            return mf.do("POST", "auths", request=request)
         elif authid:
             auth = Auth.objects.get(id=authid)
-            return auth.do("POST", "auths", **{"request":request.POST} )
+            return auth.do("POST", "auths", request=request)
         else:
             resp = rc.BAD_REQUEST
             return resp

@@ -86,7 +86,6 @@ class Job(NamedBase):
                 data = []
                 while count <= now:
                     tasks = TaskState.objects.filter(tstamp__lt=count,tstamp__gt=prev)
-                    logging.info("count for %s is %s ", count, len(tasks))
                     prev = count
                     count = count + step
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
@@ -119,7 +118,6 @@ class Job(NamedBase):
                 plots.append(jobplot)
 
                 for taskname in set(taskstates.values_list("name",flat=True).distinct()):
-                    logging.info(taskname)
                     subplot = {}
                     subplot["type"] = "pie"
                     subplot["size"] = "small"

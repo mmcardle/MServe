@@ -36,9 +36,24 @@ import pycurl
 import StringIO
 import PythonMagick
 import settings as settings
-from celery.task import task
+from celery.task import task, periodic_task
 from celery.task.sets import subtask
 from subprocess import Popen, PIPE
+from datetime import timedelta
+
+@periodic_task(run_every=timedelta(minutes=5))
+def service_scrubber():
+    logging.info("Running service scrubber")
+    from dataservice.models import DataService
+    from dataservice.models import MFile
+    for ds in DataService.objects.all():
+        try:
+            mfiles = list(ds.mfile_set.all().order_by('updated'))
+            for mfile in mfiles:
+                job = mfile.create_workflow_job("periodic")
+                logging.info("Created workflow job %s " % (job) )
+        except Exception, e:
+            logging.info("Exception while scurbbing service %s , %s " % (ds, e))
 
 def _get_mfile(mfileid):
     from models import MFile
