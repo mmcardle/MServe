@@ -120,7 +120,7 @@ class Job(NamedBase):
 
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
 
-                taskplot["data"] = [ {"label": "PLOTS", "data" : data} ] + sdata.values()
+                taskplot["data"] = [ {"label": "All Jobs", "data" : data} ] + sdata.values()
                 taskplot["type"] = "time"
                 taskplot["label"] = "Tasks in last 24 hours"
                 plots.append(taskplot)
@@ -147,7 +147,7 @@ class Job(NamedBase):
                         sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
 
-                taskplot["data"] = [ {"label": "PLOTS", "data" : data} ] + sdata.values()
+                taskplot["data"] = [ {"label": "All Jobs", "data" : data} ] + sdata.values()
                 taskplot["type"] = "time"
                 taskplot["label"] = "Tasks in last hour"
                 plots.append(taskplot)

@@ -7,6 +7,13 @@ var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
 var previousPoint = null;
 var date = new Date();
 
+FLOT_TRAFFIC_OPTIONS = {
+    xaxis:{mode:'time'},
+    points:{show:true},
+    lines:{show:true},
+    grid:{hoverable:true},
+    legend: { show :true, position: "nw" }
+}
 FLOT_OPTIONS = {
     legend: {
         show: false
@@ -18,7 +25,7 @@ FLOT_TIME_OPTIONS = {
     "label" : "Last 24 Hours",
     xaxis:{mode:'time'},
     points:{show:true},
-    lines:{show:true},
+    lines:{show:true,fill:true},
     grid:{hoverable:true},
     legend: { show :true, position: "nw" }
 }
@@ -111,16 +118,7 @@ function showTooltip(x, y, contents) {
                             )
                         }
 
-                        var plotoptions = {
-                            xaxis:{mode:'time'},
-                            points:{show:true},
-                            lines:{show:true},
-                            grid:{hoverable:true},
-                            legend: { show :true, position: "nw" }
-                        };
-
-                        var plot = $.plot($this, plotdata, plotoptions );
-
+                        var plot = $.plot($this, plotdata, FLOT_TRAFFIC_OPTIONS );
 
                         $this.bind("plothover", function (event, pos, item) {
                             if (item) {
@@ -173,7 +171,11 @@ function showTooltip(x, y, contents) {
                                     if (previousPoint != item.datapoint) {
                                         previousPoint = item.datapoint;
                                         date.setTime(item.datapoint[0]).toString;
-                                        showTooltip(item.pageX, item.pageY, 'Value at ' + date + ' is ' + item.datapoint[1]);
+                                        label = "Value"
+                                        if(item.series.label){
+                                            label = item.series.label
+                                        }
+                                        showTooltip(item.pageX, item.pageY, +' at ' + date + ' is ' + item.datapoint[1]);
                                     }
                                 } else {
                                     $("#tooltip").remove();

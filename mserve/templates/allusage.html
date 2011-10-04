@@ -4,7 +4,13 @@
 
 {% block content %}
 
+{% if user.is_staff %}
+<h4>Traffic</h4>
+<div id="traffic" style="width: 95%; height: 200px;margin-top: 16px;"></div>
+{% endif %}
+
 {% include "usage.html" %}
+
 
 <script type="text/javascript">
 
