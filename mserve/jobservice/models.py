@@ -53,12 +53,50 @@ class Job(NamedBase):
         self.metrics = job_metrics
 
     @staticmethod
-    def get_job_plots(types):
-        taskstates = TaskState.objects.all()
+    def get_job_plots(request, baseid=None):
+        taskstates = TaskState.objects.none()
+
+        if baseid:
+            
+            jobs = Job.objects.none()
+            base = NamedBase.objects.get(id=baseid)
+            
+            if utils.is_containerauth(base):
+                auth = Auth.objects.get(id=baseid)
+                base = auth.get_real_base()
+                jobs = base.jobs()
+            if utils.is_serviceauth(base):
+                auth = Auth.objects.get(id=baseid)
+                base = auth.get_real_base()
+                jobs = base.jobs()
+            if utils.is_mfileauth(base):
+                auth = Auth.objects.get(id=baseid)
+                base = auth.get_real_base()
+                jobs = Job.objects.filter(mfile=base)
+            if utils.is_container(base):
+                hc = HostingContainer.objects.get(id=baseid)
+                jobs = hc.jobs()
+            if utils.is_service(base):
+                ds = DataService.objects.get(id=baseid)
+                jobs = ds.jobs()
+            if utils.is_mfile(base):
+                mf = MFile.objects.get(id=baseid)
+                jobs = Job.objects.filter(mfile=mf)
+
+            tasksets_ids = [job.tasks()["taskset_id"] for job in jobs]
+            taskresults = filter(None, [TaskSetResult.restore(tasksetid)
+                                    for tasksetid in tasksets_ids])
+            asyncs = [asyncresult for taskres in taskresults
+                                    for asyncresult in taskres.subtasks]
+            taskstates = TaskState.objects.filter(task_id__in=asyncs)
+
+        elif request.user.is_staff:
+            taskstates = TaskState.objects.all()
+
         plots = []
-
+        types = request.GET
         for type in types:
-
+            names = taskstates.values('name')
             if type == "last24":
                 now = datetime.datetime.now()
                 count = now - datetime.timedelta(days=1)
@@ -66,13 +104,23 @@ class Job(NamedBase):
                 prev = count - step
                 taskplot = {}
                 data = []
+                sdata = {}
                 while count <= now:
-                    tasks = TaskState.objects.filter(tstamp__lt=count,tstamp__gt=prev)
+                    tasks = taskstates.filter(tstamp__lt=count,tstamp__gt=prev)
                     prev = count
                     count = count + step
+                    for task in names:
+                        _taskname = task["name"]
+                        stasks = tasks.filter(name=_taskname)
+                        if _taskname not in sdata:
+                            sdata[_taskname] = {}
+                            sdata[_taskname]["label"] = _taskname
+                            sdata[_taskname]["data"] = []
+                        sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])
+
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
 
-                taskplot["data"] = [data]
+                taskplot["data"] = [ {"label": "PLOTS", "data" : data} ] + sdata.values()
                 taskplot["type"] = "time"
                 taskplot["label"] = "Tasks in last 24 hours"
                 plots.append(taskplot)
@@ -84,12 +132,22 @@ class Job(NamedBase):
                 prev = count - step
                 taskplot = {}
                 data = []
+                sdata = {}
                 while count <= now:
-                    tasks = TaskState.objects.filter(tstamp__lt=count,tstamp__gt=prev)
+                    tasks = taskstates.filter(tstamp__lt=count,tstamp__gt=prev)
                     prev = count
                     count = count + step
+                    for task in names:
+                        _taskname = task["name"]
+                        stasks = tasks.filter(name=_taskname)
+                        if _taskname not in sdata:
+                            sdata[_taskname] = {}
+                            sdata[_taskname]["label"] = _taskname
+                            sdata[_taskname]["data"] = []
+                        sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
-                taskplot["data"] = [data]
+
+                taskplot["data"] = [ {"label": "PLOTS", "data" : data} ] + sdata.values()
                 taskplot["type"] = "time"
                 taskplot["label"] = "Tasks in last hour"
                 plots.append(taskplot)

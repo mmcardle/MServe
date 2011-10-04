@@ -769,6 +769,12 @@ class HostingContainer(NamedBase):
                     Job.objects.filter(id__in=jobids)))
         return summary
 
+    def jobs(self):
+        from jobservice.models import Job
+        dataservices = self.dataservice_set.all()
+        mfiles = MFile.objects.filter(service__in=dataservices).all()
+        return Job.objects.filter(mfile__in=mfiles)
+
     @staticmethod
     def create_container(name):
         hostingcontainer = HostingContainer(name=name)

@@ -45,6 +45,8 @@ from forms import DataServiceTaskForm
 from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.http import HttpResponseBadRequest
+from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse
@@ -98,21 +100,18 @@ def home(request, form=HostingContainerForm()):
 
 
 @staff_member_required
-def stats(request):  
+def traffic(request ):
     """Render the json stats for graphing """
-    if "traffic" in request.GET:
-        days = [date.today() - timedelta(day) for day in range(10)]
-        days_qs = [(day, Request.objects.day(date=day)) for day in days]
-        _json = simplejson.dumps(modules.graph(days_qs))
-        return HttpResponse(_json, mimetype="application/json")
-
-    from jobservice.models import Job
-    json = Job.get_job_plots(request.GET)
-
-    _json = simplejson.dumps(json)
-
+    days = [date.today() - timedelta(day) for day in range(10)]
+    days_qs = [(day, Request.objects.day(date=day)) for day in days]
+    _json = simplejson.dumps(modules.graph(days_qs))
     return HttpResponse(_json, mimetype="application/json")
 
+def stats(request, baseid=None):
+    from jobservice.models import Job
+    json = Job.get_job_plots(request,baseid=baseid)
+    _json = simplejson.dumps(json)
+    return HttpResponse(_json, mimetype="application/json")
 
 def render_base(request, baseid):
     """Render a specified base """

@@ -155,7 +155,9 @@ urlpatterns = patterns('',
     # HTML Views
     url(r'^$',  'dataservice.views.home'),
     url(r'^usage/',  'dataservice.views.render_usage'),
+    url(r'^traffic/$',  'dataservice.views.traffic'),
     url(r'^stats/$',  'dataservice.views.stats'),
+    url(r'^stats/(?P<baseid>[^/]+)/$',  'dataservice.views.stats'),
     url(r'^browse/(?P<baseid>[^/]+)/$', "dataservice.views.render_base"),
 
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),

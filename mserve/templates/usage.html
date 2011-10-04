@@ -10,17 +10,6 @@
 {% if user.is_staff %}
 <h4>Traffic</h4>
 <div id="traffic" style="width: 95%; height: 200px;margin-top: 16px;"></div>
-<script type="text/javascript">
-
-$('#tabs').bind('tabsshow', function(event, ui) {
-  if (ui.panel.id == "tabs-usage") {
-    $("#traffic").mserveusage('traffic' )
-  }
-});
-$("#traffic").mserveusage('traffic' )
-
-</script>
-
 {% endif %}
 
 <div id="mservelast24" style="margin-top: 20px;"></div>
@@ -34,12 +23,36 @@ $("#traffic").mserveusage('traffic' )
 
 <script type="text/javascript">
 
-$("#mservelast24").mserveusage('stats', ["last24"] )
-$("#mservelast1").mserveusage('stats', ["last1"] )
-$("#mservejobs").mserveusage('stats', ["jobs"] )
-$("#mservejobstype").mserveusage('stats', ["jobsbytype"] )
+$('#tabs').bind('tabsshow', function(event, ui) {
+  if (ui.panel.id == "tabs-usage") {
+
+    {% if user.is_staff %}
+        $("#traffic").mserveusage('traffic' )
+    {% endif %}
+
+    $("#mservelast24").mserveusage('stats', ["last24"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#mservelast1").mserveusage('stats', ["last1"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#mservejobs").mserveusage('stats', ["jobs"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+
+  }
+});
+
+var hash = window.location.hash.substring(1)
+if(hash=="tabs-usage"){
+    {% if user.is_staff %}
+        $("#traffic").mserveusage('traffic' )
+    {% endif %}
+    $("#mservelast24").mserveusage('stats', ["last24"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#mservelast1").mserveusage('stats', ["last1"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#mservejobs").mserveusage('stats', ["jobs"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+}
 
 </script>
+
+
+
 
 <h4>Statistics</h4>
 <div id="usagecontent" >

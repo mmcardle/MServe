@@ -96,7 +96,7 @@ function showTooltip(x, y, contents) {
             data = $this.data('mserve');
                 $.ajax({
                    type: "GET",
-                   url: '/stats/?traffic',
+                   url: '/traffic/',
 
                    success: function(msg){
 
@@ -142,11 +142,14 @@ function showTooltip(x, y, contents) {
                  })
         });
     },
-    stats: function(types){
+    stats: function(types, serviceid){
 
         var defaults = {};
         var options = $.extend(defaults, options);
-
+        url = "/stats/?"+types.join('&')
+        if(serviceid){
+            url = "/stats/"+serviceid+"/?"+types.join('&')
+        }
         return this.each(function() {
             var o = options;
             var obj = $(this);
@@ -154,8 +157,9 @@ function showTooltip(x, y, contents) {
             data = $this.data('mserve');
             $.ajax({
                type: "GET",
-               url: "/stats/?"+types.join('&'),
+               url: url,
                success: function(msg){
+                    $this.empty()
                     $(msg).each( function(index, plot){
                         $holder = $("#graphTemplate").tmpl( plot )
                         $this.append($holder)
