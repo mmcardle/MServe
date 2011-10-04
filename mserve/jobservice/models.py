@@ -32,6 +32,7 @@ from dataservice.tasks import thumboutput
 from dataservice.tasks import thumbvideooutput
 from celery.result import TaskSetResult
 from djcelery.models import TaskState
+from django.http import HttpResponseNotFound
 
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
@@ -56,32 +57,38 @@ class Job(NamedBase):
     def get_job_plots(request, baseid=None):
         taskstates = TaskState.objects.none()
 
-        if baseid:
-            
-            jobs = Job.objects.none()
-            base = NamedBase.objects.get(id=baseid)
-            
-            if utils.is_containerauth(base):
-                auth = Auth.objects.get(id=baseid)
-                base = auth.get_real_base()
-                jobs = base.jobs()
-            if utils.is_serviceauth(base):
-                auth = Auth.objects.get(id=baseid)
-                base = auth.get_real_base()
-                jobs = base.jobs()
-            if utils.is_mfileauth(base):
-                auth = Auth.objects.get(id=baseid)
-                base = auth.get_real_base()
-                jobs = Job.objects.filter(mfile=base)
-            if utils.is_container(base):
-                hc = HostingContainer.objects.get(id=baseid)
-                jobs = hc.jobs()
-            if utils.is_service(base):
-                ds = DataService.objects.get(id=baseid)
-                jobs = ds.jobs()
-            if utils.is_mfile(base):
-                mf = MFile.objects.get(id=baseid)
-                jobs = Job.objects.filter(mfile=mf)
+        if baseid:        
+            jobs = None
+            try:
+                base = NamedBase.objects.get(id=baseid)
+                if utils.is_container(base):
+                    hc = HostingContainer.objects.get(id=baseid)
+                    jobs = hc.jobs()
+                if utils.is_service(base):
+                    ds = DataService.objects.get(id=baseid)
+                    jobs = ds.jobs()
+                if utils.is_mfile(base):
+                    mf = MFile.objects.get(id=baseid)
+                    jobs = Job.objects.filter(mfile=mf)
+            except NamedBase.DoesNotExist:
+                try:
+                    auth = Auth.objects.get(id=baseid)
+                    if utils.is_container(auth.base):
+                        base = auth.get_real_base()
+                        jobs = base.jobs()
+                    if utils.is_service(auth.base):
+                        base = auth.get_real_base()
+                        jobs = base.jobs()
+                    if utils.is_mfile(auth.base):
+                        base = auth.get_real_base()
+                        jobs = Job.objects.filter(mfile=base)
+                except Auth.DoesNotExist:
+                    pass
+                pass
+
+            if jobs == None:
+                logging.error("Base id %s does not relate to a base or auth", baseid)
+                return None
 
             tasksets_ids = [job.tasks()["taskset_id"] for job in jobs]
             taskresults = filter(None, [TaskSetResult.restore(tasksetid)

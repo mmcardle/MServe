@@ -47,6 +47,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
+from django.http import HttpResponseNotFound
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse
@@ -110,6 +111,8 @@ def traffic(request ):
 def stats(request, baseid=None):
     from jobservice.models import Job
     json = Job.get_job_plots(request,baseid=baseid)
+    if json == None:
+        return HttpResponseNotFound()
     _json = simplejson.dumps(json)
     return HttpResponse(_json, mimetype="application/json")
 

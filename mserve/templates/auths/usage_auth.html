@@ -1,5 +1,54 @@
 {% load mservetags %}
 
+{% block script %}
+<script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.pie.js"></script>
+<script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.resize.min.js"></script>
+{% endblock %}
+
+{% load mservetags %}
+
+<div id="mservelast24" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+<div id="mservelast1" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+<div id="mservejobs" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+<div id="mservejobstype" style="margin-top: 20px;"></div>
+<div class="clr"></div>
+
+<script type="text/javascript">
+{% if service.id %}
+    _id = '{{service.id}}'
+{% endif %}
+{% if mfile.id %}
+    _id = '{{mfile.id}}'
+{% endif %}
+{% if container.id %}
+    _id = '{{container.id}}'
+{% endif %}
+{% if auth.id %}
+    _id = '{{auth.id}}'
+{% endif %}
+
+$('#tabs').bind('tabsshow', function(event, ui) {
+  if (ui.panel.id == "tabs-usage") {
+    $("#mservelast24").mserveusage('stats', ["last24"], _id )
+    $("#mservelast1").mserveusage('stats', ["last1"], _id )
+    $("#mservejobs").mserveusage('stats', ["jobs"], _id )
+    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], _id )
+  }
+});
+
+var hash = window.location.hash.substring(1)
+if(hash=="tabs-usage"){
+    $("#mservelast24").mserveusage('stats', ["last24"], _id )
+    $("#mservelast1").mserveusage('stats', ["last1"], _id )
+    $("#mservejobs").mserveusage('stats', ["jobs"], _id )
+    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], _id )
+}
+
+</script>
+
 <h3>Usage Summary</h3>
 
 <table class="table_usage" cellpadding="5" cellspacing="5">

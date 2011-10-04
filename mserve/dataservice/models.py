@@ -732,7 +732,7 @@ class HostingContainer(NamedBase):
             return None
 
     def put(self, url, *args, **kwargs):
-        logging.info("PUT CONTAINER %s %s %s ", url, args, kwargs)
+        logging.info("PUT CONTAINER %s %s", url, args)
         if url == None:
             from forms import HostingContainerForm
             form = HostingContainerForm(kwargs["request"].POST,instance=self)
