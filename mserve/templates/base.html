@@ -213,9 +213,9 @@ $(document).ready(function() {
     $(function() {
         $( "#tabs" ).tabs();
 
-        //$.address.change(function(event){
-        //    $("#tabs").tabs( "select" , window.location.hash )
-        //})
+        $.address.change(function(event){
+            $("#tabs").tabs( "select" , window.location.hash )
+        })
 
         $("#tabs").bind("tabsselect", function(event, ui) {
             window.location.hash = ui.tab.hash;
