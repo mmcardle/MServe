@@ -175,7 +175,7 @@ function showTooltip(x, y, contents) {
                                         if(item.series.label){
                                             label = item.series.label
                                         }
-                                        showTooltip(item.pageX, item.pageY, +' at ' + date + ' is ' + item.datapoint[1]);
+                                        showTooltip(item.pageX, item.pageY, label+' at ' + date + ' is ' + item.datapoint[1]);
                                     }
                                 } else {
                                     $("#tooltip").remove();
