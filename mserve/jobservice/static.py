@@ -118,13 +118,22 @@ job_descriptions['digitalrapids'] = {
         "options":[],
         "results" : []
 }
-job_descriptions['r3d'] = {
+job_descriptions['red3dmux'] = {
         "nbinputs" : 2,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "video" },
         "input-1" : { "mimetype" : "video" },
         "output-0" : { "mimetype" : "image/tiff" },
         "options":[],
+        "results" : []
+}
+job_descriptions['red2dtranscode'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "video" },
+        "input-1" : { "mimetype" : "video" },
+        "output-0" : { "mimetype" : "image/tiff" },
+        "options":["export_type"],
         "results" : []
 }
 job_descriptions_admin = {}

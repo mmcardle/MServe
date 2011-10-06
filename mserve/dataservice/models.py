@@ -264,11 +264,10 @@ class Usage(models.Model):
 
     @staticmethod
     def get_job_usagesummary(jobs):
-        tasksets_ids = [job.tasks()["taskset_id"] for job in jobs]
-        taskresults = filter(None, [TaskSetResult.restore(tasksetid)
-                                for tasksetid in tasksets_ids])
-        asyncs = [asyncresult for taskres in taskresults
-                                for asyncresult in taskres.subtasks]
+        from jobservice.models import Job
+        from jobservice.models import JobASyncResult
+
+        asyncs = JobASyncResult.objects.filter(job__in=jobs).values_list("async_id",flat=True)
         taskstates = TaskState.objects.filter(task_id__in=asyncs)
 
         jobtype_usage = taskstates.values("name").annotate(
@@ -1690,7 +1689,10 @@ class MFile(NamedBase):
 
             workflow_tasks = profile.workflows.get(name=name).tasks.all()
 
-            workflow_task_config = static.default_profiles[profile_name][name]
+            if len(workflow_tasks) == 0:
+                return None
+
+            #workflow_task_config = static.default_profiles[profile_name][name]
 
             in_tasks = []
 
@@ -1762,15 +1764,7 @@ class MFile(NamedBase):
             return job
 
         else:
-            # Return a job with no tasks for an empty file
-            from jobservice.models import Job
-            job = Job(name="%s Empty %s Job" % (self.name, name), mfile=self)
-            job.save()
-            ts = TaskSet(tasks=[])
-            tsr.save()
-            job.taskset_id = tsr.taskset_id
-            job.save()
-            return job
+            return None
 
     def post_process(self):
         return self.create_workflow_job("ingest")

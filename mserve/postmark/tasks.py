@@ -38,14 +38,100 @@ from ssh import MultiSSHClient
 from dataservice.models import MFile
 from jobservice.models import JobOutput
 
-def _ssh_r3d(left_eye_file,right_eye_file,tmpimage):
+def _ssh_r2d(file, export_type, tmpimage, start_frame=1, end_frame=10):
 
     ssh = MultiSSHClient()
 
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(settings.R3D_HOST, username=settings.R3D_USER, password=settings.R3D_PASS)
-    start_frame = "4"
-    end_frame = "4"
+    output_file_dir,output_file_name = os.path.split(tmpimage)
+
+    command = "redline --i %s --outDir %s -o %s --exportPreset %s -s %s -e %s" % (file, output_file_dir, output_file_name, export_type, start_frame, end_frame)
+    logging.info(command)
+
+    stdin, stdout, stderr = ssh.exec_command(command)
+
+    result = {}
+    result["stdout"] = stdout.readlines()
+    result["sdterr"] = stderr.readlines()
+
+    return result
+
+@task(name="red2dtranscode")
+def red2dtranscode(inputs,outputs,options={},callbacks=[]):
+
+    logging.info("Inputs %s"% (inputs))
+    if len(inputs) > 0:
+        input_mfile  = MFile.objects.get(id=inputs[0])
+        logging.info("R2D input file %s" % input_mfile)
+        remote_mount = "/Volumes/ifs/mserve/"
+
+        export_type = "avid"
+        if "export_type" in options:
+            export_type = options["export_type"]
+        
+        file_local_mount = os.path.join(settings.STORAGE_ROOT)
+        if input_mfile.service.container.default_path:
+            file_local_mount = os.path.join(settings.STORAGE_ROOT, input_mfile.service.container.default_path)
+
+        file_path=input_mfile.file.path
+
+        file_relative= os.path.join(file_path.replace(file_local_mount,remote_mount))
+
+        tfile_uuid = "r2d-image-"+str(uuid.uuid4())
+        remoteimage = os.path.join(remote_mount,tfile_uuid)
+
+        if export_type == "avid":
+            input_name = input_mfile.name.split(".")[0]
+            fname = input_name+".mxf"
+            localimage = os.path.join(settings.STORAGE_ROOT,"MXF",fname)
+            if input_mfile.service.container.default_path:
+                localimage = os.path.join(settings.STORAGE_ROOT,input_mfile.service.container.default_path,"MXF",fname)
+
+        if export_type == "tiff":
+            suffix = "."+("0".zfill(6))+".tif"
+            localimage = os.path.join(settings.STORAGE_ROOT,tfile_uuid,tfile_uuid+suffix)
+            if input_mfile.service.container.default_path:
+                localimage = os.path.join(settings.STORAGE_ROOT,input_mfile.service.container.default_path,tfile_uuid,tfile_uuid+suffix)
+                
+        if export_type == "fcp":
+            pass
+        
+        logging.info("file_local_mount %s" % file_local_mount)
+        logging.info("file_path %s" % file_path)
+        logging.info("file_relative %s" % file_relative)
+        logging.info("remoteimage %s" % remoteimage)
+        logging.info("localimage %s" % localimage)
+
+        result = _ssh_r2d(file_relative,export_type,remoteimage)
+
+        logging.info(result)
+
+        # TODO: Change to local in deployment
+        outputfile = open(localimage,'r')
+        #outputfile = open(remoteimage,'r')
+
+        suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='image/tiff')
+
+        if len(outputs)>0:
+            jo = JobOutput.objects.get(id=outputs[0])
+            jo.file.save('image.jpg', suf, save=True)
+        else:
+            logging.error("Nowhere to save output")
+
+        outputfile.close()
+
+        return {"message":"R2D successful"}
+    else:
+        logging.error("No input given")
+    raise
+
+def _ssh_r3d(left_eye_file,right_eye_file,tmpimage, start_frame=4, end_frame=4):
+
+    ssh = MultiSSHClient()
+
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(settings.R3D_HOST, username=settings.R3D_USER, password=settings.R3D_PASS)
     clip_settings_file = "/Volumes/Media/masterRMD"
     output_file_dir,output_file_name = os.path.split(tmpimage)
 
@@ -62,8 +148,8 @@ def _ssh_r3d(left_eye_file,right_eye_file,tmpimage):
     return result
 
 
-@task(name="r3d")
-def r3d(inputs,outputs,options={},callbacks=[]):
+@task(name="red3dmux")
+def red3dmux(inputs,outputs,options={},callbacks=[]):
 
     logging.info("Inputs %s"% (inputs))
     if len(inputs) > 0:

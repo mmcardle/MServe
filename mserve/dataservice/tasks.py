@@ -41,7 +41,8 @@ from celery.task.sets import subtask
 from subprocess import Popen, PIPE
 from datetime import timedelta
 
-@periodic_task(run_every=timedelta(minutes=5))
+'''
+@periodic_task(run_every=timedelta(minutes=15))
 def service_scrubber():
     logging.info("Running service scrubber")
     from dataservice.models import DataService
@@ -51,10 +52,11 @@ def service_scrubber():
             mfiles = list(ds.mfile_set.all().order_by('updated'))
             for mfile in mfiles:
                 job = mfile.create_workflow_job("periodic")
-                logging.info("Created workflow job %s " % (job) )
+                if job:
+                    logging.info("Created workflow job %s " % (job) )
         except Exception, e:
             logging.info("Exception while scurbbing service %s , %s " % (ds, e))
-
+'''
 def _get_mfile(mfileid):
     from models import MFile
     mf = MFile.objects.get(id=mfileid)

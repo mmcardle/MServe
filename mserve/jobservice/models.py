@@ -41,6 +41,10 @@ metric_job = "http://mserve/job"
 
 job_metrics = [metric_job]
 
+class JobASyncResult(models.Model):
+    async_id = models.CharField(max_length=200)
+    job = models.ForeignKey('Job')
+
 class Job(NamedBase):
     mfile  = models.ForeignKey(MFile)
     created  = models.DateTimeField(auto_now_add=True)
@@ -90,11 +94,7 @@ class Job(NamedBase):
                 logging.error("Base id %s does not relate to a base or auth", baseid)
                 return None
 
-            tasksets_ids = [job.tasks()["taskset_id"] for job in jobs]
-            taskresults = filter(None, [TaskSetResult.restore(tasksetid)
-                                    for tasksetid in tasksets_ids])
-            asyncs = [asyncresult for taskres in taskresults
-                                    for asyncresult in taskres.subtasks]
+            asyncs = JobASyncResult.objects.filter(job__in=jobs).values_list("async_id",flat=True)
             taskstates = TaskState.objects.filter(task_id__in=asyncs)
 
         elif request.user.is_staff:
@@ -165,7 +165,10 @@ class Job(NamedBase):
                 jobplot["label"] = "Jobs by Type",
                 query = taskstates.values("name").annotate(n=Count("name"))
                 for val in query:
-                    val["label"] = val["name"].split(".")[-1]
+                    if val["name"] == None:
+                        val["label"] = "unknown"
+                    else:
+                        val["label"] = val["name"].split(".")[-1]
                     val["data"] = val["n"]
                 jobplot["data"] = [item for item in query]
                 plots.append(jobplot)
@@ -201,6 +204,11 @@ class Job(NamedBase):
     def save(self):
         if not self.id:
             self.id = utils.random_id()
+        if self.taskset_id:
+            for st in  TaskSetResult.restore(self.taskset_id).subtasks:
+                jasr = JobASyncResult(async_id=st.task_id,job=self)
+                jasr.save()
+
         super(Job, self).save()
 
     def __unicode__(self):
