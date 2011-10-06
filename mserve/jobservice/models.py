@@ -116,15 +116,14 @@ class Job(NamedBase):
                     tasks = taskstates.filter(tstamp__lt=count,tstamp__gt=prev)
                     prev = count
                     count = count + step
-                    for task in names:
+                    '''for task in names:
                         _taskname = task["name"]
                         stasks = tasks.filter(name=_taskname)
                         if _taskname not in sdata:
                             sdata[_taskname] = {}
                             sdata[_taskname]["label"] = _taskname
                             sdata[_taskname]["data"] = []
-                        sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])
-
+                        sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])'''
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
 
                 taskplot["data"] = [ {"label": "All Jobs", "data" : data} ] + sdata.values()
@@ -144,14 +143,14 @@ class Job(NamedBase):
                     tasks = taskstates.filter(tstamp__lt=count,tstamp__gt=prev)
                     prev = count
                     count = count + step
-                    for task in names:
+                    '''for task in names:
                         _taskname = task["name"]
                         stasks = tasks.filter(name=_taskname)
                         if _taskname not in sdata:
                             sdata[_taskname] = {}
                             sdata[_taskname]["label"] = _taskname
                             sdata[_taskname]["data"] = []
-                        sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])
+                        sdata[_taskname]["data"].append( [time.mktime(count.timetuple())*1000, str(len(stasks)) ])'''
                     data.append( [time.mktime(count.timetuple())*1000, str(len(tasks)) ])
 
                 taskplot["data"] = [ {"label": "All Jobs", "data" : data} ] + sdata.values()
@@ -205,9 +204,11 @@ class Job(NamedBase):
         if not self.id:
             self.id = utils.random_id()
         if self.taskset_id:
-            for st in  TaskSetResult.restore(self.taskset_id).subtasks:
-                jasr = JobASyncResult(async_id=st.task_id,job=self)
-                jasr.save()
+            subtasks = TaskSetResult.restore(self.taskset_id).subtasks
+            if subtasks:
+                for st in subtasks:
+                    jasr = JobASyncResult(async_id=st.task_id,job=self)
+                    jasr.save()
 
         super(Job, self).save()
 
