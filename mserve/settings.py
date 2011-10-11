@@ -226,8 +226,8 @@ wuxga = (1920,1200)
 FORCE_SCRIPT_NAME = ''
 
 # POSTMARK SPECIFIC
-DIGITAL_RAPIDS_INPUT_DIR = "/mnt/postmark/postmark/input/"
-DIGITAL_RAPIDS_OUTPUT_DIR = "/mnt/postmark/postmark/output/"
+DIGITAL_RAPIDS_INPUT_DIR = "/mnt/postmark/postmark/input/QuickTime_H264_768x576_2Mbps_AAC_192Kbps_Stereo/"
+DIGITAL_RAPIDS_OUTPUT_DIR = "/mnt/postmark/postmark/output/QuickTime_H264_768x576_2Mbps_AAC_192Kbps_Stereo/"
 R3D_HOST="r3dhost"
 R3D_USER="r3dusername"
 R3D_PASS="r3dpassword"

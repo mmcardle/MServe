@@ -79,6 +79,11 @@ class JobHandler(BaseHandler):
 
             if mfileid != "":
                 mfile = MFile.objects.get(id=mfileid)
+
+                check = mfile.service.check_times()
+                if check:
+                    return check
+
                 inputs.append(mfile.id)
             else:
                 r = rc.BAD_REQUEST

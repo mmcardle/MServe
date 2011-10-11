@@ -475,6 +475,25 @@
         </div>
 </script>
 
+<script id="mfileUploadFailedTemplate" type="text/x-jquery-tmpl">
+    <div class="mfileUpload">
+        <table>
+            <tr>
+                <td rowspan="2" class="file_upload_preview"></td>
+                <td colspan="1" class="ui-state-error-text">${error}</td>
+                <td class="file_upload_cancel">
+                    <button class="ui-state-default ui-corner-all" title="Cancel">
+                <span class="ui-icon ui-icon-cancel">Cancel</span>
+                </button>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" class="file_upload_progress"><div></div></td>
+            </tr>
+        </table>
+    </div>
+</script>
+
 <script id="mfileUploadTemplate" type="text/x-jquery-tmpl">
     <div class="mfileUpload">
         <table>

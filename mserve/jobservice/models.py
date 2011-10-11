@@ -204,11 +204,13 @@ class Job(NamedBase):
         if not self.id:
             self.id = utils.random_id()
         if self.taskset_id:
-            subtasks = TaskSetResult.restore(self.taskset_id).subtasks
-            if subtasks:
-                for st in subtasks:
-                    jasr = JobASyncResult(async_id=st.task_id,job=self)
-                    jasr.save()
+            tsr = TaskSetResult.restore(self.taskset_id)
+            if tsr is not None and hasattr(tsr,"taskset_id"):
+                subtasks = tsr.subtasks
+                if subtasks:
+                    for st in subtasks:
+                        jasr = JobASyncResult(async_id=st.task_id,job=self)
+                        jasr.save()
 
         super(Job, self).save()
 

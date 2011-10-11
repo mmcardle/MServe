@@ -6,12 +6,17 @@ $(function () {
         maxChunkSize:10000000,
         uploadTable: $('#files'),
         buildUploadRow: function (files, index) {
-            return $( "#mfileUploadTemplate" ).tmpl( files[index] )
-
+            mfile = files[index]
+            return $( "#mfileUploadTemplate" ).tmpl( mfile )
         },
-        buildDownloadRow: function (file) {
-            loadMFile(file)
-            return $( "#mfileUploadCompleteTemplate" ).tmpl( file )
+        buildDownloadRow: function (mfile) {
+            if( mfile.error){
+                 failed = $( "#mfileUploadFailedTemplate" ).tmpl( mfile )
+                 $(failed).find(".ui-icon-cancel").click(function (){ failed.remove() } )
+                 return failed
+            }
+            loadMFile(mfile)
+            return $( "#mfileUploadCompleteTemplate" ).tmpl( mfile )
         }
     });
 });

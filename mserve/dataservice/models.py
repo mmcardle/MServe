@@ -957,15 +957,18 @@ class DataService(NamedBase):
         self.metrics = SERVICE_METRICS
 
     def get_usage(self):
-        tasksets_ids = [job.tasks()["taskset_id"] for job in self.jobs()]
-        taskresults = filter(None, [TaskSetResult.restore(tasksetid)
-                                for tasksetid in tasksets_ids])
-        asyncs = [asyncresult for taskres in taskresults
-                                for asyncresult in taskres.subtasks]
+
+        ids = [mfile.id for mfile in self.mfile_set.all()] \
+                + [job.id for job in self.jobs()] + [self.id]
+        thisusage = Usage.objects.filter(base__in=ids)
+        return thisusage
+
+        from jobservice.models import JobASyncResult
+        asyncs = JobASyncResult.objects.filter(job__in=self.jobs()).values_list("async_id",flat=True)
         taskstates = [taskstate for taskstate in TaskState.objects
                             .filter(task_id__in=asyncs)
                             .filter(state="SUCCESS")]
-        usages = [Usage(base=self, metric=METRIC_JOBRUNTIME,
+        usages = [Usage(base=self, metric=taskstate.name,
                                 total=taskstate.runtime, rate=0,
                                 rateCumulative=0, rateTime=taskstate.tstamp,
                                 nInProgress=0, reports=1,
@@ -1049,10 +1052,23 @@ class DataService(NamedBase):
         mfiles = MFile.objects.filter(service=self).all()
         return Job.objects.filter(mfile__in=mfiles)
 
+    def check_times(self):
+        now = datetime.datetime.now()
+        if (self.starttime and now < self.starttime) or (self.endtime and now > self.endtime):
+            _json = {"error" : "The service is only avaliable between %s and %s " % (self.starttime, self.endtime) }
+            return HttpResponseForbidden(_json, mimetype="application/json" )
+        return None
+
     def post(self, url, *args, **kwargs):
         # TODO : Jobs
         logging.info("%s %s ", args, kwargs)
+
         if url == "mfiles":
+
+            check = self.check_times()
+            if check:
+                return check
+
             if self.parent:
                 return self.parent.post(url, *args, **kwargs)
             mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
@@ -1060,6 +1076,11 @@ class DataService(NamedBase):
                 subservice.__duplicate__(mfile)
             return mfile
         if url == "mfolders":
+
+            check = self.check_times()
+            if check:
+                return check
+
             return self.create_mfolder(kwargs['name'])
         return HttpResponseNotFound()
 

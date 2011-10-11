@@ -124,7 +124,7 @@ job_descriptions['red3dmux'] = {
         "input-0" : { "mimetype" : "video" },
         "input-1" : { "mimetype" : "video" },
         "output-0" : { "mimetype" : "image/tiff" },
-        "options":[],
+        "options":["start_frame","end_frame"],
         "results" : []
 }
 job_descriptions['red2dtranscode'] = {
@@ -132,8 +132,8 @@ job_descriptions['red2dtranscode'] = {
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "video" },
         "input-1" : { "mimetype" : "video" },
-        "output-0" : { "mimetype" : "image/tiff" },
-        "options":["export_type"],
+        "output-0" : { "mimetype" : "application/octet-stream" },
+        "options":["export_type","start_frame","end_frame"],
         "results" : []
 }
 job_descriptions_admin = {}

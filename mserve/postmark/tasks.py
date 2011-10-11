@@ -24,6 +24,9 @@
 from celery.task import task
 import logging
 import os
+import re
+import tempfile
+import datetime
 import shutil
 import os.path
 import time
@@ -32,13 +35,41 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 import dataservice.utils as utils
 import settings as settings
 import paramiko
-import os
 import uuid
 from ssh import MultiSSHClient
 from dataservice.models import MFile
 from jobservice.models import JobOutput
+import tarfile
 
-def _ssh_r2d(file, export_type, tmpimage, start_frame=1, end_frame=10):
+def tar_files(temp_tarfile, files):
+    tar = tarfile.open(temp_tarfile, "w:gz")
+    for name in files:
+        (head,tail) = os.path.split(name)
+        tar.add(name,arcname=tail)
+    tar.close()
+
+
+def get_files(directory, prefix=None, suffix=None, after=None):
+    _files=[]
+    for fname in os.listdir(directory):
+        file = os.path.join(directory,fname)
+        if not os.path.isfile(file):
+            continue
+        if after:
+            mtime = os.path.getmtime(file)
+            if datetime.datetime.fromtimestamp(mtime) <= after:
+                continue
+        if prefix:
+            if not re.match(prefix,fname):
+                continue
+        if suffix:
+            if not re.search(suffix+"$",fname):
+                continue
+        _files.append(file)
+    return _files
+
+
+def _ssh_r2d(file, export_type, tmpimage, start_frame=1, end_frame=2):
 
     ssh = MultiSSHClient()
 
@@ -60,14 +91,24 @@ def _ssh_r2d(file, export_type, tmpimage, start_frame=1, end_frame=10):
 @task(name="red2dtranscode")
 def red2dtranscode(inputs,outputs,options={},callbacks=[]):
 
+    started = datetime.datetime.now()
+
     logging.info("Inputs %s"% (inputs))
     if len(inputs) > 0:
         input_mfile  = MFile.objects.get(id=inputs[0])
         logging.info("R2D input file %s" % input_mfile)
         remote_mount = "/Volumes/ifs/mserve/"
 
-        export_type = "avid"
-        if "export_type" in options:
+        start_frame = 1
+        if "start_frame" in options:
+            start_frame = options["start_frame"]
+
+        end_frame = 2
+        if "end_frame" in options:
+            end_frame = options["end_frame"]
+
+        export_type = "tiff"
+        if "export_type" in options and options["export_type"] != "":
             export_type = options["export_type"]
         
         file_local_mount = os.path.join(settings.STORAGE_ROOT)
@@ -75,58 +116,74 @@ def red2dtranscode(inputs,outputs,options={},callbacks=[]):
             file_local_mount = os.path.join(settings.STORAGE_ROOT, input_mfile.service.container.default_path)
 
         file_path=input_mfile.file.path
-
         file_relative= os.path.join(file_path.replace(file_local_mount,remote_mount))
-
         tfile_uuid = "r2d-image-"+str(uuid.uuid4())
         remoteimage = os.path.join(remote_mount,tfile_uuid)
 
+        if export_type == "tiff":
+            suffix = "."+("0".zfill(6))+".tif"
+            localimage = os.path.join(file_local_mount,tfile_uuid,tfile_uuid+suffix)
         if export_type == "avid":
             input_name = input_mfile.name.split(".")[0]
             fname = input_name+".mxf"
-            localimage = os.path.join(settings.STORAGE_ROOT,"MXF",fname)
-            if input_mfile.service.container.default_path:
-                localimage = os.path.join(settings.STORAGE_ROOT,input_mfile.service.container.default_path,"MXF",fname)
+            localimage = os.path.join(file_local_mount,"MXF",fname)
+        elif export_type == "fcp":
+            fname = tfile_uuid+".mov"
+            localimage = os.path.join(file_local_mount,fname)
+        else:
+            raise Exception("Unknown export type '%s'", export_type)
 
-        if export_type == "tiff":
-            suffix = "."+("0".zfill(6))+".tif"
-            localimage = os.path.join(settings.STORAGE_ROOT,tfile_uuid,tfile_uuid+suffix)
-            if input_mfile.service.container.default_path:
-                localimage = os.path.join(settings.STORAGE_ROOT,input_mfile.service.container.default_path,tfile_uuid,tfile_uuid+suffix)
-                
-        if export_type == "fcp":
-            pass
-        
         logging.info("file_local_mount %s" % file_local_mount)
         logging.info("file_path %s" % file_path)
         logging.info("file_relative %s" % file_relative)
         logging.info("remoteimage %s" % remoteimage)
         logging.info("localimage %s" % localimage)
 
-        result = _ssh_r2d(file_relative,export_type,remoteimage)
+        result = _ssh_r2d(file_relative,export_type,remoteimage,start_frame=start_frame,end_frame=end_frame)
+        outputfile = None
 
-        logging.info(result)
+        if export_type == "tiff":
+            localdir = os.path.join(file_local_mount,tfile_uuid)
+            temp_tarfile = tempfile.NamedTemporaryFile('wb')
+            tar_files(temp_tarfile.name, [localdir] )
+            outputfile = open(temp_tarfile.name, 'r')
 
-        # TODO: Change to local in deployment
-        outputfile = open(localimage,'r')
-        #outputfile = open(remoteimage,'r')
+        if export_type == "avid":
+            localdir = os.path.join(file_local_mount,"MXF")
+            files = get_files(localdir, prefix=input_mfile.name[:8], after=started)
+            logging.info(files)
+            temp_tarfile = tempfile.NamedTemporaryFile('wb')
+            tar_files(temp_tarfile.name, files )
+            outputfile = open(temp_tarfile.name, 'r')
 
-        suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='image/tiff')
+        if export_type == "fcp":
+            files = [localimage]
+            logging.info(files)
+            temp_tarfile = tempfile.NamedTemporaryFile('wb')
+            tar_files(temp_tarfile.name, files )
+            outputfile = open(temp_tarfile.name, 'r')
 
-        if len(outputs)>0:
-            jo = JobOutput.objects.get(id=outputs[0])
-            jo.file.save('image.jpg', suf, save=True)
+        logging.info("outputfile %s", outputfile)
+
+        if outputfile:
+            suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='image/tiff')
+
+            if len(outputs)>0:
+                jo = JobOutput.objects.get(id=outputs[0])
+                jo.file.save('results.tar.gz', suf, save=True)
+            else:
+                logging.error("Nowhere to save output")
+
+            outputfile.close()
         else:
-            logging.error("Nowhere to save output")
-
-        outputfile.close()
+            raise Exception("Unable to get outputfile location")
 
         return {"message":"R2D successful"}
     else:
         logging.error("No input given")
     raise
 
-def _ssh_r3d(left_eye_file,right_eye_file,tmpimage, start_frame=4, end_frame=4):
+def _ssh_r3d(left_eye_file,right_eye_file,tmpimage, start_frame=1, end_frame=2):
 
     ssh = MultiSSHClient()
 
@@ -160,6 +217,14 @@ def red3dmux(inputs,outputs,options={},callbacks=[]):
             logging.info("Right %s" % right)
             remote_mount = "/Volumes/ifs/mserve/"
 
+            start_frame = 1
+            if "start_frame" in options:
+                start_frame = options["start_frame"]
+
+            end_frame = 2
+            if "end_frame" in options:
+                end_frame = options["end_frame"]
+
             left_local_mount = os.path.join(settings.STORAGE_ROOT,left.service.container.default_path)
             right_local_mount = os.path.join(settings.STORAGE_ROOT,right.service.container.default_path)
 
@@ -183,7 +248,7 @@ def red3dmux(inputs,outputs,options={},callbacks=[]):
             logging.info("remoteimage %s" % remoteimage)
             logging.info("localimage %s" % localimage)
 
-            result = _ssh_r3d(left_relative,right_relative,remoteimage)
+            result = _ssh_r3d(left_relative,right_relative,remoteimage,start_frame=start_frame,end_frame=end_frame)
 
             logging.info(result)
 

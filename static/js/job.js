@@ -256,7 +256,16 @@ function mfile_job_ajax(mfileid,data){
                 if(!msg.ready){
                     check_job(msg)
                 }
-       }
+       },
+       error: function(msg){
+            json_response = eval('(' + msg.responseText + ')');
+            if(json_response.error){
+                showError("Error creating Job",json_response.error)
+            }else{
+                showError("Error creating Job",msg.responseText)
+            }
+       },
+
      });
 }
 
