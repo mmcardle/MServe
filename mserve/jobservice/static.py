@@ -6,6 +6,7 @@ job_descriptions['thumbimage'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.thumbimage'] = job_descriptions['thumbimage']
 job_descriptions['posterimage'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
@@ -13,6 +14,7 @@ job_descriptions['posterimage'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.posterimage'] = job_descriptions['posterimage']
 job_descriptions['thumbvideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
@@ -20,6 +22,7 @@ job_descriptions['thumbvideo'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.thumbvideo'] = job_descriptions['thumbvideo']
 job_descriptions['postervideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
@@ -27,6 +30,7 @@ job_descriptions['postervideo'] = {
         "options" : ['width','height'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.postervideo'] = job_descriptions['postervideo']
 job_descriptions['transcodevideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,
@@ -35,6 +39,7 @@ job_descriptions['transcodevideo'] = {
         "options" : ['width','height','ffmpeg_args'],
         "results" :[]
     }
+job_descriptions['dataservice.tasks.transcodevideo'] = job_descriptions['transcodevideo']
 job_descriptions['dataservice.tasks.mfilefetch'] = {
     "nbinputs" : 1,
     "nboutputs" : 1,
@@ -64,6 +69,7 @@ job_descriptions['md5file'] = {
         "options": [] ,
         "results" : ['md5']
 }
+job_descriptions['dataservice.tasks.md5file'] = job_descriptions['md5file']
 job_descriptions['mimefile'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,

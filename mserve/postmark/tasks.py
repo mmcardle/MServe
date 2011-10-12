@@ -123,7 +123,7 @@ def red2dtranscode(inputs,outputs,options={},callbacks=[]):
         if export_type == "tiff":
             suffix = "."+("0".zfill(6))+".tif"
             localimage = os.path.join(file_local_mount,tfile_uuid,tfile_uuid+suffix)
-        if export_type == "avid":
+        elif export_type == "avid":
             input_name = input_mfile.name.split(".")[0]
             fname = input_name+".mxf"
             localimage = os.path.join(file_local_mount,"MXF",fname)
@@ -131,7 +131,7 @@ def red2dtranscode(inputs,outputs,options={},callbacks=[]):
             fname = tfile_uuid+".mov"
             localimage = os.path.join(file_local_mount,fname)
         else:
-            raise Exception("Unknown export type '%s'", export_type)
+            raise Exception("Unknown export type '%s'" % export_type)
 
         logging.info("file_local_mount %s" % file_local_mount)
         logging.info("file_path %s" % file_path)
