@@ -121,7 +121,6 @@ function load_render_preview(mfileid){
       }
    }
  });
-
 }
 
 function load_jobs_mfile(mfileid){
@@ -138,9 +137,7 @@ function load_jobs_mfile(mfileid){
                 if(!job.tasks.ready){
                     check_job(job,mfileid)
                 }
-
             });
-
        }
      });
 }

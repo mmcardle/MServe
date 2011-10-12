@@ -11,9 +11,9 @@ $(function () {
         },
         buildDownloadRow: function (mfile) {
             if( mfile.error){
-                 failed = $( "#mfileUploadFailedTemplate" ).tmpl( mfile )
-                 $(failed).find(".ui-icon-cancel").click(function (){ failed.remove() } )
-                 return failed
+                 var $failed = $( "#mfileUploadFailedTemplate" ).tmpl( mfile )
+                 $($failed).find(".ui-icon-cancel button").button().click(function (){ $failed.remove() } )
+                 return $failed
             }
             loadMFile(mfile)
             return $( "#mfileUploadCompleteTemplate" ).tmpl( mfile )

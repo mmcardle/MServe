@@ -82,7 +82,6 @@ function mservetimeout(obj,mfileid,depth){
 
                 $("#newjobbutton-"+mfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
                 $('#newjobbutton-'+mfileid).click(function(){
-                    create_new_job_ui_dialog(mfile.id,true)
                     $("#mfileid").val(mfileid);
                     $("#dialog-new-job-dialog-form").dialog( "open" );
                 });
