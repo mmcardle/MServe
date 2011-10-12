@@ -168,7 +168,7 @@ CELERY_DEFAULT_EXCHANGE_TYPE = "topic"
 CELERY_DEFAULT_ROUTING_KEY = "task.default"
 CELERY_RESULT_BACKEND = "djcelery.backends.database.DatabaseBackend"
 
-CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks",  )
+CELERY_IMPORTS = ("dataservice.tasks", "jobservice.tasks", )
 
 import djcelery
 djcelery.setup_loader()
@@ -192,14 +192,14 @@ INSTALLED_APPS = (
 # Do POSTMark setup
 POSTMARK = True
 if POSTMARK:
-    CELERY_IMPORTS += "postmark.tasks"
-    INSTALLED_APPS += 'postmark'
+    CELERY_IMPORTS += ("postmark.tasks",)
+    INSTALLED_APPS += ('postmark',)
 
 # Do PrestoPRIME setup
 PRESTOPRIME = False
 if PRESTOPRIME:
-    CELERY_IMPORTS += "prestoprime.tasks"
-    INSTALLED_APPS += 'prestoprime'
+    CELERY_IMPORTS += ("prestoprime.tasks",)
+    INSTALLED_APPS += ('prestoprime',)
 
 
 CACHES = {
