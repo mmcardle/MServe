@@ -58,6 +58,7 @@ from dataservice.tasks import mimefile
 # Declare Signals
 MFILE_GET_SIGNAL = django.dispatch.Signal(providing_args=["mfile"])
 
+FILE_FIELD_LENGTH = 400
 ID_FIELD_LENGTH = 200
 SLEEP_TIME = 10  # in seconds
 SLEEP_TIMEOUT = 300  # in seconds
@@ -1325,7 +1326,7 @@ class MFile(NamedBase):
     service = models.ForeignKey(DataService)
     folder = models.ForeignKey(MFolder, null=True)
     file = models.FileField(upload_to=utils.mfile_upload_to,
-                        blank=True, null=True,
+                        blank=True, null=True, max_length=FILE_FIELD_LENGTH,
                         storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200, blank=True, null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)
@@ -1912,6 +1913,7 @@ post_save.connect(post_save_handler, sender=MFile,
 class BackupFile(NamedBase):
     mfile = models.ForeignKey(MFile)
     file = models.FileField(upload_to=utils.create_filename,
+                            max_length=FILE_FIELD_LENGTH,
                             storage=storage.gettapestorage())
     mimetype = models.CharField(max_length=200, blank=True, null=True)
     checksum = models.CharField(max_length=32, blank=True, null=True)

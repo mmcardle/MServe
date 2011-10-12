@@ -22,22 +22,9 @@
 #
 ########################################################################
 import os.path
-
-# We can register as a class ....
-
-#from celery.task import Task
-#from celery.registry import tasks
-#class ProcessVideoTask(Task):
-#    def run(self, object_id, **kwargs):
-#        logger = self.get_logger(**kwargs)
-#        logger.info("Processed video for %s." % object_id)
-#        return True
-#tasks.register(ProcessVideoTask)
-
-# .... or use the @task decorator
-
 from celery.task import task
 from celery.task.sets import subtask
+from django.core.files import File
 import logging
 import subprocess
 import string
@@ -55,16 +42,18 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
     localFile.write(u.read())
     localFile.close()
 
-    if options["mfile"]:
-        mfile = options['mfile']
-        mfile.name= "Imported File"
-        mfile.save()
-        mfile.post_process() 
+    mfileid = inputs[0]
+    from mserve.dataservice.models import MFile
+    mfile = MFile.objects.get(id=mfileid)
+    mfile.name = "Imported File"
+    mfile.update_mfile(mfile.name, file=File(open(output, 'r')) )
+    mfile.save()
+    mfile.post_process()
 
     for callback in callbacks:
         subtask(callback).delay()
         
-    return {  }
+    return { "message" : "Copy from url was successfull" }
 
 # Blender Commnad Line API
 #

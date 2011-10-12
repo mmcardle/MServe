@@ -34,6 +34,8 @@ from celery.result import TaskSetResult
 from djcelery.models import TaskState
 from django.http import HttpResponseNotFound
 
+
+FILE_FIELD_LENGTH = 400
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
 
@@ -282,7 +284,7 @@ class Job(NamedBase):
 class JobOutput(NamedBase):
     job   = models.ForeignKey(Job)
     mimetype = models.CharField(max_length=200,blank=True,null=True)
-    file  = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage())
+    file  = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage(),max_length=FILE_FIELD_LENGTH)
     thumb = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
 
     def get_upload_path(self):
