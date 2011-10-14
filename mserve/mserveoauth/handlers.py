@@ -128,8 +128,6 @@ class ReceiveHandler(BaseHandler):
 
             for auth in result['auths']:
 
-                #logging.info("AUTH %s" % auth)
-
                 mfile = service.create_mfile("Import File",post_process=False)
 
                 job = Job(name="Import Job",mfile=mfile)
@@ -137,23 +135,10 @@ class ReceiveHandler(BaseHandler):
 
                 options = {}
                 options['url'] = remote_service.get_auth_url(auth['id'])
-                options['mfile'] = mfile
 
-                un = utils.unique_id()
-                outputpath = os.path.join( "imported" , "content-%s"%un)
-                mfile.file = outputpath
-                mfile.save()
+                task = copyfromurl.subtask([[mfile.id],[],options])
 
-                outputs = []
-                outputs.append(mfile.file.path)
-                (head,tail) = os.path.split(mfile.file.path)
-
-                if not os.path.isdir(head):
-                    os.makedirs(head)
-
-                task = copyfromurl.subtask([[],outputs,options])
-
-                logging.info("created ouath task %s "% (task))
+                logging.info("created oauth task %s "% (task))
 
                 ts = TaskSet(tasks=[task])
                 tsr = ts.apply_async()
