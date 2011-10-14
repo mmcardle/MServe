@@ -50,11 +50,11 @@ default_profiles = {
                 # Video
                 {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
                 {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
+                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                 # MXF Ingest
                 {"task":"thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
                 {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
 
                 ],
@@ -76,11 +76,11 @@ default_profiles = {
                 # Video
                 {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
                 {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
+                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                 # MXF Ingest
                 {"task":"thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
                 {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
 
             ],
@@ -90,25 +90,25 @@ default_profiles = {
             "ingest" : [
 
                 # Standard Ingest (images/videos)
-                {"task":"md5file",            "args": {} },
+                {"task":"md5file",  "args": {} },
                 {"task":"dataservice.tasks.backup_mfile",       "args": {} },
 
                 # Images
-                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
+                {"task":"thumbimage",   "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
+                {"task":"posterimage",  "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
 
                 # Video
-                {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
-                {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
+                {"task":"thumbvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
+                {"task":"postervideo",  "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
+                {"task":"proxyvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                 # HD
-                {"task":"transcodevideo",     "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
-                {"task":"transcodevideo",    "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
+                {"task":"transcodevideo",   "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
+                {"task":"transcodevideo",   "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
 
                 # MXF Ingest
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
-                {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
+                {"task":"proxyvideo",   "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                {"task":"postervideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
 
                 ],
             "access" : [
@@ -130,11 +130,11 @@ default_profiles = {
                 # Video
                 {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
                 {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
+                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                 # MXF Ingest
                 {"task":"thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
                 {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
 
             ],
