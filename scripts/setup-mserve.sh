@@ -246,6 +246,8 @@ check_os_release () {
 			;;
 		11.04) echo "Release 11.04 is supported"
 			;;
+		11.10) echo "Release 11.10 is supported"
+			;;
 		*) echo "MSERVE installer does not support this ($release)"
 			exit 1
 			;;
@@ -497,7 +499,6 @@ echo "PART-I installing MServe prerequisites"
 # upgrade system
 #sudo apt-get update
 #sudo apt-get -y upgrade
-
 #sudo reboot
 
 #############################
@@ -537,6 +538,60 @@ install_mod_auth_token() {
 	make install || f_ "failed to install mod_auth_token"
 }
 
+
+
+
+#######################
+# install ffmpeg and update to latest
+install_ffmpeg () {
+    cd
+    apt-get -y update
+
+    # To get presets (.ff presets)
+    apt-get -y install ffmpeg
+
+    apt-get -y install build-essential git-core checkinstall yasm texi2html libfaac-dev \
+        libopencore-amrnb-dev libopencore-amrwb-dev libsdl1.2-dev libtheora-dev \
+        libvorbis-dev libx11-dev libxfixes-dev libxvidcore-dev zlib1g-dev || f_ "failed to install ffmpeg prereqs"
+
+    git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
+    cd x264
+    ./configure --enable-static || f_ "failed to configure x264"
+    make || f_ "failed to make x264"
+    checkinstall --pkgname=x264 --default --pkgversion="3:$(./version.sh | \
+        awk -F'[" ]' '/POINT/{print $4"+git"$5}')" --backup=no --deldoc=yes || f_ "failed to install x264"
+
+    apt-get -y remove libmp3lame-dev
+    apt-get -y install nasm
+    cd
+    wget http://downloads.sourceforge.net/project/lame/lame/3.98.4/lame-3.98.4.tar.gz || f_ "failed to wget lame"
+    tar xzvf lame-3.98.4.tar.gz || f_ "failed to untar lame"
+    cd lame-3.98.4
+    ./configure --enable-nasm --disable-shared || f_ "failed to configure lame"
+    make || f_ "failed to make lame"
+    checkinstall --pkgname=lame-ffmpeg --pkgversion="3.98.4" --backup=no --default \
+        --deldoc=yes || f_ "failed to install lame"
+
+    cd
+    git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
+    cd ffmpeg
+    ./configure --enable-gpl --enable-version3 --enable-nonfree --enable-postproc \
+        --enable-libfaac --enable-libopencore-amrnb --enable-libopencore-amrwb \
+        --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid \
+        --enable-x11grab --enable-libmp3lame || f_ "failed to configure ffmpeg"
+    make || f_ "failed to make ffmpeg"
+    checkinstall --pkgname=ffmpeg --pkgversion="5:$(./version.sh)" --backup=no \
+        --deldoc=yes --default || f_ "failed to install ffmpeg"
+    hash x264 ffmpeg ffplay ffprobe
+    make tools/qt-faststart || f_ "failed to make qt-faststart"
+    checkinstall --pkgname=qt-faststart --pkgversion="$(./version.sh)" --backup=no \
+        --deldoc=yes --default install -D -m755 tools/qt-faststart /usr/local/bin/qt-faststart || f_ "failed to install qt-faststart"
+
+    # Copy Presets
+    cp  /usr/share/ffmpeg/* /usr/local/share/ffmpeg/ || f_ "failed to copy ffmpeg presets"
+}
+
+install_ffmpeg || f_ "failed to install ffmpeg"
 
 #######################
 # install http server
@@ -1056,7 +1111,7 @@ configure_apache () {
 	cat $_source | sed -e "s@/var/www@${MSERVE_DATA}/www-root@ ; \
 		s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
 	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/mserve-fcgi.sock -idle-timeout 30\n\n\
-        XSendFile On\nXSendFileAllowAbove On\n\
+        XSendFile On\n\
 	Alias /media ${MSERVE_DATA}/www-root/media\n\
         Alias /dl /var/opt/mserve-data/dl\n\n\
 	RewriteEngine On\n\
