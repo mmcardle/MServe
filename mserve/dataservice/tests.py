@@ -48,6 +48,7 @@ class ClientTest(TestCase):
         self.password = 'mypassword'
         self.username = 'myuser'
         self.container_name = "testingcontainer"
+        self.service_name = "testingservice"
         self.c = Client()
         User.objects.create_superuser(self.username, 'myemail@tempuri.com', self.password)
         self.c.login(username=self.username, password=self.password)
@@ -55,6 +56,8 @@ class ClientTest(TestCase):
         hc.save()
         self.hc = hc
         self.hc_post_url = reverse('hostingcontainers')
+        self.service_post_url = reverse('dataservices')
+
 
     def test_create_container(self):
 
@@ -218,7 +221,7 @@ class ClientTest(TestCase):
         js = json.loads(response.content)
         self.failUnlessEqual(js["name"],"testsubservice")
         self.failUnlessEqual(len(js["mfile_set"]),0)
-        
+
         # Test PUT Methods
         newname = "newcontainername"
         response = self.c.put(hc_url, {"name": newname})
@@ -237,8 +240,213 @@ class ClientTest(TestCase):
         # Test DELETE Methods
         response = self.c.delete(hc_url)
         self.failUnlessEqual(response.status_code,204)
-        
+
         response = self.c.get(hc_url)
+        self.failUnlessEqual(response.status_code,404)
+
+    def test_get_service(self):
+        service = self.hc.create_data_service(self.service_name)
+        service.save()
+        self.service = service
+        self.service_url = reverse('dataservice',args=[service.id])
+
+        # Test GET Methods
+        response = self.c.get(self.service_url)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+
+        response = self.c.get(self.service_url)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],self.service_name)
+        self.failUnlessEqual(len(js["mfile_set"]),0)
+        self.failUnlessEqual(len(js["mfolder_set"]),0)
+        self.failUnlessEqual(js["starttime"],None)
+        self.failUnlessEqual(js["endtime"],None)
+        self.failUnlessEqual(js["priority"],False)
+        self.failUnlessEqual(js["reportnum"],1)
+
+    def test_get_service_urls(self):
+        service = self.hc.create_data_service(self.service_name)
+        service.save()
+        self.service = service
+        self.service_url = reverse('dataservice',args=[service.id])
+        serviceid = self.service.id
+        service_url =  reverse('dataservice', args=[serviceid])
+        service_url_usage =  reverse('dataservice_usages', args=[serviceid])
+        service_url_properties = reverse('dataservice_props', args=[serviceid])
+        service_url_auths = reverse('dataservice_auths', args=[serviceid])
+        service_url_mfiles = reverse('dataservice_mfiles', args=[serviceid])
+        service_url_mfolders = reverse('dataservice_mfolders', args=[serviceid])
+        service_url_subservices = reverse('dataservice_subservices', args=[serviceid])
+        service_url_profiles = reverse('dataservice_profiles', args=[serviceid])
+
+        response = self.c.get(service_url_usage)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+
+        response = self.c.get(service_url_usage, {"full":"True"} )
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+
+        response = self.c.get(service_url_usage, {"aggregate":"True"} )
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+        metrics = [m["metric"] for m in js["usages"] ]
+        self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
+
+        response = self.c.get(service_url_usage, {"full":"True","aggregate":"True"} )
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+        metrics = [m["metric"] for m in js["usages"] ]
+        self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
+
+        response = self.c.get(service_url_usage, {"full":"True","aggregate":"True","last":"-1"} )
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["squares"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["nInProgress"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
+        self.failUnlessEqual(type(js["usages"][0]["reports"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+
+        metrics = [m["metric"] for m in js["usages"] ]
+        self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
+
+        response = self.c.get(service_url_auths)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js[0]["roles"]),list)
+        self.failUnlessEqual(type(js[0]["thumburl"]),str)
+        self.failUnlessEqual(type(js[0]["basename"]),str)
+        self.failUnlessEqual(type(js[0]["auth_set"]),list)
+        self.failUnlessEqual(type(js[0]["urls"]),dict)
+        self.failUnlessEqual(type(js[0]["id"]),str)
+        self.failUnlessEqual(type(js[0]["authname"]),str)
+        self.failUnlessEqual(js[0]["authname"],"full")
+
+        response = self.c.get(service_url_mfiles)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js),list)
+        self.failUnlessEqual(len(js),0)
+
+        response = self.c.get(service_url_mfolders)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js),list)
+        self.failUnlessEqual(len(js),0)
+
+        response = self.c.get(service_url_subservices)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js),list)
+        self.failUnlessEqual(len(js),0)
+
+        response = self.c.get(service_url_properties)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(type(js[0]["property"]),str)
+        self.failUnlessEqual(type(js[0]["value"]),str)
+
+        response = self.c.get(service_url_profiles)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js[0]["name"], "default")
+
+        # Test POST Methods
+        for profile in js:
+            for workflow in profile["workflows"]:
+                service_url_profiles_tasks = reverse('dataservice_profiles_tasks', args=[serviceid,profile["id"]])
+                response = self.c.post(service_url_profiles_tasks,{"workflow":workflow["id"],"condition":"","task_name":"thumbimage","args":""})
+                self.failUnlessEqual(response.status_code,200)
+                js = json.loads(response.content)
+
+        response = self.c.post(self.service_post_url)
+        self.failUnlessEqual(response.status_code,400)
+
+        response = self.c.post(service_url_usage)
+        self.failUnlessEqual(response.status_code,405)
+
+        # Test POST Methods
+        response = self.c.post(service_url_auths,{"name":"newserviceauthname","roles":"servicecustomer"})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["authname"],"newserviceauthname")
+        self.failUnlessEqual(js["roles"],["servicecustomer"])
+
+        response = self.c.post(service_url_auths,{"name":"newserviceauthname2","roles":"serviceadmin"})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["authname"],"newserviceauthname2")
+        self.failUnlessEqual(js["roles"],["serviceadmin"])
+
+        response = self.c.post(self.service_post_url, {"name": "testservice", "container": self.hc.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],"testservice")
+        self.failUnlessEqual(len(js["mfile_set"]),0)
+        serviceid = js["id"]
+
+        response = self.c.post(service_url_subservices, {"name": "testsubservice", "serviceid": serviceid})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],"testsubservice")
+        self.failUnlessEqual(len(js["mfile_set"]),0)
+        
+        # Test PUT Methods
+        newname = "newservicename"
+        response = self.c.put(service_url, {"name": newname})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        jsname = js["name"]
+        self.failUnlessEqual(jsname, newname)
+
+        # Test DELETE Methods
+        response = self.c.delete(service_url)
+        self.failUnlessEqual(response.status_code,204)
+        
+        response = self.c.get(service_url)
         self.failUnlessEqual(response.status_code,404)
 
 class APITest(TestCase):

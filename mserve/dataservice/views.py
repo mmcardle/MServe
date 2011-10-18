@@ -44,6 +44,7 @@ from forms import AuthForm
 from forms import DataServiceTaskForm
 from django.http import Http404
 from django.shortcuts import render_to_response
+from django.shortcuts import redirect
 from django.template import RequestContext
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
@@ -250,7 +251,7 @@ def render_service(request, serviceid, form=MFileForm()):
     _dict["form"] = form
     _dict["usage"] = service.get_usage()
     _dict["usagesummary"] = service.get_usage_summary()
-    return render_to_response('service.html', append_dict(_dict, request), \
+    return render_to_response( 'service.html', append_dict(_dict, request), \
         context_instance=RequestContext(request))
 
 def render_service_auth(request, auth):
@@ -334,4 +335,11 @@ def render_error(request, error):
         context_instance=RequestContext(request))
 
 
-    
+def redirect_to(request):
+    if 'to' in request.GET:
+        return redirect(request.GET['to'])
+    else:
+        _dict = {}
+        _dict["error"] = "Error redirecting"
+        return render_to_response('error.html', append_dict(_dict, request), \
+                context_instance=RequestContext(request))

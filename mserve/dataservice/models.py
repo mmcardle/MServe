@@ -880,7 +880,7 @@ class DataServiceTask(models.Model):
                                         related_name="tasks")
     task_name = models.CharField(max_length=200, choices=TASK_CHOICES)
     condition = models.CharField(max_length=200, blank=True, null=True)
-    args = models.TextField()
+    args = models.TextField(blank=True, null=True)
 
     def __unicode__(self):
         return "Task %s for %s" % (self.task_name, self.workflow.name)
@@ -995,7 +995,7 @@ class DataService(NamedBase):
         return summary
 
     def subservices_url(self):
-        return reverse('subservices', args=[self.id])
+        return reverse('dataservice_subservices', args=[self.id])
 
     def create_subservice(self, name, save=True):
         if self.parent:
@@ -1096,7 +1096,17 @@ class DataService(NamedBase):
         if self.parent:
             return self.parent.put(url, *args, **kwargs)
         logging.info("PUT SERVICE %s %s %s ", url, args, kwargs)
-        return HttpResponseNotFound()
+        if "request" in kwargs:
+            request = kwargs["request"]
+            if "name" in request.POST:
+                    self.name = request.POST["name"]
+            if "priority" in request.POST:
+                if request.POST['priority'] == "True" or request.POST['priority'] == "true":
+                    self.priority = True
+                if request.POST['priority'] == "False" or request.POST['priority'] == "false":
+                    self.priority = False
+            self.save()
+        return self
 
     def get_rate_for_metric(self, metric):
         if self.parent:

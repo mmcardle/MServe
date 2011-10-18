@@ -752,9 +752,9 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 
 
 .fbg {
-	padding:10px 0 0 0;
+	padding:0px 0 0 0;
 	background:#393939 url(/mservemedia/images/fbg_bg.gif) bottom repeat-x;
-	margin:10px 0 0 0;
+	margin:0px 0 0 0;
 }
 .fbg_resize {
 	margin:0 auto;

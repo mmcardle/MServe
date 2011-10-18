@@ -169,43 +169,30 @@
 
     </table>
     
-    <div class="fbg">
+
+</div>
+
+      <div class="fbg ui-corner-all ui-widget-content">
     <div class="fbg_resize">
-      <div class="col c1">
-        <table class="icontable">
-            <tr>
-                <th>Usage</th>
-                <th>Messages</th>
-                <th>Network</th>
-            </tr>
-            <tr>
-                <td><img src="/mservemedia/images/icon_usage.png" width="32" height="32" alt="" /></td>
-                <td><img src="/mservemedia/images/icon_message.png" width="32" height="32" alt="" /></td>
-                <td><img src="/mservemedia/images/icon_network.png" width="32" height="32" alt="" /></td>
-            </tr>
-        </table>
-      </div>
       <div class="col c2">
-        <h2><span>Mserve Systems</span></h2>
-        <p>Mserve is written in <a href="http://python.org">python.</a> using the <a href="http://www.djangoproject.com/">django.</a> framework.
-          Fronted by <a href="http://www.lighttpd.net/">lighttpd.</a>,
-          Using <a href="http://celeryproject.org/">celery.</a> and <a href="http://www.rabbitmq.com/">rabbitmq</a> for job submission.
-          Client side GUI is <a href="http://jquery.com/">jquery</a> and <a href="http://jqueryui.com/">jquery ui</a> </p>
+        <h2><span>MServe Systems</span></h2>
+        <p>MServe is written in <a href="{% url redirect_to %}?to={{ 'http://python.org'|urlencode }}">Python.</a> using the <a href="{% url redirect_to %}?to={{ 'http://www.djangoproject.com/'|urlencode }}">Django.</a> framework.
+          Fronted by <a href="{% url redirect_to %}?to={{ 'http://httpd.apache.org/'|urlencode }}">Apache</a>,
+          Using <a href="{% url redirect_to %}?to={{ 'http://celeryproject.org/'|urlencode }}">Celery.</a> and <a href="{% url redirect_to %}?to={{ 'http://www.rabbitmq.com/'|urlencode }}">RabbitMQ</a> for job submission.
+          Client side GUI is <a href="{% url redirect_to %}?to={{ 'http://jquery.com/'|urlencode }}">JQuery</a> and <a href="{% url redirect_to %}?to={{ 'http://jqueryui.com/'|urlencode }}">JQuery UI</a> </p>
       </div>
       <div class="col c3">
         <h2><span>Contact</span></h2>
-        <p>For more information on mserve contact.<a href="#">mm@it-innovation.soton.ac.uk</a><br />
+        <p>For more information on MServe contact.<br/><em style="color:#78bbe6;">mm [at] it-innovation.soton.ac.uk</em><br />
         </p>
       </div>
       <div class="clr"></div>
     </div>
-    <div class="footer">
-      <p class="lf">&copy; Copyright <a href="http://www.it-innovation.soton.ac.uk">IT Innovation</a>.</p>
-      <p class="rf">Layout by Free <a href="http://www.freewebsitetemplatez.com/">Website Templates</a></p>
+    <div class="footer" >
+      <p class="lf">&copy; Copyright <a href="{% url redirect_to %}?to={{ 'http://www.it-innovation.soton.ac.uk'|urlencode }}">IT Innovation</a>.</p>
+      <p class="rf">Layout from <a href="{% url redirect_to %}?to={{ 'http://www.freewebsitetemplatez.com/'|urlencode }}">Free Website Templatez</a></p>
       <div class="clr"></div>
     </div>
-  </div>
-
   </div>
 
 <script type="text/javascript">

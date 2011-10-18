@@ -248,19 +248,13 @@ class DataServiceHandler(BaseHandler):
         if containerid:
             return HostingContainer.objects.get(pk=containerid).do("GET","services")
         if id:
-            return self.model.objects.get(id=id).do("GET")
-        return Http404()
+            dataservice = get_object_or_404(self.model, pk=id)
+            return dataservice.do("GET")
+        return []
 
     def update(self, request, id):
         try:
-            service = DataService.objects.get(pk=id)
-
-            if request.POST.has_key("priority"):
-                if request.POST['priority'] == "True" or request.POST['priority'] == "true":
-                    service.priority = True
-                if request.POST['priority'] == "False" or request.POST['priority'] == "false":
-                    service.priority = False
-            service.save()
+            service = DataService.objects.get(pk=id).do("PUT",request=request)
             return service
         except Exception as e:
             r = rc.BAD_REQUEST
@@ -268,41 +262,44 @@ class DataServiceHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
-
     def delete(self, request, id):
         logging.info("Deleting Service %s " % id)
         return DataService.objects.get(id=id).do("DELETE")
 
     def create(self, request, containerid=None, serviceid=None):
-
         service = None
         if serviceid:
             service = DataService.objects.get(id=serviceid)
             form = SubServiceForm(request.POST)
         else:
             form = DataServiceForm(request.POST)
-
         if form.is_valid(): 
-
-            logging.info("CREATE DATASERVICE %s" % request.POST)
-
-            name = request.POST['name']
-
-            if service:
-                dataservice = service.create_subservice(name)
+            if 'name' in request.POST:
+                name = request.POST['name']
+                if service:
+                    dataservice = service.create_subservice(name)
+                else:
+                    if containerid:
+                        container = HostingContainer.objects.get(id=containerid)
+                        dataservice = container.create_data_service(name)
+                    elif 'container' in request.POST:
+                        containerid = request.POST['container']
+                        container = HostingContainer.objects.get(id=containerid)
+                        dataservice = container.create_data_service(name)
+                    else:
+                        r = rc.BAD_REQUEST
+                        r.write("Invalid Request! - No name in POST parameters")
+                        return r
+                if request.POST.has_key('starttime'):
+                    dataservice.starttime = request.POST['starttime']
+                if request.POST.has_key('endtime'):
+                    dataservice.endtime = request.POST['endtime']
+                dataservice.save()
+                return dataservice
             else:
-                if not containerid:
-                    containerid = request.POST['container']
-                container = HostingContainer.objects.get(id=containerid)
-                dataservice = container.create_data_service(name)
-
-            if request.POST.has_key('starttime'):
-                dataservice.starttime = request.POST['starttime']
-            if request.POST.has_key('endtime'):
-                dataservice.endtime = request.POST['endtime']
-            dataservice.save()
-            
-            return dataservice
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! - No container in POST parameters")
+                return r
         else:
             logging.info(form)
             r = rc.BAD_REQUEST
@@ -355,6 +352,7 @@ class DataServiceTaskHandler(BaseHandler):
             return dst
         else:
             r = rc.BAD_REQUEST
+            logging.info(dstf)
             r.write("Invalid Request!")
             return r
 
@@ -787,7 +785,7 @@ class AuthHandler(BaseHandler):
 
         return []
 
-    def create(self, request, id=None, containerid=None):
+    def create(self, request, id=None, containerid=None, serviceid=None):
 
         if containerid:
             container = HostingContainer.objects.get(id=containerid)
