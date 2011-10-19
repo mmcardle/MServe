@@ -34,7 +34,6 @@ from celery.result import TaskSetResult
 from djcelery.models import TaskState
 from django.http import HttpResponseNotFound
 
-
 FILE_FIELD_LENGTH = 400
 thumbpath = settings.THUMB_PATH
 mediapath = settings.MEDIA_URL
@@ -237,6 +236,20 @@ class Job(NamedBase):
         jobdict["created"] = self.created
 
         return jobdict
+
+    def failed(self):
+        tsr = TaskSetResult.restore(self.taskset_id)
+        if tsr is not None and hasattr(tsr,"taskset_id"):
+            return tsr.failed()
+        else:
+            return False
+
+    def successful(self):
+        tsr = TaskSetResult.restore(self.taskset_id)
+        if tsr is not None and hasattr(tsr,"taskset_id"):
+            return tsr.successful()
+        else:
+            return False
 
     def tasks(self):
         tsr = TaskSetResult.restore(self.taskset_id)

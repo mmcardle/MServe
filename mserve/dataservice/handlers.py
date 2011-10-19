@@ -340,12 +340,12 @@ class DataServiceTaskHandler(BaseHandler):
     model = DataServiceTask
     fields = ('task_name','id','condition','args')
 
+    def read(self, request, serviceid, profileid ):
+        return get_object_or_404(DataService,pk=serviceid).profiles.get(id=profileid)
+
     def create(self, request, serviceid, profileid ):
-
         DataService.objects.get(id=serviceid).profiles.get(id=profileid)
-
         dstf = DataServiceTaskForm(request.POST)
-
         if dstf.is_valid():
             dst = dstf.save()
             logging.info("DST %s "  % dst.id)

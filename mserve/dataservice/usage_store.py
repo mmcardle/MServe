@@ -60,15 +60,14 @@ def startrecording(id,metric,rate,report=True):
     try:
         usage = Usage.objects.get(base=base,metric=metric)
         if rate == usage.rate:
-            logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
+            logging.debug("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
-            logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
+            logging.debug("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
             _update_usage(usage,rate=rate)
             if report:
                 reportusage(base)
             return usage
     except Usage.DoesNotExist:
-        logging.info("Usage DoesNotExist  ")
         usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
         logging.info("created %s " % usage)
         usage.save()
@@ -94,7 +93,6 @@ def _update_usage(usage,rate=None):
 
 def updaterecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)
-    logging.info("Update Recording base %s "% base)
 
     try:
         usage = Usage.objects.get(base=base,metric=metric)
@@ -107,9 +105,7 @@ def updaterecording(id,metric,rate,report=True):
                 reportusage(base)
             return usage
     except Usage.DoesNotExist:
-        logging.info("Usage DoesNotExist  ")
         usage = Usage(base=base,metric=metric,rate=rate,total=0.0,reports=1,nInProgress=1,rateCumulative=0,rateTime=datetime.datetime.now())
-        logging.info("created %s " % usage)
         usage.save()
         if report:
             reportusage(base)

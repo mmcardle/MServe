@@ -40,7 +40,8 @@ from celery.task import task, periodic_task
 from celery.task.sets import subtask
 from subprocess import Popen, PIPE
 from datetime import timedelta
-
+from celery.task.sets import TaskSet
+from settings import HOSTNAME
 '''
 @periodic_task(run_every=timedelta(minutes=15))
 def service_scrubber():
@@ -163,7 +164,7 @@ def _save_topath(file,path):
             logging.warn(e)
     raise Exception("Could not put Mfile to any transports")
 
-def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
+def _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=False):
 
     tfile = tempfile.NamedTemporaryFile(suffix=".png")
     tfile1 = tempfile.NamedTemporaryFile(suffix=".png")
@@ -176,87 +177,108 @@ def _thumbvideo_ffmpegthumbnailer(videopath,width,height):
         logging.info("Video %s does not exist" % (videopath))
         return False
 
-    hw = float(int(width)/2)
-    hh = float(int(height)/2)
+    if tiled:
+        hw = float(int(width)/2)
+        hh = float(int(height)/2)
 
-    subprocess.call(["ffmpegthumbnailer","-t","10","-s","%sx%s"%(width,height),"-i",videopath,"-o",tfile.name])
-    subprocess.call(["ffmpegthumbnailer","-t","20","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile1.name])
-    subprocess.call(["ffmpegthumbnailer","-t","40","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile2.name])
-    subprocess.call(["ffmpegthumbnailer","-t","60","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile3.name])
-    subprocess.call(["ffmpegthumbnailer","-t","80","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile4.name])
+        subprocess.call(["ffmpegthumbnailer","-t","10","-s","%sx%s"%(width,height),"-i",videopath,"-o",tfile.name])
+        subprocess.call(["ffmpegthumbnailer","-t","20","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile1.name])
+        subprocess.call(["ffmpegthumbnailer","-t","40","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile2.name])
+        subprocess.call(["ffmpegthumbnailer","-t","60","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile3.name])
+        subprocess.call(["ffmpegthumbnailer","-t","80","-s","%sx%s"%(hw,hh),"-i",videopath,"-o",tfile4.name])
 
-    image = Image.open(tfile.name)
-    image1 = Image.open(tfile1.name)
-    image2 = Image.open(tfile2.name)
-    image3 = Image.open(tfile3.name)
-    image4 = Image.open(tfile4.name)
+        image = Image.open(tfile.name)
+        image1 = Image.open(tfile1.name)
+        image2 = Image.open(tfile2.name)
+        image3 = Image.open(tfile3.name)
+        image4 = Image.open(tfile4.name)
 
-    image.paste(image1, (0,0))
-    image.paste(image2, (int(hw),0))
-    image.paste(image3, (0,int(hh)))
-    image.paste(image4, (int(hw),int(hh)))
+        image.paste(image1, (0,0))
+        image.paste(image2, (int(hw),0))
+        image.paste(image3, (0,int(hh)))
+        image.paste(image4, (int(hw),int(hh)))
 
-    return image
+        return image
+    else:
+        subprocess.call(["ffmpegthumbnailer","-t","10","-s","%sx%s"%(width,height),"-i",videopath,"-o",tfile.name])
+        image = Image.open(tfile.name)
+        return image
 
-
-def _thumbvideo(videopath,width,height):
+def _thumbvideo(videopath,width,height,tiled=False):
 
     try:
         import pyffmpeg
 
-        hw = float(int(width)/2)
-        hh = float(int(height)/2)
+        if tiled:
+            hw = float(int(width)/2)
+            hh = float(int(height)/2)
 
-        try:
+            try:
 
-            reader = pyffmpeg.FFMpegReader(False)
-            reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
-            vt=reader.get_tracks()[0]
+                reader = pyffmpeg.FFMpegReader(False)
+                reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
+                vt=reader.get_tracks()[0]
 
-            vt.seek_to_frame(0)
-            image = vt.get_current_frame()[2]
-            image = _thumbimageinstance(image,width,height)
+                vt.seek_to_frame(0)
+                image = vt.get_current_frame()[2]
+                image = _thumbimageinstance(image,width,height)
 
-            rdrdurtime=reader.duration_time()
-            cdcdurtime=vt.duration_time()
-            mt=max(cdcdurtime,rdrdurtime)
-            nframes=min(mt*vt.get_fps(),1000)
+                rdrdurtime=reader.duration_time()
+                cdcdurtime=vt.duration_time()
+                mt=max(cdcdurtime,rdrdurtime)
+                nframes=min(mt*vt.get_fps(),1000)
 
-            frames = range(0,nframes,nframes/5)[-4:]
+                frames = range(0,nframes,nframes/5)[-4:]
 
-            vt.seek_to_frame(frames[0])
-            image2 = vt.get_current_frame()[2]
-            image2 = _thumbimageinstance(image2,hw,hh)
-            image.paste(image2, (0, 0))
+                vt.seek_to_frame(frames[0])
+                image2 = vt.get_current_frame()[2]
+                image2 = _thumbimageinstance(image2,hw,hh)
+                image.paste(image2, (0, 0))
 
-            vt.seek_to_frame(frames[1])
-            image3 = vt.get_current_frame()[2]
-            image3 = _thumbimageinstance(image3,hw,hh)
-            image.paste(image3, (hw, 0))
+                vt.seek_to_frame(frames[1])
+                image3 = vt.get_current_frame()[2]
+                image3 = _thumbimageinstance(image3,hw,hh)
+                image.paste(image3, (hw, 0))
 
-            vt.seek_to_frame(frames[2])
-            image4 = vt.get_current_frame()[2]
-            image4 = _thumbimageinstance(image4,hw,hh)
-            image.paste(image4, (0, hh))
+                vt.seek_to_frame(frames[2])
+                image4 = vt.get_current_frame()[2]
+                image4 = _thumbimageinstance(image4,hw,hh)
+                image.paste(image4, (0, hh))
 
-            vt.seek_to_frame(frames[3])
-            image5 = vt.get_current_frame()[2]
-            image5 = _thumbimageinstance(image5,hw,hh)
-            image.paste(image5, (hw,hh))
+                vt.seek_to_frame(frames[3])
+                image5 = vt.get_current_frame()[2]
+                image5 = _thumbimageinstance(image5,hw,hh)
+                image.paste(image5, (hw,hh))
 
-            reader.close()
+                reader.close()
 
-            logging.info("Reader Done")
+                logging.info("Reader Done")
 
-            return image
+                return image
 
-        except IOError as e:
-            logging.info("IOError seeking pyffmeg, trying ffmpegthumbnailer")
+            except IOError as e:
+                logging.info("IOError seeking pyffmeg, trying ffmpegthumbnailer")
 
-        return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
+            return _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=tiled)
+        else:
+            try:
+                reader = pyffmpeg.FFMpegReader(False)
+                reader.open(videopath,pyffmpeg.TS_VIDEO_PIL)
+                vt=reader.get_tracks()[0]
+                vt.seek_to_frame(0)
+                image = vt.get_current_frame()[2]
+                image = _thumbimageinstance(image,width,height)
+                reader.close()
+                logging.info("Reader Done")
+                return image
+
+            except IOError as e:
+                logging.info("IOError seeking pyffmeg, trying ffmpegthumbnailer")
+
+            return _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=tiled)
     except ImportError:
         logging.error("Could not import pyffmpeg, failing back to ffmpegthumbnailer")
-        return _thumbvideo_ffmpegthumbnailer(videopath,width,height)
+        return _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=tiled)
 
 @task(default_retry_delay=15,max_retries=3,name="thumbvideo")
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
@@ -267,12 +289,19 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
         width=options["width"]
         height=options["height"]
+
+        tiled=False
+        if "tiled" in options:
+            tiledS = options["tiled"]
+            if tiledS == "True" or tiledS == "true":
+                tiled = True
+
         logging.info("Processing video thumb %sx%s for %s" % (width,height,videopath))
         if not os.path.exists(videopath):
             logging.info("Video %s does not exist" % (videopath))
             return False
 
-        image = _thumbvideo(videopath,width,height)
+        image = _thumbvideo(videopath,width,height,tiled=tiled)
 
         if not _save_thumb(mfileid,image):
             thumbvideo.retry([inputs,outputs,options,callbacks])
@@ -291,12 +320,19 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
 
         width=options["width"]
         height=options["height"]
+
+        tiled=False
+        if "tiled" in options:
+            tiledS = options["tiled"]
+            if tiledS == "True" or tiledS == "true":
+                tiled = True
+
         logging.info("Processing video thumb %sx%s for %s" % (width,height,videopath))
         if not os.path.exists(videopath):
             logging.info("Video %s does not exist" % (videopath))
             return False
 
-        image = _thumbvideo(videopath,width,height)
+        image = _thumbvideo(videopath,width,height,tiled=tiled)
 
         if not _save_poster(mfileid,image):
             postervideo.retry([inputs,outputs,options,callbacks])
@@ -464,6 +500,7 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
         mf.save()
 
         for callback in callbacks:
+            logging.info("Mimefile callback - "% callback)
             subtask(callback).delay()
 
         return {"success":True,"message":"Mime detection successful", "mimetype" : mimetype}
@@ -496,6 +533,45 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
     except Exception, e:
         logging.info("Error with backup_mfile %s" % e)
         raise
+
+@task(default_retry_delay=15,max_retries=3,name="email")
+def email(inputs,outputs,options={},callbacks=[]):
+    try:
+        from django.core.mail import send_mail
+
+        from mserve.dataservice.models import MFile
+        mf = MFile.objects.get(id=inputs[0])
+
+        message = "Your workflow on file '%s' has succedded\n" % (mf.name)
+
+        send_mail('MServe Workflow', message, 'mserve@'+HOSTNAME,
+            ['mm@it-innovation.soton.ac.uk'], fail_silently=False)
+
+        return { "message":"Email sent" }
+    except Exception as e:
+        logging.info("Error with email %s" % e)
+        raise e
+
+
+@task
+def continue_workflow_taskset(mfileid, jobid, nexttasksetid):
+    try:
+        from mserve.jobservice.models import Job
+        from mserve.dataservice.models import MFile, DataServiceTaskSet
+        prevjob = Job.objects.get(id=jobid)
+        nexttaskset = DataServiceTaskSet.objects.get(id=nexttasksetid)
+
+        if prevjob.successful():
+            nexttaskset.workflow.continue_workflow_job(mfileid, nexttasksetid)
+        elif prevjob.failed():
+            raise Exception("Workflow task failed")
+        else:
+            logging.info("Job %s not complete yet", prevjob)
+            continue_workflow_taskset.retry(args=[mfileid, jobid, nexttasksetid], countdown=5)
+    except Exception as e:
+        logging.info("Error with continue_workflow_task %s" % e)
+        raise e
+
 
 @task
 def mfilefetch(inputs,outputs,options={},callbacks=[]):
@@ -662,12 +738,19 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
         width=options["width"]
         height=options["height"]
+
+        tiled=False
+        if "tiled" in options:
+            tiledS = options["tiled"]
+            if tiledS == "True" or tiledS == "true":
+                tiled = True
+
         logging.info("Processing video thumb %sx%s for %s" % (width,height,videopath))
         if not os.path.exists(videopath):
             logging.info("Video %s does not exist" % (videopath))
             return False
 
-        image = _thumbvideo(videopath,width,height)
+        image = _thumbvideo(videopath,width,height,tiled=tiled)
 
         if image:
             if not _save_thumb(mfileid,image):
@@ -800,13 +883,19 @@ def thumbvideooutput(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
+        tiled=False
+        if "tiled" in options:
+            tiledS = options["tiled"]
+            if tiledS == "True" or tiledS == "true":
+                tiled = True
+
         from mserve.jobservice.models import JobOutput
         jo = JobOutput.objects.get(pk=inputid)
         path = jo.file.path
 
         logging.info("Creating %sx%s image for %s" % (width,height,inputid))
 
-        image = _thumbvideo(path,width,height)
+        image = _thumbvideo(path,width,height,tiled=tiled)
 
         if image:
 

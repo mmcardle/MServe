@@ -33,6 +33,7 @@ import utils as utils
 import static as static
 import django.dispatch
 import settings
+from tasks import continue_workflow_taskset
 from piston.utils import rc
 from django.db import models
 from celery.task.sets import TaskSet
@@ -827,20 +828,53 @@ class HostingContainer(NamedBase):
                 wf = DataServiceWorkflow(profile=dsp, name=workflow_name)
                 wf.save()
 
-                for task in workflow:
-                    task_name = task['task']
+                #_dataservicetasks = {}
+                logging.info(workflow)
+                tasksets = workflow['tasksets']
+                workflow['tasksets'].reverse()
+                #initial_tasks = workflow['initial_tasks']
+                #tasks.reverse()
 
-                    condition = ""
-                    if 'condition' in task:
-                        condition = task['condition']
+                next = None
+                for taskset in tasksets:
+                    logging.info(taskset)
+                    tasksetname = taskset['name']
+                    dstaskset = DataServiceTaskSet(name=tasksetname,
+                                                    workflow=wf, next=next)
+                    dstaskset.save()
 
-                    args = ""
-                    if 'args' in task:
-                        args = task['args']
+                    tasks = taskset['tasks']
+                    for task in tasks:
+                        logging.info(task)
+                        task_name = task['task']
 
-                    dst = DataServiceTask(workflow=wf, task_name=task_name,
-                                            condition=condition, args=args)
-                    dst.save()
+                        condition = ""
+                        if 'condition' in task:
+                            condition = task['condition']
+
+                        args = ""
+                        if 'args' in task:
+                            args = task['args']
+
+                        dst = DataServiceTask(name=name, taskset=dstaskset,
+                                                task_name=task_name,
+                                                condition=condition, args=args)
+                        dst.save()
+                        logging.info(dst)
+                    next = dstaskset
+
+                wf.initial = dstaskset
+                wf.save()
+
+                        
+                #        _dataservicetasks[name] = dst
+
+                #        logging.info(_dataservicetasks)
+
+                #for taskset in tasksets:
+                #    dst = _dataservicetasks[taskset["name"]]
+                #    for next in taskset['next']:
+                #        dst.next.add(_dataservicetasks[next])
 
         return dataservice
 
@@ -870,24 +904,110 @@ class DataServiceProfile(models.Model):
 class DataServiceWorkflow(models.Model):
     profile = models.ForeignKey(DataServiceProfile, related_name="workflows")
     name = models.CharField(max_length=200)
-
+    initial = models.ForeignKey('DataServiceTaskSet', related_name="initial", null=True, blank=True)
+    
     def __unicode__(self):
         return "Workflow %s for %s" % (self.name, self.profile.name)
 
+    def create_workflow_job(self, mfileid):
+        if self.initial is None:
+            raise Exception("Workflow has no initial taskset to run")
+        return self.continue_workflow_job(mfileid, self.initial.id)
+
+    def continue_workflow_job(self, mfileid, taskid):
+
+        nexttask = self.tasksets.get(id=taskid)
+
+        if nexttask is None:
+            raise Exception("Workflow has no nexttask taskset to run %s", taskid)
+
+        mfile = MFile.objects.get(id=mfileid)
+        from mserve.jobservice.models import Job
+        job = Job(name="Workflow %s - Task %s" % (self.name, nexttask.name),
+            mfile=mfile)
+        job.save()
+        tsr = nexttask.create_workflow_taskset(mfileid, job)
+        job.taskset_id = tsr.taskset_id
+        job.save()
+
+        if nexttask.next:
+            continue_workflow_taskset.delay(mfileid, job.id, nexttask.next.id )
+        else:
+            logging.info("Last job in workflow running")
+
+        return job
+
+class DataServiceTaskSet(models.Model):
+    name = models.CharField(max_length=200)
+    workflow = models.ForeignKey(DataServiceWorkflow, related_name="tasksets")
+    next = models.ForeignKey('DataServiceTaskSet', related_name="prev", null=True, blank=True)
+
+    def create_workflow_taskset(self, mfileid, job):
+        in_tasks = filter(lambda t : t != None , [task.create_workflow_task(mfileid, job) for task in self.tasks.all()])
+        ts = TaskSet(tasks=in_tasks)
+        tsr = ts.apply_async()
+        tsr.save()
+        return tsr
 
 class DataServiceTask(models.Model):
-    workflow = models.ForeignKey(DataServiceWorkflow,
-                                        related_name="tasks")
+    name = models.CharField(max_length=200)
+    taskset = models.ForeignKey(DataServiceTaskSet, related_name="tasks")
     task_name = models.CharField(max_length=200, choices=TASK_CHOICES)
     condition = models.CharField(max_length=200, blank=True, null=True)
     args = models.TextField(blank=True, null=True)
+    next = models.ManyToManyField("DataServiceTask", related_name="prev_tasks")
+
+    def create_workflow_task(self, mfileid, job):
+        task_name = self.task_name
+        logging.debug("Processing task %s ", task_name)
+        mfile = MFile.objects.get(id=mfileid)
+
+        if self.condition != None \
+                and self.condition != "":
+            condition = self.condition
+            logging.debug("Task has condition %s ", condition)
+
+            passed = eval(condition, {"mfile": mfile})
+            if not passed:
+                return None
+
+        args = {}
+        if self.args is not None \
+                and self.args != "":
+            args = eval(self.args)
+
+        output_arr = []
+
+        from jobservice.static import job_descriptions
+
+        if task_name in job_descriptions:
+            job_description = job_descriptions[task_name]
+            nboutputs = job_description['nboutputs']
+            for i in range(0, nboutputs):
+                outputmimetype = \
+                    job_description["output-%s" % i]["mimetype"]
+                output = JobOutput(name="Output%s-%s" % (i, task_name),
+                                    job=job, mimetype=outputmimetype)
+                output.save()
+                output_arr.append(output.id)
+
+        prioritise = job.mfile.service.priority
+        q = "normal.%s" % (task_name)
+        if prioritise:
+            q = "priority.%s" % (task_name)
+        kwargs = {"routing_key": q}
+        task = subtask(task=task_name,
+                        args=[[mfileid], output_arr, args],
+                        options=kwargs)
+        logging.info("Task created %s ", task)
+
+        return task
 
     def __unicode__(self):
-        return "Task %s for %s" % (self.task_name, self.workflow.name)
+        return "Task %s for %s" % (self.task_name, self.taskset.name)
 
 # Chunk Size - 50Mb
 CHUNK_SIZE = 1024 * 1024 * 50
-
 
 def fbuffer(f, length, chunk_size=CHUNK_SIZE):
     to_read = int(length)
@@ -1713,88 +1833,11 @@ class MFile(NamedBase):
             self.save()
 
             profile_name = self.service.get_profile()
-
             logging.info("Create workflow with profile %s ", profile_name)
 
             profile = self.service.profiles.get(service=self.service,
                                                     name=profile_name)
-
-            workflow_tasks = profile.workflows.get(name=name).tasks.all()
-
-            if len(workflow_tasks) == 0:
-                return None
-
-            #workflow_task_config = static.default_profiles[profile_name][name]
-
-            in_tasks = []
-
-            from jobservice.models import Job
-            from jobservice.models import JobOutput
-
-            job = Job(name="%s %s Job" % (self.name, name), mfile=self)
-            job.save()
-
-            for workflow_task in workflow_tasks:
-                task_name = workflow_task.task_name
-                logging.debug("Processing task %s ", task_name)
-
-                if workflow_task.condition != None \
-                        and workflow_task.condition != "":
-                    condition = workflow_task.condition
-                    logging.debug("Task has condition %s ", condition)
-
-                    passed = eval(condition, {"mfile": self})
-
-                    if not passed:
-                        continue
-
-                args = {}
-                if workflow_task.args is not None \
-                        and workflow_task.args != "":
-                    args = eval(workflow_task.args)
-
-                output_arr = []
-
-                from jobservice.static import job_descriptions
-
-                if task_name in job_descriptions:
-                    job_description = job_descriptions[task_name]
-
-                    nboutputs = job_description['nboutputs']
-
-                    for i in range(0, nboutputs):
-                        outputmimetype = \
-                            job_description["output-%s" % i]["mimetype"]
-                        output = JobOutput(name="Output%s-%s" % (i, task_name),
-                                            job=job, mimetype=outputmimetype)
-                        output.save()
-                        output_arr.append(output.id)
-
-                import random
-
-                prioritise = self.service.priority
-                q = "normal.%s" % (task_name)
-                if prioritise:
-                    q = "priority.%s" % (task_name)
-                kwargs = {"routing_key": q}
-                task = subtask(task=task_name,
-                                args=[[self.id], output_arr, args],
-                                options=kwargs)
-                logging.info("Task created %s ", task)
-
-                in_tasks.append(task)
-
-            logging.info("%s", in_tasks)
-
-            ts = TaskSet(tasks=in_tasks)
-            tsr = ts.apply_async()
-            tsr.save()
-
-            job.taskset_id = tsr.taskset_id
-            job.save()
-
-            return job
-
+            return profile.workflows.get(name=name).create_workflow_job(self.id)
         else:
             return None
 

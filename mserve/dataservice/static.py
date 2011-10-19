@@ -10,136 +10,140 @@ hd_h = settings.wuxga[1]
 
 default_profiles = {
     "default": {
-            "ingest" : [
-
+            "ingest" : {
                 # Standard Ingest
-                {"task":"md5file",            "args": {} },
-
-                # Images
-                {"task":"thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
-
-                ],
-            "access" : [
-
-                # Standard Access Tasks
-                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
-
-                ],
-            "update" : [
-
-                {"task":"md5file",            "args": {} },
-
-                # Images
-                {"task":"thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
-
-            ],
-            "periodic" : []
+                "tasksets":
+                [   {
+                        "name" : "taskset0",
+                        "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
+                    },
+                    {
+                        "name" : "taskset1",
+                        "tasks" : [
+                            {"name":"B","task":"md5file","args": {},},
+                            {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"C","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
+                        ],
+                    },
+                   {
+                        "name" : "taskset3",
+                        "tasks" : [{"name":"D","task":"email","args": {},},],
+                },],
             },
-    "web-delivery": {
-            "ingest" : [
-
-                # Standard Ingest 
-                {"task":"md5file",            "args": {} },
-
-                # Images
-                {"task":"thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
-
-                # Video
-                {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
-                {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
-
-                # MXF Ingest
-                {"task":"thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
-                {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
-
-                ],
-            "access" : [
-
-                # Standard Access Tasks
-                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
-
-                ],
-            "update" : [
-                 
-                # Standard Ingest (images/videos)
-                {"task":"md5file",            "args": {} },
-
-                # Images
-                {"task":"thumbimage",         "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
-
-                # Video
-                {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
-                {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
-
-                # MXF Ingest
-                {"task":"thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
-                {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
-
-            ],
-            "periodic" : []
+            "update" : {
+                # Standard Ingest
+                "tasksets":
+                [   {
+                        "name" : "taskset0",
+                        "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
+                    },
+                    {
+                        "name" : "taskset1",
+                        "tasks" : [
+                            {"name":"B","task":"md5file","args": {},},
+                            {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"C","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
+                        ],
+                    },
+                   {
+                        "name" : "taskset3",
+                        "tasks" : [{"name":"D","task":"email","args": {},},],
+                },],
             },
-    "hd-delivery": {
-            "ingest" : [
+            "access" : {
+                # Standard Ingest
+                "tasksets":
+                [],
+            },
+            "periodic" : {
+                # Standard Ingest
+                "tasksets":
+                [],
+            },
+        },
+        "transcode": {
+            "ingest" : {
+                # Standard Ingest
+                "tasksets":
+                [   {
+                        "name" : "taskset0",
+                        "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
+                    },
+                    {
+                        "name" : "taskset1",
+                        "tasks" : [
 
-                # Standard Ingest (images/videos)
-                {"task":"md5file",  "args": {} },
-                {"task":"dataservice.tasks.backup_mfile",       "args": {} },
+                            # Image
+                            {"name":"B","task":"md5file","args": {},},
+                            {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
 
-                # Images
-                {"task":"thumbimage",   "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",  "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
+                            # Video
+                            {"name":"E","task":"thumbvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
+                            {"name":"F","task":"postervideo",  "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
+                            {"name":"G","task":"proxyvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
-                # Video
-                {"task":"thumbvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
-                {"task":"postervideo",  "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
+                            # HD
+                            {"name":"H","task":"transcodevideo",  "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
+                            {"name":"D","task":"transcodevideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
 
-                # HD
-                {"task":"transcodevideo",   "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
-                {"task":"transcodevideo",   "allowremote" :True,  "remotecondition" : "numlocal >= 0", "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
+                            # MXF Ingest
+                            {"name":"I","task":"proxyvideo",   "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                            {"name":"J","task":"postervideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
 
-                # MXF Ingest
-                {"task":"proxyvideo",   "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
-                {"task":"postervideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
+                        ],
+                    },
+                   {
+                        "name" : "taskset3",
+                        "tasks" : [{"name":"D","task":"email","args": {},},],
+                },],
+            },
+            "update" : {
+                # Standard Ingest
+                "tasksets":
+                [   {
+                        "name" : "taskset0",
+                        "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
+                    },
+                    {
+                        "name" : "taskset1",
+                        "tasks" : [
+                            # Image
+                            {"name":"B","task":"md5file","args": {},},
+                            {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
 
-                ],
-            "access" : [
+                            # Video
+                            {"name":"E","task":"thumbvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
+                            {"name":"F","task":"postervideo",  "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
+                            {"name":"G","task":"proxyvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
-                # Standard Access Tasks
-                {"task":"dataservice.tasks.mfilefetch",         "args": {}    , "outputs" : [ {"name":"mfileoutput"} ] },
+                            # HD
+                            {"name":"H","task":"transcodevideo",   "allowremote" :True,  "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
+                            {"name":"D","task":"transcodevideo",   "allowremote" :True,  "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
 
-                ],
-            "update" : [
+                            # MXF Ingest
+                            {"name":"I","task":"proxyvideo",   "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
+                            {"name":"J","task":"postervideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
 
-                # Standard Ingest (images/videos)
-                {"task":"md5file",            "args": {} },
-                {"task":"dataservice.tasks.backup_mfile",       "args": {} },
-
-                # Images
-                {"task":"thumbimage",                           "condition": "mfile.mimetype.startswith('image')",  "args": {"width":tw,"height":th} },
-                {"task":"posterimage",        "condition": "mfile.mimetype.startswith('image')",  "args": {"width":pw,"height":ph} },
-
-                # Video
-                {"task":"thumbvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
-                {"task":"postervideo",        "condition": "mfile.mimetype.startswith('video')",  "args": {"width":pw,"height":ph} },
-                {"task":"proxyvideo",         "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
-
-                # MXF Ingest
-                {"task":"thumbvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"width":tw,"height":th} },
-                {"task":"proxyvideo",         "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
-                {"task":"postervideo",        "condition": "mfile.name.endswith('mxf')",          "args": {"width":pw,"height":ph} },
-
-            ],
-            "periodic" : []
-        }
+                        ],
+                    },
+                   {
+                        "name" : "taskset3",
+                        "tasks" : [{"name":"K","task":"email","args": {},},],
+                },],
+            },
+            "access" : {
+                # Standard Ingest
+                "tasksets":
+                [],
+            },
+            "periodic" : {
+                # Standard Ingest
+                "tasksets":
+                [],
+            },
+        },
 }
 
 default_roles = {
