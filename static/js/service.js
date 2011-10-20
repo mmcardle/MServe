@@ -186,7 +186,7 @@ function service_loadprofiles_remote(serviceid, tasks){
             function handlePaginationClick(new_page_index, pagination_container) {
                 // This selects elements from a content array
                 start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
+                end = (new_page_index+1)*this.items_per_page
                 if(end>profiles.length){
                     end=profiles.length;
                 }
@@ -203,16 +203,17 @@ function service_loadprofiles_remote(serviceid, tasks){
 
                 $(profileslice).each(function(pindex,profile){
                     $(profile.workflows).each(function(windex,workflow){
-
-                        $(workflow.tasks).each(function(tindex,task){
-
-                            $("#allowremotecheck-"+task.id).buttonset()
-
-                            //if( tasks["descriptions"][task.task_name] && tasks["descriptions"][task.task_name].examples ){
-                                //$( "#id_args-"+task.id ).autocomplete({
-                                //        source: tasks["descriptions"][task.task_name].examples
-                                //})
-                            //}
+                        console.log("WF-"+workflow)
+                        $(workflow.tasksset).each(function(tsindex,taskset){
+                            console.log(taskset)
+                            $(taskset.tasks).each(function(tindex,task){
+                                console.log(task)
+                                //if( tasks["descriptions"][task.task_name] && tasks["descriptions"][task.task_name].examples ){
+                                    //$( "#id_args-"+task.id ).autocomplete({
+                                    //        source: tasks["descriptions"][task.task_name].examples
+                                    //})
+                                //}
+                            });
                         });
 
                         $("#addbutton-workflow-"+workflow.id).button().click(
@@ -229,7 +230,6 @@ function service_loadprofiles_remote(serviceid, tasks){
 			source: tasks.regular
 		});
 
-                update_profile_buttons()
 
                 return false;
             }
@@ -244,12 +244,6 @@ function service_loadprofiles_remote(serviceid, tasks){
      });
 }
 
-function update_profile_buttons(){
-    $(".savebutton").button().click( function(){showMessage("Alert","To be done")} );
-    $(".delbutton").button().click( function(){showMessage("Alert","To be done ")} );
-    //$(".allowremotecheck").button()
-}
-
 function service_newprofile_ajax(serviceid,profileid,workflowid,data){
      $.ajax({
        type: "POST",
@@ -257,7 +251,6 @@ function service_newprofile_ajax(serviceid,profileid,workflowid,data){
        url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
        success: function(task){
             $("#taskTemplate" ).tmpl( task ) .appendTo( "#workflowtable-"+workflowid );
-            update_profile_buttons()
        },
        error: function(msg){
             showError("Error Adding Task",msg.responseText)

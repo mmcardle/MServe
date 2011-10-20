@@ -14,40 +14,40 @@ default_profiles = {
                 # Standard Ingest
                 "tasksets":
                 [   {
-                        "name" : "taskset0",
+                        "name" : "taskset1",
                         "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
                     },
                     {
-                        "name" : "taskset1",
+                        "name" : "taskset2",
                         "tasks" : [
                             {"name":"B","task":"md5file","args": {},},
                             {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
-                            {"name":"C","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
                         ],
                     },
                    {
                         "name" : "taskset3",
-                        "tasks" : [{"name":"D","task":"email","args": {},},],
+                        "tasks" : [{"name":"E","task":"email","args": {},},],
                 },],
             },
             "update" : {
                 # Standard Ingest
                 "tasksets":
                 [   {
-                        "name" : "taskset0",
+                        "name" : "taskset1",
                         "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
                     },
                     {
-                        "name" : "taskset1",
+                        "name" : "taskset2",
                         "tasks" : [
                             {"name":"B","task":"md5file","args": {},},
                             {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
-                            {"name":"C","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
                         ],
                     },
                    {
                         "name" : "taskset3",
-                        "tasks" : [{"name":"D","task":"email","args": {},},],
+                        "tasks" : [{"name":"E","task":"email","args": {},},],
                 },],
             },
             "access" : {
@@ -66,11 +66,11 @@ default_profiles = {
                 # Standard Ingest
                 "tasksets":
                 [   {
-                        "name" : "taskset0",
+                        "name" : "taskset1",
                         "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
                     },
                     {
-                        "name" : "taskset1",
+                        "name" : "taskset2",
                         "tasks" : [
 
                             # Image
@@ -95,18 +95,18 @@ default_profiles = {
                     },
                    {
                         "name" : "taskset3",
-                        "tasks" : [{"name":"D","task":"email","args": {},},],
+                        "tasks" : [{"name":"K","task":"email","args": {},},],
                 },],
             },
             "update" : {
                 # Standard Ingest
                 "tasksets":
                 [   {
-                        "name" : "taskset0",
+                        "name" : "taskset1",
                         "tasks" : [ { "name":"A", "task":"mimefile","args": {},},],
                     },
                     {
-                        "name" : "taskset1",
+                        "name" : "taskset2",
                         "tasks" : [
                             # Image
                             {"name":"B","task":"md5file","args": {},},

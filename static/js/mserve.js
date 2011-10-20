@@ -4,6 +4,43 @@ function mservetimeout(obj,mfileid,depth){
     $(obj).mserve('get_mfile_thumb', mfileid , depth )
 }
 
+function updatetaskbuttons(serviceid, profileid, taskid){
+    deletefunction = function(){
+         $.ajax({
+           type: "DELETE",
+           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
+           success: function(msg){
+               console.log("#task-"+taskid)
+               console.log($( "#task-"+taskid ))
+               $( "#task-"+taskid ).remove();
+               console.log("REMOVED "+taskid)
+           },
+           error: function(msg){
+                showError("Error Deleting Task",msg.responseText)
+            }
+         });
+    }
+    updatefunction = function(){
+            data = $("#taskform-task-"+taskid).serialize()
+             $.ajax({
+               type: "PUT",
+               data: data,
+               url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
+               success: function(task){
+                   console.log(task)
+                   var tasktmpl = $("#taskTemplate" ).tmpl( task )
+                    $( "#task-"+taskid ).replaceWith(tasktmpl);
+                    updatetaskbuttons(serviceid, profileid, taskid)
+               },
+               error: function(msg){
+                    showError("Error Updating Task",msg.responseText)
+                }
+             });
+        }
+    $("#edittaskbutton-"+taskid).button().click(updatefunction)
+    $("#deletetaskbutton-"+taskid).button().click(deletefunction)
+}
+
 (function( $ ){
 
   var methods = {
@@ -87,7 +124,7 @@ function mservetimeout(obj,mfileid,depth){
                 });
                 $("#deletemfilebutton-"+mfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false });
                 $('#deletemfilebutton-'+mfileid).click(function(){
-                    $("#mservetree").mserve('delete', mfileid)
+                    $("#mservetree").mserve('deletemfile', mfileid)
                 });
 
                 if(options.pollthumb){
@@ -113,7 +150,7 @@ function mservetimeout(obj,mfileid,depth){
                 });
             });
     },
-    delete : function(mfileid) {
+    deletemfile : function(mfileid) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -166,6 +203,88 @@ function mservetimeout(obj,mfileid,depth){
 
                 $(data.allcontent[0]).append($("#mfileholder-"+mfile.id).clone(true))
             });
+    },
+
+    serviceprofiles : function(serviceid){
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                $.ajax({
+                   type: "GET",
+                   url: "/tasks/",
+                   success: function(tasks){
+                        $.ajax({
+                           type: "GET",
+                           url: "/services/"+serviceid+"/profiles/",
+                           success: function(profiles){
+
+                                if(profiles.length==0){
+                                     $("#profilemessages").append("<div id='noprofiles' class='message' >No profiles</div>");
+                                    return;
+                                }else{
+                                    $("#noprofiles").remove()
+                                }
+
+
+                                var profiletabs = $( "<div></div>")
+                                $( "#profileTabsTemplate" ).tmpl( {"profiles":profiles } ) .appendTo( profiletabs );
+                                $( "#profileTemplate" ).tmpl( profiles ) .appendTo( profiletabs );
+                                profiletabs.appendTo("#profilepaginator")
+                                profiletabs.tabs()
+
+                                $(".workflow-accordian").accordion({
+                                    collapsible: true,
+                                    autoHeight: false,
+                                    navigation: true
+                                }).accordion( "activate" , false )
+
+                                $(profiles).each(function(pindex,profile){
+                                    $(profile.workflows).each(function(windex,workflow){
+                                        $(workflow.tasksets).each(function(tsindex,taskset){
+                                            $("#addbutton-taskset-"+taskset.id).button().click(
+                                                function(){
+                                                         data = $("#newtaskform-taskset-"+taskset.id).serialize()
+                                                         $.ajax({
+                                                           type: "POST",
+                                                           data: data,
+                                                           url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasks/',
+                                                           success: function(newtask){
+                                                                var tasktmpl = $("#taskTemplate" ).tmpl( newtask )
+                                                                tasktmpl.prependTo( "#tasksetbody-"+taskset.id );
+                                                                updatetaskbuttons(serviceid, profile.id, newtask.id)
+                                                           },
+                                                           error: function(msg){
+                                                                showError("Error Adding Task",msg.responseText)
+                                                            }
+                                                         });
+                                                }
+                                            )
+
+                                            $(taskset.tasks).each(function(tindex, task){
+                                                updatetaskbuttons(serviceid, profile.id, task.id)
+                                            });
+                                        });
+                                    });
+                                });
+
+                                $(".task_name").autocomplete({
+                                        source: tasks.regular
+                                });
+
+                                return false;
+                           }
+                         });
+                    }
+                });
+            });
+
     },
     load : function( options ) {
 
@@ -242,7 +361,7 @@ function mservetimeout(obj,mfileid,depth){
                 });
 
             });
-    },
+    }
   };
 
   $.fn.mserve = function( method ) {
@@ -669,12 +788,12 @@ function mfile_buttons(gmfileid){
     });
     $("#deletemfilebutton-"+gmfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false });
     $('#deletemfilebutton-'+gmfileid).click(function(){
-        $("#mservetree").mserve('delete', gmfileid)
+        $("#mservetree").mserve('deletemfile', gmfileid)
     });
 }
 
 function mfile_delete(mfileid){
-        $("#mservetree").mserve('delete', mfileid)
+        $("#mservetree").mserve('deletemfile', mfileid)
  }
 
 $(document).ready(function(){

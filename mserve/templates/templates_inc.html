@@ -3,7 +3,7 @@
     <table style="table-layout: fixed;width: 100%;" border="0">
         <tr>
             <td style="width: 20%">
-                <button id="mserve-new-folder-button">New Folder</button>
+                <button id="mserve-new-folder-button" style="display: none;">New Folder</button>
                 <div id="mfoldertreecontainer"></div></td>
             <td style="width: 60%">
                 <ul id="qscontainer" ></ul>
@@ -319,85 +319,111 @@
 </div>
 </script>
 
+<script id="profileTabsTemplate" type="text/x-jquery-tmpl">
+    <div id="profiletabs">
+	<ul>
+            {%templatetag openvariable%}each(index,profile) profiles{%templatetag closevariable%}
+		<li><a href="#profiletab-${profile.id}">${profile.name}</a></li>
+             {%templatetag openvariable%}/each{%templatetag closevariable%}
+	</ul>
+    </div>
+</script>
+
 <script id="profileTemplate" type="text/x-jquery-tmpl">
-    <h3 class="red" style="margin-left:15px;">Profile ${name}</h3>
-        <div class="workflows">
+    <div id="profiletab-${id}">
+        <p>This profile has <span class="red">${workflows.length}</span> workflows. Click on a workflow name to view.</p>
+        <div class="workflow-accordian">
         {%templatetag openvariable%}each(index,workflow) workflows{%templatetag closevariable%}
                 <h3 class="red"><a href="#">Workflow ${workflow.name}</a></h3>
                 <div>
-                <table class="workflowtable" id="workflowtable-${id}" border="0" >
-                    <tr><th style="width: 16%">Tasks</th><th style="width: 20%">Condition</th>
-                        <!--th style="width: 12%">Remote Execution</th><th style="width: 12%">Remote Trigger</th--><th style="">Parameters</th></tr>
-
-                        {%templatetag openvariable%}if workflow.tasks.length == 0 {%templatetag closevariable%}
-                        <tr>
-                            <td class="red">No Tasks</td>
-                        </tr>
+                        {%templatetag openvariable%}if workflow.tasksets.length == 0 {%templatetag closevariable%}
+                            <span class="red">No TaskSets</span>
                         {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-                        {% templatetag openvariable %}tmpl(workflow.tasks) "#taskTemplate" {% templatetag closevariable %}
-
-                        <tbody style="border: 1px solid red;" class="workflowtbody">
-                        <tr>
-                            <td><span class="red">Add New</span></td>
-                        </tr>
-                        <tr>
-                            <form id="newtaskform-workflow-${id}">
-                            <td>
-                                <input type="hidden" style="width: 96%" id="id_workflow" name="workflow" value="${id}" >
-                                <input type="text" style="width: 96%" value="" name="task_name" id="id_task_name" class="task_name" ></td>
-                            <td>
-                                <input type="text" style="width: 96%" value="" id="id_condition" name="condition" >
-                            </td>
-                            <!--td>
-     
-                            </td>
-                            <td>
-                                <input type="text" style="width: 96%" value="" id="id_remotecondition" name="remotecondition" >
-                            </td-->
-                            <td>
-                                <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1" name="args">{}</textarea>
-                            </td>
-                            </form>
-                            <td>
-                                <button id="addbutton-workflow-${id}">Add</button>
-                            </td>
-                        </tr>
-                        </tbody>
-                </table>
-                    
+                        {% templatetag openvariable %}tmpl(workflow.tasksets,  workflowid=id, initialtask=initial  ) "#taskSetTemplate" {% templatetag closevariable %}
                 </div>
         {%templatetag openvariable%}/each{%templatetag closevariable%}
         </div>
+    </div>
+</script>
+
+<script id="taskSetTemplate" type="text/x-jquery-tmpl">
+    <div class=" ui-widget ui-widget-content ui-corner-all" style="margin: 5px">
+        <div class="ui-widget ui-state-default">
+            
+                {%templatetag openvariable%}if initialtask && initialtask.id == id {%templatetag closevariable%}
+                    <div style="margin: 10px;font-variant: small-caps;font-weight: bold" class="red">${name} - Starting Task</div>
+                   {%templatetag openvariable%}else{%templatetag closevariable%}
+                    <div style="margin: 10px;font-variant: small-caps;font-weight: bold">${name}</div>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+                
+        </div>
+        <div class="ui-widget " style="margin: 5px">
+            <table id="tasksettable-${id}" border="0" >
+                <tr><th style="width: 5%">Task ID</th><th style="width: 16%">Task Name</th><th style="width: 16%">Task</th><th style="width: 20%">Condition</th>
+                    <!--th style="width: 12%">Remote Execution</th><th style="width: 12%">Remote Trigger</th--><th style="">Parameters</th></tr>
+
+                    {%templatetag openvariable%}if tasks.length == 0 {%templatetag closevariable%}
+                    <tr>
+                        <td class="red">No Tasks</td>
+                    </tr>
+                    {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+                    <tbody style="border: 1px solid red;" >
+                        {% templatetag openvariable %}tmpl(tasks, tasksetid=id ) "#taskTemplate" {% templatetag closevariable %}
+                    </tbody>
+                    
+                    <tbody style="border: 1px solid red;" id="tasksetbody-${id}" class="tasksettbody">
+                    <tr>
+                        <td><span class="red">Add New</span></td>
+                    </tr>
+                    <tr>
+                        <form id="newtaskform-taskset-${id}">
+                            <td></td>
+                        <td>
+                            <input type="hidden" style="width: 96%" id="id_workflow" name="workflow" value="${workflowid}" >
+                            <input type="hidden" style="width: 96%" id="id_taskset" name="taskset" value="${id}" >
+                            <input type="text" style="width: 96%" value="New Task" name="name" id="id_name" class="name" >
+                        </td>
+                        <td>
+                            <input type="text" style="width: 96%" value="md5file" name="task_name" id="id_task_name" class="task_name" >
+                        </td>
+                        <td>
+                            <input type="text" style="width: 96%" value="" id="id_condition" name="condition" >
+                        </td>
+                        <td>
+                            <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1" name="args">{}</textarea>
+                        </td>
+                        </form>
+                        <td>
+                            <button id="addbutton-taskset-${id}">Add Task</button>
+                        </td>
+                    </tr>
+                    </tbody>
+            </table>
+
+        </div>
+    </div>
 
 </script>
 
 <script id="taskTemplate" type="text/x-jquery-tmpl">
-    <tr>
-        <td class="green">${task_name}</td>
+    <tr  id="task-${id}">
+        <td>${id}</td>
+        <form id="taskform-task-${id}" >
+            <input type="hidden" style="width: 96%" id="id_taskset" name="taskset" value="${tasksetid}" >
+        <td class="green"><input type="text" style="width: 96%" name="name" id="id_name" class="name" value="${name}" ></td>
+        <td class="green"><input type="text" style="width: 96%" name="task_name" id="id_task_name" class="task_name" value="${task_name}" ></td>
         <td>
-            <input type="text" style="width: 96%" value="${condition}" >
-        </td>
-        <!--td>
-                <div id="allowremotecheck-${id}">
-            {%templatetag openvariable%}if allowremote {%templatetag closevariable%}
-                <input style="display: inline-block" type="radio" name="radio-${id}" id="check-${id}-1" checked="checked" /><label for="check-${id}-1"></label>
-                <input style="display: inline-block" type="radio" name="radio-${id}" id="check-${id}-2" /><label for="check-${id}-2">No</label>
-            {%templatetag openvariable%}else{%templatetag closevariable%}
-                <input style="display: inline-block" type="radio" name="radio-${id}"  id="check-${id}-1" /><label for="check-${id}-1">Yes</label>
-                <input style="display: inline-block" type="radio" name="radio-${id}"  id="check-${id}-2" checked="checked" /><label for="check-${id}-2">No</label>
-            {%templatetag openvariable%}/if{%templatetag closevariable%}
-            </div>
+            <input type="text" style="width: 96%" value="" id="id_condition" name="${condition}" >
         </td>
         <td>
-            <input type="text" style="width: 96%" value="${remotecondition}" >
-        </td-->
-        <td>
-            <textarea style="width: 96%;border: 1px dotted silver" NAME="comments" COLS=30 ROWS=1 id="id_args-${id}">${args}</textarea>
+            <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1 id="id_args-${id}">${args}</textarea>
         </td>
+        </form>
         <td>
-            <button class="savebutton">Save</button>
-            <button class="delbutton">Delete</button>
+            <button id="edittaskbutton-${id}" class="savebutton">Save</button>
+            <button id="deletetaskbutton-${id}" class="delbutton">Delete</button>
         </td>
     <tr>
 </script>

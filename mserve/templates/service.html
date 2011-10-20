@@ -190,7 +190,9 @@
             <script type="text/javascript">
                 $(document).ready(function() {
                     service_loadmanagementproperties('{{service.id}}');
-                    service_loadprofiles('{{service.id}}');
+
+                    $("#profilepaginator").mserve( "serviceprofiles", '{{service.id}}' )
+                    //service_loadprofiles('{{service.id}}');
                 });
             </script>
 
@@ -208,7 +210,7 @@
 $(document).ready(function() {
     $(function() {
         $( "#tabs" ).tabs();
-        $("#webdav").text("dav://"+window.location.hostname+"/webdav/"+"{{service.id}}"+"/")
+        $("#webdav").text("dav://"+window.location.hostname+":"+window.location.port+"/webdav/"+"{{service.id}}"+"/")
     });
 });
 

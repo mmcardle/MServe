@@ -78,6 +78,7 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/subservices/$', dataservice_handler, name="dataservice_subservices"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler, name="dataservice_profiles"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/(?P<taskid>[^/]+)/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
 
     url(r'^mfiles/$', mfile_handler  ),
     url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler  ),

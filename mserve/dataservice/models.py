@@ -829,19 +829,27 @@ class HostingContainer(NamedBase):
                 wf.save()
 
                 tasksets = workflow['tasksets']
-                workflow['tasksets'].reverse()
+                workflow['tasksets']
 
                 dstaskset = None
-                next = None
+                prev = None
+                initial = True
                 for taskset in tasksets:
-                    tasksetname = taskset['name']
-                    dstaskset = DataServiceTaskSet(name=tasksetname,
-                                                    workflow=wf, next=next)
+                    tsname = taskset['name']
+                    dstaskset = DataServiceTaskSet(name=tsname, workflow=wf)
                     dstaskset.save()
+                    if initial:
+                        wf.initial = dstaskset
+                        wf.save()
+                        initial = False
+                    if prev:
+                        prev.next = dstaskset
+                        prev.save()
 
                     tasks = taskset['tasks']
                     for task in tasks:
                         task_name = task['task']
+                        name = task['name']
                         condition = ""
                         if 'condition' in task:
                             condition = task['condition']
@@ -853,10 +861,8 @@ class HostingContainer(NamedBase):
                                                 condition=condition, args=args)
                         dst.save()
                         logging.info(dst)
-                    next = dstaskset
+                    prev = dstaskset
 
-                wf.initial = dstaskset
-                wf.save()
 
         return dataservice
 
@@ -937,7 +943,6 @@ class DataServiceTask(models.Model):
     task_name = models.CharField(max_length=200, choices=TASK_CHOICES)
     condition = models.CharField(max_length=200, blank=True, null=True)
     args = models.TextField(blank=True, null=True)
-    next = models.ManyToManyField("DataServiceTask", related_name="prev_tasks")
 
     def create_workflow_task(self, mfileid, job):
         task_name = self.task_name
