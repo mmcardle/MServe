@@ -828,16 +828,12 @@ class HostingContainer(NamedBase):
                 wf = DataServiceWorkflow(profile=dsp, name=workflow_name)
                 wf.save()
 
-                #_dataservicetasks = {}
-                logging.info(workflow)
                 tasksets = workflow['tasksets']
                 workflow['tasksets'].reverse()
-                #initial_tasks = workflow['initial_tasks']
-                #tasks.reverse()
 
+                dstaskset = None
                 next = None
                 for taskset in tasksets:
-                    logging.info(taskset)
                     tasksetname = taskset['name']
                     dstaskset = DataServiceTaskSet(name=tasksetname,
                                                     workflow=wf, next=next)
@@ -845,17 +841,13 @@ class HostingContainer(NamedBase):
 
                     tasks = taskset['tasks']
                     for task in tasks:
-                        logging.info(task)
                         task_name = task['task']
-
                         condition = ""
                         if 'condition' in task:
                             condition = task['condition']
-
                         args = ""
                         if 'args' in task:
                             args = task['args']
-
                         dst = DataServiceTask(name=name, taskset=dstaskset,
                                                 task_name=task_name,
                                                 condition=condition, args=args)
@@ -865,16 +857,6 @@ class HostingContainer(NamedBase):
 
                 wf.initial = dstaskset
                 wf.save()
-
-                        
-                #        _dataservicetasks[name] = dst
-
-                #        logging.info(_dataservicetasks)
-
-                #for taskset in tasksets:
-                #    dst = _dataservicetasks[taskset["name"]]
-                #    for next in taskset['next']:
-                #        dst.next.add(_dataservicetasks[next])
 
         return dataservice
 
@@ -917,14 +899,13 @@ class DataServiceWorkflow(models.Model):
     def continue_workflow_job(self, mfileid, taskid):
 
         nexttask = self.tasksets.get(id=taskid)
-
         if nexttask is None:
-            raise Exception("Workflow has no nexttask taskset to run %s", taskid)
+            raise Exception("Workflow %s has no next taskset to run", self.name)
 
         mfile = MFile.objects.get(id=mfileid)
         from mserve.jobservice.models import Job
-        job = Job(name="Workflow %s - Task %s" % (self.name, nexttask.name),
-            mfile=mfile)
+        jobname = "Workflow %s - Task %s" % (self.name, nexttask.name)
+        job = Job(name=jobname, mfile=mfile)
         job.save()
         tsr = nexttask.create_workflow_taskset(mfileid, job)
         job.taskset_id = tsr.taskset_id
@@ -934,8 +915,8 @@ class DataServiceWorkflow(models.Model):
             continue_workflow_taskset.delay(mfileid, job.id, nexttask.next.id )
         else:
             logging.info("Last job in workflow running")
-
         return job
+
 
 class DataServiceTaskSet(models.Model):
     name = models.CharField(max_length=200)
@@ -948,6 +929,7 @@ class DataServiceTaskSet(models.Model):
         tsr = ts.apply_async()
         tsr.save()
         return tsr
+
 
 class DataServiceTask(models.Model):
     name = models.CharField(max_length=200)
@@ -976,6 +958,8 @@ class DataServiceTask(models.Model):
                 and self.args != "":
             args = eval(self.args)
 
+        args["taskid"] = self.id
+
         output_arr = []
 
         from jobservice.static import job_descriptions
@@ -995,10 +979,10 @@ class DataServiceTask(models.Model):
         q = "normal.%s" % (task_name)
         if prioritise:
             q = "priority.%s" % (task_name)
-        kwargs = {"routing_key": q}
+        options = {"routing_key": q}
         task = subtask(task=task_name,
                         args=[[mfileid], output_arr, args],
-                        options=kwargs)
+                        options=options)
         logging.info("Task created %s ", task)
 
         return task

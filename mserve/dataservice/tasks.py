@@ -567,7 +567,7 @@ def continue_workflow_taskset(mfileid, jobid, nexttasksetid):
             raise Exception("Workflow task failed")
         else:
             logging.info("Job %s not complete yet", prevjob)
-            continue_workflow_taskset.retry(args=[mfileid, jobid, nexttasksetid], countdown=5)
+            continue_workflow_taskset.apply_async(args=[mfileid, jobid, nexttasksetid], countdown=5)
     except Exception as e:
         logging.info("Error with continue_workflow_task %s" % e)
         raise e
