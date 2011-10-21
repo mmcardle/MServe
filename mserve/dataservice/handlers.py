@@ -349,22 +349,48 @@ class DataServiceProfileHandler(BaseHandler):
 class DataServiceWorkflowHandler(BaseHandler):
     allowed_methods = ('GET')
     model = DataServiceWorkflow
-    fields = ('name', 'id', 'tasksets', 'initial', )
+    fields = ('name', 'id', 'tasksets', )
 
 
 class DataServiceTaskSetHandler(BaseHandler):
-    allowed_methods = ('GET')
+    allowed_methods = ('GET','PUT','POST','DELETE')
     model = DataServiceTaskSet
-    fields = ('name', 'id', 'tasks')
+    fields = ('name', 'id', 'tasks', 'order')
 
+    def delete(self, request, serviceid, profileid, tasksetid ):
+        dsts = DataServiceTaskSet.objects.get(id=tasksetid)
+        dsts.delete()
+        r = rc.DELETED
+        return r
+
+    def update(self, request, serviceid, profileid, tasksetid ):
+        dsts = DataServiceTaskSet.objects.get(id=tasksetid)
+        dstsf = DataServiceTaskSetForm(request.POST, instance=dsts)
+        if dstsf.is_valid():
+            dsts = dstsf.save()
+            return dsts
+        else:
+            r = rc.BAD_REQUEST
+            logging.info(dstsf)
+            r.write("Invalid Request!")
+            return r
+
+    def create(self, request, serviceid, profileid ):
+        DataService.objects.get(id=serviceid).profiles.get(id=profileid)
+        dstsf = DataServiceTaskSetForm(request.POST)
+        if dstsf.is_valid():
+            dst = dstsf.save()
+            return dst
+        else:
+            r = rc.BAD_REQUEST
+            logging.info(dstsf)
+            r.write("Invalid Request!")
+            return r
 
 class DataServiceTaskHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataServiceTask
     fields = ('name', 'task_name', 'id', 'condition', 'args')
-
-    def read(self, request, serviceid, profileid ):
-        return get_object_or_404(DataService,pk=serviceid).profiles.get(id=profileid)
 
     def delete(self, request, serviceid, profileid, taskid ):
         dst = DataServiceTask.objects.get(id=taskid)

@@ -42,7 +42,18 @@ def make_request(get=None,post=None):
         request.POST = post
     return request
 
+
+
+
 class ClientTest(TestCase):
+
+    def test_service_workflows(self):
+        service = self.hc.create_data_service(self.service_name)
+        service.save()
+        self.service = service
+        service_url_profiles = reverse('dataservice_profiles', args=[service.id])
+        response = self.c.get(service_url_profiles)
+        print response
 
     def setUp(self):
         self.password = 'mypassword'

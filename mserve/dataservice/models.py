@@ -39,12 +39,12 @@ from django.db import models
 from celery.task.sets import TaskSet
 from celery.task.sets import subtask
 from celery.registry import tasks
-from celery.result import TaskSetResult
 from djcelery.models import TaskState
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -362,7 +362,6 @@ class Usage(models.Model):
 
     def save(self):
         super(Usage, self).save()
-        logging.info("Saving Usage %s ", self)
 
     def fmt_ctime(self):
         return self.created.ctime()
@@ -833,15 +832,12 @@ class HostingContainer(NamedBase):
 
                 dstaskset = None
                 prev = None
-                initial = True
+                order = 0
                 for taskset in tasksets:
                     tsname = taskset['name']
-                    dstaskset = DataServiceTaskSet(name=tsname, workflow=wf)
+                    dstaskset = DataServiceTaskSet(name=tsname, workflow=wf, order=order)
                     dstaskset.save()
-                    if initial:
-                        wf.initial = dstaskset
-                        wf.save()
-                        initial = False
+                    order = order +1
                     if prev:
                         prev.next = dstaskset
                         prev.save()
@@ -892,42 +888,46 @@ class DataServiceProfile(models.Model):
 class DataServiceWorkflow(models.Model):
     profile = models.ForeignKey(DataServiceProfile, related_name="workflows")
     name = models.CharField(max_length=200)
-    initial = models.ForeignKey('DataServiceTaskSet', related_name="initial", null=True, blank=True)
     
     def __unicode__(self):
         return "Workflow %s for %s" % (self.name, self.profile.name)
 
     def create_workflow_job(self, mfileid):
-        if self.initial is None:
+        initial = self.tasksets.get(order=0)
+        if initial is None:
             raise Exception("Workflow has no initial taskset to run")
-        return self.continue_workflow_job(mfileid, self.initial.id)
+        return self.continue_workflow_job(mfileid, initial.id)
 
     def continue_workflow_job(self, mfileid, taskid):
 
-        nexttask = self.tasksets.get(id=taskid)
-        if nexttask is None:
-            raise Exception("Workflow %s has no next taskset to run", self.name)
+        task = self.tasksets.get(id=taskid)
+        if task is None:
+            raise Exception("Workflow %s has no taskset to run", self.name)
 
         mfile = MFile.objects.get(id=mfileid)
         from mserve.jobservice.models import Job
-        jobname = "Workflow %s - Task %s" % (self.name, nexttask.name)
+        jobname = "Workflow %s - Task %s" % (self.name, task.name)
         job = Job(name=jobname, mfile=mfile)
         job.save()
-        tsr = nexttask.create_workflow_taskset(mfileid, job)
+        tsr = task.create_workflow_taskset(mfileid, job)
         job.taskset_id = tsr.taskset_id
         job.save()
 
-        if nexttask.next:
-            continue_workflow_taskset.delay(mfileid, job.id, nexttask.next.id )
-        else:
-            logging.info("Last job in workflow running")
+        try:
+            nexttask = self.tasksets.filter(order__gt=task.order).order_by("order")[0]
+            continue_workflow_taskset.delay(mfileid, job.id, nexttask.id )
+        except ObjectDoesNotExist:
+            logging.info("Last job %s in workflow running", task.order)
         return job
 
 
 class DataServiceTaskSet(models.Model):
     name = models.CharField(max_length=200)
     workflow = models.ForeignKey(DataServiceWorkflow, related_name="tasksets")
-    next = models.ForeignKey('DataServiceTaskSet', related_name="prev", null=True, blank=True)
+    order = models.IntegerField()
+
+    class Meta:
+        ordering = ["order"]
 
     def create_workflow_taskset(self, mfileid, job):
         in_tasks = filter(lambda t : t != None , [task.create_workflow_task(mfileid, job) for task in self.tasks.all()])

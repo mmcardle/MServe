@@ -1388,10 +1388,12 @@ echo -e "\nNB: a copy of MSERVE installation summary is stored under ${MSERVE_HO
 
 if [ ! -f /etc/init.d/mserve-service ]; then
 	echo -e "\nNB: mserve-service should be copied into /etc/init.d directory."
+        echo -e "\nNB: update-rc.d mserve-service defaults"
 fi
 
 if [ ! -f /etc/init.d/celeryd-service ]; then
 	echo -e "\nNB: celeryd-service should be copied into /etc/init.d directory."
+	echo -e "\nNB: update-rc.d celeryd-service defaults."
 fi
 
 if [ -d $old_installation ]; then

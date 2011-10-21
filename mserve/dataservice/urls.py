@@ -39,6 +39,7 @@ subservice_handler = Resource(SubServiceHandler)
 dataservice_url_handler = Resource(DataServiceURLHandler)
 dataservice_profile_handler = Resource(DataServiceProfileHandler)
 dataservice_task_handler = Resource(DataServiceTaskHandler)
+dataservice_taskset_handler = Resource(DataServiceTaskSetHandler)
 mfile_handler = Resource(MFileHandler)
 backupfile_handler = Resource(BackupFileHandler)
 mfolder_handler = Resource(MFolderHandler)
@@ -79,6 +80,8 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler, name="dataservice_profiles"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/(?P<taskid>[^/]+)/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/(?P<tasksetid>[^/]+)/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
 
     url(r'^mfiles/$', mfile_handler  ),
     url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler  ),

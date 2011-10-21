@@ -334,13 +334,42 @@
         <p>This profile has <span class="red">${workflows.length}</span> workflows. Click on a workflow name to view.</p>
         <div class="workflow-accordian">
         {%templatetag openvariable%}each(index,workflow) workflows{%templatetag closevariable%}
-                <h3 class="red"><a href="#">Workflow ${workflow.name}</a></h3>
+                <h3 class="red" style="font-size: 14px"><a href="#">Workflow ${workflow.name} <span style="float: right">ID: ${workflow.id}</span></a></h3>
                 <div>
-                        {%templatetag openvariable%}if workflow.tasksets.length == 0 {%templatetag closevariable%}
-                            <span class="red">No TaskSets</span>
-                        {%templatetag openvariable%}/if{%templatetag closevariable%}
+                    
+                    {%templatetag openvariable%}if workflow.tasksets.length == 0 {%templatetag closevariable%}
+                        <!--span class="red">No TaskSets</span-->
+                    {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-                        {% templatetag openvariable %}tmpl(workflow.tasksets,  workflowid=id, initialtask=initial  ) "#taskSetTemplate" {% templatetag closevariable %}
+                    <div id="workflowbody-${workflow.id}">
+                        {% templatetag openvariable %}tmpl(workflow.tasksets,  { "workflowid" : workflow.id, } ) "#taskSetTemplate" {% templatetag closevariable %}
+                    </div>
+
+                     <div class="ui-widget" id="workflowsavedmsg-${workflow.id}" style="display: none">
+                            <div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+                                    <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+                                    <strong>Alert:</strong> Order has changed - Remember to Save.</p>
+                            </div>
+                    </div>
+
+                    <div class="ui-widget ui-widget-content ui-corner-all " style="margin: 5px;margin-bottom:15px">
+                        <table>
+                            <tr>
+                                <td style="vertical-align: middle"><span class="red bold smallcaps">Add New Task Set</span></td>
+                                <td>
+                                    <form id="newtasksetform-workflow-${workflow.id}">
+                                        <input type="hidden" style="width: 96%" id="id_workflow" name="workflow" value="${workflow.id}" >
+                                        <input type="hidden" style="width: 96%" id="id_order" name="order" value="-1" >
+                                        <input type="text" style="width: 96%" value="New Task Set" name="name" id="id_name" class="name" >
+                                    </form>
+                                </td>
+                                <td>
+                                    <button id="addbutton-taskset-${id}">Add Task Set</button>
+                                    <button id="workflowbody-savebutton-${id}">Save Order</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
         {%templatetag openvariable%}/each{%templatetag closevariable%}
         </div>
@@ -348,38 +377,42 @@
 </script>
 
 <script id="taskSetTemplate" type="text/x-jquery-tmpl">
-    <div class=" ui-widget ui-widget-content ui-corner-all" style="margin: 5px">
+    <div class="taskset ui-widget ui-widget-content ui-corner-all" style="margin: 5px" id="taskset-${id}" data-taskid="${id}">
         <div class="ui-widget ui-state-default">
-            
-                {%templatetag openvariable%}if initialtask && initialtask.id == id {%templatetag closevariable%}
-                    <div style="margin: 10px;font-variant: small-caps;font-weight: bold" class="red">${name} - Starting Task</div>
-                   {%templatetag openvariable%}else{%templatetag closevariable%}
-                    <div style="margin: 10px;font-variant: small-caps;font-weight: bold">${name}</div>
-                {%templatetag openvariable%}/if{%templatetag closevariable%}
-                
+                <div style="margin: 10px;font-weight: bold;font-size: 12px">
+                    ${name}<span style="float: right">Order: ${order} ID: ${id}</span>
+                </div>
         </div>
-        <div class="ui-widget " style="margin: 5px">
-            <table id="tasksettable-${id}" border="0" >
-                <tr><th style="width: 5%">Task ID</th><th style="width: 16%">Task Name</th><th style="width: 16%">Task</th><th style="width: 20%">Condition</th>
-                    <!--th style="width: 12%">Remote Execution</th><th style="width: 12%">Remote Trigger</th--><th style="">Parameters</th></tr>
+
+        <form id="tasksetupdateform-taskset-${id}" class="tasksetupdateform-taskset" >
+            <input type="hidden" style="width: 96%" id="id_name" name="name" value="${name}" >
+            <input type="hidden" style="width: 96%" id="id_workflow" name="workflow" value="${$item.workflowid}" >
+            <input type="hidden" style="width: 96%" id="id_taskset" name="taskset" value="${id}" >
+            <input type="hidden" style="width: 96%" id="id_order" name="order" value="" >
+        </form>
+
+        <button style="clear:both;margin:5px" id="deletetasksetbutton-${id}">Delete Task Set</button>
+        <div class="ui-widget " style="margin: 5px 15px 15px 15px">
+            <table id="tasksettable-${id}" border="0" style="1px outset silver;" >
+                <tr><th style="width: 5%">Task ID</th><th style="width: 16%">Task Name</th><th style="width: 16%">Task</th><th style="width: 20%">Condition</th><th style="width: 20%">Arguments</th>
 
                     {%templatetag openvariable%}if tasks.length == 0 {%templatetag closevariable%}
-                    <tr>
+                    <!--tr>
                         <td class="red">No Tasks</td>
-                    </tr>
+                    </tr-->
                     {%templatetag openvariable%}/if{%templatetag closevariable%}
 
                     <tbody style="border: 1px solid red;" >
                         {% templatetag openvariable %}tmpl(tasks, tasksetid=id ) "#taskTemplate" {% templatetag closevariable %}
                     </tbody>
                     
-                    <tbody style="border: 1px solid red;" id="tasksetbody-${id}" class="tasksettbody">
-                    <tr>
-                        <td><span class="red">Add New</span></td>
-                    </tr>
+                    <tbody style="border: 1px solid red;margin-top: 10px;" id="tasksetbody-${id}" >
+                    </tbody>
+                    
+                    <tbody style="border: 1px solid red;margin-top: 10px;" >
                     <tr>
                         <form id="newtaskform-taskset-${id}">
-                            <td></td>
+                            <td style="vertical-align: middle"><span class="red bold smallcaps">New</span></td>
                         <td>
                             <input type="hidden" style="width: 96%" id="id_workflow" name="workflow" value="${workflowid}" >
                             <input type="hidden" style="width: 96%" id="id_taskset" name="taskset" value="${id}" >
@@ -396,7 +429,7 @@
                         </td>
                         </form>
                         <td>
-                            <button id="addbutton-taskset-${id}">Add Task</button>
+                            <button id="addbutton-task-${id}">Add Task</button>
                         </td>
                     </tr>
                     </tbody>

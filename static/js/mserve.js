@@ -4,16 +4,49 @@ function mservetimeout(obj,mfileid,depth){
     $(obj).mserve('get_mfile_thumb', mfileid , depth )
 }
 
+function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
+
+    $("#addbutton-task-"+taskset.id).button({icons: {primary: "ui-icon-disk"}}).click(
+        function(){
+                 data = $("#newtaskform-taskset-"+taskset.id).serialize()
+                 $.ajax({
+                   type: "POST",
+                   data: data,
+                   url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
+                   success: function(newtask){
+                        var tasktmpl = $("#taskTemplate" ).tmpl( newtask )
+                        tasktmpl.appendTo( "#tasksetbody-"+taskset.id );
+                        updatetaskbuttons(serviceid, profileid, newtask.id)
+                   },
+                   error: function(msg){
+                        showError("Error Adding Task",msg.responseText)
+                    }
+                 });
+        }
+    )
+
+    deletefunction = function(){
+         $.ajax({
+           type: "DELETE",
+           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasksets/'+taskset.id+'/',
+           success: function(msg){
+               $( "#taskset-"+taskset.id ).remove();
+           },
+           error: function(msg){
+                showError("Error Deleting Task", "")
+            }
+         });
+    }
+    $("#deletetasksetbutton-"+taskset.id).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
+}
+
 function updatetaskbuttons(serviceid, profileid, taskid){
     deletefunction = function(){
          $.ajax({
            type: "DELETE",
            url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
            success: function(msg){
-               console.log("#task-"+taskid)
-               console.log($( "#task-"+taskid ))
                $( "#task-"+taskid ).remove();
-               console.log("REMOVED "+taskid)
            },
            error: function(msg){
                 showError("Error Deleting Task",msg.responseText)
@@ -27,18 +60,18 @@ function updatetaskbuttons(serviceid, profileid, taskid){
                data: data,
                url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
                success: function(task){
-                   console.log(task)
                    var tasktmpl = $("#taskTemplate" ).tmpl( task )
                     $( "#task-"+taskid ).replaceWith(tasktmpl);
                     updatetaskbuttons(serviceid, profileid, taskid)
+
                },
                error: function(msg){
                     showError("Error Updating Task",msg.responseText)
                 }
              });
         }
-    $("#edittaskbutton-"+taskid).button().click(updatefunction)
-    $("#deletetaskbutton-"+taskid).button().click(deletefunction)
+    $("#edittaskbutton-"+taskid).button({icons: {primary: "ui-icon-disk"}}).click(updatefunction)
+    $("#deletetaskbutton-"+taskid).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
 }
 
 (function( $ ){
@@ -204,7 +237,6 @@ function updatetaskbuttons(serviceid, profileid, taskid){
                 $(data.allcontent[0]).append($("#mfileholder-"+mfile.id).clone(true))
             });
     },
-
     serviceprofiles : function(serviceid){
 
             var defaults = {};
@@ -227,12 +259,11 @@ function updatetaskbuttons(serviceid, profileid, taskid){
 
                                 if(profiles.length==0){
                                      $("#profilemessages").append("<div id='noprofiles' class='message' >No profiles</div>");
-                                    return;
+                                    return False;
                                 }else{
                                     $("#noprofiles").remove()
                                 }
-
-
+                                
                                 var profiletabs = $( "<div></div>")
                                 $( "#profileTabsTemplate" ).tmpl( {"profiles":profiles } ) .appendTo( profiletabs );
                                 $( "#profileTemplate" ).tmpl( profiles ) .appendTo( profiletabs );
@@ -247,26 +278,64 @@ function updatetaskbuttons(serviceid, profileid, taskid){
 
                                 $(profiles).each(function(pindex,profile){
                                     $(profile.workflows).each(function(windex,workflow){
-                                        $(workflow.tasksets).each(function(tsindex,taskset){
-                                            $("#addbutton-taskset-"+taskset.id).button().click(
-                                                function(){
-                                                         data = $("#newtaskform-taskset-"+taskset.id).serialize()
-                                                         $.ajax({
-                                                           type: "POST",
+                                        $("#addbutton-taskset-"+workflow.id).button({icons: {primary: "ui-icon-disk"}}).click(
+                                        function(){
+                                                 data = $("#newtasksetform-workflow-"+workflow.id).serialize()
+                                                 $.ajax({
+                                                   type: "POST",
+                                                   data: data,
+                                                   url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/',
+                                                   success: function(newtaskset){
+                                                       console.log(newtaskset)
+                                                        var tasksettmpl = $("#taskSetTemplate" ).tmpl( newtaskset, { "workflowid" : workflow.id } )
+                                                        tasksettmpl.appendTo("#workflowbody-"+workflow.id );
+                                                        updatetasksetbuttons(serviceid, profile.id, workflow.id, newtaskset)
+                                                   },
+                                                   error: function(msg){
+                                                        showError("Error Adding Task Set",msg.responseText)
+                                                    }
+                                                 });
+                                            }
+                                        )
+                                        $("#workflowbody-"+workflow.id).sortable({
+                                            update : function(event, ui){
+                                                var tasksetid = $(ui.item[0]).attr("data-taskid")
+
+                                                $("#workflowsavedmsg-"+workflow.id).show()
+                                            }
+                                        })
+                                        $("#workflowbody-savebutton-"+workflow.id).button().click(
+                                            function(){
+                                                $("#workflowbody-"+workflow.id).find(".taskset").each( function(tindex,taskset){
+                                                    $("#workflowsavedmsg-"+workflow.id).hide()
+                                                    var tasksetid = $(taskset).attr("data-taskid")
+                                                    var index = $(taskset).parent().children().index(taskset)
+                                                    form = $(taskset).find("#tasksetupdateform-taskset-"+tasksetid)
+                                                    form.find("input[name=order]").val(index)
+                                                    data = form.serialize()
+                                                     $.ajax({
+                                                           type: "PUT",
                                                            data: data,
-                                                           url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasks/',
-                                                           success: function(newtask){
-                                                                var tasktmpl = $("#taskTemplate" ).tmpl( newtask )
-                                                                tasktmpl.prependTo( "#tasksetbody-"+taskset.id );
-                                                                updatetaskbuttons(serviceid, profile.id, newtask.id)
+                                                           url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/'+tasksetid+'/',
+                                                           success: function(updatedtaskset){
+                                                               var tasksettmpl = $("#taskSetTemplate").tmpl( updatedtaskset , {"workflowid":workflow.id}  )
+                                                               $( "#taskset-"+updatedtaskset.id ).replaceWith(tasksettmpl);
+                                                               updatetasksetbuttons(serviceid, profile.id, workflow.id, updatedtaskset)
+                                                               $(updatedtaskset.tasks).each(function(newtindex, task){
+                                                                    updatetaskbuttons(serviceid, profile.id, task.id)
+                                                                });
                                                            },
                                                            error: function(msg){
-                                                                showError("Error Adding Task",msg.responseText)
+                                                                showError("Error Updating TaskSet ", "")
                                                             }
                                                          });
-                                                }
-                                            )
 
+                                                    })
+                                                }
+                                        )
+
+                                        $(workflow.tasksets).each(function(tsindex,taskset){
+                                            updatetasksetbuttons(serviceid, profile.id, workflow.id, taskset)
                                             $(taskset.tasks).each(function(tindex, task){
                                                 updatetaskbuttons(serviceid, profile.id, task.id)
                                             });

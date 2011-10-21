@@ -58,6 +58,12 @@ html, .main {
 .green {
     color:#237734;
 }
+.bold {
+    font-weight: bold;
+}
+.smallcaps {
+    font-variant: small-caps
+}
 .header h1 small {
 	display:block;
 	float:left;

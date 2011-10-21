@@ -11,7 +11,6 @@ function create_service(containerid){
         stepHour: 1,
         stepMinute: 15,
         numberOfMonths: 1,
-        step: { minutes: 15 },
         show: 'fold',
         showButtonPanel: true,
         defaultTime: now
@@ -26,7 +25,6 @@ function create_service(containerid){
         stepHour: 1,
         stepMinute: 15,
         numberOfMonths: 1,
-        step: { minutes: 15 },
         show: 'fold',
         showButtonPanel: true,
         defaultTime: oneHour

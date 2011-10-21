@@ -25,6 +25,9 @@ from django import forms
 from dataservice.models import *
 from django.forms import ModelForm
 from static import *
+import logging
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Avg, Max, Min, Count
 
 ID_FIELD_LENGTH  = 200
 
@@ -33,9 +36,45 @@ class ServiceRequestForm(ModelForm):
         exclude=['profile','state']
         model = ServiceRequest
 
+class DataServiceTaskSetForm(ModelForm):
+
+    def save(self, commit=True):
+        instance = super(DataServiceTaskSetForm, self).save(commit=False)
+        logging.info(self.cleaned_data)
+        if instance.order == -1 and instance.id == None:
+            max_order = instance.workflow.tasksets.aggregate(max_order=Max('order'))["max_order"] or -1 and 0
+            instance.order = max_order +1
+
+        '''if instance.order != -1 and instance.id != None:
+            logging.info("XXX 1 %s" , instance)
+            try:
+                previnst = DataServiceTaskSet.objects.get(id=instance.id)
+                logging.info("XXX 2 %s" , instance)
+                previnstorder = previnst.order
+                logging.info("XXX 3 %s" , previnstorder)
+                try:
+                    logging.info("XXX 3.2 %s" , previnstorder)
+                    duplicateinstances = instance.workflow.tasksets.filter(order=previnstorder)
+                    logging.info("XXX 4 %s" , duplicateinstances )
+                    for duplicateinstance in duplicateinstances:
+                        duplicateinstance.order = previnstorder
+                        duplicateinstance.save()
+                except ObjectDoesNotExist:
+                    logging.info("XXX 5 %s" , instance)
+                    raise e
+            except Exception as e:
+                raise e'''
+        if commit:
+            instance.save()
+        logging.info("XXX %s" , instance)
+        return instance
+
+    class Meta:
+        #exclude=['order',]
+        model = DataServiceTaskSet
+
 class DataServiceTaskForm(ModelForm):
     class Meta:
-        #exclude=['id','workflow','task_name','condition','allowremote','remotecondition']
         model = DataServiceTask
 
 PROFILE_CHOICES = [  ]
