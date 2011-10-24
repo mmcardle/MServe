@@ -12,6 +12,9 @@ Contents:
    :maxdepth: 2
 
    overview
+   user_guide
+   service_provider_guide
+   admin_guide
    architecture
    dataservice
 

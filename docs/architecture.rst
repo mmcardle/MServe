@@ -70,7 +70,7 @@ Service Provider can query theses metrics aggregated over all services to see re
 Design Overview
 ###################
 
-[[File:MServe_Architecture.png||]]
+.. image:: images/mserve-architecture.png
 
 Software Components
 *******************
