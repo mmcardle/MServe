@@ -403,7 +403,7 @@
                     {%templatetag openvariable%}/if{%templatetag closevariable%}
 
                     <tbody style="border: 1px solid red;" >
-                        {% templatetag openvariable %}tmpl(tasks, tasksetid=id ) "#taskTemplate" {% templatetag closevariable %}
+                        {% templatetag openvariable %}tmpl(tasks, { "tasksetid" : id, } ) "#taskTemplate" {% templatetag closevariable %}
                     </tbody>
                     
                     <tbody style="border: 1px solid red;margin-top: 10px;" id="tasksetbody-${id}" >
@@ -444,11 +444,11 @@
     <tr  id="task-${id}">
         <td>${id}</td>
         <form id="taskform-task-${id}" >
-            <input type="hidden" style="width: 96%" id="id_taskset" name="taskset" value="${tasksetid}" >
+            <td><input type="text" style="width: 96%" id="id_taskset" name="taskset" value="${$item.tasksetid}" ></td>
         <td class="green"><input type="text" style="width: 96%" name="name" id="id_name" class="name" value="${name}" ></td>
         <td class="green"><input type="text" style="width: 96%" name="task_name" id="id_task_name" class="task_name" value="${task_name}" ></td>
         <td>
-            <input type="text" style="width: 96%" value="" id="id_condition" name="${condition}" >
+            <input type="text" style="width: 96%" value="${condition}" id="id_condition" name="condition" >
         </td>
         <td>
             <textarea style="width: 96%;border: 1px dotted silver" NAME="args" COLS=30 ROWS=1 id="id_args-${id}">${args}</textarea>

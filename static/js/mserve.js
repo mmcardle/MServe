@@ -14,9 +14,9 @@ function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
                    data: data,
                    url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
                    success: function(newtask){
-                        var tasktmpl = $("#taskTemplate" ).tmpl( newtask )
+                        var tasktmpl = $("#taskTemplate" ).tmpl( newtask, { "tasksetid" : taskset.id }  )
                         tasktmpl.appendTo( "#tasksetbody-"+taskset.id );
-                        updatetaskbuttons(serviceid, profileid, newtask.id)
+                        updatetaskbuttons(serviceid, profileid, taskset.id, newtask.id)
                    },
                    error: function(msg){
                         showError("Error Adding Task",msg.responseText)
@@ -40,7 +40,7 @@ function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
     $("#deletetasksetbutton-"+taskset.id).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
 }
 
-function updatetaskbuttons(serviceid, profileid, taskid){
+function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
     deletefunction = function(){
          $.ajax({
            type: "DELETE",
@@ -60,9 +60,11 @@ function updatetaskbuttons(serviceid, profileid, taskid){
                data: data,
                url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
                success: function(task){
-                   var tasktmpl = $("#taskTemplate" ).tmpl( task )
+                   var tasktmpl = $("#taskTemplate" ).tmpl( task, { "tasksetid" : tasksetid } )
+                   console.log(task)
+                   console.log(tasktmpl)
                     $( "#task-"+taskid ).replaceWith(tasktmpl);
-                    updatetaskbuttons(serviceid, profileid, taskid)
+                    updatetaskbuttons(serviceid, profileid, tasksetid, taskid)
 
                },
                error: function(msg){
@@ -322,7 +324,7 @@ function updatetaskbuttons(serviceid, profileid, taskid){
                                                                $( "#taskset-"+updatedtaskset.id ).replaceWith(tasksettmpl);
                                                                updatetasksetbuttons(serviceid, profile.id, workflow.id, updatedtaskset)
                                                                $(updatedtaskset.tasks).each(function(newtindex, task){
-                                                                    updatetaskbuttons(serviceid, profile.id, task.id)
+                                                                    updatetaskbuttons(serviceid, profile.id, updatedtaskset.id, task.id)
                                                                 });
                                                            },
                                                            error: function(msg){
@@ -337,7 +339,7 @@ function updatetaskbuttons(serviceid, profileid, taskid){
                                         $(workflow.tasksets).each(function(tsindex,taskset){
                                             updatetasksetbuttons(serviceid, profile.id, workflow.id, taskset)
                                             $(taskset.tasks).each(function(tindex, task){
-                                                updatetaskbuttons(serviceid, profile.id, task.id)
+                                                updatetaskbuttons(serviceid, profile.id, taskset.id, task.id)
                                             });
                                         });
                                     });
