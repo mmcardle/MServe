@@ -32,6 +32,7 @@ import urlparse
 import os
 import os.path
 import time
+import shutil
 import pycurl
 import StringIO
 import PythonMagick
@@ -133,35 +134,45 @@ def _save_proxy(mfileid,proxy):
     path = mfile.get_upload_proxy_path()
     return _save_topath(proxy, path)
 
-def _save_topath(file,path):
+def _save_topath(file, path):
     for name in settings.FILE_TRANSPORTS.keys():
         transport = settings.FILE_TRANSPORTS[name]
         logging.debug("Trying transport %s" % name)
-        try:
-            resp = StringIO.StringIO()
+        if transport["schema"] == "http" or transport["schema"] == "https":
+            try:
+                resp = StringIO.StringIO()
 
-            remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],path)
-            logging.debug("remotemfile %s" % remotemfile)
-            resp = StringIO.StringIO()
+                remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],path)
+                logging.debug("remotemfile %s" % remotemfile)
+                resp = StringIO.StringIO()
 
-            f = open(file.name)
-            c = pycurl.Curl()
-            c.setopt(c.URL, str(remotemfile))
-            c.setopt(c.PUT, 1)
-            c.setopt(c.INFILE, f)
-            c.setopt(c.INFILESIZE, os.path.getsize(f.name))
-            c.setopt(c.WRITEFUNCTION, resp.write)
-            c.perform()
-            status = c.getinfo(c.HTTP_CODE)
-            c.close()
+                f = open(file.name)
+                c = pycurl.Curl()
+                c.setopt(c.URL, str(remotemfile))
+                c.setopt(c.PUT, 1)
+                c.setopt(c.INFILE, f)
+                c.setopt(c.INFILESIZE, os.path.getsize(f.name))
+                c.setopt(c.WRITEFUNCTION, resp.write)
+                c.perform()
+                status = c.getinfo(c.HTTP_CODE)
+                c.close()
 
-            if status > 400:
-                logging.warn("Transport %s return error status code '%s' " % (name,status))
-            else:
-                return f.name
-        except Exception as e:
-            logging.warn("Could not put MFile to transport '%s'"%name)
-            logging.warn(e)
+                if status > 400:
+                    logging.warn("Transport %s return error status code '%s' " % (name,status))
+                else:
+                    return f.name
+            except Exception as e:
+                logging.warn("Could not put MFile to transport '%s'"%name)
+                logging.warn(e)
+        elif transport["schema"] == "localpath":
+            if path[0] == "/":
+                path = path[1:]
+            fullpath = os.path.join(transport["path"], path)
+            if not os.path.exists(fullpath):
+                os.makedirs(fullpath)
+            shutil.copy(file.name, fullpath)
+            logging.warn("Saving MFile to local path '%s', using transport '%s'", fullpath, name)
+            return os.path.join(fullpath, os.path.basename(file.name))
     raise Exception("Could not put Mfile to any transports")
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=False):
@@ -387,12 +398,16 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
         ffmpeg_args.append(tmpfile)
 
         logging.info(" ".join(ffmpeg_args))
+        logging.info("%s%s", "XXX", " ".join(ffmpeg_args))
         p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdin, close_fds=True)
         p.communicate()
 
         qt_args = ["qt-faststart", tmpfile, tmpoutfile]
         qt = Popen(qt_args, stdin=PIPE, close_fds=True)
         qt.communicate()
+
+        logging.info("XXX tmpoutfile : %s" % os.path.getsize(tmpoutfile))
+        logging.info("XXX tmpfile : %s" % os.path.getsize(tmpfile))
 
         _save_joboutput(joboutput,toutfile)
 
@@ -418,7 +433,24 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
     infile = _get_mfile(mfileid)
-    _ffmpeg_args=options["ffmpeg_args"]
+
+    if "width" in options:
+        widthS = options["width"]
+        width  = int(widthS)
+    else:
+        width = settings.postersize[0]
+
+    if "height" in options:
+        heightS = options["height"]
+        height  = int(heightS)
+    else:
+        height = settings.postersize[1]
+
+    if "ffmpeg_args" in options:
+        _ffmpeg_args=options["ffmpeg_args"]
+    else:
+        _ffmpeg_args = ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(width,height),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
 
     #_stdout = open('/var/mserve/mserve.log','a')
     #_stderr = open('/var/mserve/mserve.log','a')
@@ -460,6 +492,9 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
         logging.info(" ".join(ffmpeg_args))
         p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdout, close_fds=True)
         p.communicate()
+
+        if os.path.getsize(tmpfile) == 0:
+            raise Exception("ffmpeg produced 0 size output")
 
         qt_args = ["qt-faststart", tmpfile, outfile.name]
         qt = Popen(qt_args, stdin=PIPE, close_fds=True)
@@ -831,9 +866,9 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
         else:
             raise Exception("Could not create image")
 
-    except Exception as e:
-        logging.info("Error with thumbimage %s" % e)
-        raise e
+    except:# Exception as e:
+        #logging.info("Error with thumbimage %s" % e)
+        raise
 
 @task(default_retry_delay=15,max_retries=3)
 def thumboutput(inputs,outputs,options={},callbacks=[]):

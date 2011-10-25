@@ -913,10 +913,10 @@ class DataServiceWorkflow(models.Model):
         job.taskset_id = tsr.taskset_id
         job.save()
 
-        try:
-            nexttask = self.tasksets.filter(order__gt=task.order).order_by("order")[0]
-            continue_workflow_taskset.delay(mfileid, job.id, nexttask.id )
-        except ObjectDoesNotExist:
+        tasks = self.tasksets.filter(order__gt=task.order).order_by("order")
+        if len(tasks) > 0:
+            continue_workflow_taskset.delay(mfileid, job.id, tasks[0].id )
+        else:
             logging.info("Last job %s in workflow running", task.order)
         return job
 
@@ -975,6 +975,7 @@ class DataServiceTask(models.Model):
             for i in range(0, nboutputs):
                 outputmimetype = \
                     job_description["output-%s" % i]["mimetype"]
+                from jobservice.models import JobOutput
                 output = JobOutput(name="Output%s-%s" % (i, task_name),
                                     job=job, mimetype=outputmimetype)
                 output.save()

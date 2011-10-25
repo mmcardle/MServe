@@ -22,17 +22,23 @@
 #
 ########################################################################
 from mserve.dataservice.models import HostingContainer
-import simplejson as json
 from django.test import TestCase
 from dataservice.models import *
+from dataservice.tasks import *
 from jobservice.models import *
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
 from django.core.files.base import ContentFile
+from django.core.files import File
 from django.core.urlresolvers import reverse
 from django.test.client import Client
 from django.contrib.auth.models import User
 from django.http import HttpRequest
+
+import simplejson as json
+import tempfile
+import shutil
+import settings
 
 def make_request(get=None,post=None):
     request = HttpRequest()
@@ -43,7 +49,59 @@ def make_request(get=None,post=None):
     return request
 
 
+class TaskTest(TestCase):
 
+    def setUp(self):
+
+        self.container_name = "testingcontainer"
+        self.service_name = "testingservice"
+        self.mfile_name = "testmfile"
+        self.job_name = "testjob"
+        self.joboutput_name = "testjoboutput"
+        self.testfolder = os.path.join(settings.TESTDATA_ROOT)
+        self.assertTrue(os.path.exists(self.testfolder))
+
+        self.image_name = "IMAG0361.jpg"
+        self.video_name = "sintel_trailer-480p.mp4"
+
+        self.test_image_path = os.path.join(self.testfolder, self.image_name)
+        self.test_video_path  = os.path.join(self.testfolder, self.video_name)
+
+        self.test_image = File(open( self.test_image_path ,'r'))
+        self.test_video = File(open( self.test_video_path ,'r'))
+
+        self.hc = HostingContainer.create_container(self.container_name)
+        self.service = self.hc.create_data_service(self.service_name)
+
+    def test_thumbimage(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_image )
+        job = mfile.create_job(self.job_name)
+        output = JobOutput(name=self.joboutput_name,job=job, mimetype="image/png")
+        thumbimage([mfile.id],[output.id], options={"width":"210","height":"120"})
+
+    def test_posterimage(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_image )
+        job = mfile.create_job(self.job_name)
+        output = JobOutput(name=self.joboutput_name, job=job, mimetype="image/png")
+        posterimage([mfile.id],[output.id], options={"width":"210","height":"120"})
+
+    def test_thumbvideo(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_video )
+        job = mfile.create_job(self.job_name)
+        output = JobOutput(name=self.joboutput_name,job=job, mimetype="image/png")
+        thumbvideo([mfile.id],[output.id], options={"width":"210","height":"120"})
+
+    def test_postervideo(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_video )
+        job = mfile.create_job(self.job_name)
+        output = JobOutput(name=self.joboutput_name, job=job, mimetype="image/png")
+        postervideo([mfile.id],[output.id], options={"width":"210","height":"120"})
+
+    def test_proxyvideo(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_video )
+        job = mfile.create_job(self.job_name)
+        output = JobOutput(name=self.joboutput_name, job=job, mimetype="video/mp4")
+        proxyvideo([mfile.id],[output.id], options={"width":"210","height":"120"})
 
 class ClientTest(TestCase):
 
