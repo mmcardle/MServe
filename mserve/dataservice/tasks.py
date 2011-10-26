@@ -43,6 +43,7 @@ from subprocess import Popen, PIPE
 from datetime import timedelta
 from celery.task.sets import TaskSet
 from settings import HOSTNAME
+from django.core.files import File
 '''
 @periodic_task(run_every=timedelta(minutes=15))
 def service_scrubber():
@@ -100,17 +101,17 @@ def _save_joboutput_thumb(outputid,image):
     joboutput = JobOutput.objects.get(id=outputid)
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
-    return _save_topath(tfile, joboutput.get_upload_thumb_path())
+    return _save_topath(tfile, joboutput.get_upload_thumb_path(), field=joboutput.thumb )
 
 def _save_joboutput(outputid,file):
     from mserve.jobservice.models import JobOutput
     joboutput = JobOutput.objects.get(id=outputid)
-    return _save_topath(file, joboutput.get_upload_path())
+    return _save_topath(file, joboutput.get_upload_path(), field=joboutput.file)
 
 def _save_backupfile(backupid,file):
     from mserve.dataservice.models import BackupFile
     backupfile = BackupFile.objects.get(id=backupid)
-    return _save_topath(file, backupfile.get_upload_path())
+    return _save_topath(file, backupfile.get_upload_path(), field=backupfile.file)
 
 def _save_thumb(mfileid,image):
     from mserve.dataservice.models import MFile
@@ -118,7 +119,7 @@ def _save_thumb(mfileid,image):
     path = mfile.get_upload_thumb_path()
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
-    return _save_topath(tfile,path)
+    return _save_topath(tfile, path, field=mfile.thumb)
 
 def _save_poster(mfileid,image):
     from mserve.dataservice.models import MFile
@@ -126,15 +127,15 @@ def _save_poster(mfileid,image):
     path = mfile.get_upload_poster_path()
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
-    return _save_topath(tfile,path)
+    return _save_topath(tfile,path, field=mfile.poster)
 
 def _save_proxy(mfileid,proxy):
     from mserve.dataservice.models import MFile
     mfile = MFile.objects.get(id=mfileid)
     path = mfile.get_upload_proxy_path()
-    return _save_topath(proxy, path)
+    return _save_topath(proxy, path, field=mfile.proxy)
 
-def _save_topath(file, path):
+def _save_topath(file, path, field=None):
     for name in settings.FILE_TRANSPORTS.keys():
         transport = settings.FILE_TRANSPORTS[name]
         logging.debug("Trying transport %s" % name)
@@ -164,16 +165,89 @@ def _save_topath(file, path):
             except Exception as e:
                 logging.warn("Could not put MFile to transport '%s'"%name)
                 logging.warn(e)
-        elif transport["schema"] == "localpath":
-            if path[0] == "/":
-                path = path[1:]
-            fullpath = os.path.join(transport["path"], path)
-            if not os.path.exists(fullpath):
-                os.makedirs(fullpath)
-            shutil.copy(file.name, fullpath)
-            logging.warn("Saving MFile to local path '%s', using transport '%s'", fullpath, name)
-            return os.path.join(fullpath, os.path.basename(file.name))
+        elif transport["schema"] == "direct":
+            if field != None:
+                field.save(os.path.basename(path), File(file))
+                return field.path
+            else:
+                logging.error("Transport Schema set to direct, but no field object provided")
     raise Exception("Could not put Mfile to any transports")
+
+def _transcode_ffmpeg(videopath, options):
+
+    if "width" in options:
+        widthS = options["width"]
+        width  = int(widthS)
+    else:
+        width = settings.postersize[0]
+
+    if "height" in options:
+        heightS = options["height"]
+        height  = int(heightS)
+    else:
+        height = settings.postersize[1]
+
+    if "ffmpeg_args" in options:
+        _ffmpeg_args=options["ffmpeg_args"]
+    else:
+        _ffmpeg_args = ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(width,height),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
+    # TODO: Replace with Job Logs
+    nulfp = open(os.devnull, "w")
+    _stdout = nulfp.fileno()
+    _stderr = nulfp.fileno()
+
+    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+    outfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
+
+    try:
+        tmpfile=tfile.name
+        vidfifo="stream.yuv"
+        audfifo="stream.wav"
+
+        tmpdir = tempfile.mkdtemp()
+        vidfilename = os.path.join(tmpdir, vidfifo)
+        try:
+            os.mkfifo(vidfilename)
+        except OSError, e:
+            logging.info("Failed to create Video FIFO: %s" % e)
+
+        audfilename = os.path.join(tmpdir, audfifo)
+        try:
+            os.mkfifo(audfilename)
+        except OSError, e:
+            logging.info("Failed to create Audio FIFO: %s" % e)
+
+        ffmpeg_args_rawvid = ["ffmpeg","-y","-i",videopath,"-an","-f","yuv4mpegpipe",vidfilename]
+        ffmpeg_args_rawwav = ["ffmpeg","-y","-i",videopath,"-f","wav","-acodec","pcm_s16le",audfilename]
+
+        Popen(ffmpeg_args_rawvid,stdout=_stdout,stderr=_stderr)
+        Popen(ffmpeg_args_rawwav,stdout=_stdout,stderr=_stderr)
+
+        ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
+
+        ffmpeg_args.extend(_ffmpeg_args)
+        ffmpeg_args.append(tmpfile)
+
+        logging.info(" ".join(ffmpeg_args))
+        p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdout, stderr=_stderr, close_fds=True)
+        p.communicate()
+
+        if os.path.getsize(tmpfile) == 0:
+            raise Exception("ffmpeg produced 0 size output")
+
+        qt_args = ["qt-faststart", tmpfile, outfile.name]
+        qt = Popen(qt_args, stdin=PIPE, stdout=_stdout, stderr=_stderr, close_fds=True)
+        qt.communicate()
+
+        return outfile
+
+    except:
+        logging.info("Error encoding video")
+        os.unlink(tmpfile)
+        tfile.close()
+        raise
+
 
 def _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=False):
 
@@ -358,75 +432,17 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
     infile = _get_mfile(mfileid)
-    _ffmpeg_args=options["ffmpeg_args"]
-
-    _stdin = None
-    _stderr = None
-
-    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
-    toutfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
     joboutput = outputs[0]
 
-    try:
-        tmpfile=tfile.name
-        tmpoutfile=toutfile.name
-        vidfifo="stream.yuv"
-        audfifo="stream.wav"
+    transcode = _transcode_ffmpeg(infile, options)
+    
+    if os.path.getsize(transcode.name) == 0:
+        raise Exception("Transcode produced a 0 byte file")
 
-        tmpdir = tempfile.mkdtemp()
-        vidfilename = os.path.join(tmpdir, vidfifo)
-        try:
-            os.mkfifo(vidfilename)
-        except OSError, e:
-            logging.info("Failed to create Video FIFO: %s" % e)
+    _save_joboutput(joboutput, transcode)
 
-        audfilename = os.path.join(tmpdir, audfifo)
-        try:
-            os.mkfifo(audfilename)
-        except OSError, e:
-            logging.info("Failed to create Audio FIFO: %s" % e)
+    return {"success":True, "message": "Transcode Successful"}
 
-        ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
-        ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
-
-        Popen(ffmpeg_args_rawvid,stdout=_stdin,stderr=_stderr)
-        Popen(ffmpeg_args_rawwav,stdout=_stdin,stderr=_stderr)
-
-        ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
-
-        ffmpeg_args.extend(_ffmpeg_args)
-        ffmpeg_args.append(tmpfile)
-
-        logging.info(" ".join(ffmpeg_args))
-        logging.info("%s%s", "XXX", " ".join(ffmpeg_args))
-        p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdin, close_fds=True)
-        p.communicate()
-
-        qt_args = ["qt-faststart", tmpfile, tmpoutfile]
-        qt = Popen(qt_args, stdin=PIPE, close_fds=True)
-        qt.communicate()
-
-        logging.info("XXX tmpoutfile : %s" % os.path.getsize(tmpoutfile))
-        logging.info("XXX tmpfile : %s" % os.path.getsize(tmpfile))
-
-        _save_joboutput(joboutput,toutfile)
-
-        logging.info("Created file at : %s" % toutfile.name)
-
-    except Exception, e:
-        logging.info("Error encoding video %s" % e)
-        os.unlink(tmpfile)
-        tfile.close()
-        raise
-    else:
-        logging.info("Proxy Video '%s' Done"% infile)
-        os.unlink(tmpfile)
-        tfile.close()
-
-        for callback in callbacks:
-            subtask(callback).delay()
-
-        return {"success":True,"message":"Transcode  successful"}
 
 @task(default_retry_delay=15,max_retries=3,name="proxyvideo")
 def proxyvideo(inputs,outputs,options={},callbacks=[]):
@@ -434,88 +450,15 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
     mfileid = inputs[0]
     infile = _get_mfile(mfileid)
 
-    if "width" in options:
-        widthS = options["width"]
-        width  = int(widthS)
-    else:
-        width = settings.postersize[0]
+    transcode = _transcode_ffmpeg(infile, options)
 
-    if "height" in options:
-        heightS = options["height"]
-        height  = int(heightS)
-    else:
-        height = settings.postersize[1]
+    if os.path.getsize(transcode.name) == 0:
+        raise Exception("Proxy Transcode produced a 0 byte file")
 
-    if "ffmpeg_args" in options:
-        _ffmpeg_args=options["ffmpeg_args"]
-    else:
-        _ffmpeg_args = ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(width,height),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+    _save_proxy(mfileid, transcode)
 
+    return {"success":True, "message": "Proxy Successful"}
 
-    #_stdout = open('/var/mserve/mserve.log','a')
-    #_stderr = open('/var/mserve/mserve.log','a')
-    _stdout = PIPE
-    _stderr = PIPE
-
-    tfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
-    outfile = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
-
-    try:
-        tmpfile=tfile.name
-        vidfifo="stream.yuv"
-        audfifo="stream.wav"
-
-        tmpdir = tempfile.mkdtemp()
-        vidfilename = os.path.join(tmpdir, vidfifo)
-        try:
-            os.mkfifo(vidfilename)
-        except OSError, e:
-            logging.info("Failed to create Video FIFO: %s" % e)
-
-        audfilename = os.path.join(tmpdir, audfifo)
-        try:
-            os.mkfifo(audfilename)
-        except OSError, e:
-            logging.info("Failed to create Audio FIFO: %s" % e)
-
-        ffmpeg_args_rawvid = ["ffmpeg","-y","-i",infile,"-an","-f","yuv4mpegpipe",vidfilename]
-        ffmpeg_args_rawwav = ["ffmpeg","-y","-i",infile,"-f","wav","-acodec","pcm_s16le",audfilename]
-
-        Popen(ffmpeg_args_rawvid,stdout=_stdout,stderr=_stderr)
-        Popen(ffmpeg_args_rawwav,stdout=_stdout,stderr=_stderr)
-
-        ffmpeg_args = ["ffmpeg","-y","-i",vidfilename,"-i",audfilename]
-
-        ffmpeg_args.extend(_ffmpeg_args)
-        ffmpeg_args.append(tmpfile)
-
-        logging.info(" ".join(ffmpeg_args))
-        p = Popen(ffmpeg_args, stdin=PIPE, stdout=_stdout, close_fds=True)
-        p.communicate()
-
-        if os.path.getsize(tmpfile) == 0:
-            raise Exception("ffmpeg produced 0 size output")
-
-        qt_args = ["qt-faststart", tmpfile, outfile.name]
-        qt = Popen(qt_args, stdin=PIPE, close_fds=True)
-        qt.communicate()
-
-        _save_proxy(mfileid, outfile)
-
-    except Exception as e:
-        logging.info("Error encoding video %s" % e)
-        os.unlink(tmpfile)
-        tfile.close()
-        raise e
-    else:
-        logging.info("Proxy Video '%s' Done"% infile)
-        os.unlink(tmpfile)
-        tfile.close()
-
-        for callback in callbacks:
-            subtask(callback).delay()
-
-        return {"success":True,"message":"Transcode successful"}
 
 @task(default_retry_delay=15,max_retries=3,name="mimefile")
 def mimefile(inputs,outputs,options={},callbacks=[]):
@@ -654,7 +597,7 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
         for callback in callbacks:
             subtask(callback).delay()
 
-        return {"message":"Verification of '%s' successful %s=%s" % (mf,db_md5,calculated_md5) }
+        return {"message":"Verification of '%s' successful %s=%s" % (mf,db_md5,calculated_md5), "md5" : calculated_md5  }
 
     except Exception as e:
         logging.info("Error with mime %s" % e)
@@ -850,7 +793,7 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
 
         logging.info("Creating %sx%s image for %s" % (width,height,inputid))
 
-        image = _thumbimage(path,width,height)
+        image = _thumbimage(path, width,height)
 
         if image:
 

@@ -31,6 +31,14 @@ job_descriptions['postervideo'] = {
         "results" :[]
     }
 job_descriptions['dataservice.tasks.postervideo'] = job_descriptions['postervideo']
+job_descriptions['proxyvideo'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 0,
+        "input-0" : { "mimetype" : "video" },
+        "options" : ['width','height','ffmpeg_args'],
+        "results" :[]
+    }
+job_descriptions['dataservice.tasks.proxyvideo'] = job_descriptions['proxyvideo']
 job_descriptions['transcodevideo'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,

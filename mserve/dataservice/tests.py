@@ -36,8 +36,7 @@ from django.contrib.auth.models import User
 from django.http import HttpRequest
 
 import simplejson as json
-import tempfile
-import shutil
+import magic
 import settings
 
 def make_request(get=None,post=None):
@@ -63,6 +62,10 @@ class TaskTest(TestCase):
 
         self.image_name = "IMAG0361.jpg"
         self.video_name = "sintel_trailer-480p.mp4"
+        self.image_md5 = "d9bf0bdc061b74c4b731cb68d5f5cb61"
+        self.image_mimetype = "image/jpeg"
+        self.thumb_mimetype = "image/png"
+        self.video_mimetype = "video/mp4"
 
         self.test_image_path = os.path.join(self.testfolder, self.image_name)
         self.test_video_path  = os.path.join(self.testfolder, self.video_name)
@@ -73,23 +76,56 @@ class TaskTest(TestCase):
         self.hc = HostingContainer.create_container(self.container_name)
         self.service = self.hc.create_data_service(self.service_name)
 
+        self.magicmime = magic.open(magic.MAGIC_MIME)
+        self.magicmime.load()
+
+    def test_mimefile(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_image )
+        mimefile([mfile.id],[])
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertEqual(updatedmfile.mimetype, self.image_mimetype)
+
+    def test_md5file(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_image )
+        md5file([mfile.id],[])
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(updatedmfile.checksum==self.image_md5)
+
+    def test_md5fileverify(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_image )
+        self.assertRaises(Exception,  md5fileverify , ([mfile.id],[]) )
+        md5file([mfile.id],[])
+        result = md5fileverify([mfile.id],[])
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(updatedmfile.checksum==result["md5"])
+
     def test_thumbimage(self):
         mfile = self.service.create_mfile(self.image_name, file=self.test_image )
-        job = mfile.create_job(self.job_name)
-        output = JobOutput(name=self.joboutput_name,job=job, mimetype="image/png")
-        thumbimage([mfile.id],[output.id], options={"width":"210","height":"120"})
+        thumbimage([mfile.id],[], options={"width":"210","height":"120"})
+
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(os.path.exists(updatedmfile.thumb.path))
+        self.assertTrue(updatedmfile.thumb.size>0)
+        self.failUnlessEqual(self.magicmime.file(updatedmfile.thumb.path).split(';')[0], self.thumb_mimetype )
 
     def test_posterimage(self):
         mfile = self.service.create_mfile(self.image_name, file=self.test_image )
         job = mfile.create_job(self.job_name)
-        output = JobOutput(name=self.joboutput_name, job=job, mimetype="image/png")
-        posterimage([mfile.id],[output.id], options={"width":"210","height":"120"})
+        posterimage([mfile.id],[], options={"width":"210","height":"120"})
+
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(os.path.exists(updatedmfile.poster.path))
+        self.assertTrue(updatedmfile.poster.size>0)
+        self.failUnlessEqual(self.magicmime.file(updatedmfile.poster.path).split(';')[0], self.thumb_mimetype )
 
     def test_thumbvideo(self):
         mfile = self.service.create_mfile(self.image_name, file=self.test_video )
-        job = mfile.create_job(self.job_name)
-        output = JobOutput(name=self.joboutput_name,job=job, mimetype="image/png")
-        thumbvideo([mfile.id],[output.id], options={"width":"210","height":"120"})
+        thumbvideo([mfile.id],[], options={"width":"210","height":"120"})
+
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(os.path.exists(updatedmfile.thumb.path))
+        self.assertTrue(updatedmfile.thumb.size>0)
+        self.failUnlessEqual(self.magicmime.file(updatedmfile.thumb.path).split(';')[0], self.thumb_mimetype )
 
     def test_postervideo(self):
         mfile = self.service.create_mfile(self.image_name, file=self.test_video )
@@ -97,11 +133,42 @@ class TaskTest(TestCase):
         output = JobOutput(name=self.joboutput_name, job=job, mimetype="image/png")
         postervideo([mfile.id],[output.id], options={"width":"210","height":"120"})
 
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(os.path.exists(updatedmfile.poster.path))
+        self.assertTrue(updatedmfile.poster.size>0)
+        self.failUnlessEqual(self.magicmime.file(updatedmfile.poster.path).split(';')[0], self.thumb_mimetype )
+
     def test_proxyvideo(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_video )
+        proxyvideo([mfile.id],[], options={"width":"210","height":"120"})
+
+        updatedmfile = MFile.objects.get(id=mfile.id)
+        self.assertTrue(os.path.exists(updatedmfile.proxy.path))
+        self.assertTrue(updatedmfile.proxy.size>0)
+        self.failUnlessEqual(self.magicmime.file(updatedmfile.proxy.path).split(';')[0], self.video_mimetype )
+
+    def test_transcodevideo(self):
         mfile = self.service.create_mfile(self.image_name, file=self.test_video )
         job = mfile.create_job(self.job_name)
         output = JobOutput(name=self.joboutput_name, job=job, mimetype="video/mp4")
-        proxyvideo([mfile.id],[output.id], options={"width":"210","height":"120"})
+        output.save()
+        transcodevideo([mfile.id],[output.id], options={"width":"210","height":"120"})
+
+        updatedjoboutput = JobOutput.objects.get(id=output.id)
+        self.assertTrue(os.path.exists(updatedjoboutput.file.path))
+        self.assertTrue(updatedjoboutput.file.size>0)
+        self.failUnlessEqual(self.magicmime.file(updatedjoboutput.file.path).split(';')[0], self.video_mimetype )
+
+    def test_mfilefetch(self):
+        mfile = self.service.create_mfile(self.image_name, file=self.test_image )
+        job = mfile.create_job(self.job_name)
+        output = JobOutput(name=self.joboutput_name, job=job, mimetype="video/mp4")
+        output.save()
+        mfilefetch([mfile.id],[output.id])
+        updatedjoboutput = JobOutput.objects.get(id=output.id)
+        self.assertTrue(os.path.exists(updatedjoboutput.file.path))
+        self.assertTrue(updatedjoboutput.file.size==mfile.size)
+        self.failUnlessEqual(self.magicmime.file(updatedjoboutput.file.path).split(';')[0], self.image_mimetype )
 
 class ClientTest(TestCase):
 
@@ -118,6 +185,7 @@ class ClientTest(TestCase):
         self.username = 'myuser'
         self.container_name = "testingcontainer"
         self.service_name = "testingservice"
+        self.mfile_name = "testmfile"
         self.c = Client()
         User.objects.create_superuser(self.username, 'myemail@tempuri.com', self.password)
         self.c.login(username=self.username, password=self.password)
@@ -126,7 +194,104 @@ class ClientTest(TestCase):
         self.hc = hc
         self.hc_post_url = reverse('hostingcontainers')
         self.service_post_url = reverse('dataservices')
+        self.mfile_post_url = reverse('mfiles')
 
+        self.testfolder = os.path.join(settings.TESTDATA_ROOT)
+        self.assertTrue(os.path.exists(self.testfolder))
+
+        self.image_name = "IMAG0361.jpg"
+        self.video_name = "sintel_trailer-480p.mp4"
+        self.image_md5 = "d9bf0bdc061b74c4b731cb68d5f5cb61"
+        self.image_mimetype = "image/jpeg"
+        self.thumb_mimetype = "image/png"
+        self.video_mimetype = "video/mp4"
+        self.thumb_image_url = '/mservemedia/images/image-x-generic.png'
+        self.thumb_generic_url = '/mservemedia/images/text-x-generic.png'
+
+        self.test_image_path = os.path.join(self.testfolder, self.image_name)
+        self.test_video_path  = os.path.join(self.testfolder, self.video_name)
+
+        self.test_image = File(open( self.test_image_path ,'r'))
+        self.test_video = File(open( self.test_video_path ,'r'))
+
+        self.hc = HostingContainer.create_container(self.container_name)
+        self.service = self.hc.create_data_service(self.service_name)
+
+        self.magicmime = magic.open(magic.MAGIC_MIME)
+        self.magicmime.load()
+        
+    def test_create_service(self):
+
+        response = self.c.post(self.service_post_url, {"name": self.service_name, "container": self.hc.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        serviceid = js["id"]
+        self.failUnlessEqual(js["name"], self.service_name)
+        self.failUnlessEqual(len(js["mfile_set"]), 0)
+        self.failUnlessEqual(len(js["mfolder_set"]), 0)
+        self.failUnlessEqual(js["subservices_url"], reverse("dataservice_subservices", args=[serviceid] ))
+        self.failUnlessEqual(type(js["folder_structure"]), dict )
+        self.failUnlessEqual(type(js["thumbs"]), list )
+        self.failUnlessEqual(js["priority"], False )
+        self.failUnlessEqual(js["starttime"], None )
+        self.failUnlessEqual(js["endtime"], None )
+        self.failUnlessEqual(js["reportnum"], 1 )
+        
+        now = datetime.datetime.now()
+
+        response = self.c.post(self.service_post_url, {
+            "name": self.service_name,
+            "container": self.hc.id,
+            "starttime" : datetime.datetime.strftime(now, "%Y-%m-%d %H:%M:%S"),
+            "endtime" : datetime.datetime.strftime(now, "%Y-%m-%d %H:%M:%S")
+            })
+
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        serviceid = js["id"]
+        self.failUnlessEqual(js["name"], self.service_name)
+        self.failUnlessEqual(len(js["mfile_set"]), 0)
+        self.failUnlessEqual(len(js["mfolder_set"]), 0)
+        self.failUnlessEqual(js["subservices_url"], reverse("dataservice_subservices", args=[serviceid] ))
+        self.failUnlessEqual(type(js["folder_structure"]), dict )
+        self.failUnlessEqual(type(js["thumbs"]), list )
+        self.failUnlessEqual(js["priority"], False )
+        self.assertTrue((now - datetime.datetime.strptime(js["starttime"],"%Y-%m-%d %H:%M:%S")).total_seconds() < 1 )
+        self.assertTrue((now - datetime.datetime.strptime(js["endtime"],"%Y-%m-%d %H:%M:%S")).total_seconds() < 1 )
+        self.failUnlessEqual(js["reportnum"], 1 )
+
+    def test_create_mfile(self):
+
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name})
+        self.failUnlessEqual(response.status_code,200)
+
+    def test_get_mfile(self):
+        service = self.hc.create_data_service(self.service_name)
+        service.save()
+        self.service = service
+        self.service_url = reverse('dataservice',args=[service.id])
+        self.mfile = service.create_mfile( self.mfile_name , file=self.test_image)
+
+        self.mfile_url = reverse('mfile', args=[self.mfile.id] )
+
+        # Test GET Methods
+        response = self.c.get(self.mfile_url)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnlessEqual(js["name"],self.mfile_name)
+
+        self.assertTrue( (datetime.datetime.now() - datetime.datetime.strptime(js["updated"],"%Y-%m-%d %H:%M:%S")).total_seconds() < 10 )
+        self.assertTrue( (datetime.datetime.now() - datetime.datetime.strptime(js["created"],"%Y-%m-%d %H:%M:%S")).total_seconds() < 10 )
+        self.failUnlessEqual(js["thumburl"], self.thumb_image_url)
+        self.failUnlessEqual(js["posterurl"], self.thumb_image_url)
+        self.failUnlessEqual(js["proxyurl"], '')
+        self.failUnlessEqual(js["proxy"], '')
+        self.failUnlessEqual(js["file"], self.mfile.file )
+        self.failUnlessEqual(js["thumb"], '')
+        self.failUnlessEqual(js["poster"], '')
+        self.failUnlessEqual(js["reportnum"], 1)
+        self.failUnlessEqual(js["id"], self.mfile.id)
+        self.failUnlessEqual(js["size"], self.mfile.size )
 
     def test_create_container(self):
 
@@ -323,10 +488,6 @@ class ClientTest(TestCase):
         response = self.c.get(self.service_url)
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
-
-        response = self.c.get(self.service_url)
-        self.failUnlessEqual(response.status_code,200)
-        js = json.loads(response.content)
         self.failUnlessEqual(js["name"],self.service_name)
         self.failUnlessEqual(len(js["mfile_set"]),0)
         self.failUnlessEqual(len(js["mfolder_set"]),0)
@@ -518,6 +679,8 @@ class ClientTest(TestCase):
         
         response = self.c.get(service_url)
         self.failUnlessEqual(response.status_code,404)
+
+
 
 class APITest(TestCase):
 
