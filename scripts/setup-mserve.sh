@@ -556,6 +556,7 @@ install_ffmpeg () {
 
     git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
     cd x264
+    git checkout origin/stable
     ./configure --enable-static || f_ "failed to configure x264"
     make || f_ "failed to make x264"
     checkinstall --pkgname=x264 --default --pkgversion="3:$(./version.sh | \
@@ -619,7 +620,8 @@ apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
 	python-setuptools python-flup python-magic python-dev python-pythonmagick \
-	python-imaging python-pycurl python-openid python-lxml python-pip  || \
+	sendmail python-imaging python-pycurl python-openid python-lxml python-pip \
+	python-django-extensions || \
 	f_ "failed to install erlang packages and python libraries"
 
 
@@ -769,7 +771,6 @@ fi
 cd 
 mkdir mserve$$
 cd mserve$$
-
 
 ######################
 #Install django-oauth
@@ -1393,7 +1394,7 @@ fi
 
 if [ ! -f /etc/init.d/celeryd-service ]; then
 	echo -e "\nNB: celeryd-service should be copied into /etc/init.d directory."
-	echo -e "\nNB: update-rc.d celeryd-service defaults."
+	echo -e "\nNB: update-rc.d celeryd-service defaults"
 fi
 
 if [ -d $old_installation ]; then

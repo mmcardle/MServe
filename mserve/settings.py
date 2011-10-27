@@ -188,7 +188,7 @@ INSTALLED_APPS = (
     'jobservice',
     'djcelery',
     'request',
-    'django_extensions',
+    #'django_extensions',
 )
 
 # Do POSTMark setup
