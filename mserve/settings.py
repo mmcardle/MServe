@@ -94,6 +94,7 @@ THUMB_PATH = "/mservethumbs/"
 # MServe Specific Settings
 STORAGE_ROOT = os.path.join(MSERVE_DATA, 'mservedata')
 BACKUP_ROOT = os.path.join(MSERVE_DATA, 'mservebackup')
+TESTDATA_ROOT = os.path.join(STORAGE_ROOT, 'test-data')
 SECDOWNLOAD_ROOT = os.path.join(MSERVE_DATA)
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
@@ -187,6 +188,7 @@ INSTALLED_APPS = (
     'jobservice',
     'djcelery',
     'request',
+    'django_extensions',
 )
 
 # Do POSTMark setup
@@ -223,6 +225,11 @@ FILE_TRANSPORTS = {
     "localhost": { "schema":"http","port":"8000", "netloc":"127.0.0.1", "path" : "/mfiles/%s/file/" },
     HOSTNAME: { "schema":"http","port":"80", "netloc":HOSTNAME, "path" : "/mfiles/%s/file/" },
 }
+
+if DEBUG:
+    FILE_TRANSPORTS["mfile"] = { "schema" : "direct" }
+    #FILE_TRANSPORTS["folder"] = { "schema" : "localpath", "path" : TESTDATA_ROOT }
+
 
 # JOB CONFIG
 USE_CELERY=True

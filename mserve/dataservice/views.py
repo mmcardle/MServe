@@ -46,6 +46,7 @@ from django.http import Http404
 from django.shortcuts import render_to_response
 from django.shortcuts import redirect
 from django.template import RequestContext
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotFound
@@ -314,6 +315,13 @@ def render_mfile_auth(request, auth):
     _dict["auth"] = auth
     return render_to_response('auths/mfile_auth.html', \
             append_dict(_dict, request), \
+            context_instance=RequestContext(request))
+
+def mediaplayer(request, mfileid):
+    mfile = get_object_or_404(MFile,id=mfileid)
+    _dict = {}
+    _dict["mfile"] = mfile
+    return render_to_response('mediaplayer.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
 
 @staff_member_required

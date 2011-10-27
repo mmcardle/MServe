@@ -1,23 +1,29 @@
-<script type="text/javascript"
-    src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js">
-</script>
-
 {% if mfile.file %}
-    <!--<p id="container1">Please install the Flash Plugin</p>
 
-    <script type="text/javascript" language="javascript">
+    <h3>Preview</h3>
 
-        //var flashvars = { file:"{{mfile.proxyurl}}/",image:"{{mfile.posterurl}}",autostart:"false" };
-        //var params = { allowfullscreen:"true", allowscriptaccess:"always" };
-        //var attributes = { id:"player1", name:"player1" };
-        //swfobject.embedSWF("/mservemedia/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
+    <iframe
+      width="96%"
+      height="500"
+      id="video_iframe"
+      marginheight="0"
+      frameborder="0"
+      onLoad="calcHeight();"
+      src="/mediaplayer/{{mfile.id}}/"  >
+    </iframe>
 
-    </script>-->
+    <script type="text/javascript">
+    <!--
+    function calcHeight()
+    {
+      //find the height of the internal page
+      var the_height=document.getElementById('video_iframe').contentWindow.document.body.scrollHeight;
+      the_height = the_height + 50
+      //change the height of the iframe
+      $('#video_iframe').attr("height",the_height);
 
-    <video width="640" height="360" src="{{mfile.proxyurl}}" poster="{{mfile.posterurl}}" autobuffer="True" controls="True"  >
-        <div class="fallback">
-                <p>You must have an HTML5 capable browser.</p>
-            </div>
-    </video>
+    }
+    //-->
+    </script>
 
 {% endif %}

@@ -1,3 +1,7 @@
 _build
 *.log
 pylint.txt
+static/js/kaltura-html5player-widget/examples/*
+static/js/kaltura-html5player-widget/libraries/*
+static/js/kaltura-html5player-widget/modules/*
+static/js/kaltura-html5player-widget/components/*
