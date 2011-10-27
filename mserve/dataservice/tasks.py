@@ -167,7 +167,7 @@ def _save_topath(file, path, field=None):
                 logging.warn(e)
         elif transport["schema"] == "direct":
             if field != None:
-                field.save(os.path.basename(path), File(file))
+                field.save(os.path.basename(file.name), File(file))
                 return field.path
             else:
                 logging.error("Transport Schema set to direct, but no field object provided")
