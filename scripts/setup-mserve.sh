@@ -576,6 +576,7 @@ install_ffmpeg () {
     cd
     git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
     cd ffmpeg
+    git checkout n0.8.5
     ./configure --enable-gpl --enable-version3 --enable-nonfree --enable-postproc \
         --enable-libfaac --enable-libopencore-amrnb --enable-libopencore-amrwb \
         --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid \
@@ -620,8 +621,7 @@ apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
 	python-setuptools python-flup python-magic python-dev python-pythonmagick \
-	sendmail python-imaging python-pycurl python-openid python-lxml python-pip \
-	python-django-extensions || \
+	sendmail python-imaging python-pycurl python-openid python-lxml python-pip || \
 	f_ "failed to install erlang packages and python libraries"
 
 
@@ -687,7 +687,6 @@ cat mysql.preseed | sudo debconf-set-selections
 
 apt-get -y install mysql-server python-mysqldb || f_ "failed to install MySQL"
 rm mysql.preseed
-
 
 ######################
 # install django 1.3
@@ -887,19 +886,13 @@ except ImportError:
 " | python
 if [ $? -ne 0 ]; then
 	echo "installing django-celery"
-	django_celery_url="https://github.com/ask/django-celery.git"
-	git clone $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
-	cd django-celery
+	django_celery_url="http://pypi.python.org/packages/source/d/django-celery/django-celery-2.3.3.tar.gz#md5=5d5fa09980c4558307289bae1f1db011"
+	wget $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
+	tar xfz django-celery-2.3.3.tar.gz || f_ "failed to untar django-celery-2.2.4.tar.gz"
+	cd  django-celery-2.3.3
 	python setup.py install || f_ "failed to install django-celery"
-	cd  ..
-	rm -rf django-celery
-	#django_celery_url="http://pypi.python.org/packages/source/d/django-celery/django-celery-2.2.4.tar.gz"
-	#wget $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
-	#tar xfz django-celery-2.2.4.tar.gz || f_ "failed to untar django-celery-2.2.4.tar.gz"
-	#cd  django-celery-2.2.4
-	#python setup.py install || f_ "failed to install django-celery"
-	#cd ..
-	#rm -rf django-celery-2.2.4
+	cd ..
+	rm -rf django-celery-2.3.3
 else
 	echo "django-celery found"
 fi
