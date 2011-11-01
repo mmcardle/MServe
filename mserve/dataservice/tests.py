@@ -178,7 +178,7 @@ class ClientTest(TestCase):
         self.service = service
         service_url_profiles = reverse('dataservice_profiles', args=[service.id])
         response = self.c.get(service_url_profiles)
-        print response
+        self.failUnlessEqual(response.status_code,200)
 
     def setUp(self):
         self.password = 'mypassword'
@@ -194,7 +194,7 @@ class ClientTest(TestCase):
         self.hc = hc
         self.hc_post_url = reverse('hostingcontainers')
         self.service_post_url = reverse('dataservices')
-        self.mfile_post_url = reverse('mfiles')
+        
 
         self.testfolder = os.path.join(settings.TESTDATA_ROOT)
         self.assertTrue(os.path.exists(self.testfolder))
@@ -216,6 +216,8 @@ class ClientTest(TestCase):
 
         self.hc = HostingContainer.create_container(self.container_name)
         self.service = self.hc.create_data_service(self.service_name)
+
+        self.mfile_post_url = reverse('dataservice_mfiles', args=[self.service.id])
 
         self.magicmime = magic.open(magic.MAGIC_MIME)
         self.magicmime.load()
@@ -262,7 +264,7 @@ class ClientTest(TestCase):
 
     def test_create_mfile(self):
 
-        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name})
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
         self.failUnlessEqual(response.status_code,200)
 
     def test_get_mfile(self):
@@ -309,14 +311,14 @@ class ClientTest(TestCase):
         response = self.c.get(self.hc_post_url)
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
-        self.failUnlessEqual(len(js),1)
+        self.failUnlessEqual(len(js),2)
 
         hc_url =  reverse('hostingcontainer', args=[self.hc.id])
         response = self.c.get(hc_url)
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         self.failUnlessEqual(js["name"],self.container_name)
-        self.failUnlessEqual(len(js["dataservice_set"]),0)
+        self.failUnlessEqual(len(js["dataservice_set"]),1)
 
     def test_get_container_urls(self):
         containerid = self.hc.id
@@ -415,7 +417,7 @@ class ClientTest(TestCase):
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         self.failUnlessEqual(type(js),list)
-        self.failUnlessEqual(len(js),0)
+        self.failUnlessEqual(len(js),1)
 
         response = self.c.get(hc_url_subservices)
         self.failUnlessEqual(response.status_code,200)

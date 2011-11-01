@@ -856,10 +856,7 @@ class HostingContainer(NamedBase):
                                                 task_name=task_name,
                                                 condition=condition, args=args)
                         dst.save()
-                        logging.info(dst)
                     prev = dstaskset
-
-
         return dataservice
 
     def get_rate_for_metric(self, metric):
@@ -2005,7 +2002,7 @@ class ManagementProperty(models.Model):
             return {"type": "enum",
                     "choices": static.default_profiles.keys()}
         else:
-            return {}
+            return {"type": "string"}
 
 
 class Auth(Base):

@@ -24,8 +24,12 @@
 import re
 import usage_store as usage_store
 import datetime
+import logging
+from models import MFile
+from models import DataService
 
 metric_responsetime = "http://mserve/responsetime"
+metric_deliverytime = "http://mserve/deliverySuccess"
 
 class ResponseMiddleware(object):
 
@@ -38,6 +42,23 @@ class ResponseMiddleware(object):
             timetaken = endtime - starttime
             tt = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
             usage_store.record(mfileid,metric_responsetime,tt)
+
+            try:
+                mfile = MFile.objects.get(id=mfileid)
+                ds = DataService.objects.get(mfile__id=mfileid)
+                multiplier = ds.managementproperty_set.get(property="deliverySuccessMultiplier").value
+                constant = ds.managementproperty_set.get(property="deliverySuccessConstant").value
+                threshold  = ds.managementproperty_set.get(property="deliverySuccessThreshold").value
+
+                delivery_time = mfile.size * float(multiplier) + float(constant)
+
+                if delivery_time < threshold:
+                    usage_store.record(ds.id,metric_deliverytime,1)
+                else:
+                    usage_store.record(ds.id,metric_deliverytime,0)
+
+            except Exception as e:
+                logging.error("Request for mfile %s throws error - %s ", mfileid, e )
         return response
 
     def process_request(self, request):

@@ -206,44 +206,39 @@
 </div>
 </script>
 
-<script id="managementpropertyTemplate-steps" type="text/x-jquery-tmpl">
+<script id="managementpropertyTemplate-string" type="text/x-jquery-tmpl">
     <tr>
         <th>${ property}</th>
-        <td class="${ property } red" style="text-align: center;vertical-align: middle;">${ value }</td>
-
-        <td style="vertical-align: middle;width:400px"><div style="" id="slider-${ id }"></div></td>
-
-        <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
-
-        <td style="vertical-align: middle;">
-            <button id="service-setmanagementproperty-button-${ id }" >Set</button>
-
+        <td class="${ property } red" style="vertical-align: middle;">${ value }</td>
+        
+        <td >
+            <input type="text" value="${ value }" name="val-${ id }" id="val-${ id }" style="border:1; color:#f6931f; font-weight:bold;"  />
         </td>
-
-        <td style="vertical-align: middle;">
-            <div id="managementalts-${id}">
-            </div>
-        </td>
-
     </tr>
 </script>
 
 <script id="managementpropertyTemplate-choices" type="text/x-jquery-tmpl">
     <tr>
         <th>${ property}</th>
+        <td class="${ property } red" style="vertical-align: middle;">${ value }</td>
+        <td colspan="1" style="vertical-align: middle;">
+            <div id="managementradio-${id}" class="servicetyperadio"></div>
+        </td>
+    </tr>
+</script>
+
+
+<script id="managementpropertyTemplate-steps" type="text/x-jquery-tmpl">
+    <tr>
+        <th>${ property}</th>
         <td class="${ property } red" style="text-align: center;vertical-align: middle;">${ value }</td>
 
-        <td colspan="2" style="vertical-align: middle;width:400px">
-            <div id="managementradio-${id}" class="servicetyperadio">
-            </div>
-        </td>
+        <td style="vertical-align: middle;"><div style="" id="slider-${ id }"></div></td>
 
-
-        <td style="vertical-align: middle;">
+        <td style="vertical-align: middle;text-align: center;">
+            <input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  />
             <button id="service-setmanagementproperty-button-${ id }" >Set</button>
-
         </td>
-                <td style="vertical-align: middle;text-align: center;"><input readonly type="text" id="val-${ id }" style="border:0; color:#f6931f; font-weight:bold;"  /></td>
 
     </tr>
 </script>

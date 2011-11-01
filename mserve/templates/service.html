@@ -173,13 +173,26 @@
                 </dd>
             </dl>
 
-
             <h2>Management Properties</h2>
 
-            <table id="managementpropertyholder" style="width:100%;vertical-align: middle;padding:20px;padding-left: 40px;" >
-                <tr><th>Name</th><th>Current Value</th><th></th><th>New Value</th><th></th><th></th></tr>
-
+            <table id="managementpropertyholder" style="width:100%;vertical-align: middle;padding:10px;padding-left: 40px;" >
+                <tr>
+                    <th style="width: 10%">Name</th>
+                    <th style="width: 10%">Current Value</th>
+                    <th style="width: 50%">New Value</th>
+                    <th width="*" ></th>
+                </tr>
             </table>
+
+            <h4></h4>
+
+                <table style="width:50%;vertical-align: middle;padding:10px;padding-left: 40px;" >
+                    <tr><th style="">New Management Property</th></tr>
+                    <form id="managementpropertyform">
+                            {{ managementpropertyform.as_table }}
+                    </form>
+                    <tr><td></td><td><button id="managementpropertybutton">New Property</button></td></tr>
+                </table>
 
             <h2>Profile Configuration</h2>
 
@@ -190,9 +203,16 @@
             <script type="text/javascript">
                 $(document).ready(function() {
                     service_loadmanagementproperties('{{service.id}}');
-
+                    $("#managementpropertybutton").button().click(
+                        function(){
+                            service_postmanagementproperty_ajax(
+                                '{{service.id}}',
+                                '{% url dataservice_props service.id %}',
+                                $('#managementpropertyform').serialize()
+                            )
+                        }
+                    )
                     $("#profilepaginator").mserve( "serviceprofiles", '{{service.id}}' )
-                    //service_loadprofiles('{{service.id}}');
                 });
             </script>
 

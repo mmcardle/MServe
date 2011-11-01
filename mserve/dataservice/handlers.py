@@ -759,8 +759,8 @@ class ManagementPropertyHandler(BaseHandler):
     model = ManagementProperty
     fields = ("value","property","id","values")
     exclude = ()
-    
-    def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):
+            
+    def read(self, request, containerid=None, serviceid=None, mfileid=None, authid=None):
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
             return container.do("GET","properties")
@@ -773,43 +773,45 @@ class ManagementPropertyHandler(BaseHandler):
         if authid:
             auth = Auth.objects.get(pk=authid)
             return auth.do("GET","properties")
-
         return []
 
-        base = NamedBase.objects.get(id=id)
-        return base.do("GET","properties")
-    
-        properties = ManagementProperty.objects.filter(base=base)
-        properties_json = []
-        for prop in properties:
-            properties_json.append(prop)
-        return properties_json
-
-    def create(self, request, id):
-        resp = rc.BAD_REQUEST
-        #resp.write("Not Allowed")
-        return resp
-
-    def update(self, request, id):
-        form = ManagementPropertyForm(request.POST) 
-        if form.is_valid(): 
-
-            property = form.cleaned_data['property']
-
-            base = NamedBase.objects.get(id=id)
-
+    def create(self, request, id=None, serviceid=None):
+        if id==None:
+            id=serviceid
+        form = ManagementPropertyForm(request.POST)
+        if form.is_valid():
+            mp = form.save(commit=False)
+            mp.base = DataService.objects.get(id=id)
             try:
+                ManagementProperty.objects.get(property=mp.property, base=mp.base)
+                logging.info("Bad Form %s " % form)
+                resp = rc.BAD_REQUEST
+                resp.write(" The Management Property allready '%s' exists " % (mp))
+                return resp
+            except ManagementProperty.DoesNotExist:
+                pass
+            mp.save()
+            return mp
+        else:
+            logging.info("Bad Form %s " % form)
+            return HttpResponseRedirect(request.META["HTTP_REFERER"])
+
+    def update(self, request, id=None, serviceid=None):
+        if id==None:
+            id=serviceid
+        form = ManagementPropertyForm(request.POST) 
+        if form.is_valid():
+            try:
+                property = form.cleaned_data['property']
+                base = NamedBase.objects.get(id=id)
                 existingmanagementproperty = ManagementProperty.objects.get(property=property,base=base)
-                value    = form.cleaned_data['value']
-                existingmanagementproperty.value = value
-                existingmanagementproperty.save()
-                logging.warn("### Management Property '%s' on '%s' set to '%s' ###"%(property,base,value))
-                return existingmanagementproperty
+                form = ManagementPropertyForm(request.POST,instance=existingmanagementproperty)
+                mp = form.save()
+                return mp
             except ObjectDoesNotExist:
                 resp = rc.BAD_REQUEST
                 resp.write(" The Management Property '%s' doesn't exist " % (property))
                 return resp
-
         else:
             logging.info("Bad Form %s " % form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])

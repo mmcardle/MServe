@@ -262,78 +262,78 @@ function service_loadmanagementproperties(serviceid){
        type: "GET",
        url: '/services/'+serviceid+'/properties/',
        success: function(properties){
-
            $.each(properties, function(i,property){
-
-              
-                if(property.values.type == "step"){
-                    $( "#managementpropertyTemplate-steps" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
-                    $("#service-setmanagementproperty-button-"+property.id ).button().click(
-                        function() {
-                            service_setmanagementproperty_ajax(serviceid,property.property, $( "#slider-"+property.id ).slider( "value" ) )
-                        }
-                    )
-
-                    sliderval=0
-                    if(isNaN(property.value) ){
-                        sliderval = property.val
-                    }
-
-                    $( "#slider-"+property.id ).slider({
-                            value:  sliderval,
-                            range: "min",
-                            min: property.values.min,
-                            max: property.values.max,
-                            step: property.values.step,
-                            slide: function( event, ui ) {
-                                    $( "#val-"+property.id ).val( ui.value );
-                            }
-                    });
-                     var malt = $( "#managementalts-"+property.id )
-
-                     $.each(property.values.altchoices, function(i,choice){
-
-                            var b = $("<button>Set "+choice+"</button>")
-                            b.button()
-                            malt.append( b )
-                            b.click(function(){
-                                service_setmanagementproperty_ajax(serviceid,property.property, choice )
-                            })
-  
-                     })
-
-
-                    $( "#val-"+property.id ).val(  $( "#slider-"+property.id ).slider( "value" ) );
-
-                }else if(property.values.type == "enum"){
-                    $( "#managementpropertyTemplate-choices" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
-
-                     var mr = $( "#managementradio-"+property.id )
-
-                     $.each(property.values.choices, function(i,choice){
-                        if(choice == property.value){
-                            mr.append( $("<input type='radio' id='radio-"+property.id+"-"+i+"' name='radio"+property.id+"' checked='checked'   /><label for='radio-"+property.id+"-"+i+"'>"+choice+"</label>"))
-                        }else{
-                            mr.append( $("<input type='radio' id='radio-"+property.id+"-"+i+"' name='radio"+property.id+"'  /><label for='radio-"+property.id+"-"+i+"'>"+choice+"</label>"))
-                        }
-                     })
-
-                     mr.buttonset()
-                     
-                     $("#service-setmanagementproperty-button-"+property.id ).button().click(
-                        function() {
-                            var value = $("input:radio[name=radio"+property.id+"]:checked")
-                            var id = value.attr("id")
-                            var label = $("label[for='"+id+"']")
-                            service_setmanagementproperty_ajax(serviceid,property.property, label.text() )
-                        }
-                     )
-                }
-
+                render_managementproperty(serviceid, property)
            });
-
        }
      });
+}
+
+function render_managementproperty(serviceid, property){
+
+    if(property.values.type == "step"){
+        $( "#managementpropertyTemplate-steps" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
+        $("#service-setmanagementproperty-button-"+property.id ).button().click(
+            function() {
+                service_setmanagementproperty_ajax(serviceid,property.property, $( "#slider-"+property.id ).slider( "value" ) )
+            }
+        )
+
+        sliderval=0
+        if(isNaN(property.value) ){
+            sliderval = property.val
+        }
+
+        $( "#slider-"+property.id ).slider({
+                value:  sliderval,
+                range: "min",
+                min: property.values.min,
+                max: property.values.max,
+                step: property.values.step,
+                slide: function( event, ui ) {
+                        $( "#val-"+property.id ).val( ui.value );
+                }
+        });
+         var malt = $( "#managementalts-"+property.id )
+
+         $.each(property.values.altchoices, function(i,choice){
+
+                var b = $("<button>Set "+choice+"</button>")
+                b.button()
+                malt.append( b )
+                b.click(function(){
+                    service_setmanagementproperty_ajax(serviceid,property.property, choice )
+                })
+
+         })
+        $( "#val-"+property.id ).val(  $( "#slider-"+property.id ).slider( "value" ) );
+
+    }else if(property.values.type == "enum"){
+        $( "#managementpropertyTemplate-choices" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
+
+         var mr = $( "#managementradio-"+property.id )
+
+         $.each(property.values.choices, function(i,choice){
+            if(choice == property.value){
+                mr.append( $("<input type='radio' id='radio-"+property.id+"-"+i+"' value='"+choice+"' name='radio"+property.id+"' checked='checked'   /><label for='radio-"+property.id+"-"+i+"'>"+choice+"</label>"))
+            }else{
+                mr.append( $("<input type='radio' id='radio-"+property.id+"-"+i+"' value='"+choice+"' name='radio"+property.id+"'  /><label for='radio-"+property.id+"-"+i+"'>"+choice+"</label>"))
+            }
+         })
+
+         mr.buttonset().find("input[type=radio]").change(function() {
+            service_setmanagementproperty_ajax(serviceid, property.property, $(this).val())
+        });
+
+    }else if(property.values.type == "string"){
+        var mpt = $( "#managementpropertyTemplate-string" ).tmpl( property )
+        mpt.appendTo( "#managementpropertyholder" ) ;
+
+        mpt.find("input[type=text]").change(function() {
+            service_setmanagementproperty_ajax(serviceid, property.property, $(this).val())
+        });
+    }
+
 }
 
 function service_setmanagementproperty_ajax(service,prop,val){
@@ -348,3 +348,13 @@ function service_setmanagementproperty_ajax(service,prop,val){
      });
  }
 
+function service_postmanagementproperty_ajax(serviceid, url, data){
+     $.ajax({
+       type: "POST",
+       data: data,
+       url: url,
+       success: function(property){
+           render_managementproperty(serviceid, property)
+       }
+     });
+ }
