@@ -317,11 +317,11 @@ def render_mfile_auth(request, auth):
             append_dict(_dict, request), \
             context_instance=RequestContext(request))
 
-def mediaplayer(request, mfileid):
+def videoplayer(request, mfileid):
     mfile = get_object_or_404(MFile,id=mfileid)
     _dict = {}
     _dict["mfile"] = mfile
-    return render_to_response('mediaplayer.html', append_dict(_dict, request), \
+    return render_to_response('videoplayer.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
 
 @staff_member_required

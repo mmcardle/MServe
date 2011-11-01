@@ -68,9 +68,9 @@
                                     {% if mfile.mimetype %}
 
                                         {% if mfile.mimetype|startswith:"video"  %}
-                                                {% include "mfile/mediaplayer.html" %}
+                                                {% include "mfile/videoplayer.html" %}
                                         {% else %}{% if mfile.mimetype|endswith:"ogg"  %}
-                                                {% include "mfile/mediaplayer.html" %}
+                                                {% include "mfile/videoplayer.html" %}
                                         {% else %}{% if mfile.mimetype|startswith:"image"  %}
                                                 {% include "mfile/image.html" %}
                                         {% else %}{% if mfile.mimetype|startswith:"text"  %}

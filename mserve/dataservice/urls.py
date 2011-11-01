@@ -159,7 +159,7 @@ urlpatterns = patterns('',
     # HTML Views
     url(r'^$',  'dataservice.views.home'),
     url(r'^usage/',  'dataservice.views.render_usage'),
-    url(r'^mediaplayer/(?P<mfileid>[^/]+)/',  'dataservice.views.mediaplayer'),
+    url(r'^videoplayer/(?P<mfileid>[^/]+)/',  'dataservice.views.videoplayer'),
     url(r'^traffic/$',  'dataservice.views.traffic'),
     url(r'^stats/$',  'dataservice.views.stats'),
     url(r'^stats/(?P<baseid>[^/]+)/$',  'dataservice.views.stats'),

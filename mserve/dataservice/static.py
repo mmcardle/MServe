@@ -5,8 +5,8 @@ th = settings.thumbsize[1]
 pw = settings.postersize[0]
 ph = settings.postersize[1]
 
-hd_w = settings.wuxga[0]
-hd_h = settings.wuxga[1]
+hd_w = settings.hd1080[0]
+hd_h = settings.hd1080[1]
 
 default_profiles = {
     "default": {
@@ -119,8 +119,8 @@ default_profiles = {
                             {"name":"G","task":"proxyvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] } },
 
                             # HD
-                            {"name":"H","task":"transcodevideo",   "allowremote" :True,  "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
-                            {"name":"D","task":"transcodevideo",   "allowremote" :True,  "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
+                            {"name":"H","task":"transcodevideo",   "allowremote" :True,  "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","36000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
+                            {"name":"D","task":"transcodevideo",   "allowremote" :True,  "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","36000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
 
                             # MXF Ingest
                             {"name":"I","task":"proxyvideo",   "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },

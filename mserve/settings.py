@@ -239,6 +239,7 @@ DEFAULT_ACCESS_SPEED = "unlimited"
 thumbsize = (210,128)
 postersize = (420,256)
 wuxga = (1920,1200)
+hd1080 = (1920,1080)
 
 # For FGCI
 FORCE_SCRIPT_NAME = ''
