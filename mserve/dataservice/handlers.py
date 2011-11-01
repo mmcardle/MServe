@@ -786,7 +786,7 @@ class ManagementPropertyHandler(BaseHandler):
                 ManagementProperty.objects.get(property=mp.property, base=mp.base)
                 logging.info("Bad Form %s " % form)
                 resp = rc.BAD_REQUEST
-                resp.write(" The Management Property allready '%s' exists " % (mp))
+                resp.write(". A Management Property called '%s' allready exists " % (mp.property))
                 return resp
             except ManagementProperty.DoesNotExist:
                 pass

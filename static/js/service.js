@@ -46,7 +46,7 @@ function create_subservice(serviceid,containerid){
         stepHour: 1,
         stepMinute: 15,
         numberOfMonths: 1,
-        step: { minutes: 15 },
+        step: {minutes: 15},
         show: 'fold',
         showButtonPanel: true,
         defaultTime: now
@@ -61,7 +61,7 @@ function create_subservice(serviceid,containerid){
         stepHour: 1,
         stepMinute: 15,
         numberOfMonths: 1,
-        step: { minutes: 15 },
+        step: {minutes: 15},
         show: 'fold',
         showButtonPanel: true,
         defaultTime: oneHour
@@ -72,7 +72,7 @@ function create_subservice(serviceid,containerid){
 }
 
 function render_service(service,containerid){
-    $("#serviceTemplate").tmpl( service, { containerid : containerid } ) .appendTo( "#servicepaginator" );
+    $("#serviceTemplate").tmpl( service, {containerid : containerid} ) .appendTo( "#servicepaginator" );
     $("#newsubservicebutton-"+service.id).button()
 }
 
@@ -95,7 +95,7 @@ function create_mfolder_paginator(mfolders){
         var mfoldercontainer = $("#mfoldercontainer")
         $(mfolders).each( function(index,mfolder){
             $("#mfolderTemplate").tmpl(mfolder).appendTo(mfoldercontainer)
-            $("#mfolderholder-"+mfolder.id).click( function(){ console.log(mfolder) } )
+            $("#mfolderholder-"+mfolder.id).click( function(){console.log(mfolder)} )
         } )
 
 }
@@ -124,7 +124,7 @@ function loadServices(containerid){
                 }
 
                 var serviceslice = services.slice(start,end)
-                $(serviceslice).each( function(index,service){ render_service(service,containerid) } )
+                $(serviceslice).each( function(index,service){render_service(service,containerid)} )
 
                 return false;
             }
@@ -151,7 +151,7 @@ function update_service_priority(url,priority){
 
 function check_service_method(method){
     if (! eval("typeof service_" + method + " == 'function'")) {
-        $('#button-'+method+'-button').button({ disabled: true });
+        $('#button-'+method+'-button').button({disabled: true});
     }
 }
 
@@ -257,25 +257,25 @@ function service_newprofile_ajax(serviceid,profileid,workflowid,data){
  }
 
 
-function service_loadmanagementproperties(serviceid){
+function service_loadmanagementproperties(serviceid, url){
      $.ajax({
        type: "GET",
        url: '/services/'+serviceid+'/properties/',
        success: function(properties){
            $.each(properties, function(i,property){
-                render_managementproperty(serviceid, property)
+                render_managementproperty(serviceid, url, property)
            });
        }
      });
 }
 
-function render_managementproperty(serviceid, property){
+function render_managementproperty(serviceid, url, property){
 
     if(property.values.type == "step"){
         $( "#managementpropertyTemplate-steps" ).tmpl( property ).appendTo( "#managementpropertyholder" ) ;
         $("#service-setmanagementproperty-button-"+property.id ).button().click(
             function() {
-                service_setmanagementproperty_ajax(serviceid,property.property, $( "#slider-"+property.id ).slider( "value" ) )
+                service_setmanagementproperty_ajax(serviceid, url, property.property, $( "#slider-"+property.id ).slider( "value" ) )
             }
         )
 
@@ -302,7 +302,7 @@ function render_managementproperty(serviceid, property){
                 b.button()
                 malt.append( b )
                 b.click(function(){
-                    service_setmanagementproperty_ajax(serviceid,property.property, choice )
+                    service_setmanagementproperty_ajax(serviceid, url, property.property, choice )
                 })
 
          })
@@ -322,7 +322,7 @@ function render_managementproperty(serviceid, property){
          })
 
          mr.buttonset().find("input[type=radio]").change(function() {
-            service_setmanagementproperty_ajax(serviceid, property.property, $(this).val())
+            service_setmanagementproperty_ajax(serviceid, url, property.property, $(this).val())
         });
 
     }else if(property.values.type == "string"){
@@ -330,17 +330,17 @@ function render_managementproperty(serviceid, property){
         mpt.appendTo( "#managementpropertyholder" ) ;
 
         mpt.find("input[type=text]").change(function() {
-            service_setmanagementproperty_ajax(serviceid, property.property, $(this).val())
+            service_setmanagementproperty_ajax(serviceid, url, property.property, $(this).val())
         });
     }
 
 }
 
-function service_setmanagementproperty_ajax(service,prop,val){
+function service_setmanagementproperty_ajax(service, url, prop, val){
      $.ajax({
        type: "PUT",
        data: "property="+prop+"&value="+val,
-       url: '/api/'+service+'/setmanagementproperty/',
+       url: url,
        success: function(msg){
          //showMessage("Property Set", "Property '"+prop+"' set to "+val);
          $("."+prop).html(val)
@@ -355,6 +355,9 @@ function service_postmanagementproperty_ajax(serviceid, url, data){
        url: url,
        success: function(property){
            render_managementproperty(serviceid, property)
+       },
+       error: function(msg){
+        showError("Error creating new property.",""+msg.responseText)
        }
      });
  }

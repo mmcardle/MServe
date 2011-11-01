@@ -185,9 +185,8 @@
             </table>
 
             <h4></h4>
-
                 <table style="width:50%;vertical-align: middle;padding:10px;padding-left: 40px;" >
-                    <tr><th style="">New Management Property</th></tr>
+                    <tr><th style="width: 25%" colspan="2" >New Management Property</th></tr>
                     <form id="managementpropertyform">
                             {{ managementpropertyform.as_table }}
                     </form>
@@ -202,17 +201,18 @@
 
             <script type="text/javascript">
                 $(document).ready(function() {
-                    service_loadmanagementproperties('{{service.id}}');
+                    service_loadmanagementproperties('{{service.id}}','{% url dataservice_props service.id %}');
                     $("#managementpropertybutton").button().click(
                         function(){
                             service_postmanagementproperty_ajax(
                                 '{{service.id}}',
                                 '{% url dataservice_props service.id %}',
                                 $('#managementpropertyform').serialize()
-                            )
+                            );
                         }
                     )
                     $("#profilepaginator").mserve( "serviceprofiles", '{{service.id}}' )
+                    $("input[type=text]").css("border","1").css("color","#f6931f").css("font-weight","bold")
                 });
             </script>
 
