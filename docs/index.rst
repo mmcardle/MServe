@@ -16,6 +16,7 @@ Contents:
    service_provider_guide
    admin_guide
    architecture
+   metrics
    dataservice
 
 Indices and tables
