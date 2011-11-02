@@ -76,7 +76,7 @@
                                         {% else %}{% if mfile.mimetype|startswith:"text"  %}
                                                 {% include "mfile/text.html" %}
                                         {% else %}{% if mfile.name|endswith:".mxf"  %}
-                                                {% include "mfile/mediaplayer.html" %}
+                                                {% include "mfile/videoplayer.html" %}
 
                                         {% else %}{% if mfile.name|endswith:".blend"  %}
                                                 {% include "mfile/render.html" %}
