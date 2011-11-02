@@ -43,10 +43,7 @@ default_profiles = {
                             {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
                         ],
                     },
-                   {
-                        "name" : "taskset3",
-                        "tasks" : [{"name":"E","task":"email","args": {},},],
-                },],
+                   ],
             },
             "access" : {
                 # Standard Ingest
@@ -92,10 +89,7 @@ default_profiles = {
 
                         ],
                     },
-                   {
-                        "name" : "taskset3",
-                        "tasks" : [{"name":"K","task":"email","args": {},},],
-                },],
+                   ],
             },
             "update" : {
                 # Standard Ingest
@@ -127,10 +121,7 @@ default_profiles = {
 
                         ],
                     },
-                   {
-                        "name" : "taskset3",
-                        "tasks" : [{"name":"K","task":"email","args": {},},],
-                },],
+                   ],
             },
             "access" : {
                 # Standard Ingest
