@@ -40,22 +40,22 @@ class ResponseMiddleware(object):
             starttime = request.META["starttime"]
             endtime = datetime.datetime.now()
             timetaken = endtime - starttime
-            tt = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
-            usage_store.record(mfileid,metric_responsetime,tt)
+            time_taken = float("%s.%s" % (timetaken.seconds,timetaken.microseconds))
+            usage_store.record(mfileid,metric_responsetime,time_taken)
 
             try:
                 mfile = MFile.objects.get(id=mfileid)
                 ds = DataService.objects.get(mfile__id=mfileid)
-                multiplier = ds.managementproperty_set.get(property="deliverySuccessMultiplier").value
-                constant = ds.managementproperty_set.get(property="deliverySuccessConstant").value
-                threshold  = ds.managementproperty_set.get(property="deliverySuccessThreshold").value
+                multiplier = ds.managementproperty_set.get(property="deliverySuccessMultiplier_GB").value
+                constant = ds.managementproperty_set.get(property="deliverySuccessConstant_Minutes").value
 
-                delivery_time = mfile.size * float(multiplier) + float(constant)
+                target_delivery_time = mfile.size/(1024.0*1024.0*1024.0) * float(multiplier) + float(constant)
 
-                if delivery_time < threshold:
-                    usage_store.record(ds.id,metric_deliverytime,1)
+                time_taken_minutes = time_taken/60.0
+                if target_delivery_time < time_taken_minutes:
+                    usage_store.record(mfile.id, metric_deliverytime, 0)
                 else:
-                    usage_store.record(ds.id,metric_deliverytime,0)
+                    usage_store.record(mfile.id, metric_deliverytime, 1)
 
             except Exception as e:
                 logging.error("Request for mfile %s throws error - %s ", mfileid, e )

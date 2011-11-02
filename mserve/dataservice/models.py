@@ -807,6 +807,16 @@ class HostingContainer(NamedBase):
                                         value=settings.DEFAULT_ACCESS_SPEED)
         managementproperty.save()
 
+        if settings.PRESTOPRIME:
+            mp_delivery_multi = ManagementProperty(property="deliverySuccessMultiplier_GB",
+                                        base=dataservice,
+                                        value=settings.DEFAULT_DELIVERY_SUCCESS_MULTIPLIER_GB)
+            mp_delivery_multi.save()
+            mp_delivery_const = ManagementProperty(property="deliverySuccessConstant_Minutes",
+                                        base=dataservice,
+                                        value=settings.DEFAULT_DELIVERY_SUCCESS_CONSTANT_MIN)
+            mp_delivery_const.save()
+
         pr = DEFAULT_PROFILE
         if self.default_profile != None and self.default_profile != "":
             pr = self.default_profile
