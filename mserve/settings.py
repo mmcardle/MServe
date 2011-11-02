@@ -192,7 +192,7 @@ INSTALLED_APPS = (
 )
 
 # Do POSTMark setup
-POSTMARK = True
+POSTMARK = False
 if POSTMARK:
     CELERY_IMPORTS += ("postmark.tasks",)
     INSTALLED_APPS += ('postmark',)
