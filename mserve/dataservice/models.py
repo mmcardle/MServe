@@ -221,6 +221,61 @@ class Usage(models.Model):
     rateCumulative = models.FloatField()
 
     @staticmethod
+    def get_usage_plots(request, baseid=None):
+        types = request.GET
+        plots = []
+        base = None
+        try:
+            base = NamedBase.objects.get(id=baseid)
+        except NamedBase.DoesNotExist:
+            try:
+                auth = Auth.objects.get(id=baseid)
+                base = auth.get_real_base()
+            except Auth.DoesNotExist:
+                pass
+
+        if base == None:
+            return []
+
+        for type in types:
+            if type == "http://mserve/deliverySuccess":
+                plot = {}
+                plot["type"] = "pie"
+                plot["label"] = "Delivery Success"
+                success = base.get_real_base().get_usage().filter(
+                    metric=settings.DELIVERY_SUCCESS_METRIC)\
+                    .aggregate(success=Sum('total'))["success"]
+                total = base.get_real_base().get_usage().filter(
+                    metric=settings.DELIVERY_SUCCESS_METRIC)\
+                    .aggregate(total=Count('reports'))["total"]
+                if success == None:
+                    success = 0
+                failure = total - success
+
+                if total == 0:
+                    data = []
+                    data.append({
+                        "label" : "No Data" ,
+                        "data" : 1,
+                        "color" : "#CCCCCC"})
+                    plot["data"] = data
+                    plots.append(plot)
+                else:
+                    data = []
+                    data.append({
+                        "label" : "Failed" ,
+                        "data" : failure,
+                        "color" : "#CC0000"})
+                    data.append({
+                        "label" : "Success" ,
+                        "data" : success,
+                        "color" : "#00CC00"})
+                    plot["data"] = data
+                    plots.append(plot)
+
+        return plots
+    
+    @staticmethod
     def get_full_usagesummary():
         usages = Usage.objects.all()
         usagesummary = Usage.usages_to_summary(usages)
@@ -269,7 +324,8 @@ class Usage(models.Model):
         from jobservice.models import Job
         from jobservice.models import JobASyncResult
 
-        asyncs = JobASyncResult.objects.filter(job__in=jobs).values_list("async_id",flat=True)
+        asyncs = JobASyncResult.objects.filter(job__in=jobs)\
+                                    .values_list("async_id",flat=True)
         taskstates = TaskState.objects.filter(task_id__in=asyncs)
 
         jobtype_usage = taskstates.values("name").annotate(
@@ -775,6 +831,11 @@ class HostingContainer(NamedBase):
         mfiles = MFile.objects.filter(service__in=dataservices).all()
         return Job.objects.filter(mfile__in=mfiles)
 
+    def mfiles(self):
+        dataservices = self.dataservice_set.all()
+        mfiles = MFile.objects.filter(service__in=dataservices).all()
+        return mfiles
+
     @staticmethod
     def create_container(name):
         hostingcontainer = HostingContainer(name=name)
@@ -808,13 +869,15 @@ class HostingContainer(NamedBase):
         managementproperty.save()
 
         if settings.PRESTOPRIME:
-            mp_delivery_multi = ManagementProperty(property="deliverySuccessMultiplier_GB",
-                                        base=dataservice,
-                                        value=settings.DEFAULT_DELIVERY_SUCCESS_MULTIPLIER_GB)
+            mp_delivery_multi = ManagementProperty(
+                    property="deliverySuccessMultiplier_GB",
+                    base=dataservice,
+                    value=settings.DEFAULT_DELIVERY_SUCCESS_MULTIPLIER_GB)
             mp_delivery_multi.save()
-            mp_delivery_const = ManagementProperty(property="deliverySuccessConstant_Minutes",
-                                        base=dataservice,
-                                        value=settings.DEFAULT_DELIVERY_SUCCESS_CONSTANT_MIN)
+            mp_delivery_const = ManagementProperty(
+                    property="deliverySuccessConstant_Minutes",
+                    base=dataservice,
+                    value=settings.DEFAULT_DELIVERY_SUCCESS_CONSTANT_MIN)
             mp_delivery_const.save()
 
         pr = DEFAULT_PROFILE
@@ -845,7 +908,8 @@ class HostingContainer(NamedBase):
                 order = 0
                 for taskset in tasksets:
                     tsname = taskset['name']
-                    dstaskset = DataServiceTaskSet(name=tsname, workflow=wf, order=order)
+                    dstaskset = DataServiceTaskSet(name=tsname,
+                                                workflow=wf, order=order)
                     dstaskset.save()
                     order = order +1
                     if prev:
@@ -937,7 +1001,9 @@ class DataServiceTaskSet(models.Model):
         ordering = ["order"]
 
     def create_workflow_taskset(self, mfileid, job):
-        in_tasks = filter(lambda t : t != None , [task.create_workflow_task(mfileid, job) for task in self.tasks.all()])
+        in_tasks = filter(lambda t : t != None ,
+                    [task.create_workflow_task(mfileid, job)
+                        for task in self.tasks.all()])
         ts = TaskSet(tasks=in_tasks)
         tsr = ts.apply_async()
         tsr.save()
@@ -1082,7 +1148,8 @@ class DataService(NamedBase):
         return thisusage
 
         from jobservice.models import JobASyncResult
-        asyncs = JobASyncResult.objects.filter(job__in=self.jobs()).values_list("async_id",flat=True)
+        asyncs = JobASyncResult.objects.filter(job__in=self.jobs())\
+                                        .values_list("async_id",flat=True)
         taskstates = [taskstate for taskstate in TaskState.objects
                             .filter(task_id__in=asyncs)
                             .filter(state="SUCCESS")]
@@ -1153,15 +1220,6 @@ class DataService(NamedBase):
             return jobs
         if url == "profiles":
             return self.profiles.all()
-
-            # TODO: Return any service specific workflow
-            ret = []
-            for k in profiles.keys():
-                r = {}
-                r['name'] = k
-                r['workflows'] = profiles[k]
-                ret.append(r)
-            return ret
         if not url:
             return self
 
@@ -1170,10 +1228,15 @@ class DataService(NamedBase):
         mfiles = MFile.objects.filter(service=self).all()
         return Job.objects.filter(mfile__in=mfiles)
 
+    def mfiles(self):
+        return self.mfile_set.all()
+
     def check_times(self):
         now = datetime.datetime.now()
-        if (self.starttime and now < self.starttime) or (self.endtime and now > self.endtime):
-            _json = {"error" : "The service is only avaliable between %s and %s " % (self.starttime, self.endtime) }
+        if (self.starttime and now < self.starttime)\
+                or (self.endtime and now > self.endtime):
+            _json = {"error" : "The service is only avaliable between %s and %s"
+                            % (self.starttime, self.endtime) }
             return HttpResponseForbidden(_json, mimetype="application/json" )
         return None
 
@@ -1216,11 +1279,13 @@ class DataService(NamedBase):
         if "request" in kwargs:
             request = kwargs["request"]
             if "name" in request.POST:
-                    self.name = request.POST["name"]
+                self.name = request.POST["name"]
             if "priority" in request.POST:
-                if request.POST['priority'] == "True" or request.POST['priority'] == "true":
+                if request.POST['priority'] == "True"\
+                        or request.POST['priority'] == "true":
                     self.priority = True
-                if request.POST['priority'] == "False" or request.POST['priority'] == "false":
+                if request.POST['priority'] == "False"\
+                        or request.POST['priority'] == "false":
                     self.priority = False
             self.save()
         return self
@@ -1478,6 +1543,10 @@ class MFile(NamedBase):
             "jobs": ["GET", "POST"],
             }
 
+    @staticmethod
+    def get_mfile_plots(request, baseid=None):
+        return []
+
     class Meta:
         ordering = ('-created', 'name')
 
@@ -1620,7 +1689,7 @@ class MFile(NamedBase):
                 logging.info("Verification of %s on read ok", mfile)
             else:
                 logging.info("Verification of %s on read FAILED", mfile)
-                usage_store.record(mfile.id, metric_corruption, 1)
+                usage_store.record(mfile.id, METRIC_CORRUPTION, 1)
                 try:
                     backup = BackupFile.objects.get(mfile=mfile)
                     check3 = mfile.checksum
@@ -1708,7 +1777,7 @@ class MFile(NamedBase):
                 rangestart = int(ranges[0])
                 rangeend = int(ranges[1])
                 length = rangeend - rangestart
-                ranged = true
+                ranged = True
             elif 'HTTP_RANGE' in request.META:
                 range_header = request.META['HTTP_RANGE']
                 byte, range = range_header.split('=')
@@ -1878,10 +1947,13 @@ class MFile(NamedBase):
             if self.name.endswith(".blend"):
                 return os.path.join(settings.MEDIA_URL, "images/blender.png")
             if self.mimetype.startswith("image"):
-                return os.path.join(settings.MEDIA_URL, "images", "image-x-generic.png")
+                return os.path.join(settings.MEDIA_URL,
+                    "images", "image-x-generic.png")
             if self.mimetype.startswith("text"):
-                return os.path.join(settings.MEDIA_URL, "images", "text-x-generic.png")
-        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
+                return os.path.join(settings.MEDIA_URL,
+                    "images", "text-x-generic.png")
+        return os.path.join(settings.MEDIA_URL, "images",
+                    "package-x-generic.png")
 
     def posterurl(self):
         if self.poster and self.poster != "":
@@ -1894,7 +1966,8 @@ class MFile(NamedBase):
                 if self.mimetype.startswith("text"):
                     return os.path.join(settings.MEDIA_URL,
                                         "images", "text-x-generic.png")
-        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
+        return os.path.join(settings.MEDIA_URL,
+                                        "images", "package-x-generic.png")
 
     def proxyurl(self):
         if self.proxy and self.proxy != "":
@@ -1908,7 +1981,8 @@ class MFile(NamedBase):
                 if self.mimetype.startswith("text"):
                     return os.path.join(settings.MEDIA_URL,
                             "images", "text-x-generic.png")
-        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
+        return os.path.join(settings.MEDIA_URL,
+                            "images", "package-x-generic.png")
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -2045,7 +2119,8 @@ class Auth(Base):
             ds = DataService.objects.get(id=self.base.id)
             if len(ds.mfile_set.all()) > 0:
                 return list(ds.mfile_set.all())[0].thumburl()
-        return os.path.join(settings.MEDIA_URL, "images", "package-x-generic.png")
+        return os.path.join(settings.MEDIA_URL,
+                    "images", "package-x-generic.png")
 
     def getroles(self):
         return self.roles_csv.split(",")
@@ -2135,4 +2210,5 @@ class Auth(Base):
         super(Auth, self).save()
 
     def __unicode__(self):
-        return "Auth: authname=%s base=%s roles=%s " % (self.authname, self.base, ",".join(self.getroles()))
+        return "Auth: authname=%s base=%s roles=%s "\
+                % (self.authname, self.base, ",".join(self.getroles()))

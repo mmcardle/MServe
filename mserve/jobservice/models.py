@@ -164,14 +164,23 @@ class Job(NamedBase):
                 jobplot["type"] = "pie"
                 jobplot["label"] = "Jobs by Type",
                 query = taskstates.values("name").annotate(n=Count("name"))
-                for val in query:
-                    if val["name"] == None:
-                        val["label"] = "unknown"
-                    else:
-                        val["label"] = val["name"].split(".")[-1]
-                    val["data"] = val["n"]
-                jobplot["data"] = [item for item in query]
-                plots.append(jobplot)
+                if query.count() == 0:
+                    data = []
+                    data.append({
+                        "label" : "No Data" ,
+                        "data" : 1,
+                        "color" : "#CCCCCC"})
+                    jobplot["data"] = data
+                    plots.append(jobplot)
+                else:
+                    for val in query:
+                        if val["name"] == None:
+                            val["label"] = "unknown"
+                        else:
+                            val["label"] = val["name"].split(".")[-1]
+                        val["data"] = val["n"]
+                    jobplot["data"] = [item for item in query]
+                    plots.append(jobplot)
 
             if type == "jobs":
                 jobplot = {}
@@ -185,19 +194,29 @@ class Job(NamedBase):
 
                 plots.append(jobplot)
 
-                for taskname in set(taskstates.values_list("name",flat=True).distinct()):
-                    subplot = {}
-                    subplot["type"] = "pie"
-                    subplot["size"] = "small"
-                    subplot["label"] = "Job %s" % taskname.split(".")[-1]
-                    tasks = taskstates.filter(name=taskname)
-                    success = tasks.filter(state="SUCCESS").aggregate(success=Count('name'))["success"]
-                    failure = tasks.filter(state="FAILURE").aggregate(failure=Count('name'))["failure"]
+                task_names = set(taskstates.values_list("name",flat=True).distinct())
+                if len(task_names) == 0:
                     data = []
-                    data.append({ "label" : "Failed" , "data" : failure, "color" : "#CC0000"})
-                    data.append({ "label" : "Success" , "data" : success, "color" : "#00CC00"})
-                    subplot["data"] = data
-                    plots.append(subplot)
+                    data.append({
+                        "label" : "No Data" ,
+                        "data" : 1,
+                        "color" : "#CCCCCC"})
+                    jobplot["data"] = data
+                    #plots.append(jobplot)
+                else:
+                    for taskname in task_names:
+                        subplot = {}
+                        subplot["type"] = "pie"
+                        subplot["size"] = "small"
+                        subplot["label"] = "Job %s" % taskname.split(".")[-1]
+                        tasks = taskstates.filter(name=taskname)
+                        success = tasks.filter(state="SUCCESS").aggregate(success=Count('name'))["success"]
+                        failure = tasks.filter(state="FAILURE").aggregate(failure=Count('name'))["failure"]
+                        data = []
+                        data.append({ "label" : "Failed" , "data" : failure, "color" : "#CC0000"})
+                        data.append({ "label" : "Success" , "data" : success, "color" : "#00CC00"})
+                        subplot["data"] = data
+                        plots.append(subplot)
 
         return plots
 

@@ -28,6 +28,8 @@ TEMPLATE_DEBUG = DEBUG
 DEFAULT_CHARSET = 'utf-8'
 
 import os
+import logging
+import platform
 
 try:
     from settings_dev import *
@@ -37,7 +39,7 @@ except ImportError:
     MSERVE_LOG='/var/log/mserve'
     DBNAME='mservedb'
 
-import logging
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(pathname)s %(lineno)d %(asctime)s %(levelname)-8s %(message)s',
@@ -47,14 +49,11 @@ logging.basicConfig(
     filemode='a'
 )
 
-import platform
 HOSTNAME = platform.uname()[1]
 
 ADMINS = (
     # ('Your Name', 'your_email@domain.com'),
 )
-
-LOG_FILE="django_log"
 
 MANAGERS = ADMINS
 DATABASES = {
@@ -201,6 +200,7 @@ if POSTMARK:
 PRESTOPRIME = False
 DEFAULT_DELIVERY_SUCCESS_CONSTANT_MIN = 15.0
 DEFAULT_DELIVERY_SUCCESS_MULTIPLIER_GB = 1.0
+DELIVERY_SUCCESS_METRIC = "http://mserve/deliverySuccess"
 if PRESTOPRIME:
     CELERY_IMPORTS += ("prestoprime.tasks",)
     INSTALLED_APPS += ('prestoprime',)
@@ -230,7 +230,6 @@ FILE_TRANSPORTS = {
 
 if DEBUG:
     FILE_TRANSPORTS["mfile"] = { "schema" : "direct" }
-    #FILE_TRANSPORTS["folder"] = { "schema" : "localpath", "path" : TESTDATA_ROOT }
 
 
 # JOB CONFIG

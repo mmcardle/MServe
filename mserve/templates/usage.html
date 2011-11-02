@@ -11,9 +11,15 @@
 <div class="clr"></div>
 <div id="mservelast1" style="margin-top: 20px;"></div>
 <div class="clr"></div>
+
+<table>
+    <tr>
+        <td><div id="mservejobstype" style="margin-top: 20px;"></div></td>
+        <td><div id="deliverySuccess" style="margin-top: 20px;"></div></td>
+    </tr>
+</table>
+
 <div id="mservejobs" style="margin-top: 20px;"></div>
-<div class="clr"></div>
-<div id="mservejobstype" style="margin-top: 20px;"></div>
 <div class="clr"></div>
 
 <script type="text/javascript">
@@ -24,6 +30,7 @@ $('#tabs').bind('tabsshow', function(event, ui) {
     $("#mservelast1").mserveusage('stats', ["last1"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
     $("#mservejobs").mserveusage('stats', ["jobs"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
     $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
   }
 });
 
@@ -33,6 +40,7 @@ if(hash=="tabs-usage"){
     $("#mservelast1").mserveusage('stats', ["last1"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
     $("#mservejobs").mserveusage('stats', ["jobs"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
     $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    $("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
 }
 
 </script>

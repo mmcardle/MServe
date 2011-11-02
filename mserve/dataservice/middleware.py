@@ -23,13 +23,14 @@
 ########################################################################
 import re
 import usage_store as usage_store
+import settings as settings
 import datetime
 import logging
 from models import MFile
 from models import DataService
 
 metric_responsetime = "http://mserve/responsetime"
-metric_deliverytime = "http://mserve/deliverySuccess"
+metric_delivery_success = settings.DELIVERY_SUCCESS_METRIC
 
 class ResponseMiddleware(object):
 
@@ -53,9 +54,9 @@ class ResponseMiddleware(object):
 
                 time_taken_minutes = time_taken/60.0
                 if target_delivery_time < time_taken_minutes:
-                    usage_store.record(mfile.id, metric_deliverytime, 0)
+                    usage_store.record(mfile.id, metric_delivery_success, 0)
                 else:
-                    usage_store.record(mfile.id, metric_deliverytime, 1)
+                    usage_store.record(mfile.id, metric_delivery_success, 1)
 
             except Exception as e:
                 logging.error("Request for mfile %s throws error - %s ", mfileid, e )

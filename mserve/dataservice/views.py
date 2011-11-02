@@ -112,7 +112,10 @@ def traffic(request ):
 
 def stats(request, baseid=None):
     from jobservice.models import Job
-    json = Job.get_job_plots(request,baseid=baseid)
+    job_json = Job.get_job_plots(request,baseid=baseid)
+    mfile_json = MFile.get_mfile_plots(request,baseid=baseid)
+    usage_json = Usage.get_usage_plots(request,baseid=baseid)
+    json = job_json + mfile_json + usage_json
     if json == None:
         return HttpResponseNotFound()
     _json = simplejson.dumps(json)

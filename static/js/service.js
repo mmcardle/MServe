@@ -354,7 +354,7 @@ function service_postmanagementproperty_ajax(serviceid, url, data){
        data: data,
        url: url,
        success: function(property){
-           render_managementproperty(serviceid, property)
+           render_managementproperty(serviceid, url, property)
        },
        error: function(msg){
         showError("Error creating new property.",""+msg.responseText)
