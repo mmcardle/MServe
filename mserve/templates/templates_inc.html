@@ -439,8 +439,11 @@
     <tr  id="task-${id}">
         <td>${id}</td>
         <form id="taskform-task-${id}" >
-            <td><input type="text" style="width: 96%" id="id_taskset" name="taskset" value="${$item.tasksetid}" ></td>
-        <td class="green"><input type="text" style="width: 96%" name="name" id="id_name" class="name" value="${name}" ></td>
+            
+        <td class="green">
+            <input type="hidden" style="width: 96%" id="id_taskset" name="taskset" value="${$item.tasksetid}" >
+            <input type="text" style="width: 96%" name="name" id="id_name" class="name" value="${name}" >
+        </td>
         <td class="green"><input type="text" style="width: 96%" name="task_name" id="id_task_name" class="task_name" value="${task_name}" ></td>
         <td>
             <input type="text" style="width: 96%" value="${condition}" id="id_condition" name="condition" >
