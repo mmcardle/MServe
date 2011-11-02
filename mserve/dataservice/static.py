@@ -23,12 +23,10 @@ default_profiles = {
                             {"name":"B","task":"md5file","args": {},},
                             {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
                             {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"E","task":"dataservice.tasks.backup_mfile","args": {}},
                         ],
                     },
-                   {
-                        "name" : "taskset3",
-                        "tasks" : [{"name":"E","task":"email","args": {},},],
-                },],
+                   ],
             },
             "update" : {
                 # Standard Ingest
@@ -77,6 +75,7 @@ default_profiles = {
                             {"name":"B","task":"md5file","args": {},},
                             {"name":"C","task":"thumbimage","args": {"width":tw,"height":th},"condition": "mfile.mimetype.startswith('image')",},
                             {"name":"D","task":"posterimage","args": {"width":pw,"height":ph},"condition": "mfile.mimetype.startswith('image')",},
+                            {"name":"K","task":"dataservice.tasks.backup_mfile","args": {},},
 
                             # Video
                             {"name":"E","task":"thumbvideo",   "condition": "mfile.mimetype.startswith('video')",  "args": {"width":tw,"height":th} },
@@ -85,7 +84,7 @@ default_profiles = {
 
                             # HD
                             {"name":"H","task":"transcodevideo",  "condition": "mfile.mimetype.startswith('video')",  "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","2","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ] },
-                            {"name":"D","task":"transcodevideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
+                            {"name":"L","task":"transcodevideo",  "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-s","%s:%s"%(hd_w,hd_h),"-r","24","-vcodec","dnxhd","-f","mov","-pix_fmt","rgb32","-b","120000k","-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] }, "outputs" : [ {"name":"HD.mov","mimetype":"video/quicktime"} ]  },
 
                             # MXF Ingest
                             {"name":"I","task":"proxyvideo",   "condition": "mfile.name.endswith('mxf')",          "args": {"ffmpeg_args": ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(pw,ph),"-acodec","libfaac","-ac","1","-ab","64","-ar","44100"] } },
