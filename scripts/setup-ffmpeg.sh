@@ -48,6 +48,7 @@ install_ffmpeg () {
 
     git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
     cd x264
+    git checkout origin/stable
     ./configure --enable-static || f_ "failed to configure x264"
     make || f_ "failed to make x264"
     checkinstall --pkgname=x264 --default --pkgversion="3:$(./version.sh | \
@@ -67,6 +68,7 @@ install_ffmpeg () {
     cd
     git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
     cd ffmpeg
+    git checkout n0.8.5
     ./configure --enable-gpl --enable-version3 --enable-nonfree --enable-postproc \
         --enable-libfaac --enable-libopencore-amrnb --enable-libopencore-amrwb \
         --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid \
