@@ -561,6 +561,8 @@ install_ffmpeg () {
     make || f_ "failed to make x264"
     checkinstall --pkgname=x264 --default --pkgversion="3:$(./version.sh | \
         awk -F'[" ]' '/POINT/{print $4"+git"$5}')" --backup=no --deldoc=yes || f_ "failed to install x264"
+    cd ..
+    rm -rf x264
 
     apt-get -y remove libmp3lame-dev
     apt-get -y install nasm
@@ -572,6 +574,8 @@ install_ffmpeg () {
     make || f_ "failed to make lame"
     checkinstall --pkgname=lame-ffmpeg --pkgversion="3.98.4" --backup=no --default \
         --deldoc=yes || f_ "failed to install lame"
+    cd ..
+    rm -rf lame-3.98.4
 
     cd
     git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
@@ -588,7 +592,8 @@ install_ffmpeg () {
     make tools/qt-faststart || f_ "failed to make qt-faststart"
     checkinstall --pkgname=qt-faststart --pkgversion="$(./version.sh)" --backup=no \
         --deldoc=yes --default install -D -m755 tools/qt-faststart /usr/local/bin/qt-faststart || f_ "failed to install qt-faststart"
-
+    cd ..
+    rm -rf ffmpeg
     # Copy Presets
     cp  /usr/share/ffmpeg/* /usr/local/share/ffmpeg/ || f_ "failed to copy ffmpeg presets"
 }
@@ -1106,6 +1111,7 @@ configure_apache () {
 		s@DocumentRoot.*\$@DocumentRoot ${MSERVE_DATA}/www-root\n\n\
 	FastCGIExternalServer ${MSERVE_DATA}/www-root/mysite.fcgi -socket /tmp/mserve-fcgi.sock -idle-timeout 30\n\n\
         XSendFile On\n\
+        XSendFileAllowAbove On\n\
 	Alias /media ${MSERVE_DATA}/www-root/media\n\
         Alias /dl /var/opt/mserve-data/dl\n\n\
 	RewriteEngine On\n\
