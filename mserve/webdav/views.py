@@ -35,7 +35,6 @@ import logging
 import time
 import os.path
 import os
-import urllib2
 from copy import deepcopy
 from django.http import *
 from django.shortcuts import render_to_response
@@ -201,8 +200,7 @@ class DavServer(object):
 
                 range_string = "0-"
 
-                path = object.file.path.encode("utf-8")
-                enc_url = urllib2.quote(path)
+                enc_url = object.file.path.encode("utf-8")
 
                 if self.apache:
                     # Apache can deal with range requests itself
