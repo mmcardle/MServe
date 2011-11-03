@@ -437,7 +437,7 @@ class Usage(models.Model):
     def __unicode__(self):
         object = ""
         if self.base:
-            object = self.base
+            object = unicode(self.base)
         return "Usage:%s metric=%s total=%f reports=%s nInProgress=%s rate=%s \
                     rateTime=%s rateCumulative=%s"\
                     % (object, self.metric, self.total, self.reports,
