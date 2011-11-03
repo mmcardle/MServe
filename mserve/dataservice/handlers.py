@@ -44,9 +44,7 @@ import usage_store as usage_store
 import time
 import logging
 import os
-import os.path
 import shutil
-import os
 
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
@@ -75,7 +73,7 @@ class ServiceRequestHandler(BaseHandler):
     model = ServiceRequest
     fields = ('id','name','reason','state','status','time','ctime', ('profile', ( 'id',  'user' )  ))
 
-    def update(self,request,id=None):
+    def update(self, request, servicerequestid=None):
         if request.user.is_staff:
             if request.POST.has_key("state"):
                 if request.POST['state'] == "A":
@@ -83,7 +81,7 @@ class ServiceRequestHandler(BaseHandler):
                     if request.POST.has_key('cid'):
 
                         cid = request.POST['cid']
-                        sr = ServiceRequest.objects.get(id=id)
+                        sr = ServiceRequest.objects.get(id=servicerequestid)
 
                         sr.state = "A"
                         sr.save()
@@ -100,7 +98,7 @@ class ServiceRequestHandler(BaseHandler):
                         r.write("Invalid arguments - No Container id specified")
                         return r
                 elif request.POST['state'] == "R":
-                    sr = ServiceRequest.objects.get(id=id)
+                    sr = ServiceRequest.objects.get(id=servicerequestid)
                     sr.state = "R"
                     sr.save()
                     return sr
@@ -118,12 +116,12 @@ class ServiceRequestHandler(BaseHandler):
             response.status_code = 401
             return response
 
-    def delete(self, request, id=None):
+    def delete(self, request, servicerequestid=None):
         if not request.user.is_authenticated():
             response = HttpResponse("Not Authorised.")
             response.status_code = 401
             return response
-        sr = ServiceRequest.objects.get(id=id)
+        sr = ServiceRequest.objects.get(id=servicerequestid)
         if request.user.get_profile() == sr.profile:
             sr.delete()
             r = rc.DELETED
@@ -133,11 +131,11 @@ class ServiceRequestHandler(BaseHandler):
             response.status_code = 401
             return response
 
-    def read(self, request, id=None):
+    def read(self, request, servicerequestid=None):
 
         if request.user.is_staff:
-            if id:
-                sr = ServiceRequest.objects.get(id=id)
+            if servicerequestid:
+                sr = ServiceRequest.objects.get(id=servicerequestid)
                 return sr
             else:
                 sr = ServiceRequest.objects.all()
@@ -155,8 +153,8 @@ class ServiceRequestHandler(BaseHandler):
             profile = MServeProfile(user=request.user)
             profile.save()
 
-        if id:
-            return ServiceRequest.objects.filter(profile=profile,id=id)
+        if servicerequestid:
+            return ServiceRequest.objects.filter(profile=profile,id=servicerequestid)
         else:
             return ServiceRequest.objects.filter(profile=profile)
 
@@ -444,28 +442,6 @@ class DataServiceURLHandler(BaseHandler):
             logging.info(form)
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
-            return r
-
-
-class InfoHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self, request, id):
-        try:
-            auth = Auth.objects.get(id=id)
-            parent = auth
-
-            while parent.base == None:
-                parent = parent.parent
-
-            base = parent.base
-            if utils.is_mfile(base):
-                mfile = MFile.objects.get(id=base.id)
-                return utils.clean_mfile(mfile)
-        except Auth.DoesNotExist:
-            # TODO - fix
-            logging.error("Auth does not exist")
-            r = rc.BAD_REQUEST
             return r
 
 class BackupFileHandler(BaseHandler):
@@ -839,7 +815,8 @@ class AuthHandler(BaseHandler):
 
         return []
 
-    def create(self, request, id=None, containerid=None, serviceid=None):
+    def create(self, request, id=None, containerid=None, serviceid=None,
+                        mfileid=None, authid=None):
 
         if containerid:
             container = HostingContainer.objects.get(id=containerid)

@@ -37,14 +37,16 @@ import pycurl
 import StringIO
 import PythonMagick
 import settings as settings
-from celery.task import task, periodic_task
+from celery.task import task
 from celery.task.sets import subtask
 from subprocess import Popen, PIPE
 from datetime import timedelta
 from celery.task.sets import TaskSet
 from settings import HOSTNAME
 from django.core.files import File
+
 '''
+from celery.task import periodic_task
 @periodic_task(run_every=timedelta(minutes=15))
 def service_scrubber():
     logging.info("Running service scrubber")
@@ -704,79 +706,6 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
     except Exception ,e:
         #logging.info("Error with posterimage %s" % e)
         raise
-
-@task(default_retry_delay=15,max_retries=3,name="thumbvideo")
-def thumbvideo(inputs,outputs,options={},callbacks=[]):
-
-    try:
-        mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
-        mf = MFile.objects.get(id=mfileid)
-        videopath = mf.file.path
-
-        width=options["width"]
-        height=options["height"]
-
-        tiled=False
-        if "tiled" in options:
-            tiledS = options["tiled"]
-            if tiledS == "True" or tiledS == "true":
-                tiled = True
-
-        logging.info("Processing video thumb %sx%s for %s" % (width,height,videopath))
-        if not os.path.exists(videopath):
-            logging.info("Video %s does not exist" % (videopath))
-            return False
-
-        image = _thumbvideo(videopath,width,height,tiled=tiled)
-
-        if image:
-            if not _save_thumb(mfileid,image):
-                thumbvideo.retry([inputs,outputs,options,callbacks])
-
-            return {"success":True,"message":"Thumbnail '%sx%s' of video successful"%(width,height)}
-        else:
-            raise Exception("Could not create video thumb image")
-        
-    except Exception as e:
-        logging.info("Error with thumbvideo %s" % e)
-        raise e
-
-@task(default_retry_delay=15,max_retries=3,name="thumbimage.remote")
-def thumbimage(inputs,outputs,options={},callbacks=[]):
-    try:
-        inputid = inputs[0]
-        remoteservice = inputs[1]
-
-        widthS = options["width"]
-        heightS = options["height"]
-        height = int(heightS)
-        width  = int(widthS)
-
-        path = _get_mfile(inputid)
-
-        logging.info("Creating Remote %sx%s image for %s" % (width,height,inputid))
-
-        image = _thumb_file_remote(path,remoteservice,width,height)
-
-        if image:
-
-            if not _save_thumb(inputid,image):
-                thumbimage.retry([inputs,outputs,options,callbacks])
-
-            logging.info("Thumbnail created %s" % (image))
-
-            for callback in callbacks:
-                subtask(callback).delay()
-
-            return {"success":True,"message":"Thumbnail '%sx%s' successful"%(width,height)}
-        else:
-            raise Exception("Could not create image remote")
-
-    except Exception as e:
-        logging.info("Error with thumbimage %s" % e)
-        raise e
-
 
 @task(default_retry_delay=15,max_retries=3,name="thumbimage")
 def thumbimage(inputs,outputs,options={},callbacks=[]):

@@ -51,7 +51,6 @@ usagesummary_handler = Resource(UsageSummaryHandler)
 usage_handler = Resource(UsageHandler)
 role_handler = Resource(RoleHandler)
 resources_handler = Resource(ResourcesHandler)
-info_handler = Resource(InfoHandler)
 profile_handler = Resource(ProfileHandler)
 service_request_handler = Resource(ServiceRequestHandler)
 auth_contents_handler = Resource(AuthContentsHandler)
@@ -116,7 +115,7 @@ urlpatterns = patterns('',
     #url(r'^auth/$', auth_handler),
     url(r'^users/$', profile_handler,name='user'),
     url(r'^users/requests/$', service_request_handler,name='user_requests'),
-    url(r'^users/requests/(?P<id>[^/]+)/$', service_request_handler),
+    url(r'^users/requests/(?P<servicerequestid>[^/]+)/$', service_request_handler),
 
     # REST Methods for individual resources
     #url(r'^container/(?P<id>[^/]+)/$', hosting_handler),
@@ -125,7 +124,6 @@ urlpatterns = patterns('',
     #url(r'^auth/(?P<id>[^/]+)/$', auth_handler),
 
     #Global
-    #url(r'^api/(?P<id>[^/]+)/info/$', info_handler),
     url(r'^api/(?P<id>[^/]+)/resources/$', resources_handler),
     url(r'^api/(?P<id>[^/]+)/usage/$', usage_handler),
     #url(r'^api/(?P<id>[^/]+)/property/$', property_handler),
