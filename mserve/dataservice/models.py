@@ -1251,11 +1251,14 @@ class DataService(NamedBase):
                 return check
 
             if self.parent:
-                return self.parent.post(url, *args, **kwargs)
-            mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
-            for subservice in self.subservices.all():
-                subservice.__duplicate__(mfile)
-            return mfile
+                mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
+                self.parent.__duplicate__(mfile)
+                return mfile
+            else:
+                mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
+                for subservice in self.subservices.all():
+                    subservice.__duplicate__(mfile)
+                return mfile
         if url == "mfolders":
 
             check = self.check_times()
@@ -1431,29 +1434,27 @@ class DataService(NamedBase):
 
         elif file == None:
             emptyfile = ContentFile('')
-            mfile = MFile(name=name, service=service, empty=True)
+            mfile = MFile(name=name, service=service, empty=True, duplicate_of=duplicate_of)
             mfile.file.save(name, emptyfile)
         else:
             if type(file) == django.core.files.base.ContentFile:
-                mfile = MFile(name=name, service=service)
+                mfile = MFile(name=name, service=service, duplicate_of=duplicate_of)
                 mfile.file.save(name, file)
                 length = mfile.file.size
             else:
                 mfile = MFile(name=name, service=service, file=file,
-                                empty=False)
+                                empty=False, duplicate_of=duplicate_of)
                 mfile.save()
                 length = mfile.file.size
-
-        if duplicate_of:
-            mfile.duplicate_of = duplicate_of
 
         mfile.folder = folder
         mfile.size = length
         mfile.mimetype = mimefile([mfile.id], [], {})["mimetype"]
         mfile.save()
 
-        import usage_store as usage_store
-        usage_store.record(mfile.id, METRIC_INGEST, int(length))
+        if not duplicate_of:
+            import usage_store as usage_store
+            usage_store.record(mfile.id, METRIC_INGEST, int(length))
 
         logging.debug("MFile creation started '%s' ", mfile.name)
         logging.debug("Creating roles for '%s' ", mfile.name)
@@ -1917,28 +1918,31 @@ class MFile(NamedBase):
             return self.name
 
     def get_rate_for_metric(self, metric):
-        if metric == METRIC_MFILE:
-            return 1
-        if not self.empty:
-            if metric == METRIC_DISC:
-                return self.size
+        if not self.duplicate_of:
+            if metric == METRIC_MFILE:
+                return 1
+            if not self.empty:
+                if metric == METRIC_DISC:
+                    return self.size
 
     def get_value_for_metric(self, metric):
-        if not self.empty:
+        if not self.empty and not self.duplicate_of:
             if metric == METRIC_DISC_SPACE:
                 return self.size
 
     def get_updated_value_for_metric(self, metric):
-        if not self.empty:
-            if metric == METRIC_DISC_SPACE:
-                return self.size
+        if not self.duplicate_of:
+            if not self.empty:
+                if metric == METRIC_DISC_SPACE:
+                    return self.size
 
     def get_updated_rate_for_metric(self, metric):
-        if metric == METRIC_MFILE:
-            return 1
-        if not self.empty:
-            if metric == METRIC_DISC:
-                return self.size
+        if not self.duplicate_of:
+            if metric == METRIC_MFILE:
+                return 1
+            if not self.empty:
+                if metric == METRIC_DISC:
+                    return self.size
 
     def thumburl(self):
         if self.thumb and self.thumb != "":
