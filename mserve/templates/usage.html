@@ -49,17 +49,17 @@ if(hash=="tabs-usage"){
 <div id="usagecontent" >
 {% if usagesummary %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th align="left">Metric</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Sum</th><th>Std. Dev</th><th>Variance</th></tr>
+        <tr><th style="text-align: left">Metric Name</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Sum</th><th>Std. Dev</th><th>Variance</th></tr>
         {% for summary in usagesummary%}
             <tr>
                 <td style="text-align: left;"><b>{{summary.metric}}</b></td>
-                <td><script>document.write(number_format('{{summary.min}}', 2, '.', ','))</script></td>
-                <td><script>document.write(number_format('{{summary.max}}', 2, '.', ','))</script></td>
-                <td><script>document.write(number_format('{{summary.n}}', 0, '.', ','))</script></td>
-                <td><script>document.write(number_format('{{summary.avg}}', 2, '.', ','))</script></td>
-                <td><script>document.write(number_format('{{summary.sum}}', 2, '.', ','))</script></td>
-                <td><script>document.write(number_format('{{summary.stddev}}', 2, '.', ','))</script></td>
-                <td><script>document.write(number_format('{{summary.variance}}', 2, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.min}}', 2, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.max}}', 2, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.n}}', 0, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.avg}}', 2, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.sum}}', 2, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.stddev}}', 2, '.', ','))</script></td>
+                <td align="right"><script>document.write(number_format('{{summary.variance}}', 2, '.', ','))</script></td>
             </tr>
         {% endfor %}
     </table>
