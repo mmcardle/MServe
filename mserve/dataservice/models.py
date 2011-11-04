@@ -1252,7 +1252,7 @@ class DataService(NamedBase):
 
             if self.parent:
                 mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
-                self.parent.__duplicate__(mfile)
+                self.parent.__duplicate__(mfile, ignore_services=[self.id])
                 return mfile
             else:
                 mfile = self.create_mfile(kwargs['name'], file=kwargs['file'])
@@ -1268,12 +1268,13 @@ class DataService(NamedBase):
             return self.create_mfolder(kwargs['name'])
         return HttpResponseNotFound()
 
-    def __duplicate__(self, mfile):
+    def __duplicate__(self, mfile, ignore_services=[]):
         newmfile = mfile.duplicate(save=False, service=self)
         newmfile.service = self
         newmfile.save()
         for subservice in self.subservices.all():
-            subservice.__duplicate__(mfile)
+            if subservice.id not in ignore_services:
+                subservice.__duplicate__(mfile)
 
     def put(self, url, *args, **kwargs):
         if self.parent:
