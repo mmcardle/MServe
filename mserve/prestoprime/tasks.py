@@ -54,7 +54,7 @@ def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
         p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
 
         from mserve.jobservice.models import JobOutput
-        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo = JobOutput.objects.get(id=joboutput)
         jo.file.save('mxftechmdextractor.txt', ContentFile(p.stdout.read()), save=True)
 
         for callback in callbacks:
@@ -92,7 +92,7 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
         suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='text/plain')
 
         from mserve.jobservice.models import JobOutput
-        jo = JobOutput.objects.get(id=joboutput.pk)
+        jo = JobOutput.objects.get(id=joboutput)
         jo.file.save('d10mxfchecksum.txt', suf, save=True)
 
         for callback in callbacks:
