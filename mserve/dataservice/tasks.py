@@ -441,7 +441,11 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
     if os.path.getsize(transcode.name) == 0:
         raise Exception("Transcode produced a 0 byte file")
 
-    _save_joboutput(joboutput, transcode)
+    transcode.close()
+
+    upload = open(transcode.name,'r')
+    _save_joboutput(joboutput, upload)
+    upload.close()
 
     return {"success":True, "message": "Transcode Successful"}
 
@@ -456,8 +460,12 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
     if os.path.getsize(transcode.name) == 0:
         raise Exception("Proxy Transcode produced a 0 byte file")
+    
+    transcode.close()
 
-    _save_proxy(mfileid, transcode)
+    upload = open(transcode.name,'r')
+    _save_proxy(mfileid, upload)
+    upload.close()
 
     return {"success":True, "message": "Proxy Successful"}
 
@@ -507,7 +515,7 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
         backup = BackupFile(name="backup_%s"%mf.name,mfile=mf,mimetype=mf.mimetype,checksum=mf.checksum)
         backup.save()
 
-        _save_backupfile(backup.id,file)
+        _save_backupfile(backup.id, file)
 
         return {"success":True,"message":"Backup of '%s' successful"%mf.name}
     except Exception, e:
