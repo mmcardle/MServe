@@ -34,8 +34,102 @@ import random
 import os
 import sys
 import logging
+from django.core.files.temp import NamedTemporaryFile
+from django.http import HttpResponseBadRequest
 
 fmt = "%3.2f"
+
+# Chunk Size - 50Mb
+CHUNK_SIZE = 1024 * 1024 * 50
+
+def fbuffer(f, length, chunk_size=CHUNK_SIZE):
+    to_read = int(length)
+    while to_read > 0:
+        chunk = f.read(chunk_size)
+        to_read = to_read - chunk_size
+        if not chunk:
+            break
+        yield chunk
+
+def write_request_to_field(request, field, name):
+    print "Writing request %s to %s " % (name, field)
+    rangestart = -1
+    rangeend = -1
+    chunked = False
+
+    if 'CONTENT_LENGTH' in request.META:
+        length = request.META['CONTENT_LENGTH']
+    elif 'HTTP_CONTENT_LENGTH' in request.META:
+        length = request.META['HTTP_CONTENT_LENGTH']
+
+    if 'RANGE' in request.META:
+        range_header = request.META['RANGE']
+        byte, range = range_header.split('=')
+        ranges = range.split('-')
+
+        if len(ranges) != 2:
+            return HttpResponseBadRequest(
+                    "Do not support range '%s' ", range_header)
+
+        rangestart = int(ranges[0])
+        rangeend = int(ranges[1])
+        length = rangeend - rangestart
+    elif 'HTTP_RANGE' in request.META:
+        range_header = request.META['HTTP_RANGE']
+        byte, range = range_header.split('=')
+        ranges = range.split('-')
+
+        if len(ranges) != 2:
+            return HttpResponseBadRequest(
+                    "Do not support range '%s' ", range_header)
+
+        rangestart = int(ranges[0])
+        rangeend = int(ranges[1])
+        length = rangeend - rangestart
+
+    if 'TRANSFER_ENCODING' in request.META:
+        encoding_header = request.META['TRANSFER_ENCODING']
+        if encoding_header.find('chunked') != -1:
+            chunked = True
+
+    if 'HTTP_TRANSFER_ENCODING' in request.META:
+        encoding_header = request.META['HTTP_TRANSFER_ENCODING']
+        if encoding_header.find('chunked') != -1:
+            chunked = True
+
+    if chunked:
+        raise "Chunking Not Supported"
+
+    input = request.META['wsgi.input']
+    temp = NamedTemporaryFile()
+
+    if rangestart != -1:
+        try:
+            mf = open(temp.name, 'r+b')
+            try:
+                mf.seek(rangestart)
+                for chunk in fbuffer(input, length):
+                    mf.write(chunk)
+            finally:
+                mf.close()
+        except IOError:
+            logging.error(
+                "Error writing partial content to MFile '%s'",
+                    temp.name)
+            pass
+    else:
+        try:
+            mf = open(temp.name, 'wb')
+            try:
+                for chunk in fbuffer(input, length):
+                    mf.write(chunk)
+            finally:
+                mf.close()
+        except IOError:
+            logging.error(
+                "Error writing content to MFile '%s'", temp.name)
+            pass
+    field.save(name, File(temp))
 
 def get_class( kls ):
     parts = kls.split('.')

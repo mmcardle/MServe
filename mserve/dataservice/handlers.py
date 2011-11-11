@@ -456,7 +456,7 @@ class BackupFileHandler(BaseHandler):
     def update(self, request, backupid):
         backupfile = BackupFile.objects.get(pk=backupid)
         try:
-            backupfile.file.save("%s_%s"%("backup",backupfile.mfile.name), ContentFile(request.raw_post_data), save=True)
+            utils.write_request_to_field(request, backupfile.file, "%s_%s"%("backup",backupfile.mfile.name))
             return {"message":"updated backup file"}
         except Exception, e:
             logging.info(e)
@@ -507,13 +507,13 @@ class MFileHandler(BaseHandler):
 
         mfile = MFile.objects.get(pk=id)
         if field == "thumb":
-            mfile.thumb.save('thumb.png', ContentFile(request.raw_post_data), save=True)
+            utils.write_request_to_field(request, mfile.thumb, 'thumb.png')
             return {"message":"updated thumb"}
         if field == "poster":
-            mfile.poster.save('poster.png', ContentFile(request.raw_post_data), save=True)
+            utils.write_request_to_field(request, mfile.poster, 'poster.png')
             return {"message":"updated poster"}
         if field == "proxy":
-            mfile.proxy.save('proxy.mp4', ContentFile(request.raw_post_data), save=True)
+            utils.write_request_to_field(request, mfile.proxy, 'proxy.mp4')
             return {"message":"updated proxy"}
 
         form = UpdateMFileForm(request.POST,request.FILES)

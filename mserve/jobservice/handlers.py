@@ -195,13 +195,12 @@ class JobOutputContentsHandler(BaseHandler):
     def update(self, request, outputid, field=None):
         joboutput = JobOutput.objects.get(id=outputid)
 
-        logging.info(request)
-
         if field == "thumb":
-            joboutput.thumb.save('thumb.png', ContentFile(request.raw_post_data), save=True)
+            utils.write_request_to_field(request, joboutput.thumb, "thumb.png")
             return {"message":"updated job thumb"}
 
-        joboutput.file.save("joboutput", ContentFile(request.raw_post_data), save=True)
+        utils.write_request_to_field(request, joboutput.file, "joboutput")
+
         return {"message":"updated job"}
 
     def create(self, request, outputid):

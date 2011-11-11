@@ -1,4 +1,4 @@
-"""The Mserve dataservice models """
+"""The MServe dataservice models """
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -51,7 +51,6 @@ from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
 from django.core.urlresolvers import reverse
-from django.core.files.temp import NamedTemporaryFile
 from django.core.files import File
 from django.db.models import Count, Max, Min, Avg, Sum, StdDev, Variance
 from dataservice.tasks import mimefile
@@ -850,10 +849,22 @@ class HostingContainer(NamedBase):
 
         return hostingcontainer
 
-    def create_data_service(self, name):
+    def create_data_service(self, name, duplicate_of=None):
 
         dataservice = DataService(name=name, container=self)
         dataservice.save()
+
+        if duplicate_of:
+            dataservice.parent = duplicate_of
+            dataservice.save()
+            for mfile in duplicate_of.mfile_set.all():
+                newmfile = mfile.duplicate(save=False, service=dataservice)
+                newmfile.service = dataservice
+                newmfile.save()
+            for mfolder in duplicate_of.mfolder_set.all():
+                newmfolder= mfolder.duplicate(save=False, service=dataservice)
+                newmfolder.service = dataservice
+                newmfolder.save()
 
         serviceauth = Auth(base=dataservice, authname="full")
         serviceauth.setroles(["serviceadmin"])
@@ -1069,19 +1080,6 @@ class DataServiceTask(models.Model):
     def __unicode__(self):
         return "Task %s for %s" % (self.task_name, self.taskset.name)
 
-# Chunk Size - 50Mb
-CHUNK_SIZE = 1024 * 1024 * 50
-
-def fbuffer(f, length, chunk_size=CHUNK_SIZE):
-    to_read = int(length)
-    while to_read > 0:
-        chunk = f.read(chunk_size)
-        to_read = to_read - chunk_size
-        if not chunk:
-            break
-        yield chunk
-
-
 class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer, blank=True, null=True)
     parent = models.ForeignKey('DataService', blank=True, null=True,
@@ -1188,13 +1186,7 @@ class DataService(NamedBase):
             service.save()
             return service
         elif self.container:
-            service = self.container.create_data_service(name)
-            service.parent = self
-            service.save()
-            for mfile in self.mfile_set.all():
-                newmfile = mfile.duplicate(save=False, service=service)
-                newmfile.service = service
-                newmfile.save()
+            service = self.container.create_data_service(name, duplicate_of=self)
             return service
         else:
             return HttpResponseBadRequest()
@@ -1367,72 +1359,7 @@ class DataService(NamedBase):
         length = 0
 
         if request:
-            rangestart = -1
-            rangeend = -1
-
-            if 'CONTENT_LENGTH' in request.META:
-                length = request.META['CONTENT_LENGTH']
-            elif 'HTTP_CONTENT_LENGTH' in request.META:
-                length = request.META['HTTP_CONTENT_LENGTH']
-
-            if 'RANGE' in request.META:
-                range_header = request.META['RANGE']
-                byte, range = range_header.split('=')
-                ranges = range.split('-')
-
-                if len(ranges) != 2:
-                    return HttpResponseBadRequest(
-                            "Do not support range '%s' ", range_header)
-
-                rangestart = int(ranges[0])
-                rangeend = int(ranges[1])
-                length = rangeend - rangestart
-            elif 'HTTP_RANGE' in request.META:
-                range_header = request.META['HTTP_RANGE']
-                byte, range = range_header.split('=')
-                ranges = range.split('-')
-
-                if len(ranges) != 2:
-                    return HttpResponseBadRequest(
-                            "Do not support range '%s' ", range_header)
-
-                rangestart = int(ranges[0])
-                rangeend = int(ranges[1])
-                length = rangeend - rangestart
-            input = request.META['wsgi.input']
-            emptyfile = ContentFile('')
-            temp = NamedTemporaryFile()
-
-            if rangestart != -1:
-                try:
-                    mf = open(temp.name, 'r+b')
-                    try:
-                        mf.seek(rangestart)
-                        for chunk in fbuffer(input, length):
-                            mf.write(chunk)
-                    finally:
-                        mf.close()
-                except IOError:
-                    logging.error(
-                        "Error writing partial content to MFile '%s'",
-                            temp.name)
-                    pass
-            else:
-                try:
-                    mf = open(temp.name, 'wb')
-                    logging.info(temp.name)
-                    try:
-                        for chunk in fbuffer(input, length):
-                            mf.write(chunk)
-                    finally:
-                        mf.close()
-                except IOError:
-                    logging.error(
-                        "Error writing content to MFile '%s'", temp.name)
-                    pass
-            mfile = MFile(name=name, service=service, empty=True)
-            mfile.file.save(name, File(temp))
-
+            utils.write_request_to_field(request, mfile.file, name)
         elif file == None:
             emptyfile = ContentFile('')
             mfile = MFile(name=name, service=service, empty=True, duplicate_of=duplicate_of)
@@ -1481,7 +1408,23 @@ class MFolder(NamedBase):
     service = models.ForeignKey(DataService)
     parent = models.ForeignKey('self', null=True)
 
-    def duplicate(self, name, parent):
+    def duplicate(self, save=True, service=None):
+        if service:
+            new_mfolder = service.create_mfolder(self.name, folder=self.folder,
+                                            duplicate_of=self)
+        else:
+            new_mfolder = self.service.create_mfolder(self.name,
+                                            folder=self.folder,
+                                            duplicate_of=self)
+        if save:
+            new_mfolder.save()
+
+        return new_mfolder
+
+    def make_copy(self, name, parent):
+        
+        if name == None:
+            name = self.name
 
         new_mfolder = MFolder(name=name, service=self.service, parent=parent)
         new_mfolder.save()
@@ -1493,7 +1436,7 @@ class MFolder(NamedBase):
             new_mfile.save()
 
         for submfolder in self.mfolder_set.all():
-            new_submfolder = submfolder.duplicate(submfolder.name, new_mfolder)
+            new_submfolder = submfolder.make_copy(submfolder.name, new_mfolder)
             new_submfolder.save()
 
         new_mfolder.save()
@@ -1757,88 +1700,7 @@ class MFile(NamedBase):
         length = 0
 
         if request:
-            chunked = False
-            ranged = False
-            rangestart = -1
-            rangeend = -1
-
-            if 'CONTENT_LENGTH' in request.META:
-                length = request.META['CONTENT_LENGTH']
-            elif 'HTTP_CONTENT_LENGTH' in request.META:
-                length = request.META['HTTP_CONTENT_LENGTH']
-
-            if 'RANGE' in request.META:
-                range_header = request.META['RANGE']
-                byte, range = range_header.split('=')
-                ranges = range.split('-')
-
-                if len(ranges) != 2:
-                    return HttpResponseBadRequest(
-                            "Do not support range '%s' ", range_header)
-
-                rangestart = int(ranges[0])
-                rangeend = int(ranges[1])
-                length = rangeend - rangestart
-                ranged = True
-            elif 'HTTP_RANGE' in request.META:
-                range_header = request.META['HTTP_RANGE']
-                byte, range = range_header.split('=')
-                ranges = range.split('-')
-
-                if len(ranges) != 2:
-                    return HttpResponseBadRequest(
-                            "Do not support range '%s' ", range_header)
-
-                rangestart = int(ranges[0])
-                rangeend = int(ranges[1])
-                length = rangeend - rangestart
-                ranged = True
-
-            if 'TRANSFER_ENCODING' in request.META:
-                encoding_header = request.META['TRANSFER_ENCODING']
-                if encoding_header.find('chunked') != -1:
-                    chunked = True
-
-            if 'HTTP_TRANSFER_ENCODING' in request.META:
-                encoding_header = request.META['HTTP_TRANSFER_ENCODING']
-                if encoding_header.find('chunked') != -1:
-                    chunked = True
-
-            if chunked:
-                return HttpResponseBadRequest("Chunking Not Supported")
-
-            input = request.META['wsgi.input']
-
-            if rangestart != -1:
-                try:
-                    mf = open(self.file.path, 'r+b')
-                    try:
-                        mf.seek(rangestart)
-                        for chunk in fbuffer(input, length):
-                            mf.write(chunk)
-                    finally:
-                        mf.close()
-                except IOError:
-                    logging.error(
-                        "Error writing partial content to MFile '%s'",
-                                    self.file.path)
-                    pass
-            else:
-                try:
-                    mf = open(self.file.path, 'wb')
-                    logging.info(self.file.path)
-                    try:
-                        for chunk in fbuffer(input, length):
-                            mf.write(chunk)
-                    finally:
-                        mf.close()
-                except IOError:
-                    logging.error("Error writing content to MFile '%s'",
-                                    self.file.path)
-                    pass
-
-            self.save()
-
+            write_request_to_field(request, self.file , self.name)
         else:
             if type(file) == django.core.files.base.ContentFile:
                 self.file.save(name, file)

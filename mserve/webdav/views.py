@@ -698,11 +698,11 @@ class DavServer(object):
             isDestFo,isDestFi,dest_object = _get_resource_for_path(dest_path,self.service,self.id)
 
             if not isDestFo:
-                new_mfolder = object.duplicate(file_or_folder,parentFo)
+                new_mfolder = object.make_copy(file_or_folder,parentFo)
                 new_mfolder.save()
             else:
                 dest_object.delete()
-                new_mfolder = object.duplicate(file_or_folder,parentFo)
+                new_mfolder = object.make_copy(file_or_folder,parentFo)
                 new_mfolder.save()
                 created = False
 
