@@ -536,6 +536,8 @@ install_mod_auth_token() {
 	./configure || f_ "failed to configure mod_auth_token"
 	make || f_ "failed to compile successfully mod_auth_token"
 	make install || f_ "failed to install mod_auth_token"
+        rm -rf mod_auth_token-1.0.5.tar.gz
+        rm -rf mod_auth_token-1.0.5
 }
 
 
