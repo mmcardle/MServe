@@ -36,6 +36,7 @@ import sys
 import logging
 from django.core.files.temp import NamedTemporaryFile
 from django.http import HttpResponseBadRequest
+from django.core.files import File
 
 fmt = "%3.2f"
 

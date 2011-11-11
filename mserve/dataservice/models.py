@@ -1700,7 +1700,7 @@ class MFile(NamedBase):
         length = 0
 
         if request:
-            write_request_to_field(request, self.file , self.name)
+            utils.write_request_to_field(request, self.file , self.name)
         else:
             if type(file) == django.core.files.base.ContentFile:
                 self.file.save(name, file)
