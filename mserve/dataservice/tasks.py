@@ -103,17 +103,17 @@ def _save_joboutput_thumb(outputid,image):
     joboutput = JobOutput.objects.get(id=outputid)
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
-    return _save_topath(tfile, joboutput.get_upload_thumb_path(), field=joboutput.thumb )
+    return _save_topath(tfile, joboutput.get_upload_thumb_path(), joboutput.thumb )
 
-def _save_joboutput(outputid,file):
+def _save_joboutput(outputid, file):
     from mserve.jobservice.models import JobOutput
     joboutput = JobOutput.objects.get(id=outputid)
-    return _save_topath(file, joboutput.get_upload_path(), field=joboutput.file)
+    return _save_topath(file, joboutput.get_upload_path(), joboutput.file)
 
-def _save_backupfile(backupid,file):
+def _save_backupfile(backupid, file):
     from mserve.dataservice.models import BackupFile
     backupfile = BackupFile.objects.get(id=backupid)
-    return _save_topath(file, backupfile.get_upload_path(), field=backupfile.file)
+    return _save_topath(file, backupfile.get_upload_path(), backupfile.file)
 
 def _save_thumb(mfileid,image):
     from mserve.dataservice.models import MFile
@@ -121,7 +121,7 @@ def _save_thumb(mfileid,image):
     path = mfile.get_upload_thumb_path()
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
-    return _save_topath(tfile, path, field=mfile.thumb)
+    return _save_topath(tfile, path, mfile.thumb)
 
 def _save_poster(mfileid,image):
     from mserve.dataservice.models import MFile
@@ -129,48 +129,47 @@ def _save_poster(mfileid,image):
     path = mfile.get_upload_poster_path()
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
-    return _save_topath(tfile,path, field=mfile.poster)
+    return _save_topath(tfile,path, mfile.poster)
 
 def _save_proxy(mfileid,proxy):
     from mserve.dataservice.models import MFile
     mfile = MFile.objects.get(id=mfileid)
     path = mfile.get_upload_proxy_path()
-    return _save_topath(proxy, path, field=mfile.proxy)
+    return _save_topath(proxy, path, mfile.proxy)
 
-def _save_topath(file, path, field=None):
+def _save_topath(file, path, filefield):
     for name in settings.FILE_TRANSPORTS.keys():
         transport = settings.FILE_TRANSPORTS[name]
         logging.debug("Trying transport %s" % name)
         if transport["schema"] == "http" or transport["schema"] == "https":
             try:
                 resp = StringIO.StringIO()
-
                 remotemfile = '%s://%s:%s%s' % (transport["schema"],transport["netloc"],transport["port"],path)
-                logging.debug("remotemfile %s" % remotemfile)
-                resp = StringIO.StringIO()
-
-                f = open(file.name)
+                logging.debug("POSTing to '%s'" % remotemfile)
                 c = pycurl.Curl()
+                http_post = \
+                    [
+                        (str(filefield.field.name),
+                        (c.FORM_FILE, str(file.name )))
+                    ]
+                c.setopt(c.POST, 1)
+                c.setopt(c.HTTPPOST, http_post )
                 c.setopt(c.URL, str(remotemfile))
-                c.setopt(c.PUT, 1)
-                c.setopt(c.INFILE, f)
-                c.setopt(c.INFILESIZE, os.path.getsize(f.name))
                 c.setopt(c.WRITEFUNCTION, resp.write)
                 c.perform()
                 status = c.getinfo(c.HTTP_CODE)
                 c.close()
-
                 if status > 400:
                     logging.warn("Transport %s return error status code '%s' " % (name,status))
                 else:
-                    return f.name
+                    return file.name
             except Exception as e:
                 logging.warn("Could not put MFile to transport '%s'"%name)
                 logging.warn(e)
         elif transport["schema"] == "direct":
-            if field != None:
-                field.save(os.path.basename(file.name), File(file))
-                return field.path
+            if filefield != None:
+                filefield.save(os.path.basename(file.name), File(file))
+                return filefield.path
             else:
                 logging.error("Transport Schema set to direct, but no field object provided")
     raise Exception("Could not put Mfile to any transports")

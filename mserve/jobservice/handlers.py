@@ -187,10 +187,8 @@ class JobHandler(BaseHandler):
 
 class JobOutputHandler(BaseHandler):
     model = JobOutput
-    fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
-
-class JobOutputContentsHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT')
+    fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
 
     def update(self, request, outputid, field=None):
         joboutput = JobOutput.objects.get(id=outputid)
@@ -203,29 +201,25 @@ class JobOutputContentsHandler(BaseHandler):
 
         return {"message":"updated job"}
 
-    def create(self, request, outputid):
+    def create(self, request, outputid, field=None):
         joboutput = JobOutput.objects.get(id=outputid)
 
-        logging.info(request.POST)
-        logging.info(request.FILES)
+        if field == "thumb":
+            file = request.FILES["thumb"]
+            joboutput.thumb.save("thumb.png", file, save=True)
+            return {"message":"updated job output thumb"}
 
-        if request.POST.has_key("name"):
-            name = request.POST["name"]
-            if request.FILES.has_key("file"):
-                file = request.FILES["file"]
-                joboutput.thumb.save(name, file, save=True)
-            else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request! no file in request.")
-                return r
+        if field == "file":
+            file = request.FILES["file"]
+            joboutput.file.save(joboutput.name, file, save=True)
+            logging.info("request.FILES SAVED")
+            return {"message":"updated job output"}
         else:
             r = rc.BAD_REQUEST
-            r.write("Invalid Request! no name in request.")
+            r.write("Invalid Request! no file in request.")
             return r
 
-        return joboutput
-
-    def read(self, request, outputid):
+    def read(self, request, outputid, field=None):
 
         joboutput = JobOutput.objects.get(id=outputid)
 

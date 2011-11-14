@@ -32,7 +32,7 @@ from jobservice.handlers import *
 
 job_handler = Resource(JobHandler)
 jobservice_handler = Resource(JobServiceHandler)
-joboutput_handler = Resource(JobOutputContentsHandler)
+joboutput_handler = Resource(JobOutputHandler)
 
 urlpatterns = patterns('',
 
@@ -41,7 +41,8 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<authid>[^/]+)/jobs/$', job_handler),
     url(r'^jobs/$', job_handler),
     url(r'^jobs/(?P<jobid>[^/]+)/$', job_handler),
-    url(r'^joboutputs/(?P<outputid>[^/]+)/contents/$', joboutput_handler, name="joboutput_upload"),
+    url(r'^joboutputs/(?P<outputid>[^/]+)/$', joboutput_handler, name="joboutput"),
+    url(r'^joboutputs/(?P<outputid>[^/]+)/file/$', joboutput_handler, {"field":"file"}, name="joboutput_upload"),
     url(r'^joboutputs/(?P<outputid>[^/]+)/thumb/$', joboutput_handler, {"field":"thumb"}, name="joboutput_upload_thumb"),
 
     # Tasks

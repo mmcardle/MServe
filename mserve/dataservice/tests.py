@@ -776,8 +776,10 @@ class APITest(TestCase):
         service = container.create_data_service("Service1")
 
         # GET container
-        props = service.do("GET","properties")
-        self.failUnlessEqual(len(props), 2)
+        props = service.do("GET", "properties")
+        for prop in props:
+            self.assertTrue(prop.property != None)
+            self.assertTrue(prop.value != None)
 
         usagesresult = service.do("GET","usages")
         self.failUnlessEqual(len(usagesresult["usages"]), 1)
@@ -787,7 +789,9 @@ class APITest(TestCase):
 
         # PUT container
         props = service.do("PUT","properties",{"accesspeed":100})
-        self.failUnlessEqual(len(props), 2)
+        for prop in props:
+            if prop.property == "accesspeed":
+                self.assertTrue(prop.value != 100)
 
         shouldbe403_1 = service.do("PUT","usages")
         self.failUnlessEqual(type(shouldbe403_1), HttpResponseForbidden)
@@ -883,14 +887,20 @@ class APITest(TestCase):
         self.failUnlessEqual(len(service.do("GET","mfiles")), 2)
         self.failUnlessEqual(len(service.do("GET","mfiles")), len(subservice.do("GET","mfiles")))
 
+        # File 1 starts off with 'new content'
+        # File 2 starts off with 'new content2'
+        # Write 'XXX' over 'new content2' giving 'XXX content2'
+        # Access file through subservice and shold return new content
+
         file1.file.open()
         filecontents1 = file1.file.read()
         self.failUnlessEqual(filecontents1, 'new content')
         file1.file.close()
 
         try:
-            wfile = open(file2.file.path,'r+b')
+            wfile = open(file2.file.path,'r+')
             try:
+                wfile.seek(0)
                 wfile.write('XXX')
             finally:
                 wfile.close()
@@ -902,7 +912,7 @@ class APITest(TestCase):
         self.failUnlessEqual(filecontents2, 'XXX content2')
         file2.file.close()
 
-        readfile = subservice.do("GET","mfiles")[0]
+        readfile = subservice.do("GET","mfiles")[1]
         readfile.file.open()
         filecontents3 = readfile.file.read()
         self.failUnlessEqual(filecontents3, 'XXX content2')
@@ -925,7 +935,9 @@ class APITest(TestCase):
 
         # GET service auth
         props = service_auth.do("GET","properties")
-        self.failUnlessEqual(len(props), 2)
+        for prop in props:
+            self.assertTrue(prop.property != None)
+            self.assertTrue(prop.value != None)
 
         usagesresult = service_auth.do("GET","usages")
         self.failUnlessEqual(len(usagesresult["usages"]), 1)
@@ -935,7 +947,9 @@ class APITest(TestCase):
 
         # PUT
         props = service_auth.do("PUT","properties",{"accesspeed":100})
-        self.failUnlessEqual(len(props), 2)
+        for prop in props:
+            if prop.property == "accesspeed":
+                self.assertTrue(prop.value != 100)
 
         shouldbe403_1 = service_auth.do("PUT","usages")
         self.failUnlessEqual(type(shouldbe403_1), HttpResponseForbidden)
@@ -1047,7 +1061,9 @@ class APITest(TestCase):
 
         # GET service auth
         props = service_auth.do("GET","properties")
-        self.failUnlessEqual(len(props), 2)
+        for prop in props:
+            self.assertTrue(prop.property != None)
+            self.assertTrue(prop.value != None)
 
         usagesresult = service_auth.do("GET","usages")
         self.failUnlessEqual(len(usagesresult["usages"]), 1)

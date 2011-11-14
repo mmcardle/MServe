@@ -453,6 +453,17 @@ class BackupFileHandler(BaseHandler):
             return BackupFile.objects.get(id=backupid)
         return {}
 
+    def create(self, request, backupid):
+        backupfile = BackupFile.objects.get(pk=backupid)
+        if request.FILES.has_key("file"):
+            file = request.FILES["file"]
+            backupfile.file.save(backupfile.name, file, save=True)
+            return {"message":"updated backup file"}
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request! no file in request.")
+            return r
+
     def update(self, request, backupid):
         backupfile = BackupFile.objects.get(pk=backupid)
         try:
@@ -518,7 +529,6 @@ class MFileHandler(BaseHandler):
 
         form = UpdateMFileForm(request.POST,request.FILES)
         if form.is_valid(): 
-            
             file = request.FILES['file']
             mfile = MFile.objects.get(pk=id)
             logging.info("Update %s with file %s" % (id,file))
@@ -527,22 +537,38 @@ class MFileHandler(BaseHandler):
             mfile.size = file.size
             mfile.save()
             mfile.post_process()
-            
             backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
             backup.save()
-
             return mfile
-
         else:
             r = rc.BAD_REQUEST
             logging.info("Bad Form %s" % (form))
             r.write("Invalid Request!")
             return r
 
-    def create(self, request, id=None ,serviceid=None, authid=None):
-        logging.debug("Create MFile")
+    def create(self, request, id=None ,serviceid=None, authid=None, field=None):
 
-        form = MFileForm(request.POST,request.FILES)
+        if field:
+            try:
+                mfile = MFile.objects.get(pk=id)
+                if field == "thumb":
+                    file = request.FILES[field]
+                    mfile.thumb.save("thumb.png", file, save=True)
+                    return {"message":"updated thumb"}
+                if field == "poster":
+                    file = request.FILES[field]
+                    mfile.poster.save("poster.png", file, save=True)
+                    return {"message":"updated poster"}
+                if field == "proxy":
+                    file = request.FILES[field]
+                    mfile.proxy.save("proxy.mp4", file, save=True)
+                    return {"message":"updated proxy"}
+            except MFile.DoesNotExist:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request!")
+                return r
+
+        form = MFileForm(request.POST, request.FILES)
         if form.is_valid():
 
             kwargs = {}
@@ -552,7 +578,6 @@ class MFileHandler(BaseHandler):
             else:
                 file = None
                 kwargs = {"name":"Empty File","file":None}
-
 
             if serviceid:
                 service = DataService.objects.get(pk=serviceid)
