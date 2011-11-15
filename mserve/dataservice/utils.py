@@ -53,7 +53,6 @@ def fbuffer(f, length, chunk_size=CHUNK_SIZE):
         yield chunk
 
 def write_request_to_field(request, field, name):
-    print "Writing request %s to %s " % (name, field)
     rangestart = -1
     rangeend = -1
     chunked = False
