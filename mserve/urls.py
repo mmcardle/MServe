@@ -32,8 +32,6 @@ urlpatterns = patterns('',
     (r'^', include('mserve.webdav.urls')),
     (r'^', include('mserve.mserveoauth.urls')),
 
-    (r'^openid/', include('django_openid_auth.urls')),
-
     (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/home/mm/dev/pp-dataservice/static/'}),
     (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/home/mm/mserve-test-data/www-root/mservethumbs'}),
 

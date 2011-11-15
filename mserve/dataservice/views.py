@@ -27,6 +27,8 @@
 
 import utils
 import logging
+import urlparse
+from django.conf import settings
 from models import NamedBase
 from models import HostingContainer
 from models import DataService
@@ -50,6 +52,9 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotFound
+from django.core.urlresolvers import reverse
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse
@@ -58,6 +63,13 @@ from request.models import Request
 from request.traffic import modules
 from datetime import timedelta
 from datetime import date
+from django_openid_auth.forms import OpenIDLoginForm
+from django_openid_auth.views import make_consumer
+from django_openid_auth.views import ax
+from django_openid_auth.views import render_openid_request
+from django_openid_auth.views import default_render_failure
+from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.contrib.auth.forms import AuthenticationForm
 
 MOBILE_UAS = [
 	'w3c ','acs-','alav','alca','amoi','audi','avan','benq','bird','blac',
@@ -98,8 +110,110 @@ def home(request, form=HostingContainerForm()):
         _dict["hostingcontainers"] = hostings
         _dict["form"] = form
         _dict["usagesummary"] = usagesummary
-    return render_to_response('home.html', append_dict(_dict, request), \
+        return render_to_response('home.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
+    elif request.user.is_authenticated():
+        return render_to_response('home.html', append_dict(_dict, request), \
+            context_instance=RequestContext(request))
+    else:
+        return redirect(reverse('login'))
+        from django.contrib.auth.forms import AuthenticationForm
+        from django_openid_auth.forms import OpenIDLoginForm
+        _dict["authform"] = AuthenticationForm()
+        _dict["form"] = OpenIDLoginForm()
+        return render_to_response('login.html', append_dict(_dict, request), \
+            context_instance=RequestContext(request))
+
+@csrf_protect
+@never_cache
+def login(request, template_name='login.html',
+                login_complete_view='openid-complete',
+                form_class=OpenIDLoginForm,
+                render_failure=default_render_failure,
+                redirect_field_name=REDIRECT_FIELD_NAME):
+    """Begin an OpenID login request, possibly asking for an identity URL."""
+      
+    redirect_to = request.REQUEST.get(redirect_field_name, '')
+
+    # Get the OpenID URL to try.  First see if we've been configured
+    # to use a fixed server URL.
+    openid_url = getattr(settings, 'OPENID_SSO_SERVER_URL', None)
+
+    if openid_url is None:
+        if request.POST:
+            login_form = form_class(data=request.POST)
+            if login_form.is_valid():
+                openid_url = login_form.cleaned_data['openid_identifier']
+        else:
+            login_form = form_class()
+
+        # Invalid or no form data:
+        if openid_url is None:
+            return render_to_response(template_name, {
+                    'oidform': login_form,
+                    'form': AuthenticationForm(),
+                    redirect_field_name: redirect_to
+                    }, context_instance=RequestContext(request))
+
+    error = None
+    consumer = make_consumer(request)
+    try:
+        openid_request = consumer.begin(openid_url)
+    except DiscoveryFailure, exc:
+        return render_failure(
+            request, "OpenID discovery error: %s" % (str(exc),), status=500)
+
+    # Request some user details.  If the provider advertises support
+    # for attribute exchange, use that.
+    if openid_request.endpoint.supportsType(ax.AXMessage.ns_uri):
+        fetch_request = ax.FetchRequest()
+        # We mark all the attributes as required, since Google ignores
+        # optional attributes.  We request both the full name and
+        # first/last components since some providers offer one but not
+        # the other.
+        for (attr, alias) in [
+            ('http://axschema.org/contact/email', 'email'),
+            ('http://axschema.org/namePerson', 'fullname'),
+            ('http://axschema.org/namePerson/first', 'firstname'),
+            ('http://axschema.org/namePerson/last', 'lastname'),
+            ('http://axschema.org/namePerson/friendly', 'nickname'),
+            # The myOpenID provider advertises AX support, but uses
+            # attribute names from an obsolete draft of the
+            # specification.  We request them for compatibility.
+            ('http://schema.openid.net/contact/email', 'old_email'),
+            ('http://schema.openid.net/namePerson', 'old_fullname'),
+            ('http://schema.openid.net/namePerson/friendly', 'old_nickname')]:
+            fetch_request.add(ax.AttrInfo(attr, alias=alias, required=True))
+        openid_request.addExtension(fetch_request)
+    else:
+        openid_request.addExtension(
+            sreg.SRegRequest(optional=['email', 'fullname', 'nickname']))
+
+    # Request team info
+    teams_mapping_auto = getattr(settings, 'OPENID_LAUNCHPAD_TEAMS_MAPPING_AUTO', False)
+    teams_mapping_auto_blacklist = getattr(settings, 'OPENID_LAUNCHPAD_TEAMS_MAPPING_AUTO_BLACKLIST', [])
+    launchpad_teams = getattr(settings, 'OPENID_LAUNCHPAD_TEAMS_MAPPING', {})
+    if teams_mapping_auto:
+        #ignore launchpad teams. use all django-groups
+        launchpad_teams = dict()
+        all_groups = Group.objects.exclude(name__in=teams_mapping_auto_blacklist)
+        for group in all_groups:
+            launchpad_teams[group.name] = group.name
+
+    if launchpad_teams:
+        openid_request.addExtension(teams.TeamsRequest(launchpad_teams.keys()))
+
+    # Construct the request completion URL, including the page we
+    # should redirect to.
+    return_to = request.build_absolute_uri(reverse(login_complete_view))
+    if redirect_to:
+        if '?' in return_to:
+            return_to += '&'
+        else:
+            return_to += '?'
+        return_to += urllib.urlencode({redirect_field_name: redirect_to})
+
+    return render_openid_request(request, openid_request, return_to)
 
 
 @staff_member_required

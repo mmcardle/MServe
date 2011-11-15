@@ -1,33 +1,103 @@
 {% extends "base.html" %}
 
+{% load i18n %}
+
+{% block script %}
+<style type="text/css">
+input.openid {
+    background: url({% url openid-logo %}) no-repeat;
+    background-position: 0 50%;
+    padding-left: 16px;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
-<table class="login">
+<table >
     <tr>
-        <th class="loginth">Login</th>
-        <th class="loginth">Login with OpenID</th>
+        {% if form %}
+            <th style="width: 30%" class="loginth">Login</th>
+        {% endif %}
+        <th  class="loginth">Sign in with your OpenID</th>
     </tr>
+    
     <tr>
+        {% if form %}
+        <td class="logintd">
+            <form method="post" action="{% url login %}" style="padding:10px;">
+                <table style="margin: auto;width: 80%">
+                {% if form.errors %}
+                <tr><td colspan="2">
+                    <div class="ui-widget">
+                        <div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+                                <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+                                <p>{% trans "Sorry, Login Failed: Please Check username and password" %}<br />
+                                        {% if form.next.errors %}
+                                        <span class="error">{{ form.next.errors|join:", " }}</span>
+                                        {% endif %}
+                                </p>
 
-        <td class="logintd" style="width:40%;">
-            {% if form.has_errors %}
-            <p>Your username and password didn't match. Please try again.</p>
-            {% endif %}
-            <form method="post" action="." style="padding:10px;">
-            <table>
-                <tr><th><label for="id_username">Username:</label></th><td   >{{ form.username }}</td></tr>
-            <tr><th><label for="id_password">Password:</label></th><td>{{ form.password }}</td></tr>
-            </table>
-            {% csrf_token %}
-            <input id="submit-button" type="submit" value="login" />
-            <input type="hidden" name="next" value="{{ next }}" />
+                        </div>
+                    </div>
+                 </td></tr>
+                {% endif %}
+                {% for field in form %}
+                    <tr><td colspan="2">{{ field.errors }}</td></tr>
+                    <tr><th>{{ field.label_tag }}</th><td> {{ field }}</td></tr>
+                {% endfor %}
+                    <tr><th></th><td style="text-align: right"><input id="submit-button" class="submit-button" type="submit" value="login" /></td></tr>
+                </table>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}" />
             </form>
-        </td>
 
+        </td>
+{% endif %}
         <td class="logintd" style="width:40%;vertical-align: middle;text-align: center;">
-            <a href="{% url openid-login %}?next={{ next|urlencode }}">
-                <img id="openid-button"  src="/mservemedia/images/openid-icon-100x100.png" alt="OpenID" title="Open Id Logo" />
-            </a>
+                
+                {% if oidform.errors %}
+                    <div class="ui-widget">
+                        <div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+                                <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+                                <p>{% trans "Please correct errors below:" %}<br />
+                                        {% if oidform.openid_identifier.errors %}
+                                        <span class="error">{{ oidform.openid_identifier.errors|join:", " }}</span>
+                                        {% endif %}
+                                        {% if oidform.next.errors %}
+                                        <span class="error">{{ oidform.next.errors|join:", " }}</span>
+                                        {% endif %}
+                                </p>
+
+                        </div>
+                    </div>
+                {% endif %}
+
+                <form name="fopenid" id="openid-form" action="/openid/login/" method="post">
+                {% csrf_token %}
+                    <fieldset>
+                        <legend></legend>
+                        <table cellspacing="5" border="0" style="width: 100%">
+                            <tr>
+                                <td style="vertical-align: middle"><label for="id_openid_identifier">{% trans "OpenID:" %}</label></td>
+                                <td style="vertical-align: middle">
+                                    {{ oidform.openid_identifier }}
+                                </td>
+
+                                <td style="vertical-align: middle"><input class="submit-button" name="bsignin" type="submit" value="{% trans 'Sign in' %}">
+                                </td>
+                            </tr>
+                        </table>
+                        {% if next %}
+                            <input class="submit-button" type="hidden" name="next" value="{{ next }}" />
+                        {% endif %}
+                    </fieldset>
+
+                </form>
+                <div><img id="openid-button"  src="/mservemedia/images/openid-icon-100x100.png" alt="OpenID" title="Open Id Logo" /></div>
+                <div  style="margin:5px">Or Choose an OpenID Provider...</div>
+                <input id="google-button" name="bsignin" type="submit" value="{% trans 'Sign in' %} with Google">
+                <input id="yahoo-button" name="bsignin" type="submit" value="{% trans 'Sign in' %} with Yahoo">
         </td>
 
     </tr>
@@ -36,8 +106,17 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    $("#submit-button").button()
-    $("#open-id").button()
+    $(".submit-button").button()
+    $("#google-button").button().click(function(){
+        url = "https://www.google.com/accounts/o8/id"
+        $("[name=openid_identifier]").val(url)
+        $("#openid-form").submit()
+    })
+    $("#yahoo-button").button().click(function(){
+        url = "me.yahoo.com"
+        $("[name=openid_identifier]").val(url)
+        $("#openid-form").submit()
+    })
 });
 </script>
 

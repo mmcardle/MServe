@@ -48,6 +48,8 @@ auth_handler = Resource(AuthHandler)
 usage_handler = Resource(UsageHandler)
 profile_handler = Resource(ProfileHandler)
 service_request_handler = Resource(ServiceRequestHandler)
+from django.contrib.auth.forms import AuthenticationForm
+from django_openid_auth.forms import OpenIDLoginForm
 
 urlpatterns = patterns('',
 
@@ -111,9 +113,12 @@ urlpatterns = patterns('',
     url(r'^users/requests/(?P<servicerequestid>[^/]+)/$', service_request_handler),
 
     # Account login/logout urls
-    url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
+    url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html','extra_context' : { "oidform" : OpenIDLoginForm() } }, name="login"),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),
     url(r'^accounts/profile/$', 'dataservice.views.profile'),
+    url(r'^openid/login/$', 'dataservice.views.login', {'template_name': 'login.html' }, name='openid-login'),
+    url(r'^openid/complete/$', 'django_openid_auth.views.login_complete', name='openid-complete'),
+    url(r'^openid/logo.gif$', 'django_openid_auth.views.logo', name='openid-logo'),
 
     # HTML Views
     url(r'^$',  'dataservice.views.home'),
