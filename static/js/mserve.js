@@ -875,7 +875,7 @@ $(document).ready(function(){
 });
 
 function mfile_get(mfileid){
-        window.open("/mfileapi/get/"+mfileid+"/")
+        window.open("/mfiles/"+mfileid+"/file/")
 }
 
 function getPoster(mfileid){
@@ -889,20 +889,7 @@ function getPoster(mfileid){
     });
  }
 
- function mfile_verify(mfileid){
-     url = '/mfileapi/verify/'+mfileid+'/'
-     $.getJSON(url, function(data) {
-        if(data.md5==data.mfile.checksum){
-            showMessage("Success: Verification OK","MD5: "+data.md5+"<br>Checksum: "+data.mfile.checksum)
-            //id = $("<div class='passed'><div>Success: Verification OK</div>"+ data.md5 + "</div>")
-            //$(id).appendTo("#message");
-        }else{
-            showError("Error: Verification has failed","MD5: "+data.md5+"<br>Checksum: "+data.mfile.checksum)
-        }
-    });
- }
-
- function add_auth_method(roleid){
+function add_auth_method(roleid){
 
 
     $( '#dialog-mfile-dialog' ).dialog({

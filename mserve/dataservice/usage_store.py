@@ -63,7 +63,7 @@ def startrecording(id,metric,rate,report=True):
             logging.debug("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
             logging.debug("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
-            _update_usage(usage,rate=rate)
+            update_usage(usage,rate=rate)
             if report:
                 reportusage(base)
             return usage
@@ -75,7 +75,7 @@ def startrecording(id,metric,rate,report=True):
             reportusage(base)
         return usage
 
-def _update_usage(usage,rate=None):
+def update_usage(usage,rate=None):
     if rate == None:
         rate = usage.rate
     now = datetime.datetime.now()
@@ -100,7 +100,7 @@ def updaterecording(id,metric,rate,report=True):
             logging.info("Usage allready exists for %s at current rate %s " % (usage.metric,rate))
         else:
             logging.info("Usage allready exists for %s at rate %s, changing rate to %s " % (usage.metric, usage.rate, rate))
-            _update_usage(usage,rate=rate)
+            update_usage(usage,rate=rate)
             if report:
                 reportusage(base)
             return usage

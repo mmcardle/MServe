@@ -241,6 +241,7 @@ def is_mfileauth(base):
     return hasattr(base,"mfileauth")
 
 def get_base_for_auth(auth):
+    from models import Auth
     try:
         base = auth.base
         auth = auth

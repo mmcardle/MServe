@@ -22,7 +22,6 @@
 #
 ########################################################################
 from models import RemoteMServeService
-from django.http import Http404
 from django.http import HttpResponseForbidden
 from piston.handler import BaseHandler
 from piston.utils import rc
@@ -32,19 +31,10 @@ from django.conf import settings
 from django.http import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
-from django.shortcuts import redirect
 from django.conf import settings
-from django.http import HttpResponseNotFound
 import settings as settings
-from django.contrib.admin.views.decorators import staff_member_required
-import static as static
-from dataservice.models import MFILE_GET_SIGNAL
 import utils as utils
-import usage_store as usage_store
-import time
 import logging
-import os
-import shutil
 
 sleeptime = 10
 DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
@@ -421,29 +411,6 @@ class DataServiceTaskHandler(BaseHandler):
             return r
 
 
-class DataServiceURLHandler(BaseHandler):
-
-    def create(self, request, containerid):
-        logging.info(request.POST)
-        form = DataServiceURLForm(request.POST)
-
-        if form.is_valid():
-
-            logging.info("CREATE DATASERVICE %s" % request.POST)
-
-            name = request.POST['name']
-
-            container = HostingContainer.objects.get(id=containerid)
-
-            dataservice = container.create_data_service(name)
-
-            return dataservice
-        else:
-            logging.info(form)
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
-
 class BackupFileHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = BackupFile
@@ -595,29 +562,6 @@ class MFileHandler(BaseHandler):
             r.write("Invalid Request! Submitted Form Invalid %s"% form)
             return r
 
-class MFileVerifyHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self, request, mfileid):
-        mfile = MFile.objects.get(pk=mfileid)
-        md5 = utils.md5_for_file(mfile.file)
-
-        dict= {}
-        dict["mfile"] = mfile
-        dict["md5"] = md5
-        
-        return dict
-
-class AuthContentsHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self, request, id):
-        try:
-            auth = Auth.objects.get(id=id)
-            return auth.do("GET","file")
-        except Exception as e:
-            logging.error(e)
-            raise e
 
 class RemoteMServeServiceHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -669,47 +613,6 @@ class MFileWorkflowHandler(BaseHandler):
             r.write("Invalid Request!")
             return r
 
-class RoleHandler(BaseHandler):
-    def read(self,request, id):
-        base = NamedBase.objects.get(pk=id)
-        if utils.is_container(base):
-            containerauths = Auth.objects.filter(base=base.id)
-            roles = []
-            for containerauth in containerauths:
-                roledict = []
-                for role in containerauth.getroles():
-                    roles.append(role)
-                roledict.append(roles)
-
-            dict = {}
-            dict["roles"] = set(roles)
-            return dict
-
-        if utils.is_service(base):
-            serviceauths = Auth.objects.filter(base=base.id)
-            roles = []
-            for serviceauth in serviceauths:
-                for role in serviceauth.getroles():
-                    roles.append(role)
-
-            dict = {}
-            dict["roles"] = set(roles)
-            return dict
-
-        if utils.is_mfile(base):
-            mfileauths = Auth.objects.filter(base=base.id)
-            roles = []
-            for mfileauth in mfileauths:
-                for a in mfileauth.getroles():
-                    roles.append(a)
-
-            dict = {}
-            dict["roles"] = set(roles)
-            return dict
-
-        r = rc.BAD_REQUEST
-        r.write("Invalid Request!")
-        return r
 
 class UsageHandler(BaseHandler):
     allowed_methods = ('GET')
@@ -730,30 +633,6 @@ class UsageHandler(BaseHandler):
             auth = Auth.objects.get(pk=authid)
             return auth.do("GET","usages",**request.GET)
 
-class UsageSummaryHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self,request, id, last_report=-1):
-        last = int(last_report)
-        try:
-            base = NamedBase.objects.get(pk=id)
-        except NamedBase.DoesNotExist:
-            auth = Auth.objects.get(pk=id)
-            base = utils.get_base_for_auth(auth)
-
-        if last is not -1:
-            while last == base.reportnum:
-                logging.debug("Waiting for new usage lastreport=%s" % last)
-                time.sleep(sleeptime)
-                base = NamedBase.objects.get(id=id)
-
-        usages = base.get_real_base().get_usage_summary()
-
-        result = {}
-        result["usages"] = usages
-        result["reportnum"] = base.reportnum
-
-        return result
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
@@ -858,95 +737,3 @@ class AuthHandler(BaseHandler):
         else:
             resp = rc.BAD_REQUEST
             return resp
-
-
-class ResourcesHandler(BaseHandler):
-    allowed_methods = ('GET')
-
-    def read(self, request, id, last_known=None):
-
-        if last_known == None:
-            last = -1
-        else:
-            last = int(last_known)
-        try:
-            base = NamedBase.objects.get(pk=id)
-
-            logging.debug("reportnum = %s " % (base.reportnum))
-
-            if last > base.reportnum:
-                last = base.reportnum
-
-            if last is not -1:
-                while last == base.reportnum:
-                    logging.debug("Waiting for new services lastreport=%s" % (last))
-                    time.sleep(sleeptime)
-                    base = NamedBase.objects.get(id=id)
-
-            if utils.is_container(base):
-                container = HostingContainer.objects.get(id=id)
-                ret = {}
-                ret["resources"] = container.dataservice_set.all()
-                ret["reportnum"] = container.reportnum
-                return ret
-
-            if utils.is_service(base):
-                service = DataService.objects.get(id=id)
-                resources = []
-                resources.append(list(service.mfile_set.all()))
-                resources.append(list(service.mfolder_set.all()))
-                ret = {}
-                ret["resources"] = resources
-                ret["reportnum"] = service.reportnum
-                return ret
-
-            if utils.is_mfile(base):
-                mfile = MFile.objects.get(id=id)
-                ret = {}
-                ret["resources"] = list(mfile)
-                ret["reportnum"] = mfile.reportnum
-                return ret
-        except NamedBase.DoesNotExist:
-            pass
-
-        try:
-            auth = Auth.objects.get(pk=id)
-            base = auth.base
-
-            if last is not -1:
-                while last == base.reportnum:
-                    logging.debug("Waiting for new services lastreport=%s" % (last))
-                    time.sleep(sleeptime)
-                    base = NamedBase.objects.get(id=base.id)
-
-            if utils.is_container(base):
-                container = HostingContainer.objects.get(id=base.id)
-                ret = {}
-                ret["resources"] = container.dataservice_set.all()
-                ret["reportnum"] = container.reportnum
-                return ret
-
-            if utils.is_service(base):
-                service = DataService.objects.get(id=base.id)
-                resources = []
-                resources.append(list(service.mfile_set.all()))
-                resources.append(list(service.mfolder_set.all()))
-                ret = {}
-                ret["resources"] = resources
-                ret["reportnum"] = service.reportnum
-                logging.info("RET %s" % ret)
-                return ret
-
-            if utils.is_mfile(base):
-                mfile = MFile.objects.get(id=base.id)
-                ret = {}
-                ret["resources"] = list(mfile)
-                ret["reportnum"] = mfile.reportnum
-                return ret
-
-        except Auth.DoesNotExist:
-            pass
-
-        r = rc.BAD_REQUEST
-        r.write("Unknown Resource")
-        return r

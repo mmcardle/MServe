@@ -31,7 +31,6 @@ urlpatterns = patterns('',
     (r'^', include('mserve.jobservice.urls')),
     (r'^', include('mserve.webdav.urls')),
     (r'^', include('mserve.mserveoauth.urls')),
-    (r'^', include('mserve.prestoprime.urls')),
 
     (r'^openid/', include('django_openid_auth.urls')),
 

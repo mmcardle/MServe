@@ -173,6 +173,7 @@ SERVICEREQUEST_STATES = (
 
 
 class ServiceRequest(models.Model):
+    ''' A request for a service from a user '''
     name = models.CharField(max_length=200)
     reason = models.TextField()
     profile = models.ForeignKey('MServeProfile', null=True, blank=True,
@@ -182,12 +183,15 @@ class ServiceRequest(models.Model):
     time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        '''set ordering to time'''
         ordering = ["-time"]
 
     def ctime(self):
+        ''' return the ctime for this request '''
         return self.time.ctime()
 
     def status(self):
+        ''' return the long version of the status '''
         for index, word in SERVICEREQUEST_STATES:
             if index == self.state:
                 return word
@@ -198,30 +202,32 @@ class ServiceRequest(models.Model):
 
 
 class Usage(models.Model):
-    '''The base object this report refers to'''
+    """
+    base - The base object this report refers to,
+    metric - The metric this report is recording,
+    time - Time first recorded (shouldnt change),
+    reports - Number of reports,
+    total - Sum of report values,
+    squares - Sum of squares of report values,
+    rateTime - Time the rate last changed,
+    rate - The current rate (change in value per second),
+    rateCumulative - Cumulative unreported usage before rateTime.
+    """
     base = models.ForeignKey('NamedBase', null=True, blank=True)
-    '''The metric this report is recording'''
     metric = models.CharField(max_length=4096)
-    '''Time first recorded (shouldnt change)'''
     time = models.DateTimeField(auto_now_add=True)
-    '''Number of reports'''
     reports = models.BigIntegerField(default=0)
-    '''Sum of report values'''
     total = models.FloatField(default=0)
-    '''Sum of squares of values'''
     squares = models.FloatField(default=0)
-    '''Sum of squares of values'''
     nInProgress = models.BigIntegerField(default=0)
-    '''Time the rate last changed'''
     rateTime = models.DateTimeField()
-    '''The current rate (change in value per second)'''
     rate = models.FloatField()
-    '''Cumulative unreported usage before rateTime'''
     rateCumulative = models.FloatField()
 
     @staticmethod
     def get_usage_plots(request, baseid=None):
-        types = request.GET
+        ''' Return jqplot json for usage '''
+        request_types = request.GET
         plots = []
         base = None
         try:
@@ -236,8 +242,8 @@ class Usage(models.Model):
         if base == None:
             return []
 
-        for type in types:
-            if type == "http://mserve/deliverySuccess":
+        for request_type in request_types:
+            if request_type == "http://mserve/deliverySuccess":
                 plot = {}
                 plot["type"] = "pie"
                 plot["label"] = "Delivery Success"
@@ -276,18 +282,19 @@ class Usage(models.Model):
     
     @staticmethod
     def get_full_usagesummary():
+        ''' Return all the usage '''
         usages = Usage.objects.all()
         usagesummary = Usage.usages_to_summary(usages)
-        from jobservice.models import Job
         usagesummary.extend(Usage.get_job_usagesummary(Job.objects.all()))
         return usagesummary
 
     @staticmethod
     def aggregate(usages):
-        import usage_store as usage_store
+        ''' Aggregate a set of usage objects '''
         for usage in usages:
             if usage.nInProgress > 0:
-                usage_store._update_usage(usage)
+                import usage_store
+                usage_store.update_usage(usage)
 
         return usages.values('metric') \
                 .annotate(reports=Count('reports')) \
@@ -300,6 +307,7 @@ class Usage(models.Model):
 
     @staticmethod
     def usages_to_summary(usages):
+        ''' Convert usages to a summary'''
         summary = []
         if not settings.DATABASES['default']['ENGINE'].endswith("sqlite3"):
             summary += usages.values('metric') \
@@ -320,8 +328,8 @@ class Usage(models.Model):
 
     @staticmethod
     def get_job_usagesummary(jobs):
-        from jobservice.models import Job
-        from jobservice.models import JobASyncResult
+        ''' Get usages for all Jobs '''
+
 
         asyncs = JobASyncResult.objects.filter(job__in=jobs)\
                                     .values_list("async_id",flat=True)
@@ -415,11 +423,11 @@ class Usage(models.Model):
         summary.append(runtime_usage_failed)
         return summary
 
-    def save(self):
-        super(Usage, self).save()
+    def save(self, *args, **kwargs):
+        super(Usage, self).save(*args, **kwargs)
 
     def fmt_ctime(self):
-        return self.created.ctime()
+        return self.time.ctime()
 
     def fmt_rtime(self):
         return self.rateTime.ctime()
@@ -670,8 +678,8 @@ class NamedBase(Base):
     usages = models.ManyToManyField("Usage")
     reportnum = models.IntegerField(default=1)
 
-    def save(self):
-        super(NamedBase, self).save()
+    def save(self, *args, **kwargs):
+        super(NamedBase, self).save(*args, **kwargs)
         if not self.initial_usage_recorded:
             logging.info("Processing %s ", self)
             import usage_store as usage_store
@@ -698,7 +706,7 @@ class NamedBase(Base):
             self.usages = startusages
             self.reportnum = 1
             self.initial_usage_recorded = True
-            super(NamedBase, self).save()
+            super(NamedBase, self).save(*args, **kwargs)
         else:
             self.update_usage()
 
@@ -948,10 +956,10 @@ class HostingContainer(NamedBase):
         if metric == METRIC_CONTAINER:
             return 1
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.id = utils.random_id()
-        super(HostingContainer, self).save()
+        super(HostingContainer, self).save(*args, **kwargs)
 
     def _delete_usage_(self):
         import usage_store as usage_store
@@ -1186,7 +1194,8 @@ class DataService(NamedBase):
             service.save()
             return service
         elif self.container:
-            service = self.container.create_data_service(name, duplicate_of=self)
+            service = self.container.create_data_service(name,
+                                                        duplicate_of=self)
             return service
         else:
             return HttpResponseBadRequest()
@@ -1301,10 +1310,10 @@ class DataService(NamedBase):
         except ManagementProperty.DoesNotExist:
             return DEFAULT_PROFILE
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.id = utils.random_id()
-        super(DataService, self).save()
+        super(DataService, self).save(*args, **kwargs)
 
     def clean_base(self, authid):
         servicedict = {}
@@ -1359,14 +1368,18 @@ class DataService(NamedBase):
         length = 0
 
         if request:
+            mfile = MFile(name=name, service=service, empty=True,
+                          duplicate_of=duplicate_of)
             utils.write_request_to_field(request, mfile.file, name)
         elif file == None:
             emptyfile = ContentFile('')
-            mfile = MFile(name=name, service=service, empty=True, duplicate_of=duplicate_of)
+            mfile = MFile(name=name, service=service, empty=True,
+                          duplicate_of=duplicate_of)
             mfile.file.save(name, emptyfile)
         else:
             if type(file) == django.core.files.base.ContentFile:
-                mfile = MFile(name=name, service=service, duplicate_of=duplicate_of)
+                mfile = MFile(name=name, service=service,
+                                duplicate_of=duplicate_of)
                 mfile.file.save(name, file)
                 length = mfile.file.size
             else:
@@ -1451,10 +1464,10 @@ class MFolder(NamedBase):
         else:
             return self.name
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.id = utils.random_id()
-        super(MFolder, self).save()
+        super(MFolder, self).save(*args, **kwargs)
 
 
 class MFile(NamedBase):
@@ -1859,7 +1872,7 @@ class MFile(NamedBase):
             if os.path.exists(self.file.path):
                 self.size = self.file.size
             self.empty = False
-        super(MFile, self).save()
+        super(MFile, self).save(*args, **kwargs)
 
     def _delete_usage_(self):
         import usage_store as usage_store
@@ -1867,17 +1880,13 @@ class MFile(NamedBase):
             usage_store._stoprecording_(usage, obj=self.service)
 
 
-def pre_delete_handler_mfile(sender, instance=False, **kwargs):
-    mfiles = MFile.objects.filter(duplicate_of=instance.pk)
-    logging.info("%s %s Has duplicates %s", instance, instance.id, mfiles)
-    if instance.duplicate_of:
-        dup = MFile.objects.filter(duplicate_of=instance.duplicate_of.pk)
-        #dup.delete()
-    instance._delete_usage_()
+def pre_delete_handler_mfile(sender, instance=None, **kwargs):
+    if instance:
+        instance._delete_usage_()
 
-
-def pre_delete_handler(sender, instance=False, **kwargs):
-    instance._delete_usage_()
+def pre_delete_handler(sender, instance=None, **kwargs):
+    if instance:
+        instance._delete_usage_()
 
 pre_delete.connect(pre_delete_handler_mfile, sender=MFile,
                     dispatch_uid="dataservice.models")
@@ -1928,10 +1937,10 @@ class BackupFile(NamedBase):
             if metric == METRIC_DISC:
                 return self.file.size
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.id = utils.random_id()
-        super(BackupFile, self).save()
+        super(BackupFile, self).save(*args, **kwargs)
 
 
 class ManagementProperty(models.Model):
@@ -2069,13 +2078,16 @@ class Auth(Base):
     def post(self, url, *args, **kwargs):
         return self.get_real_base().do("POST", url, *args, **kwargs)
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.id = utils.random_id()
         if not self.roles_csv:
             self.roles_csv = ""
-        super(Auth, self).save()
+        super(Auth, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return "Auth: authname=%s base=%s roles=%s "\
                 % (self.authname, self.base, ",".join(self.getroles()))
+
+from jobservice.models import Job
+from jobservice.models import JobASyncResult

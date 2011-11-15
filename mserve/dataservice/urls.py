@@ -36,7 +36,6 @@ remote_mserve_handler = Resource(RemoteMServeServiceHandler)
 managementproperty_handler = Resource(ManagementPropertyHandler)
 dataservice_handler = Resource(DataServiceHandler)
 subservice_handler = Resource(SubServiceHandler)
-dataservice_url_handler = Resource(DataServiceURLHandler)
 dataservice_profile_handler = Resource(DataServiceProfileHandler)
 dataservice_task_handler = Resource(DataServiceTaskHandler)
 dataservice_taskset_handler = Resource(DataServiceTaskSetHandler)
@@ -45,19 +44,16 @@ backupfile_handler = Resource(BackupFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
 mfile_workflow_handler = Resource(MFileWorkflowHandler)
-mfile_verify_handler = Resource(MFileVerifyHandler)
 auth_handler = Resource(AuthHandler)
-usagesummary_handler = Resource(UsageSummaryHandler)
 usage_handler = Resource(UsageHandler)
-role_handler = Resource(RoleHandler)
-resources_handler = Resource(ResourcesHandler)
 profile_handler = Resource(ProfileHandler)
 service_request_handler = Resource(ServiceRequestHandler)
-auth_contents_handler = Resource(AuthContentsHandler)
 
 urlpatterns = patterns('',
 
     # API v2
+
+    # Container URLs
     url(r'^containers/$', hosting_handler, name="hostingcontainers" ),
     url(r'^containers/(?P<id>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
     url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler, name="hostingcontainer_props" ),
@@ -66,8 +62,7 @@ urlpatterns = patterns('',
     url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler ,name="hostingcontainer_services"),
     url(r'^containers/(?P<containerid>[^/]+)/subservices/$', subservice_handler ,name="hostingcontainer_subservices"),
 
-    url(r'^remoteservices/$', remote_mserve_handler),
-
+    # Service URLs
     url(r'^services/$', dataservice_handler, name="dataservices" ),
     url(r'^services/(?P<id>[^/]+)/$', dataservice_handler, name="dataservice" ),
     url(r'^services/(?P<serviceid>[^/]+)/properties/$', managementproperty_handler, name="dataservice_props"),
@@ -82,6 +77,7 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/(?P<tasksetid>[^/]+)/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
 
+    # MFile URLs
     url(r'^mfiles/$', mfile_handler, name="mfiles"  ),
     url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler, name="mfile"  ),
     url(r'^mfiles/(?P<id>[^/]+)/thumb/$', mfile_handler, {"field":"thumb"}, name="mfile_upload_thumb"  ),
@@ -93,6 +89,7 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler, name='mfile_download'),
     url(r'^mfiles/(?P<mfileid>[^/]+)/workflows/$', mfile_workflow_handler),
 
+    # Auth URLs
     url(r'^auths/$', auth_handler  ),
     url(r'^auths/(?P<id>[^/]+)/$', auth_handler  ),
     url(r'^auths/(?P<authid>[^/]+)/properties/$', managementproperty_handler),
@@ -104,55 +101,19 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<authid>[^/]+)/mfolders/$', mfolder_handler),
     url(r'^auths/(?P<authid>[^/]+)/file/$', mfile_contents_handler),
 
+    # Other URLs
     url(r'^backups/(?P<backupid>[^/]+)/$', backupfile_handler, name="backup_upload" ),
-    
-    # API V1
+    url(r'^remoteservices/$', remote_mserve_handler),
 
-    # REST Methods 
-    #url(r'^container/$', hosting_handler),
-    #url(r'^service/$', dataservice_handler),
-    #url(r'^mfile/$', mfile_handler),
-    #url(r'^auth/$', auth_handler),
+    # User URLs
     url(r'^users/$', profile_handler,name='user'),
     url(r'^users/requests/$', service_request_handler,name='user_requests'),
     url(r'^users/requests/(?P<servicerequestid>[^/]+)/$', service_request_handler),
 
-    # REST Methods for individual resources
-    #url(r'^container/(?P<id>[^/]+)/$', hosting_handler),
-    #url(r'^service/(?P<id>[^/]+)/$', dataservice_handler),
-    #url(r'^mfile/(?P<id>[^/]+)/$', mfile_handler),
-    #url(r'^auth/(?P<id>[^/]+)/$', auth_handler),
-
-    #Global
-    url(r'^api/(?P<id>[^/]+)/resources/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/usage/$', usage_handler),
-    #url(r'^api/(?P<id>[^/]+)/property/$', property_handler),
-
-    url(r'^auth/(?P<id>[^/]+)/getcontents/$', auth_contents_handler),
-    #url(r'^api/(?P<id>[^/]+)/role/$', role_handler),
-
-    # TING specific
-    url(r'^api/(?P<id>[^/]+)/getusagesummary/$', usagesummary_handler),
-    url(r'^api/(?P<id>[^/]+)/getroles/$', role_handler),
-    url(r'^api/(?P<id>[^/]+)/resources/(?P<last_known>[^/]+)/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/getusagesummary/(?P<last_report>[^/]+)/$', usagesummary_handler),
-    url(r'^api/(?P<id>[^/]+)/getmanagedresources/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/getmanagedresources/(?P<last_known>[^/]+)/$', resources_handler),
-    url(r'^api/(?P<id>[^/]+)/getmanagementproperties/$', managementproperty_handler),
-    url(r'^api/(?P<id>[^/]+)/setmanagementproperty/$', managementproperty_handler),
-
-    # TING Container Methods
-    url(r'^containerapi/(?P<containerid>[^/]+)/makeserviceinstance/$', dataservice_url_handler),
-
-    # TING Service Methods
-    url(r'^serviceapi/(?P<serviceid>[^/]+)/create/$', mfile_handler),
-
-    # TING MFile Methods
-    url(r'^mfileapi/get/(?P<mfileid>[^/]+)/$', mfile_contents_handler),
-    url(r'^mfileapi/(?P<id>[^/]+)/$', mfile_handler),
-
-    # This should be a job
-    url(r'^mfileapi/verify/(?P<mfileid>[^/]+)/$', mfile_verify_handler),
+    # Account login/logout urls
+    url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
+    url(r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),
+    url(r'^accounts/profile/$', 'dataservice.views.profile'),
 
     # HTML Views
     url(r'^$',  'dataservice.views.home'),
@@ -164,7 +125,5 @@ urlpatterns = patterns('',
     url(r'^browse/(?P<baseid>[^/]+)/$', "dataservice.views.render_base"),
     url(r'^redirect/$', 'dataservice.views.redirect_to', name="redirect_to"),
 
-    url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
-    url(r'^accounts/logout/$', 'django.contrib.auth.views.logout_then_login'),
-    url(r'^accounts/profile/$', 'dataservice.views.profile'),
+
 )
