@@ -633,6 +633,28 @@ class UsageHandler(BaseHandler):
             auth = Auth.objects.get(pk=authid)
             return auth.do("GET","usages",**request.GET)
 
+class UsageSummaryHandler(BaseHandler):
+    allowed_methods = ('GET')
+
+    def read(self, request, containerid=None, serviceid=None, mfileid=None, authid=None ):
+        if containerid or serviceid or mfileid:
+            base = NamedBase.objects.get(id__in=[containerid,serviceid,mfileid])
+            result = {}
+            result["usages"] = base.get_usage_summary()
+            result["reportnum"] = base.reportnum
+            return result
+        elif authid:
+            auth = Auth.objects.get(pk=authid)
+            base = utils.get_base_for_auth(auth)
+            result = {}
+            result["usages"] = base.get_real_base().get_usage_summary()
+            result["reportnum"] = base.reportnum
+            return result
+        else:
+            r = rc.BAD_REQUEST
+            r.write("Invalid Request!")
+            return r
+
 
 class ManagementPropertyHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST')
