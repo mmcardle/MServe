@@ -33,6 +33,7 @@ from dataservice.tasks import thumbvideooutput
 from celery.result import TaskSetResult
 from djcelery.models import TaskState
 from django.http import HttpResponseNotFound
+import static
 
 FILE_FIELD_LENGTH = 400
 thumbpath = settings.THUMB_PATH
@@ -61,6 +62,7 @@ class Job(NamedBase):
     @staticmethod
     def get_job_plots(request, baseid=None):
         taskstates = TaskState.objects.none()
+        tasks_whitelist = static.job_descriptions.keys()
 
         if baseid:        
             jobs = None
@@ -97,9 +99,11 @@ class Job(NamedBase):
 
             asyncs = JobASyncResult.objects.filter(job__in=jobs).values_list("async_id",flat=True)
             taskstates = TaskState.objects.filter(task_id__in=asyncs)
+            taskstates = taskstates.filter(name__in=tasks_whitelist)
 
         elif request.user.is_staff:
             taskstates = TaskState.objects.all()
+
 
         plots = []
         types = request.GET
@@ -162,7 +166,8 @@ class Job(NamedBase):
             if type == "jobsbytype":
                 jobplot = {}
                 jobplot["type"] = "pie"
-                jobplot["label"] = "Jobs by Type",
+                jobplot["label"] = "Jobs by Type"
+
                 query = taskstates.values("name").annotate(n=Count("name"))
                 if query.count() == 0:
                     data = []
