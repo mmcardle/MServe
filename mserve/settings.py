@@ -41,7 +41,7 @@ except ImportError:
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(pathname)s %(lineno)d %(asctime)s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M:%S',
     #change as needed
@@ -120,6 +120,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'dataservice.middleware.ResponseMiddleware',
     'request.middleware.RequestMiddleware'
 )
@@ -187,8 +188,13 @@ INSTALLED_APPS = (
     'jobservice',
     'djcelery',
     'request',
-    #'django_extensions',
 )
+
+# Setup debug toolbar
+if DEBUG:
+    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+    INTERNAL_IPS = ('127.0.0.1',)
+    INSTALLED_APPS += ('debug_toolbar',)
 
 # Do POSTMark setup
 POSTMARK = False
@@ -230,7 +236,6 @@ FILE_TRANSPORTS = {
 
 if DEBUG:
     FILE_TRANSPORTS["mfile"] = { "schema" : "direct" }
-
 
 # JOB CONFIG
 USE_CELERY=True
