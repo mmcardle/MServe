@@ -30,6 +30,7 @@ admin.autodiscover()
 from piston.resource import Resource
 from dataservice.handlers import *
 from jobservice.handlers import *
+from django_openid_auth.forms import OpenIDLoginForm
 
 hosting_handler = Resource(HostingContainerHandler)
 remote_mserve_handler = Resource(RemoteMServeServiceHandler)
@@ -46,10 +47,9 @@ mfile_contents_handler = Resource(MFileContentsHandler)
 mfile_workflow_handler = Resource(MFileWorkflowHandler)
 auth_handler = Resource(AuthHandler)
 usage_handler = Resource(UsageHandler)
+usagesummary_handler = Resource(UsageSummaryHandler)
 profile_handler = Resource(ProfileHandler)
 service_request_handler = Resource(ServiceRequestHandler)
-from django.contrib.auth.forms import AuthenticationForm
-from django_openid_auth.forms import OpenIDLoginForm
 
 urlpatterns = patterns('',
 
@@ -60,6 +60,7 @@ urlpatterns = patterns('',
     url(r'^containers/(?P<id>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
     url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler, name="hostingcontainer_props" ),
     url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler ,name="hostingcontainer_usages"),
+    url(r'^containers/(?P<containerid>[^/]+)/usagesummary/$', usagesummary_handler),
     url(r'^containers/(?P<containerid>[^/]+)/auths/$', auth_handler ,name="hostingcontainer_auths"),
     url(r'^containers/(?P<containerid>[^/]+)/services/$', dataservice_handler ,name="hostingcontainer_services"),
     url(r'^containers/(?P<containerid>[^/]+)/subservices/$', subservice_handler ,name="hostingcontainer_subservices"),
@@ -69,6 +70,7 @@ urlpatterns = patterns('',
     url(r'^services/(?P<id>[^/]+)/$', dataservice_handler, name="dataservice" ),
     url(r'^services/(?P<serviceid>[^/]+)/properties/$', managementproperty_handler, name="dataservice_props"),
     url(r'^services/(?P<serviceid>[^/]+)/usages/$', usage_handler, name="dataservice_usages"),
+    url(r'^services/(?P<serviceid>[^/]+)/usagesummary/$', usagesummary_handler),
     url(r'^services/(?P<serviceid>[^/]+)/auths/$', auth_handler, name="dataservice_auths"),
     url(r'^services/(?P<serviceid>[^/]+)/mfiles/$', mfile_handler, name="dataservice_mfiles"),
     url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler, name="dataservice_mfolders"),
@@ -87,6 +89,7 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<id>[^/]+)/proxy/$', mfile_handler, {"field":"proxy"}, name="mfile_upload_proxy"   ),
     url(r'^mfiles/(?P<mfileid>[^/]+)/properties/$', managementproperty_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/usages/$', usage_handler),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/usagesummary/$', usagesummary_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/auths/$', auth_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler, name='mfile_download'),
     url(r'^mfiles/(?P<mfileid>[^/]+)/workflows/$', mfile_workflow_handler),
@@ -96,6 +99,7 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<id>[^/]+)/$', auth_handler  ),
     url(r'^auths/(?P<authid>[^/]+)/properties/$', managementproperty_handler),
     url(r'^auths/(?P<authid>[^/]+)/usages/$', usage_handler),
+    url(r'^auths/(?P<authid>[^/]+)/usagesummary/$', usagesummary_handler),
     url(r'^auths/(?P<authid>[^/]+)/auths/$', auth_handler, {"murl":"auths"}),
     url(r'^auths/(?P<authid>[^/]+)/base/$', auth_handler, {"murl":"base"}),
     url(r'^auths/(?P<authid>[^/]+)/services/$', dataservice_handler),
