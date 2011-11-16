@@ -23,7 +23,7 @@ function load_usage_auth(authid){
 function load_usagesummary_auth(authid){
      $.ajax({
        type: "GET",
-       url: '/api/'+authid+'/getusagesummary/',
+       url: '/auths/'+authid+'/usagesummary/',
        success: function(summary){
            $( "#usageSummaryTemplate" ).tmpl( summary.usages ).appendTo( "#usagesummarycontent" );
        }

@@ -617,9 +617,9 @@
 </script>
 
 <script id="graphTemplate" type="text/x-jquery-tmpl">
-    <table class="graphtable graphtable-${type} graphtable-${size}">
-        <tr><th>${label}</th></tr>
-        <tr><td><div class='graph' style="width:95%;height:200px;"></div></td></tr>
+    <table title="Chart for ${label}" class="graphtable graphtable-${type} graphtable-${size}">
+        <tr><th>${getShort(label,20)}</th></tr>
+        <tr><td><div class='graph' style="width:95%;height:300px;"></div></td></tr>
     </table>
 </script>
 

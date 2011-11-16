@@ -5,7 +5,6 @@
 {% endblock %}
 
 {% load mservetags %}
-<h3>Usage Summary</h3>
 
 <div id="mservelast24" style="margin-top: 20px;"></div>
 <div class="clr"></div>
@@ -45,43 +44,57 @@ if(hash=="tabs-usage"){
 
 </script>
 
-<h4>Statistics</h4>
+<h3>Usage Summary</h3>
 <div id="usagecontent" >
 {% if usagesummary %}
     <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr><th style="text-align: left">Metric Name</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Sum</th><th>Std. Dev</th><th>Variance</th></tr>
-        {% for summary in usagesummary%}
+        <tr>
+            <th style="text-align: left">Metric Name</th>
+            <th>Minimum</th>
+            <th>Maximum</th>
+            <th>Count</th>
+            <th>Average</th>
+            <th>Total</th>
+            <th>Standard Deviation</th>
+            <th style="display: none" class="var">Variance</th>
+        </tr>
+        {% for summary in usagesummary %}
+            {% if summary.n == 0 %}
             <tr>
                 <td style="text-align: left;"><b>{{summary.metric}}</b></td>
-                <td align="right"><script>document.write(number_format('{{summary.min}}', 2, '.', ','))</script></td>
-                <td align="right"><script>document.write(number_format('{{summary.max}}', 2, '.', ','))</script></td>
-                <td align="right"><script>document.write(number_format('{{summary.n}}', 0, '.', ','))</script></td>
-                <td align="right"><script>document.write(number_format('{{summary.avg}}', 2, '.', ','))</script></td>
-                <td align="right"><script>document.write(number_format('{{summary.sum}}', 2, '.', ','))</script></td>
-                <td align="right"><script>document.write(number_format('{{summary.stddev}}', 2, '.', ','))</script></td>
-                <td align="right"><script>document.write(number_format('{{summary.variance}}', 2, '.', ','))</script></td>
+                <td align="right">-</td>
+                <td align="right">-</td>
+                <td align="right">0</td>
+                <td align="right">-</td>
+                <td align="right">-</td>
+                <td align="right">-</td>
+                <td style="display: none" class="var" align="right">-</td>
             </tr>
-        {% endfor %}
-    </table>
-{% endif %}
-
-<h3>Historical Usage</h3>
-{% if usage %}
-    <table class="table_usage" cellpadding="5" cellspacing="5">
-        {% for u in usage %}
-            {% if u.rate == 0.0 %}
+            {% else %}
             <tr>
-                <td>Usage of <a href="/browse/{{u.base.id}}">{{u.base}}</a>&nbsp;</td><td><b>{{u.metric}}</b></td><td>at <b>{{u.fmt_rtime}}</b> was<td><b>{{u.total}}</b></td>
-            </tr>
-             {% else%}
-            <tr>
-                <td>Usage of <a href="/browse/{{u.base.id}}">{{u.base}}</a>&nbsp;</td><td><b>{{u.metric}}</b></td><td>at <b>{{u.fmt_rtime}}</b> was<td><b>{{u.rate}} per second</b></td>
+                <td style="text-align: left;"><b>{{summary.metric}}</b></td>
+                <td class="green" align="right" title="{{summary.min}}"><script>document.write(scaleNumber('{{summary.min}}', 0, '.', ','))</script></td>
+                <td class="red"   align="right" title="{{summary.max}}"><script>document.write(scaleNumber('{{summary.max}}', 0, '.', ','))</script></td>
+                <td               align="right" title="{{summary.n}}"><script>document.write(scaleNumber('{{summary.n}}', 0, '.', ','))</script></td>
+                <td class="dblue"  align="right" title="{{summary.avg}}"><script>document.write(scaleNumber('{{summary.avg}}', 2, '.', ','))</script></td>
+                <td               align="right" title="{{summary.sum}}"><script>document.write(scaleNumber('{{summary.sum}}', 2, '.', ','))</script></td>
+                <td               align="right" title="{{summary.stddev}}"><script>document.write(scaleNumber('{{summary.stddev}}', 2, '.', ','))</script></td>
+                <td style="display: none" class="var" align="right" title="{{summary.variance}}">
+                    <script>document.write(scaleNumber('{{summary.variance}}', 2, '.', ','))</script>
+                </td>
             </tr>
             {% endif %}
         {% endfor %}
     </table>
+<button id ="variancetoggle">Show/Hide Variance</button>
 {% endif %}
 </div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#variancetoggle").button().click(function(){ $(".var").toggle()  });
+});
+</script>
 
 {%block usage %}
 

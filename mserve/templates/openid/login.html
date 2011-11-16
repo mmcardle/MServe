@@ -14,43 +14,44 @@ input.openid {
 
 {% block content %}
 
-<table class="login " style="width:40%;">
+<table >
     <tr>
-        <th class="loginth" colspan="2">
-            Sign in with your OpenID
-        </th>
+        <th  class="loginth">Sign in with your OpenID</th>
     </tr>
+
     <tr>
-        <td class="logintd" style="width:20%;">
-              {% if form.errors %}
+        <td class="logintd" style="width:500px;vertical-align: middle;text-align: center;">
 
-                <div class="ui-widget">
-                    <div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
-                            <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-                            <p>{% trans "Please correct errors below:" %}<br />
-                                    {% if form.openid_identifier.errors %}
-                                    <span class="error">{{ form.openid_identifier.errors|join:", " }}</span>
-                                    {% endif %}
-                                    {% if form.next.errors %}
-                                    <span class="error">{{ form.next.errors|join:", " }}</span>
-                                    {% endif %}
-                            </p>
-                            
+                {% if form.errors %}
+                    <div class="ui-widget">
+                        <div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+                                <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+                                <p>{% trans "Please correct errors below:" %}<br />
+                                        {% if form.openid_identifier.errors %}
+                                        <span class="error">{{ form.openid_identifier.errors|join:", " }}</span>
+                                        {% endif %}
+                                        {% if oidform.next.errors %}
+                                        <span class="error">{{ form.next.errors|join:", " }}</span>
+                                        {% endif %}
+                                </p>
+
+                        </div>
                     </div>
-                </div>
-
                 {% endif %}
-                <form name="fopenid" id="openid-form" action="{{ action }}" method="post">
+
+                <form name="fopenid" id="openid-form" action="/openid/login/" method="post">
                 {% csrf_token %}
                     <fieldset>
                         <legend></legend>
                         <table cellspacing="5" border="0" style="width: 100%">
                             <tr>
-                                <td style="vertical-align: middle"><label for="id_openid_identifier">{% trans "OpenID:" %}</label></td>
                                 <td style="vertical-align: middle">
+                                    <label for="id_openid_identifier">{% trans "OpenID:" %}</label></td>
+                                <td style="vertical-align: middle">
+
                                     {{ form.openid_identifier }}
                                 </td>
-                           
+
                                 <td style="vertical-align: middle"><input class="submit-button" name="bsignin" type="submit" value="{% trans 'Sign in' %}">
                                 </td>
                             </tr>
@@ -61,20 +62,14 @@ input.openid {
                     </fieldset>
 
                 </form>
-        </td>
-    </tr>
-        <tr>
-        <th class="loginth" colspan="2">
-            Or Choose an OpenID Provider
-        </th>
-    </tr>
-    <tr>
-    <td class="logintd" style="width:40%;">
+                <div><img id="openid-button"  src="/mservemedia/images/openid-icon-100x100.png" alt="OpenID" title="Open Id Logo" /></div>
+                <div style="margin:5px">Or Choose an OpenID Provider...</div>
                 <input id="google-button" name="bsignin" type="submit" value="{% trans 'Sign in' %} with Google">
                 <input id="yahoo-button" name="bsignin" type="submit" value="{% trans 'Sign in' %} with Yahoo">
         </td>
 
     </tr>
+
 </table>
 
 <script type="text/javascript">
@@ -93,6 +88,7 @@ $(document).ready(function() {
 });
 </script>
 
+<div class="vspacer"></div>
 
 {% endblock %}
 

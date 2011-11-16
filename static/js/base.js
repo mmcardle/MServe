@@ -56,6 +56,23 @@ function number_format( number, decimals, dec_point, thousands_sep ) {
     return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
 }
 
+function scaleNumber( number, decimals, dec_point, thousands_sep ) {
+    if (number >= 1073741824) {
+         number = number_format(number / 1073741824, decimals, dec_point, thousands_sep) + ' G';
+    } else {
+            if (number >= 1048576) {
+            number = number_format(number / 1048576, 2, decimals, dec_point, thousands_sep) + ' M';
+    } else {
+            if (number >= 1024) {
+                number = number_format(number / 1024, decimals, dec_point, thousands_sep) + ' K';
+            } else {
+                number = number_format(number, decimals, dec_point, thousands_sep) + ' ';
+            };
+        };
+    };
+  return number;
+}
+
 function formatSize( filesize ) {
     if (filesize >= 1073741824) {
          filesize = number_format(filesize / 1073741824, 2, '.', '') + ' Gb';
