@@ -240,17 +240,19 @@ class Usage(models.Model):
                 pass
 
         if base == None:
-            return []
+            usages = Usage.objects.all()
+        else:
+            usages = base.get_real_base().get_usage()
 
         for request_type in request_types:
             if request_type == "http://mserve/deliverySuccess":
                 plot = {}
                 plot["type"] = "pie"
                 plot["label"] = "Delivery Success"
-                success = base.get_real_base().get_usage().filter(
+                success = usages.filter(
                     metric=settings.DELIVERY_SUCCESS_METRIC)\
                     .aggregate(success=Sum('total'))["success"]
-                total = base.get_real_base().get_usage().filter(
+                total = usages.filter(
                     metric=settings.DELIVERY_SUCCESS_METRIC)\
                     .aggregate(total=Count('reports'))["total"]
                 if success == None:
@@ -529,6 +531,7 @@ class Base(models.Model):
 
         if method == "GET" and url == "usages":
             logging.info("check for full usage %s", kwargs)
+            print kwargs
 
             base = self.get_real_base()
             if 'last' in kwargs:
@@ -563,13 +566,16 @@ class Base(models.Model):
                 usages = base.usages.all()
                 
             if 'aggregate' in kwargs:
+                print "AGGREGATE!"
                 values = kwargs.get('aggregate')
                 if 'true' in values or 'True' in values:
+                    print "TRUE!"
                     usages = Usage.aggregate(usages)
 
             usageresult = {}
             usageresult["usages"] = usages
             usageresult["reportnum"] = base.reportnum
+            print usages
             return usageresult
 
         if method == "GET" and url == "properties":
@@ -870,7 +876,8 @@ class HostingContainer(NamedBase):
                 newmfile.service = dataservice
                 newmfile.save()
             for mfolder in duplicate_of.mfolder_set.all():
-                newmfolder= mfolder.duplicate(save=False, service=dataservice)
+                newmfolder= mfolder.duplicate(mfolder.name,save=False,
+                                                service=dataservice)
                 newmfolder.service = dataservice
                 newmfolder.save()
 
@@ -1334,15 +1341,18 @@ class DataService(NamedBase):
         for usage in self.usages.all():
             usage_store._stoprecording_(usage, obj=self.container)
 
-    def create_mfolder(self, name, parent=None):
+    def create_mfolder(self, name, parent=None, duplicate_of=None):
         if self.parent:
-            return self.parent.create_mfolder(name, parent=None)
+            return self.parent.create_mfolder(name, parent=None,
+                                duplicate_of=duplicate_of)
         try:
-            MFolder.objects.get(name=name, service=self, parent=parent)
+            MFolder.objects.get(name=name, service=self, parent=parent,
+                                duplicate_of=duplicate_of)
             r = rc.DUPLICATE_ENTRY
             return r
         except MFolder.DoesNotExist:
-            folder = MFolder(name=name, service=self, parent=parent)
+            folder = MFolder(name=name, service=self, parent=parent,
+                                duplicate_of=duplicate_of)
             folder.save()
             return folder
 
@@ -1420,14 +1430,14 @@ class RemoteMServeService(models.Model):
 class MFolder(NamedBase):
     service = models.ForeignKey(DataService)
     parent = models.ForeignKey('self', null=True)
+    duplicate_of = models.ForeignKey('MFolder', null=True, related_name='duplicated_from')
 
-    def duplicate(self, save=True, service=None):
+    def duplicate(self, name, save=True, service=None):
         if service:
-            new_mfolder = service.create_mfolder(self.name, folder=self.folder,
+            new_mfolder = service.create_mfolder(name,
                                             duplicate_of=self)
         else:
-            new_mfolder = self.service.create_mfolder(self.name,
-                                            folder=self.folder,
+            new_mfolder = self.service.create_mfolder(name,
                                             duplicate_of=self)
         if save:
             new_mfolder.save()
