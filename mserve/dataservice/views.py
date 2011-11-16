@@ -70,6 +70,10 @@ from django_openid_auth.views import render_openid_request
 from django_openid_auth.views import default_render_failure
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.forms import AuthenticationForm
+from django_openid_auth import teams
+from openid.consumer.discover import DiscoveryFailure
+from openid.extensions import sreg, ax
+
 
 MOBILE_UAS = [
 	'w3c ','acs-','alav','alca','amoi','audi','avan','benq','bird','blac',
@@ -444,10 +448,8 @@ def videoplayer(request, mfileid):
 @staff_member_required
 def render_usage(request):
     """Render the usage page"""
-    usages = Usage.objects.all()
     usagesummary = Usage.get_full_usagesummary()
     _dict = {}
-    _dict["usage"] = usages
     _dict["usagesummary"] = usagesummary
     return render_to_response('allusage.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
