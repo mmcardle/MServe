@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Replace these three settings.
 MSERVE_HOME=/opt/mserve
 MSERVE_DATA=/var/opt/mserve-data
 PROJDIR="${MSERVE_HOME}"
@@ -11,13 +10,12 @@ cd $PROJDIR
 if [ -f $PIDFILE ]; then
     sudo -u www-data kill `cat -- $PIDFILE`
     sudo -u www-data rm -f -- $PIDFILE
+    printf "\033[01;31mShutdown Previous Process\n"
+    tput sgr0
 fi
-echo "Killed Previous Process"
+
 sudo -u www-data ./manage.py runfcgi --pythonpath="${MSERVE_HOME}" socket=$SOCKET pidfile=$PIDFILE && sudo chmod 777 $SOCKET
-sudo -u www-data chmod 777 $SOCKET
-sudo chown www-data:www-data $SOCKET
-if [ -f "${MSERVE_DATA}/mservedb" ]; then
-	sudo chown www-data:www-data ${MSERVE_DATA}/mservedb 
-fi
-cat $PIDFILE
-echo "Running"
+printf "\033[01;32mMServe Running (`cat $PIDFILE`)\n"
+tput sgr0
+
+exit 0

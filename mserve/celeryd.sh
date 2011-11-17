@@ -13,34 +13,36 @@ sudo -u www-data ${MSERVE_HOME}manage.py celeryd_multi ${COMMAND} -E --logfile=$
 if [ "${COMMAND}" == "restart" ] ; then
     echo "Celery Monitor... $1"
     if [ -f ${MSERVE_DATA}celerycam.pid ] ; then
-        kill `cat ${MSERVE_DATA}celerycam.pid`
-        rm ${MSERVE_DATA}celerycam.pid
+        su www-data -c "kill `cat ${MSERVE_DATA}celerycam.pid`"
+        su www-data -c "rm ${MSERVE_DATA}celerycam.pid"
     fi
-    ${MSERVE_HOME}manage.py celerycam --detach -f celerycam.log --pidfile=${MSERVE_DATA}celerycam.pid
+    su www-data -c "${MSERVE_HOME}manage.py celerycam --detach -f ${MSERVE_LOG}celerycam.log --pidfile=${MSERVE_DATA}celerycam.pid"
     echo "Celery Beat... $1"
     if [ -f ${MSERVE_DATA}celerybeat.pid ] ; then
-        kill `cat ${MSERVE_DATA}celerybeat.pid`
-        rm ${MSERVE_DATA}celerybeat.pid
+        su www-data -c "ls -la ${MSERVE_DATA}"
+        su www-data -c "kill `cat ${MSERVE_DATA}celerybeat.pid`"
+    #   su www-data -c "rm ${MSERVE_DATA}celerybeat.pid"
     fi
-    ${MSERVE_HOME}manage.py celerybeat --detach -f celerybeat.log --pidfile=${MSERVE_DATA}celerybeat.pid
+    su www-data -c "${MSERVE_HOME}manage.py celerybeat --detach -f ${MSERVE_LOG}celerybeat.log --pidfile=${MSERVE_DATA}celerybeat.pid"
 fi
+
 
 if [ "${COMMAND}" == "stop" ] ; then
     echo "Celery Monitor... $1"
     if [ -f ${MSERVE_DATA}celerycam.pid ] ; then
-        kill `cat ${MSERVE_DATA}celerycam.pid`
-        rm ${MSERVE_DATA}celerycam.pid
+        su www-data -c "kill `cat ${MSERVE_DATA}celerycam.pid`"
+        su www-data -c "rm ${MSERVE_DATA}celerycam.pid"
     fi
     echo "Celery Beat... $1"
     if [ -f ${MSERVE_DATA}celerybeat.pid ] ; then
-        kill `cat ${MSERVE_DATA}celerybeat.pid`
-        rm ${MSERVE_DATA}celerybeat.pid
+        su www-data -c "kill `cat ${MSERVE_DATA}celerybeat.pid`"
+        su www-data -c "rm ${MSERVE_DATA}celerybeat.pid"
     fi
 fi
 
 if [ "${COMMAND}" == "start" ] ; then
-    echo "Celery Monitor... $1"
-    ${MSERVE_HOME}manage.py celerycam --detach -f celerycam.log --pidfile=${MSERVE_DATA}celerycam.pid
+    echo "Celery Monitor... ${COMMAND}"
+    su www-data -c "${MSERVE_HOME}manage.py celerycam --detach -f ${MSERVE_LOG}celerycam.log --pidfile=${MSERVE_DATA}celerycam.pid"
     echo "Celery Beat... $1"
-    ${MSERVE_HOME}manage.py celerybeat --detach -f celerybeat.log --pidfile=${MSERVE_DATA}celerybeat.pid
+    su www-data -c "${MSERVE_HOME}manage.py celerybeat --detach -f ${MSERVE_LOG}celerybeat.log --pidfile=${MSERVE_DATA}celerybeat.pid"
 fi
