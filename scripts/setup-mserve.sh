@@ -893,13 +893,13 @@ except ImportError:
 " | python
 if [ $? -ne 0 ]; then
 	echo "installing django-celery"
-	django_celery_url="http://pypi.python.org/packages/source/d/django-celery/django-celery-2.3.3.tar.gz#md5=5d5fa09980c4558307289bae1f1db011"
+	django_celery_url="http://pypi.python.org/packages/source/d/django-celery/django-celery-2.4.2.tar.gz"
 	wget $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
-	tar xfz django-celery-2.3.3.tar.gz || f_ "failed to untar django-celery-2.2.4.tar.gz"
-	cd  django-celery-2.3.3
+	tar xfz django-celery-2.4.2.tar.gz || f_ "failed to untar django-celery-2.4.2.tar.gz"
+	cd  django-celery-2.4.2
 	python setup.py install || f_ "failed to install django-celery"
 	cd ..
-	rm -rf django-celery-2.3.3
+	rm -rf django-celery-2.4.2
 else
 	echo "django-celery found"
 fi
