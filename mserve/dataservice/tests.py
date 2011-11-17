@@ -263,7 +263,6 @@ class ClientTest(TestCase):
         self.failUnlessEqual(js["reportnum"], 1 )
 
     def test_create_mfile(self):
-
         response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
         self.failUnlessEqual(response.status_code,200)
 
@@ -275,6 +274,21 @@ class ClientTest(TestCase):
         self.mfile = service.create_mfile( self.mfile_name , file=self.test_image)
 
         self.mfile_url = reverse('mfile', args=[self.mfile.id] )
+        self.mfile_url_usagesummary = reverse('mfile_usagesummary', args=[self.mfile.id] )
+
+        response = self.c.get(self.mfile_url_usagesummary)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["min"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["max"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["stddev"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["variance"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["n"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["sum"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["avg"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
 
         # Test GET Methods
         response = self.c.get(self.mfile_url)
@@ -324,6 +338,7 @@ class ClientTest(TestCase):
         containerid = self.hc.id
         hc_url =  reverse('hostingcontainer', args=[containerid])
         hc_url_usage =  reverse('hostingcontainer_usages', args=[containerid])
+        hc_url_usagesummary =  reverse('hostingcontainer_usagesummary', args=[containerid])
         hc_url_properties = reverse('hostingcontainer_props', args=[containerid])
         hc_url_auths = reverse('hostingcontainer_auths', args=[containerid])
         hc_url_services = reverse('hostingcontainer_services', args=[containerid])
@@ -397,6 +412,20 @@ class ClientTest(TestCase):
         self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
         self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
         self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+
+        response = self.c.get(hc_url_usagesummary)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["min"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["max"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["stddev"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["variance"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["n"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["sum"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["avg"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
 
         metrics = [m["metric"] for m in js["usages"] ]
         self.failUnlessEqual(set(metrics),set(metrics).union(metrics))
@@ -506,6 +535,7 @@ class ClientTest(TestCase):
         serviceid = self.service.id
         service_url =  reverse('dataservice', args=[serviceid])
         service_url_usage =  reverse('dataservice_usages', args=[serviceid])
+        service_url_usagesummary =  reverse('dataservice_usagesummary', args=[serviceid])
         service_url_properties = reverse('dataservice_props', args=[serviceid])
         service_url_auths = reverse('dataservice_auths', args=[serviceid])
         service_url_mfiles = reverse('dataservice_mfiles', args=[serviceid])
@@ -581,6 +611,20 @@ class ClientTest(TestCase):
         self.failUnlessEqual(type(js["usages"][0]["rate"]),float)
         self.failUnlessEqual(type(js["usages"][0]["rateCumulative"]),float)
         self.failUnlessEqual(type(js["usages"][0]["total"]),float)
+
+        response = self.c.get(service_url_usagesummary)
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        self.failUnless(js["reportnum"]>0)
+        self.failUnlessEqual(type(js["reportnum"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["min"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["max"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["stddev"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["variance"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["n"]),int)
+        self.failUnlessEqual(type(js["usages"][0]["sum"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["avg"]),float)
+        self.failUnlessEqual(type(js["usages"][0]["metric"]),str)
 
         metrics = [m["metric"] for m in js["usages"] ]
         self.failUnlessEqual(set(metrics),set(metrics).union(metrics))

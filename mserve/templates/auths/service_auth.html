@@ -115,7 +115,7 @@
     </div>
 
     <div id="tabs-usage">
-       {% include "auths/usage_auth.html" %}
+       {% include "usage.html" with statsurl=auth.stats_url  usageurl=auth.usage_url %}
     </div>
 
 </div>

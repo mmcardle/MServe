@@ -10,27 +10,6 @@ function load_auths(authid){
      });
 }
 
-function load_usage_auth(authid){
-     $.ajax({
-       type: "GET",
-       url: '/auths/'+authid+'/usages/?full=True',
-       success: function(msg){
-
-           $( "#usageTemplate" ).tmpl( msg.usages  ).appendTo( "#usagecontent" );
-       }
-     });
-}
-function load_usagesummary_auth(authid){
-     $.ajax({
-       type: "GET",
-       url: '/auths/'+authid+'/usagesummary/',
-       success: function(summary){
-           $( "#usageSummaryTemplate" ).tmpl( summary.usages ).appendTo( "#usagesummarycontent" );
-       }
-     });
-
- }
-
 function load_details_auth(authid){
      $.ajax({
        type: "GET",

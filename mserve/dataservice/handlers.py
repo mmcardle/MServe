@@ -640,7 +640,7 @@ class UsageSummaryHandler(BaseHandler):
         if containerid or serviceid or mfileid:
             base = NamedBase.objects.get(id__in=[containerid,serviceid,mfileid])
             result = {}
-            result["usages"] = base.get_usage_summary()
+            result["usages"] = base.get_real_base().get_usage_summary()
             result["reportnum"] = base.reportnum
             return result
         elif authid:
@@ -649,6 +649,11 @@ class UsageSummaryHandler(BaseHandler):
             result = {}
             result["usages"] = base.get_real_base().get_usage_summary()
             result["reportnum"] = base.reportnum
+            return result
+        elif request.user.is_staff:
+            result = {}
+            result["usages"] = Usage.get_full_usagesummary()
+            result["reportnum"] = -1
             return result
         else:
             r = rc.BAD_REQUEST

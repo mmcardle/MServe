@@ -63,8 +63,6 @@
             $(document).ready(function() {
                 loadServices('{{ container.id }}');
                 $("#createservicebutton" ).button().click(function() {  create_service('{{ container.id }}') });
-
-
             });
         </script>
     </div>
@@ -101,8 +99,7 @@
 
     </div>
     <div id="tabs-usage">
-
-        {% include "usage.html" %}
+        {% include "usage.html" with statsurl=container.stats_url  usageurl=container.usage_url %}
     </div>
     <div id="tabs-5">
         {% include "auths.html" %}

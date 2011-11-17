@@ -594,17 +594,40 @@
 
 </script>
 
+<script id="usageSummaryTableTemplate" type="text/x-jquery-tmpl">
+    <table class="table_usage" cellpadding="5" cellspacing="5">
+        <tr><th style="text-align: left">Metric Name</th><th>Min</th><th>Max</th><th>Count</th><th>Average</th><th>Sum</th><th>Std. Dev</th><th style="display: none" class="var">Variance</th></tr>
+        <tbody id="${usageholderid}"></tbody>
+    </table>
+    <button class="togglevarbutton" onclick="$('.var').toggle()" >Show/Hide Variance</button>
+</script>
+
 <script id="usageSummaryTemplate" type="text/x-jquery-tmpl">
-    <tr>
-        <td>${metric}</td>
-        <td>${number_format(min, 2, '.', ',')}</td>
-        <td>${number_format(max, 2, '.', ',')}</td>
-        <td>${number_format(n, 0, '.', ',')}</td>
-        <td>${number_format(avg, 2, '.', ',')}</td>
-        <td>${number_format(sum, 2, '.', ',')}</td>
-        <td>${number_format(stddev, 2, '.', ',')}</td>
-        <td>${number_format(variance, 2, '.', ',')}</td>
-    </tr>
+
+    {%templatetag openvariable%}if n==0{%templatetag closevariable%}
+        <tr>
+            <td style="text-align: left;"><b>${metric}</b></td>
+            <td align="right">-</td>
+            <td align="right">-</td>
+            <td align="right">0</td>
+            <td align="right">-</td>
+            <td align="right">-</td>
+            <td align="right">-</td>
+            <td style="display: none" class="var" align="right">-</td>
+        </tr>
+    {%templatetag openvariable%}else{%templatetag closevariable%}
+        <tr>
+                <td style="text-align: left;"><b>${metric}</b></td>
+                <td class="green" align="right" title="${min}">${scaleNumber(min, 0, '.', ',')}</td>
+                <td class="red"   align="right" title="${max}">${scaleNumber(max, 0, '.', ',')}</td>
+                <td               align="right" title="${n}">${scaleNumber(n, 0, '.', ',')}</td>
+                <td class="dblue" align="right" title="${avg}">${scaleNumber(avg, 2, '.', ',')}</td>
+                <td               align="right" title="${sum}">${scaleNumber(sum, 2, '.', ',')}</td>
+                <td               align="right" title="${stddev}">${scaleNumber(stddev, 2, '.', ',')}</td>
+                <td style="display: none" class="var" align="right" title="${variance}">${scaleNumber(variance, 2, '.', ',')}</td>
+        </tr>
+    {%templatetag openvariable%}/if{%templatetag closevariable%}
+
 </script>
 
 <script id="graphLabelTemplate" type="text/x-jquery-tmpl">
@@ -616,10 +639,24 @@
     </div>
 </script>
 
-<script id="graphTemplate" type="text/x-jquery-tmpl">
+<script id="large_graphTemplate" type="text/x-jquery-tmpl">
     <table title="Chart for ${label}" class="graphtable graphtable-${type} graphtable-${size}">
         <tr><th>${getShort(label,20)}</th></tr>
         <tr><td><div class='graph' style="width:95%;height:300px;"></div></td></tr>
+    </table>
+</script>
+
+<script id="small_graphTemplate" type="text/x-jquery-tmpl">
+    <table title="Chart for ${label}" class="graphtable graphtable-${type} graphtable-${size} graphtable-${type}-${size}">
+        <tr><th>${getShort(label,20)}</th></tr>
+        <tr><td><div class='graph' style="width:95%;height:150px;"></div></td></tr>
+    </table>
+</script>
+
+<script id="graphTemplate" type="text/x-jquery-tmpl">
+    <table title="Chart for ${label}" class="graphtable graphtable-${type} graphtable-${size}">
+        <tr><th>${getShort(label,20)}</th></tr>
+        <tr><td><div class='graph' style="width:95%;height:250px;"></div></td></tr>
     </table>
 </script>
 

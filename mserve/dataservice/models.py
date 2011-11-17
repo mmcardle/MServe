@@ -248,6 +248,7 @@ class Usage(models.Model):
             if request_type == "http://mserve/deliverySuccess":
                 plot = {}
                 plot["type"] = "pie"
+                plot["size"] = "large"
                 plot["label"] = "Delivery Success"
                 success = usages.filter(
                     metric=settings.DELIVERY_SUCCESS_METRIC)\
@@ -531,7 +532,6 @@ class Base(models.Model):
 
         if method == "GET" and url == "usages":
             logging.info("check for full usage %s", kwargs)
-            print kwargs
 
             base = self.get_real_base()
             if 'last' in kwargs:
@@ -566,16 +566,13 @@ class Base(models.Model):
                 usages = base.usages.all()
                 
             if 'aggregate' in kwargs:
-                print "AGGREGATE!"
                 values = kwargs.get('aggregate')
                 if 'true' in values or 'True' in values:
-                    print "TRUE!"
                     usages = Usage.aggregate(usages)
 
             usageresult = {}
             usageresult["usages"] = usages
             usageresult["reportnum"] = base.reportnum
-            print usages
             return usageresult
 
         if method == "GET" and url == "properties":
@@ -777,6 +774,9 @@ class HostingContainer(NamedBase):
     def __init__(self, *args, **kwargs):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = CONTAINER_METRICS
+
+    def stats_url(self): return reverse('stats', args=[self.id])
+    def usage_url(self): return reverse('hostingcontainer_usagesummary', args=[self.id])
 
     def thumbs(self):
         thumbs = []
@@ -1113,6 +1113,9 @@ class DataService(NamedBase):
         "jobs": ["GET"],
         "profiles": ["GET"],
         }
+
+    def stats_url(self): return reverse('stats', args=[self.id])
+    def usage_url(self): return reverse('dataservice_usagesummary', args=[self.id])
 
     def folder_structure(self):
         return self._folder_structure(self.id)
@@ -1510,6 +1513,9 @@ class MFile(NamedBase):
             "workflows": ["GET", "POST"],
             "jobs": ["GET", "POST"],
             }
+
+    def stats_url(self): return reverse('stats', args=[self.id])
+    def usage_url(self): return reverse('mfile_usagesummary', args=[self.id])
 
     @staticmethod
     def get_mfile_plots(request, baseid=None):
@@ -1981,6 +1987,9 @@ class Auth(Base):
     parent = models.ForeignKey('Auth', blank=True, null=True)
     usages = models.ManyToManyField("Usage")
     roles_csv = models.CharField(max_length=200)
+
+    def stats_url(self): return reverse('stats', args=[self.id])
+    def usage_url(self): return reverse('auth_usagesummary', args=[self.id])
 
     def __init__(self, *args, **kwargs):
         super(Auth, self).__init__(*args, **kwargs)

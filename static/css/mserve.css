@@ -848,17 +848,24 @@ ol li {
 }
 .graphtable{
     float: left;
-    width: 400px;
-    height: 100px;
+    height: 200px;
+    height: 200px;
+}
+.graphtable-small{
+    height: 160px;
+    width: 170px;
+}
+.graphtable-large{
+    height: 300px;
+    width: 500px;
+}
+.graphtable-pie-large{
+    width: 500px;
 }
 .graphtable-time{
     width: 100%;
-    height: 100px;
 }
-.graphtable-small{
-    width: 180px;
-    height: 100px;
-}
+
 .graph {
     border: 1px dashed gainsboro;
     padding:6px;

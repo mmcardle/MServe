@@ -6,12 +6,14 @@
 
 {% load mservetags %}
 
-<div id="mservelast24" style="margin-top: 20px;"></div>
-<div class="clr"></div>
-<div id="mservelast1" style="margin-top: 20px;"></div>
-<div class="clr"></div>
+<table style="width: 90%;table-layout: fixed">
+    <tr>
+        <td><div id="mservelast24" style="margin-top: 20px;"></div></td>
+        <td><div id="mservelast1" style="margin-top: 20px;"></div></td>
+    </tr>
+</table>
 
-<table>
+<table style="width: 90%;table-layout: fixed">
     <tr>
         <td><div id="mservejobstype" style="margin-top: 20px;"></div></td>
         <td><div id="deliverySuccess" style="margin-top: 20px;"></div></td>
@@ -21,79 +23,32 @@
 <div id="mservejobs" style="margin-top: 20px;"></div>
 <div class="clr"></div>
 
+<h3>Usage summary</h3>
+<div id="usagesummary" >
+</div>
+
 <script type="text/javascript">
+
+_loadusage = function(){
+    $("#mservelast24").mserveusage('stats', ["last24"], '{{statsurl}}' )
+    $("#mservelast1").mserveusage('stats', ["last1"], '{{statsurl}}' )
+    $("#mservejobs").mserveusage('stats', ["jobs"], '{{statsurl}}' )
+    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{statsurl}}' )
+    $("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '{{statsurl}}' )
+    $("#usagesummary").mserveusage('usagesummary', '{{usageurl}}' )
+}
 
 $('#tabs').bind('tabsshow', function(event, ui) {
   if (ui.panel.id == "tabs-usage") {
-    $("#mservelast24").mserveusage('stats', ["last24"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#mservelast1").mserveusage('stats', ["last1"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#mservejobs").mserveusage('stats', ["jobs"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+        _loadusage()
   }
 });
 
 var hash = window.location.hash.substring(1)
 if(hash=="tabs-usage"){
-    $("#mservelast24").mserveusage('stats', ["last24"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#mservelast1").mserveusage('stats', ["last1"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#mservejobs").mserveusage('stats', ["jobs"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#mservejobstype").mserveusage('stats', ["jobsbytype"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
-    $("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '{{service.id}}{{container.id}}{{mfile.id}}{{auth.id}}' )
+    _loadusage()
 }
 
-</script>
-
-<h3>Usage Summary</h3>
-<div id="usagecontent" >
-{% if usagesummary %}
-    <table class="table_usage" cellpadding="5" cellspacing="5">
-        <tr>
-            <th style="text-align: left">Metric Name</th>
-            <th>Minimum</th>
-            <th>Maximum</th>
-            <th>Count</th>
-            <th>Average</th>
-            <th>Total</th>
-            <th>Standard Deviation</th>
-            <th style="display: none" class="var">Variance</th>
-        </tr>
-        {% for summary in usagesummary %}
-            {% if summary.n == 0 %}
-            <tr>
-                <td style="text-align: left;"><b>{{summary.metric}}</b></td>
-                <td align="right">-</td>
-                <td align="right">-</td>
-                <td align="right">0</td>
-                <td align="right">-</td>
-                <td align="right">-</td>
-                <td align="right">-</td>
-                <td style="display: none" class="var" align="right">-</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td style="text-align: left;"><b>{{summary.metric}}</b></td>
-                <td class="green" align="right" title="{{summary.min}}"><script>document.write(scaleNumber('{{summary.min}}', 0, '.', ','))</script></td>
-                <td class="red"   align="right" title="{{summary.max}}"><script>document.write(scaleNumber('{{summary.max}}', 0, '.', ','))</script></td>
-                <td               align="right" title="{{summary.n}}"><script>document.write(scaleNumber('{{summary.n}}', 0, '.', ','))</script></td>
-                <td class="dblue"  align="right" title="{{summary.avg}}"><script>document.write(scaleNumber('{{summary.avg}}', 2, '.', ','))</script></td>
-                <td               align="right" title="{{summary.sum}}"><script>document.write(scaleNumber('{{summary.sum}}', 2, '.', ','))</script></td>
-                <td               align="right" title="{{summary.stddev}}"><script>document.write(scaleNumber('{{summary.stddev}}', 2, '.', ','))</script></td>
-                <td style="display: none" class="var" align="right" title="{{summary.variance}}">
-                    <script>document.write(scaleNumber('{{summary.variance}}', 2, '.', ','))</script>
-                </td>
-            </tr>
-            {% endif %}
-        {% endfor %}
-    </table>
-<button id ="variancetoggle">Show/Hide Variance</button>
-{% endif %}
-</div>
-
-<script type="text/javascript">
-$(document).ready(function() {
-    $("#variancetoggle").button().click(function(){ $(".var").toggle()  });
-});
 </script>
 
 {%block usage %}

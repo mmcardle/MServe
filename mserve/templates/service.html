@@ -219,7 +219,7 @@
             
      </div>
     <div id="tabs-usage">
-            {% include "usage.html" %}
+        {% include "usage.html" with statsurl=service.stats_url  usageurl=service.usage_url %}
      </div>
     	<div id="tabs-6">
             {% include "auths.html" %}

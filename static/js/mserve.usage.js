@@ -140,14 +140,11 @@ function showTooltip(x, y, contents) {
                  })
         });
     },
-    stats: function(types, serviceid){
+    stats: function(types, statsurl){
 
         var defaults = {};
         var options = $.extend(defaults, options);
-        url = "/stats/?"+types.join('&')
-        if(serviceid){
-            url = "/stats/"+serviceid+"/?"+types.join('&')
-        }
+        url = statsurl+"?"+types.join('&')
         return this.each(function() {
             var o = options;
             var obj = $(this);
@@ -159,7 +156,11 @@ function showTooltip(x, y, contents) {
                success: function(msg){
                     $this.empty()
                     $(msg).each( function(index, plot){
-                        $holder = $("#graphTemplate").tmpl( plot )
+                        template_name = "#graphTemplate"
+                        if(plot.size){
+                            template_name = "#"+plot.size+"_graphTemplate"
+                        }
+                        $holder = $(template_name).tmpl( plot )
                         $this.append($holder)
                         $graph = $holder.find(".graph")
                         if(plot.type == "pie"){
@@ -186,6 +187,28 @@ function showTooltip(x, y, contents) {
                             $.plot($graph, plot.data , FLOT_OPTIONS );
                         }
                     });
+               }
+            });
+        });
+    },
+    usagesummary: function(usagesummaryurl){
+        var defaults = {};
+        var options = $.extend(defaults, options);
+        url = usagesummaryurl
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+            var $this = $(this),
+            data = $this.data('mserve');
+            $.ajax({
+               type: "GET",
+               url: url,
+               success: function(usagesummarydata){
+                   $this.empty()
+                   $holderid = "usagetbodyholder"
+                   $holder = $( "#usageSummaryTableTemplate" ).tmpl( {"usageholderid" : $holderid  } ).appendTo( $this );
+                   $( "#usageSummaryTemplate" ).tmpl( usagesummarydata.usages ).appendTo( $holder.find("#"+$holderid) );
+                   $(".togglevarbutton").button()
                }
             });
         });

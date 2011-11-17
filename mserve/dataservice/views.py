@@ -304,8 +304,6 @@ def render_container(request, containerid, form=DataServiceForm()):
     services = DataService.objects.filter(container=container.id)
     properties = ManagementProperty.objects.filter(base=container.id)
     usage = container.get_usage()
-    usagesummary = container.get_usage_summary()
-
     managementpropertyform = ManagementPropertyForm()
     hcform = HostingContainerForm(instance=container)
 
@@ -323,7 +321,6 @@ def render_container(request, containerid, form=DataServiceForm()):
     _dict["serviceform"] = serviceform
     _dict["auths"] = auths
     _dict["usage"] = usage
-    _dict["usagesummary"] = usagesummary
 
     return render_to_response('container.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))

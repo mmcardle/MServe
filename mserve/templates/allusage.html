@@ -5,21 +5,22 @@
 {% block content %}
 
 {% if user.is_staff %}
-<h4>Traffic</h4>
-<div id="traffic" style="width: 95%; height: 200px;margin-top: 16px;"></div>
+    <h4>Traffic</h4>
+
+    <table style="width: 90%;table-layout: fixed">
+    <tr>
+        <td>    <div id="traffic" style="width: 97.5%; height: 150px;"></div></td>
+    </tr>
+</table>
+
+
 {% endif %}
 
-{% include "usage.html" %}
+{% include "usage.html" with statsurl='/stats/'  usageurl='/usagesummary/' %}
 
 <script type="text/javascript">
-
-$("#traffic").mserveusage('traffic' )
-$("#mservelast24").mserveusage('stats', ["last24"] )
-$("#mservelast1").mserveusage('stats', ["last1"] )
-$("#mservejobs").mserveusage('stats', ["jobs"] )
-$("#mservejobstype").mserveusage('stats', ["jobsbytype"] )
-$("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"] )
-
+    $("#traffic").mserveusage('traffic' )
+    _loadusage()
 </script>
 
 {% endblock %}

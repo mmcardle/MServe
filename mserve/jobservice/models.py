@@ -133,6 +133,7 @@ class Job(NamedBase):
 
                 taskplot["data"] = [ {"label": "All Jobs", "data" : data} ] + sdata.values()
                 taskplot["type"] = "time"
+                taskplot["size"] = "small"
                 taskplot["label"] = "Tasks in last 24 hours"
                 plots.append(taskplot)
 
@@ -160,6 +161,7 @@ class Job(NamedBase):
 
                 taskplot["data"] = [ {"label": "All Jobs", "data" : data} ] + sdata.values()
                 taskplot["type"] = "time"
+                taskplot["size"] = "small"
                 taskplot["label"] = "Tasks in last hour"
                 plots.append(taskplot)
 
@@ -167,6 +169,7 @@ class Job(NamedBase):
                 jobplot = {}
                 jobplot["type"] = "pie"
                 jobplot["label"] = "Jobs by Type"
+                jobplot["size"] = "large"
 
                 query = taskstates.values("name").annotate(n=Count("name"))
                 if query.count() == 0:
