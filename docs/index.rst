@@ -17,6 +17,7 @@ Contents:
    admin_guide
    architecture
    metrics
+   api
    dataservice
 
 Indices and tables
