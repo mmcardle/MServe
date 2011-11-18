@@ -1,3 +1,4 @@
+"""The MServe dataservice urls """
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -29,7 +30,6 @@ admin.autodiscover()
 
 from piston.resource import Resource
 from dataservice.handlers import *
-from jobservice.handlers import *
 from django_openid_auth.forms import OpenIDLoginForm
 
 hosting_handler = Resource(HostingContainerHandler)
@@ -44,7 +44,6 @@ mfile_handler = Resource(MFileHandler)
 backupfile_handler = Resource(BackupFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
-mfile_workflow_handler = Resource(MFileWorkflowHandler)
 auth_handler = Resource(AuthHandler)
 usage_handler = Resource(UsageHandler)
 usagesummary_handler = Resource(UsageSummaryHandler)
@@ -76,10 +75,10 @@ urlpatterns = patterns('',
     url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler, name="dataservice_mfolders"),
     url(r'^services/(?P<serviceid>[^/]+)/subservices/$', dataservice_handler, name="dataservice_subservices"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler, name="dataservice_profiles"),
-    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
-    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/(?P<taskid>[^/]+)/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/(?P<tasksetid>[^/]+)/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
+    url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasks/(?P<taskid>[^/]+)/$', dataservice_task_handler, name="dataservice_profiles_tasks"),
 
     # MFile URLs
     url(r'^mfiles/$', mfile_handler, name="mfiles"  ),
@@ -92,7 +91,6 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<mfileid>[^/]+)/usagesummary/$', usagesummary_handler, name='mfile_usagesummary'),
     url(r'^mfiles/(?P<mfileid>[^/]+)/auths/$', auth_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler, name='mfile_download'),
-    url(r'^mfiles/(?P<mfileid>[^/]+)/workflows/$', mfile_workflow_handler),
 
     # Auth URLs
     url(r'^auths/$', auth_handler  ),
@@ -134,6 +132,4 @@ urlpatterns = patterns('',
     url(r'^stats/(?P<baseid>[^/]+)/$',  'dataservice.views.stats', name='stats'),
     url(r'^browse/(?P<baseid>[^/]+)/$', "dataservice.views.render_base"),
     url(r'^redirect/$', 'dataservice.views.redirect_to', name="redirect_to"),
-
-
 )

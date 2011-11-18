@@ -238,7 +238,7 @@ class DataServiceHandler(BaseHandler):
         if id:
             dataservice = get_object_or_404(self.model, pk=id)
             return dataservice.do("GET")
-        return []
+        return HttpResponseNotAllowed(['POST'])
 
     def update(self, request, id):
         try:
@@ -298,8 +298,7 @@ class SubServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST')
 
     def read(self, request, containerid=None):
-
-        if containerid and request.user.is_staff:
+        if containerid:
             return DataService.objects.filter(parent__container=containerid)
         else:
             r = rc.FORBIDDEN
@@ -345,6 +344,19 @@ class DataServiceTaskSetHandler(BaseHandler):
     model = DataServiceTaskSet
     fields = ('name', 'id', 'tasks', 'order')
 
+    def read(self, request, serviceid, profileid, tasksetid=None ):
+        if tasksetid:
+            dsts = DataServiceTaskSet.objects.get(
+                workflow__profile__service=serviceid,
+                workflow__profile=profileid,
+                id=tasksetid)
+            return dsts
+        else:
+            dsts = DataServiceTaskSet.objects.filter(
+                workflow__profile__service=serviceid,
+                workflow__profile=profileid)
+            return dsts
+
     def delete(self, request, serviceid, profileid, tasksetid ):
         dsts = DataServiceTaskSet.objects.get(id=tasksetid)
         dsts.delete()
@@ -379,6 +391,19 @@ class DataServiceTaskHandler(BaseHandler):
     allowed_methods = ('GET','POST','PUT','DELETE')
     model = DataServiceTask
     fields = ('name', 'task_name', 'id', 'condition', 'args')
+
+    def read(self, request, serviceid, profileid, taskid=None ):
+        if taskid:
+            dst = DataServiceTask.objects.get(
+                    taskset__workflow__profile__service=serviceid,
+                    taskset__workflow__profile=profileid,
+                    id=taskid)
+            return dst
+        else:
+            dst = DataServiceTask.objects.filter(
+                    taskset__workflow__profile__service=serviceid,
+                    taskset__workflow__profile=profileid)
+            return dst
 
     def delete(self, request, serviceid, profileid, taskid ):
         dst = DataServiceTask.objects.get(id=taskid)
@@ -463,7 +488,9 @@ class MFileHandler(BaseHandler):
                 'created' , 'updated', 'thumburl', 'posterurl', 'proxyurl', 'reportnum',\
                 ('folder', ('id','name') ) )
 
-    def read(self,request, id=None, serviceid=None, authid=None):
+    def read(self,request, id=None, serviceid=None, authid=None, field=None):
+        if field:
+            return HttpResponseNotAllowed(['POST'])
         if id :
             return self.model.objects.get(id=id).do("GET")
         if serviceid:
@@ -472,9 +499,11 @@ class MFileHandler(BaseHandler):
         if authid:
             auth = Auth.objects.get(pk=authid)
             return auth.do("GET","mfiles")
-        return []
+        return HttpResponseNotAllowed(['POST'])
 
-    def delete(self, request, id):
+    def delete(self, request, id , field=None):
+        if field:
+            return HttpResponseNotAllowed(['POST'])
         logging.info("Deleting mfile %s " % id)
         #MFile.objects.get(id=id).delete()
         MFile.objects.get(id=id).do("DELETE")
@@ -588,31 +617,6 @@ class MFileContentsHandler(BaseHandler):
             r = rc.BAD_REQUEST
             r.write("Invalid Request!")
             return r
-
-class MFileWorkflowHandler(BaseHandler):
-    allowed_methods = ('POST')
-
-    def create(self, request, mfileid=None, authid=None):
-
-        if not request.POST.has_key('name'):
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
-
-        name = request.POST['name']
-        kwargs = { "name":name }
-
-        if mfileid:
-            logging.info("MFileWorkflowHandler mfile")
-            return MFile.objects.get(pk=mfileid).do("POST","workflows",**kwargs)
-        elif authid:
-            logging.info("MFileWorkflowHandler auth")
-            return Auth.objects.get(pk=authid).do("POST","workflows",**kwargs)
-        else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
-
 
 class UsageHandler(BaseHandler):
     allowed_methods = ('GET')
