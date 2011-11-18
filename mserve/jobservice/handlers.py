@@ -191,15 +191,18 @@ class JobOutputHandler(BaseHandler):
     fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
 
     def update(self, request, outputid, field=None):
-        joboutput = JobOutput.objects.get(id=outputid)
+        if outputid:
+            joboutput = JobOutput.objects.get(id=outputid)
 
-        if field == "thumb":
-            utils.write_request_to_field(request, joboutput.thumb, "thumb.png")
-            return {"message":"updated job thumb"}
+            if field == "thumb":
+                utils.write_request_to_field(request, joboutput.thumb, "thumb.png")
+                return {"message":"updated job thumb"}
 
-        utils.write_request_to_field(request, joboutput.file, "joboutput")
+            utils.write_request_to_field(request, joboutput.file, "joboutput")
 
-        return {"message":"updated job"}
+            return {"message":"updated job"}
+        else:
+            return HttpResponseNotAllowed([])
 
     def create(self, request, outputid, field=None):
         joboutput = JobOutput.objects.get(id=outputid)
@@ -220,70 +223,76 @@ class JobOutputHandler(BaseHandler):
             return r
 
     def read(self, request, outputid, field=None):
+        if outputid:
+            if field == "file":
+                joboutput = JobOutput.objects.get(id=outputid)
 
-        joboutput = JobOutput.objects.get(id=outputid)
+                file=joboutput.file
 
-        file=joboutput.file
+                if file == "":
+                    return HttpResponseNotFound()
 
-        if file == "":
-            return HttpResponseNotFound()
+                outputfilepath = file.path
 
-        outputfilepath = file.path
+                logging.info(joboutput)
+                job = joboutput.job
+                logging.info(job)
+                accessspeed = settings.DEFAULT_ACCESS_SPEED
+                service = job.mfile.service
+                container = service.container
+                logging.info("Finding limit for %s " % (job))
 
-        logging.info(joboutput)
-        job = joboutput.job
-        logging.info(job)
-        accessspeed = settings.DEFAULT_ACCESS_SPEED
-        service = job.mfile.service
-        container = service.container
-        logging.info("Finding limit for %s " % (job))
-        
-        try:
-            prop = ManagementProperty.objects.get(base=service,property="accessspeed")
-            accessspeed = prop.value
-            logging.info("Limit set from service property to %s for %s " % (accessspeed,job.name))
-        except ObjectDoesNotExist:
-            try:
-                prop = ManagementProperty.objects.get(base=container,property="accessspeed")
-                accessspeed = prop.value
-                logging.info("Limit set from container property to %s for %s " % (accessspeed,job.name))
-            except ObjectDoesNotExist:
-                pass
+                try:
+                    prop = ManagementProperty.objects.get(base=service,property="accessspeed")
+                    accessspeed = prop.value
+                    logging.info("Limit set from service property to %s for %s " % (accessspeed,job.name))
+                except ObjectDoesNotExist:
+                    try:
+                        prop = ManagementProperty.objects.get(base=container,property="accessspeed")
+                        accessspeed = prop.value
+                        logging.info("Limit set from container property to %s for %s " % (accessspeed,job.name))
+                    except ObjectDoesNotExist:
+                        pass
 
-        if accessspeed == "unlimited":
-            dlfoldername = "dl"
+                if accessspeed == "unlimited":
+                    dlfoldername = "dl"
+                else:
+                    dlfoldername = "dl%s" % accessspeed
+
+                p = str(file)
+
+                redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
+                redirecturl = redirecturl[1:]
+
+                SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
+
+                fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
+                fullfilepathfolder = os.path.dirname(fullfilepath)
+                outputfilepath = file.path
+
+                logging.info("Redirect URL      = %s " % redirecturl)
+                logging.info("fullfilepath      = %s " % fullfilepath)
+                logging.info("fullfilefolder    = %s " % fullfilepathfolder)
+                logging.info("mfilefp      = %s " % outputfilepath)
+                logging.info("mfilef       = %s " % file)
+
+                if not os.path.exists(fullfilepathfolder):
+                    os.makedirs(fullfilepathfolder)
+
+                if not os.path.exists(fullfilepath):
+                    logging.info("linking %s (exist=%s) to %s (exists=%s)" % (outputfilepath,os.path.exists(outputfilepath),fullfilepath,os.path.exists(fullfilepath)))
+                    try:
+                        os.link(outputfilepath,fullfilepath)
+                    except Exception as e:
+                        logging.info("Caught error linking file, trying copy. %s" % str(e))
+                        shutil.copy(outputfilepath,fullfilepath)
+
+                usage_store.record(joboutput.id,models.METRIC_ACCESS,joboutput.file.size)
+
+                logging.info("Redirecting  to %s " % redirecturl)
+                return redirect("/%s"%redirecturl)
+            else:
+                joboutput = JobOutput.objects.get(id=outputid)
+                return joboutput
         else:
-            dlfoldername = "dl%s" % accessspeed
-
-        p = str(file)
-
-        redirecturl = utils.gen_sec_link_orig(p,dlfoldername)
-        redirecturl = redirecturl[1:]
-
-        SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
-
-        fullfilepath = os.path.join(SECDOWNLOAD_ROOT,dlfoldername,p)
-        fullfilepathfolder = os.path.dirname(fullfilepath)
-        outputfilepath = file.path
-
-        logging.info("Redirect URL      = %s " % redirecturl)
-        logging.info("fullfilepath      = %s " % fullfilepath)
-        logging.info("fullfilefolder    = %s " % fullfilepathfolder)
-        logging.info("mfilefp      = %s " % outputfilepath)
-        logging.info("mfilef       = %s " % file)
-
-        if not os.path.exists(fullfilepathfolder):
-            os.makedirs(fullfilepathfolder)
-
-        if not os.path.exists(fullfilepath):
-            logging.info("linking %s (exist=%s) to %s (exists=%s)" % (outputfilepath,os.path.exists(outputfilepath),fullfilepath,os.path.exists(fullfilepath)))
-            try:
-                os.link(outputfilepath,fullfilepath)
-            except Exception as e:
-                logging.info("Caught error linking file, trying copy. %s" % str(e))
-                shutil.copy(outputfilepath,fullfilepath)
-
-        usage_store.record(joboutput.id,models.METRIC_ACCESS,joboutput.file.size)
-
-        logging.info("Redirecting  to %s " % redirecturl)
-        return redirect("/%s"%redirecturl)
+            return HttpResponseNotAllowed([])
