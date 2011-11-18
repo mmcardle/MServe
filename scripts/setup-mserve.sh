@@ -1386,7 +1386,7 @@ fi
 mv /root/installation_summary.tmp ${MSERVE_HOME}/.installation_summary.txt || \
 	f_ "failed to copy installation summary from /root to ${MSERVE_HOME}"
 
-echo -e "\nNB: a copy of MSERVE installation summary is stored under ${MSERVE_HOME}/.installation_summary.txt\n"
+echo -e "\nNB: a copy of MSERVE installation summary is stored under ${MSERVE_HOME}/.installation_summary.txt"
 
 if [ ! -f /etc/init.d/mserve-service ]; then
 	echo -e "\nNB: mserve-service should be copied into /etc/init.d directory."
