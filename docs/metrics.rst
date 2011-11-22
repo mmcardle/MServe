@@ -1,7 +1,8 @@
 MServe Metrics
 ###################
 
-Usage reports come in this format::
+A metric is reference to an entity that can be monitored in MServe, the process of monitoring metrics
+produces usage reports. Usage reports come in this format::
 
     {
         "total": long,

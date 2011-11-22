@@ -1,8 +1,6 @@
 MServe Architecture
 ###################
 
-Welcome to the MServe documentation
-
 Introduction
 **************
 

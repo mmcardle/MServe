@@ -6,7 +6,7 @@ Welcome to the MServe Service Provider Guide
 Gaining Admin access to a  Service
 **********************************
 
-There is only one way in which you can be given access to an Configure an MServe Service.
+There is only one way in which you can be given access to an MServe Service.
 
 * Directly given an URL by a administrator provider
 
@@ -68,7 +68,7 @@ Tasks require the following information
 * Task Name - A descriptive name for the Task, ie. "Thumbnail images"
 * Task - The name of the task to run - ie. "thumbimage"
 * Condition - A precondition for the task, which if evaluated to True or left blank lets the task run.
-* Argument - A set of json encoded arguements passed to the task at execution
+* Argument - A set of json encoded arguments passed to the task at execution
 
 Tasks can be deleted by clicking 'Delete'
 
