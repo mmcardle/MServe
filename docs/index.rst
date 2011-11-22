@@ -6,20 +6,53 @@
 Welcome to MServe's documentation!
 ==================================
 
-Contents:
++---------------------------+----------------------------+
+| MServe Overview           | Guides                     |
++===========================+============================+
+| .. toctree::              | .. toctree::               |
+|    :maxdepth: 3           |    :maxdepth: 2            |
+|                           |                            |
+|    overview               |    user_guide              |
+|                           |    service_provider_guide  |
+|                           |    admin_guide             |
+|                           |                            |
+|                           |                            |
++---------------------------+----------------------------+
+| **MServe Architecture**   | **Metrics**                |
++---------------------------+----------------------------+
+| .. toctree::              | .. toctree::               |
+|    :maxdepth: 3           |    :maxdepth: 2            |
+|                           |                            |
+|    architecture           |    metrics                 |
+|                           |                            |
+|                           |                            |
+|                           |                            |
+|                           |                            |
++---------------------------+----------------------------+
+| **MServe REST API**       | **Code Examples**          |
++---------------------------+----------------------------+
+| .. toctree::              | .. toctree::               |
+|    :maxdepth: 2           |    :maxdepth: 2            |
+|                           |                            |
+|    api                    |    codeexamples            |
+|                           |                            |
+|                           |                            |
+|                           |                            |
+|                           |                            |
++---------------------------+----------------------------+
+| **MServe Internal API**   |                            |
++---------------------------+----------------------------+
+| .. toctree::              |                            |
+|    :maxdepth: 3           |                            |
+|                           |                            |
+|    dataservice            |                            |
+|                           |                            |
+|                           |                            |
+|                           |                            |
+|                           |                            |
++---------------------------+----------------------------+
 
-.. toctree::
-   :maxdepth: 2
-
-   overview
-   user_guide
-   service_provider_guide
-   admin_guide
-   architecture
-   metrics
-   api
-   dataservice
-
+   
 Indices and tables
 ==================
 

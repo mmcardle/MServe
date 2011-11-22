@@ -12,7 +12,6 @@ Root Container URL
  /containers/
 
 
-
 GET ``Requires Staff Login`` - Returns a list of containers  ::
 
  [
@@ -315,7 +314,7 @@ GET - Returns the subservices in the specified container::
 
     [
         {
-            "subservices_url": "/services/ZtdoKyUh27lmkG0gnpQKlUhLZw2Ae27GDCTQbch4MA/subservices/",
+
             "name": "Service",
             "folder_structure": {
                 "data": {
@@ -335,6 +334,10 @@ GET - Returns the subservices in the specified container::
                     ]
                 }
             },
+            "mfile_set": [
+                "..."
+            ]
+            "subservices_url": "/services/ZtdoKyUh27lmkG0gnpQKlUhLZw2Ae27GDCTQbch4MA/subservices/",
             "..."
     ]
 
@@ -371,11 +374,54 @@ POST - Creates a new service
 
 DELETE - **405 - Method Not Allowed**
 
+Service URL
+------------------
+::
+
+ /services/<service-id>/
+
+GET - Returns the Service <service-d>::
+
+    {
+        "name": "Service",
+        "folder_structure": {
+            "data": {
+                "data": "Service",
+                "attr": {
+                    "id": "ZtdoKyUh27lmkG0gnpQKlUhLZw2Ae27GDCTQbch4MA",
+                    "class": "service"
+                },
+                "children": [
+                    {
+                        "data": "folder1",
+                        "attr": {
+                            "id": "VRegf1RpEAZiFP2EOnd6iQRkxfbEPl7NIU4fT8A4"
+                        },
+                        "children": []
+                    },
+                ]
+            }
+        },
+        "mfile_set": [
+            "..."
+        ],
+        "subservices_url": "/services/ZtdoKyUh27lmkG0gnpQKlUhLZw2Ae27GDCTQbch4MA/subservices/",
+
+PUT - Updates the service
+
+* ``name`` (*str*) : The name for the new service **Required**
+* ``starttime`` (*date*) : The start date/time for the service in  YYYY-MM-DD HH:MM[:ss[.uuuuuu]] format.
+* ``endtime`` (*date*) : The end date/time for the service in YYYY-MM-DD HH:MM[:ss[.uuuuuu]] format.
+
+POST - **405 - Method Not Allowed**
+
+DELETE - Deletes the service
+
 Service Properties URL
 -------------------------
 ::
 
- /<service-id>/properties/
+ /services/<service-id>/properties/
 
 GET - Returns the properties for the specified service::
 
@@ -412,7 +458,7 @@ Service Usage URL
 -------------------------
 ::
 
- /<service-id>/usages/
+ /services/<service-id>/usages/
 
 GET - Returns the usage for the specified service::
 
@@ -442,7 +488,7 @@ Service Usage Summary URL
 ----------------------------
 ::
 
- /<service-id>/usagesummary/
+ /services/<service-id>/usagesummary/
 
 GET - Returns the usage for the specified service::
 
@@ -491,7 +537,7 @@ Service Authority URL
 -------------------------
 ::
 
- /<service-id>/auths/
+ /services/<service-id>/auths/
 
 GET - Returns the authoritys for the specified service::
 
@@ -607,7 +653,7 @@ Service MFiles URL
 -------------------------
 ::
 
- /<service-id>/mfiles/
+ /services/<service-id>/mfiles/
 
 GET - Returns the MFiles stored in the service::
 
@@ -644,7 +690,7 @@ Service MFolders URL
 -------------------------
 ::
 
- /<service-id>/mfolders/
+ /services/<service-id>/mfolders/
 
 GET - Returns the MFolders stored in the service::
 
@@ -676,7 +722,7 @@ Service Sub Service URL
 -------------------------
 ::
 
- /<service-id>/subservices/
+ /services/<service-id>/subservices/
 
 GET - Returns the subservices in the specified service::
 
@@ -720,7 +766,7 @@ Service Profiles URL
 -------------------------
 ::
 
- /<service-id>/profiles/
+ /services/<service-id>/profiles/
 
 GET - Returns the profiles in the specified service::
 
@@ -861,7 +907,7 @@ Service Profile TaskSets URL
 ----------------------------
 ::
 
- /<service-id>/profiles/<profile-id>/tasksets/
+ /services/<service-id>/profiles/<profile-id>/tasksets/
 
 GET - Returns the tasksets in the specified profile <profile-id>::
 
@@ -932,7 +978,7 @@ Service Profile TaskSet URL
 ----------------------------
 ::
 
- /<service-id>/profiles/<profile-id>/tasksets/<taskset-id>/
+ /services/<service-id>/profiles/<profile-id>/tasksets/<taskset-id>/
 
 GET - Returns the taskset <taskset-id> in the specified profile <profile-id>::
 
@@ -965,7 +1011,7 @@ Service Profile Tasks URL
 ----------------------------
 ::
 
- /<service-id>/profiles/<profile-id>/tasks/
+ /services/<service-id>/profiles/<profile-id>/tasks/
 
 GET - Returns the tasks in the specified profile <profile-id>::
 
@@ -1052,7 +1098,7 @@ Service Profile Task URL
 ----------------------------
 ::
 
- /<service-id>/profiles/<profile-id>/tasksets/<task-id>/
+ /services/<service-id>/profiles/<profile-id>/tasksets/<task-id>/
 
 GET - Returns the task <task-id> in the specified profile <profile-id>::
 
@@ -1207,7 +1253,7 @@ MFile Usage URL
 -------------------------
 ::
 
- /<mfile-id>/usages/
+  /mfiles/<mfile-id>/usages/
 
 GET - Returns the usage for the specified mfile::
 
@@ -1267,7 +1313,7 @@ MFile Usage Summary URL
 ----------------------------
 ::
 
- /<mfile-id>/usagesummary/
+ /mfiles/<mfile-id>/usagesummary/
 
 GET - Returns the usage for the specified mfile::
 
@@ -1327,7 +1373,7 @@ MFile Authority URL
 -------------------------
 ::
 
- /<mfile-id>/auths/
+ /mfiles/<mfile-id>/auths/
 
 GET - Returns the authoritys for the specified mfile::
 
@@ -1384,7 +1430,7 @@ MFile Jobs URL
 -------------------------
 ::
 
- /<mfile-id>/jobs/
+ /mfiles/<mfile-id>/jobs/
 
 GET - Returns the jobs for the specified mfile::
 

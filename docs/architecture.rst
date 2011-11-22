@@ -75,7 +75,7 @@ Design Overview
 Software Components
 *******************
 
-MServe is fronted with Lighttpd or Apache2, both of which efficient access to static files, and bandwidth control to content. It proxys using fast cgi to Django. Django defines the model for resources, content and their usage. Django handles requests for access ingest and manipulation of the content. For batch process Django uses Celery which holds queues of tasks to be processed. The queue is process by an efficient messaging service RabbitMQ.
+MServe is a Django application, Django defines the model for resources, content and their usage. Django handles requests for access ingest and manipulation of the content. It uses Apache2 as a frontend web server to provide access to static files, and bandwidth control to content. For batch process Django uses a distributed task queue called Celery which controls queues of tasks to be processed. The queue is procesed by an efficient messaging service RabbitMQ.
 
 An Example Workflow
 *******************
@@ -154,7 +154,7 @@ Then at some point in the future when the user asks for the status we check on t
 Processing Tasks
 ****************
 
-In a simple setup we declare 2 queues, a normal queue and a high proirity queue (http://ask.github.com/celery/userguide/routing.html)::
+In a simple setup we declare 2 queues, a normal queue and a high priority queue (http://ask.github.com/celery/userguide/routing.html)::
 
     # Details of our rabbitMQ broker
     BROKER_HOST = "localhost"
