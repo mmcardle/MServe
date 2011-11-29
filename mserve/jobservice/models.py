@@ -49,7 +49,6 @@ class JobASyncResult(models.Model):
 
 class Job(NamedBase):
     mfile  = models.ForeignKey(MFile)
-    created  = models.DateTimeField(auto_now_add=True)
     taskset_id = models.CharField(max_length=200)
 
     class Meta:

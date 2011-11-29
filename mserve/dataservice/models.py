@@ -680,6 +680,10 @@ class NamedBase(Base):
     name = models.CharField(max_length=200)
     usages = models.ManyToManyField("Usage")
     reportnum = models.IntegerField(default=1)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created"]
 
     def save(self, *args, **kwargs):
         super(NamedBase, self).save(*args, **kwargs)
@@ -761,7 +765,6 @@ class NamedBase(Base):
 
 
 class HostingContainer(NamedBase):
-    status = models.CharField(max_length=200)
     default_profile = models.CharField(max_length=200, blank=True, null=True)
     default_path = models.CharField(max_length=200, blank=True, null=True)
 
@@ -1099,7 +1102,6 @@ class DataService(NamedBase):
     container = models.ForeignKey(HostingContainer, blank=True, null=True)
     parent = models.ForeignKey('DataService', blank=True, null=True,
                                     related_name="subservices")
-    status = models.CharField(max_length=200)
     starttime = models.DateTimeField(blank=True, null=True)
     endtime = models.DateTimeField(blank=True, null=True)
     priority = models.BooleanField(default=False)
@@ -1500,7 +1502,6 @@ class MFile(NamedBase):
                             null=True, storage=storage.getposterstorage())
     proxy = models.ImageField(upload_to=utils.create_filename,
                             null=True, storage=storage.getproxystorage())
-    created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     duplicate_of = models.ForeignKey('MFile', null=True)
 

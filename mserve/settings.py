@@ -188,6 +188,7 @@ INSTALLED_APPS = (
     'jobservice',
     'djcelery',
     'request',
+    'south',
 )
 
 # Setup debug toolbar

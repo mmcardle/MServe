@@ -778,6 +778,34 @@ cd
 mkdir mserve$$
 cd mserve$$
 
+
+
+######################
+#Install django-south
+# import oauth
+echo "import sys
+try:
+   import south
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
+" | python
+if [ $? -ne 0 ]; then
+	echo "installing django south"
+	django_south_url="http://www.aeracode.org/releases/south/south-0.7.3.tar.gz"
+	wget $django_south_url || f_ "failed to fetch django south from $django_south_url"
+	tar xfz south-0.7.3.tar.gz || f_ "failed to untar south-0.7.3.tar.gz"
+	cd  south
+
+	python setup.py install || f_ "failed to install django south"
+	cd ..
+	rm -rf south
+else
+	echo "south found"
+fi
+
+
+
 ######################
 #Install django-oauth
 # import oauth
