@@ -1346,6 +1346,9 @@ fi
 sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || \
 	f_ "failed to configure mserve database"
 
+sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput || \
+	f_ "failed to migrate mserve database"
+
 if [ -f initial_data.json ]; then
 	rm initial_data.json
 fi
