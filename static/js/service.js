@@ -71,7 +71,7 @@ function create_subservice(serviceid,containerid){
     create_new_subservice_ui_dialog(serviceid,containerid)
 }
 
-function render_service(service,containerid){
+function render_service(service, containerid){
     $("#serviceTemplate").tmpl( service, {containerid : containerid} ) .appendTo( "#servicepaginator" );
     $("#newsubservicebutton-"+service.id).button()
 }

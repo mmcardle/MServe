@@ -38,3 +38,8 @@ urlpatterns = patterns('',
     (r'^admin/', include(admin.site.urls)),
 
 )
+import settings
+if settings.DEBUG:
+    urlpatterns += patterns('',
+        (r'^test/', 'dataservice.views.test' ),
+    )

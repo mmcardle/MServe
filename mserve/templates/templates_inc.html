@@ -1,3 +1,24 @@
+
+<script id="serviceformTemplate" type="text/x-jquery-tmpl">
+    {% csrf_token %} 
+    {{ serviceform.as_ul }}
+</script>
+
+<script id="hostingcontainerformTemplate" type="text/x-jquery-tmpl">
+        <div id="createcontainerholder" class="ui-corner-all" style="">
+        <div class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons"
+             style="margin: 1px;padding: 5px;width: 240px;border: 1px outset silver;">
+            <h3 class="red ui-accordion-header ui-helper-reset ui-state-default ui-corner-all" style="font-size: 14px;padding: 4px;margin:3px;"
+                role="tab" aria-expanded="false" tabindex="-1">New Container Form</h3>
+            <form method="POST" id="createcontainerform" style="width: 100%">
+                {% csrf_token %}
+                {{ hostingcontainerform.as_ul }}
+            </form>
+            <button id="createcontainerbutton">Create</button>
+        </div>
+    </div>
+</script>
+
 <script id="mserveTemplate" type="text/x-jquery-tmpl">
 
     <table style="table-layout: fixed;width: 100%;" border="0">
@@ -64,7 +85,7 @@
 </script>
 
 <script id="strongMessageTemplate" type="text/x-jquery-tmpl">
-    <div class="${cl} ui-widget" style="margin: 2px;">
+    <div class="${cl} ui-widget" style="margin: 8px;display: inline-block;">
         <div class="ui-state-error ui-corner-all" style="padding: 0 .4em;">
             <p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span><strong>${ message }</strong></p>
         </div>
@@ -72,7 +93,7 @@
 </script>
 
 <script id="messageTemplate" type="text/x-jquery-tmpl">
-    <div class="${cl} ui-widget" style="margin: 2px;">
+    <div class="${cl} ui-widget" style="margin: 8px;display: inline-block;">
         <div class="ui-state-highlight ui-corner-all" style="padding: 0 .4em;">
                 <p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>${ message }</p>
         </div>
@@ -80,70 +101,53 @@
 </script>
 
 <script id="containerTemplate" type="text/x-jquery-tmpl">
-    
-        <div class="infoholder">
-            <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
-                 {%templatetag openvariable%}each(i,val) [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]   {%templatetag closevariable%}
-                 
-                 {%templatetag openvariable%}if i%4==0 {%templatetag closevariable%}
-                 <tr>
-                 {%templatetag openvariable%}/if{%templatetag closevariable%}
+    <div id="container-${id}" class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons" style="margin: 5px;">
+        <h3 class="red ui-accordion-header ui-helper-reset ui-state-default ui-corner-all" style="font-size: 14px" role="tab" aria-expanded="false" tabindex="-1">
+            <span class="ui-icon ui-icon-triangle-1-e"></span><a>${name} ${created} <span style="float: right">${id}</span></a>
+        </h3>
 
-                 <td class="container_preview_td" style="background-image: url(${thumbs[i]});"></td>
-
-                {%templatetag openvariable%}if i%4==3 {%templatetag closevariable%}
-                 </tr>
-                 {%templatetag openvariable%}/if{%templatetag closevariable%}
-
-                {%templatetag openvariable%}/each{%templatetag closevariable%}
-            </table>
-
-            <div id="image-${id}" class='fluid' style="position: relative; top: -130px"
-                 {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
-                    onmouseover="$('#id-${id}').show();"
-                    onmouseout="$('#id-${id}').hide();"
-                 {%templatetag openvariable%}/if{%templatetag closevariable%}
-                 >
-
-                <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
-                    <colgroup><col>
-                    </colgroup>
-                    <tbody>
-                    <tr><td>
-                            <div class='title'>
-                                <a href='/browse/${id}/'>
-                                        {% autoescape off %}
-                                            ${getShort(name,20)}
-                                        {% endautoescape  %}
-                                        &nbsp;(${dataservice_set.length})
-                                </a></div></td></tr>
-                    <tr><td>
-                            <a href='/browse/${id}/'>
-                            <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
-                                  <div>${dataservice_set.length} files </div>
-                                  <div style="font-weight: bold">Latest Services :</div>
-
-                                  {%templatetag openvariable%}each dataservice_set{%templatetag closevariable%}
-                                        <!-- Show Last 4 files -->
-                                      {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
-                                        <div>${getShort($value.name,30)}</div>
-                                      {%templatetag openvariable%}/if{%templatetag closevariable%}
-                                  {%templatetag openvariable%}/each{%templatetag closevariable%}
-                              </div>
-                            </a>
-                        </td></tr>
-                    </tbody>
-                </table>
+        <div class="ui-widget ui-corner-all" style="">
+            <div class="ui-widget-content ui-state-highlight" style="padding:4px">
+                {%templatetag openvariable%}if default_profile == null {%templatetag closevariable%}
+                    <span>Services under this Container will use the <strong class="red">default</strong> profile.</span>
+                {%templatetag openvariable%}else{%templatetag closevariable%}
+                    <span>Services under this Container will use the <strong class="red">${default_profile}</strong> profile.</span>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+                <span> Data will be stored in the <strong class="red">{{STORAGE_ROOT}}/${default_path}</strong> folder.</span>
             </div>
         </div>
-        
+
+        <div id="createserviceholder-${id}" class="ui-corner-all " style="display: block">
+            <div class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons" style="margin: 10px;padding: 5px;width: 250px;float: right;border: 1px outset silver;">
+                <h3 class="red ui-accordion-header ui-helper-reset ui-state-default ui-corner-all" style="font-size: 14px;padding: 4px;margin:3px"
+                    role="tab" aria-expanded="false" tabindex="-1">New Service Form</h3>
+                <form method="POST" id="createserviceform-${id}" style="width: 100%">
+                    {% templatetag openvariable %}tmpl "#serviceformTemplate" {% templatetag closevariable %}
+                </form>
+                <button id="createservicebutton-${id}">Create</button>
+            </div>
+        </div>
+
+        <div id="containermessages-${id}" class="" style="padding: 0 .4em;margin: 10px;">
+            {%templatetag openvariable%}if dataservice_set.length==0 {%templatetag closevariable%}
+                {% templatetag openvariable %}tmpl( {"cl":"container-message-"+id,"message":"No Services have been set up yet"} ) "#messageTemplate" {% templatetag closevariable %}
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </div>
+
+        <div id="containerserviceholder-${id}" class="" style="padding: 0 .4em;margin: 10px;">
+            {%templatetag openvariable%}each(index, service) dataservice_set{%templatetag closevariable%}
+                {% templatetag openvariable %}tmpl(service ) "#serviceTemplate" {% templatetag closevariable %}
+            {%templatetag openvariable%}/each{%templatetag closevariable%}
+        </div>
+
+        <div class="clr"></div>
+    </div>
 </script>
 
 <script id="serviceTemplate" type="text/x-jquery-tmpl">
 
 <div class="infoholder">
     <table cellpadding="0" cellspacing="0" style="margin-top:9px;margin-left: 12px;">
-
 
                {%templatetag openvariable%}each(i,val) [0,1,2,3]   {%templatetag closevariable%}
 
@@ -158,8 +162,6 @@
                  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
                 {%templatetag openvariable%}/each{%templatetag closevariable%}
-
-
     </table>
 
     <div id="image-${id}" class='fluid'
@@ -183,7 +185,7 @@
             <tr>
                 <td>
                     <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
-                        <a href='/browse/${id}/'>
+                        <a href='/services/${id}' rel="address:/services/${id}" >
                           <div>${mfile_set.length} files </div>
                           <div style="font-weight: bold">Latest Files :</div>
 
@@ -850,7 +852,7 @@
             <tbody>
             <tr><td>
                     <div class='title'>
-                        <a href='/browse/${id}/'>
+                        <a href='/mfiles/${id}' rel="address:/mfiles/${id}">
                                 {% autoescape off %}
                                     ${getShort(name,20)}
                                 {% endautoescape  %}
@@ -858,7 +860,7 @@
             <tr><td>
 
                     <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
-                        <a href='/browse/${id}/'>
+                        <a href='/mfiles/${id}' rel="address:/mfiles/${id}">
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
                           <div style='font-size: xx-small;text-align: center'>${mimetype}</div>

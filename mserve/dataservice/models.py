@@ -967,9 +967,18 @@ class HostingContainer(NamedBase):
             return 1
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        initial = not self.id
+        if initial:
             self.id = utils.random_id()
         super(HostingContainer, self).save(*args, **kwargs)
+        if initial:
+            managementproperty = ManagementProperty(property="accessspeed", \
+                    base=self, value=settings.DEFAULT_ACCESS_SPEED)
+            managementproperty.save()
+
+            hostingcontainerauth = Auth(base=self, authname="full")
+            hostingcontainerauth.setroles(['containeradmin'])
+            hostingcontainerauth.save()
 
     def _delete_usage_(self):
         import usage_store as usage_store

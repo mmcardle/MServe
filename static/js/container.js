@@ -23,7 +23,7 @@ function create_container(){
    data: "name=Container",
    url: '/containers/',
    success: function(msg){
-            loadContainers()
+       $( "#containerTemplate" ).tmpl( msg ) .prependTo( "#containerholder" );
    },
    error: function(msg){
      showError("Error", ""+msg.responseText );
@@ -47,20 +47,16 @@ function loadContainers(){
 
             function handlePaginationClick(new_page_index, pagination_container) {
                 // This selects elements from a content array
+                $( "#containerholder" ).empty()
                 start = new_page_index*this.items_per_page
                 end   = (new_page_index+1)*this.items_per_page
                 if(end>containers.length){
                     end=containers.length;
                 }
 
-                $( "#containerTemplate" ).tmpl( containers.slice(start,end) ) .appendTo( "#containerpaginator" );
-                for(var i=start;i<end;i++) {
-                    //var c = $("<div>"+containers[i].name+"  <a href='/browse/"+containers[i].id+"/'>"+containers[i].id+"</a>&nbsp;<em>"+containers[i].dataservice_set.length+" services</em></div>")
-                    //$('#containerpaginator').append(c)
-                }
+                $( "#containerTemplate" ).tmpl( containers.slice(start,end) ) .prependTo( "#containerholder" );
                 return false;
             }
-
 
             // First Parameter: number of items
             // Second Parameter: options object

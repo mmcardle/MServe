@@ -103,11 +103,219 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                  if ( ! data ) {
                    $(this).data('mserve', {
                        target : $this,
-                       table : $table
+                       table : $table,
+                       allcontent : {}
                    });
                  }
 
             });
+    },
+    loadpage : function( page, staff ) {
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+
+            var $this = $(this), data = $this.data('mserve')
+
+            console.log("loading page "+page)
+            $this.empty()
+            if(!page){
+                page="/"
+            }
+            if(page=='/'){
+                if(isStaff){
+                    $(this).mserve('loadContainers');
+                }else{
+
+                }
+            }else if(page.startsWith('/services/')){
+                $(this).mserve('loadService', page);
+            }else if(page.startsWith('/mfiles/')){
+                $(this).mserve('loadMFile', page);
+            }else{
+                console.log("dont know how to load "+page)
+            }
+
+        });
+    },
+    initContainer: function(container, isNew) {
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+            var $this = $(this), data = $this.data('mserve')
+            $container = $( "#containerTemplate" ).tmpl( container )
+            $container.prependTo( $this.find("#containerholder") );
+            $container.find("input[type='text']").addClass("text ui-widget-content ui-corner-all")
+            $container.find("input[type='password']").addClass("text ui-widget-content ui-corner-all")
+            if(isNew){
+                $container.find("#containermessages-"+container.id).prepend(
+                    $("#strongMessageTemplate").tmpl({"cl":"container-message-"+container.id,"message":"New Container!" })
+                );
+            }
+
+            $("#newservicebutton-"+container.id).button().click(
+            function(){
+                 $("#createserviceholder-"+container.id).toggle()
+            })
+            $("#createservicebutton-"+container.id).button().click(
+            function(){
+                data = $("#createserviceform-"+container.id).serialize()
+                $.ajax({
+                       type: "POST",
+                       url: '/containers/'+container.id+'/services/',
+                       data: data,
+                       success: function(service){
+                            $(".container-message-"+container.id).remove()
+                            $("#serviceTemplate").tmpl( service, {containerid : container.id} ) .appendTo( "#containerserviceholder-"+container.id );
+                            $("#newsubservicebutton-"+service.id).button()
+                       },
+                       error: function(msg){
+                            showMessage("Error",msg.responseText)
+                        }
+                     });
+            })
+
+        })
+    },
+    loadContainers: function() {
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+
+            var $this = $(this), data = $this.data('mserve')
+
+            $.ajax({
+               type: "GET",
+               url: "/containers/",
+               success: function(containers){
+                    console.log("loading containers")
+
+                    $this.append("<div id='containertabs'><ul></ul></div>");
+                   
+                    $servicetab = $("<div id='tabs-services'><table><tr><td id='td1'></td><td style='width:100%' id='td2'></td></tr></table></div>");
+                    $this.append($servicetab);
+                    $("#containertabs").tabs().tabs( "add", "#tabs-services" , "Container Management" );
+                    $servicetab.find('#td1').append( $("#messageTemplate").tmpl({"message":"Welcome to the container managment page of MServe. You can create new containers and manage existing ones from here" })  );
+                    $servicetab.find('#td1').append( $("#hostingcontainerformTemplate").tmpl() );
+                    $servicetab.find('#td2').append( $("#messageTemplate").tmpl({"message":"Here is a list of Containers in this MServe, scroll with the paginator below to view more" })  );
+                    $servicetab.find('#td2').append("<div id='containerpaginator'></div>");
+                    $servicetab.find('#td2').append("<div id='containermessages'></div>");
+                    $servicetab.find('#td2').append("<div id='containerholder'></div>");
+
+                    $servicetab.find("input[type='text']").addClass("text ui-widget-content ui-corner-all")
+                    $servicetab.find("input[type='password']").addClass("text ui-widget-content ui-corner-all")
+                    $servicetab.find("select").addClass("ui-widget-content ui-corner-all")
+
+                    $("#createcontainerbutton").button()
+                    $("#createcontainerbutton" ).click(function() {
+                        data = $("#createcontainerform").serialize()
+                         $.ajax({
+                           type: "POST",
+                           data: data,
+                           url: '/containers/',
+                           success: function(container){
+                               $(obj).mserve('initContainer', container, true)
+                           },
+                           error: function(msg){
+                             showError("Error", ""+msg.responseText );
+                           }
+                         });
+                    });
+
+                    if(containers.length==0){
+                         $this.find("#containermessages").append("<div id='nocontainers' class='message'>No Containers</div>");
+                        return;
+                    }else{
+                        $("#containermessages").empty()
+                    }
+
+                    function handlePaginationClick(new_page_index, pagination_container) {
+                        // This selects elements from a content array
+                        //$( "#containerholder" ).empty()
+                        start = new_page_index*this.items_per_page
+                        end   = (new_page_index+1)*this.items_per_page
+                        if(end>containers.length){
+                            end=containers.length;
+                        }
+
+                        slice = containers.slice(start, end)
+                        
+                        $(slice.reverse()).each(function(index,container){
+                            $(obj).mserve('initContainer', container)
+                        })
+
+                        return false;
+                    }
+
+                    // First Parameter: number of items
+                    // Second Parameter: options object
+                    $servicetab.find("#containerpaginator").pagination(containers.length, {
+                            items_per_page:4,
+                            callback:handlePaginationClick
+                    });
+
+               },
+               error: function(msg){
+                    $("#containermessages").append("<div class='message'>Failed to get containers</div>");
+               }
+             });
+
+        });
+    },
+    loadService: function(url) {
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+
+            var $this = $(this), data = $this.data('mserve')
+
+             $.ajax({
+               type: "GET",
+               url: url,
+               success: function(service){
+                   $this.mserve( "init")
+                   $this.mserve( "loadMTree", {
+                        serviceid : service.id ,
+                        mfolder_set : service.mfolder_set,
+                        mfile_set : service.mfile_set,
+                        folder_structure : service.folder_structure
+                    } )
+               }
+            });
+
+        });
+    },
+    loadMFile: function(url) {
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+
+            var $this = $(this), data = $this.data('mserve')
+
+             $.ajax({
+               type: "GET",
+               url: url,
+               success: function(mfile){
+                    $this.append(mfile.name)
+               }
+            });
+
+        });
     },
     get_mfile_thumb: function(mfileid, depth){
 
@@ -357,7 +565,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
             });
 
     },
-    load : function( options ) {
+    loadMTree : function( options ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -365,17 +573,18 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
             return this.each(function() {
                 var o = options;
                 var obj = $(this);
+                var $this = $(this),
+                data = $this.data('mserve');
 
                 var serviceid = o.serviceid
                 var mfolder_set = o.mfolder_set
                 var mfile_set =  o.mfile_set
                 var folder_structure = o.folder_structure
 
+                $this.append("<div id='mservetree' style=''></div><div id='qscontainer' ></div>");
+
                 $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#qscontainer")
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#qscontainer")
-
-                var $this = $(this),
-                data = $this.data('mserve');
 
                 // Update MFile before cloning
                 $(mfile_set).each( function(index,mfile) {
@@ -386,10 +595,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 data["allcontent"] = allcontent
 
                 var $filteredData = allcontent.find('li.rootfolder');
-                $('#qscontainer').quicksand($filteredData, {
-                  duration: 800,
-                  easing: 'easeInOutQuad'
-                });
+                $('#qscontainer').quicksand($filteredData);
 
                 $("#mfoldertreecontainer").jstree({
                      "json_data" : folder_structure,

@@ -176,7 +176,9 @@ class ServiceRequestHandler(BaseHandler):
 class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE','PUT')
     model = HostingContainer
-    fields = ('name', 'id', 'created', 'default_profile', ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  ) ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
+    fields = ('name', 'id', 'created', 'default_profile', 'default_path',
+                ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  )
+                ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
     exclude = ()
 
     def update(self, request, id):
@@ -214,8 +216,8 @@ class HostingContainerHandler(BaseHandler):
         if request.user.is_staff:
             form = HostingContainerForm(request.POST)
             if form.is_valid():
-                name = form.cleaned_data['name']
-                hostingcontainer = HostingContainer.create_container(name)
+                hostingcontainer = form.save()
+                print hostingcontainer
                 return hostingcontainer
             else:
                 r = rc.BAD_REQUEST

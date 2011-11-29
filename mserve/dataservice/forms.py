@@ -86,7 +86,7 @@ class HostingContainerForm(ModelForm):
     default_path    = forms.CharField(label='Path after %s (Dont include leading slash)' % (settings.STORAGE_ROOT), required=False)
 
     class Meta:
-        exclude=['id','status','reportnum','initial_usage_recorded','usages','properties']
+        exclude=['id','reportnum','initial_usage_recorded','usages','properties']
         model = HostingContainer
 
 class ManagementPropertyForm(ModelForm):

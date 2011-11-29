@@ -64,6 +64,17 @@
     }
     </style>
  {% endif %}
+  {% if user.is_authenticated %}
+    {% if user.is_staff %}
+        <script type="text/javascript">
+            isStaff= true
+        </script>
+    {% else %}
+        <script type="text/javascript">
+            isStaff= false
+        </script>
+    {% endif %}
+  {% endif %}
 
 <!--<link rel="stylesheet" href="style.css" />-->
 <title>{% block title %}MServe{% endblock %}</title>
@@ -155,9 +166,33 @@
     {% block heading %}{% endblock %}
 
     <table id="maintable" >
-        <tr>            
-            <td>
+        <tr>
+            <td width="10%">
+                {% block sidebar%}
+                <div id="sidebar">
+                    <ul style="">
+                        {% if user.is_staff %}
+                            <li class="ui-state-default ui-corner-all"><a href="/"><span class="ui-icon ui-icon-home" style="float: left" ></span><span>Home</span></a></li>
+                            <li class="ui-state-default ui-corner-all"><a href="/admin/"><span class="ui-icon ui-icon-key" style="float: left" ></span><span>Admin</span></a></li>
+                            <li class="ui-state-default ui-corner-all"><a href="/usage/"><span class="ui-icon ui-icon-calculator" style="float: left" ></span><span>Usage</span></a></li>
+                        {% endif %}
+
+                        {% if user.is_authenticated %}
+                            <li class="ui-state-default ui-corner-all"><a href="/accounts/profile/"><span class="ui-icon ui-icon-person" style="float: left" ></span><span>Profile</span></a></li>
+                            <li class="ui-state-default ui-corner-all"><a href="/accounts/logout/"><span class="ui-icon ui-icon-power" style="float: left" ></span><span>Logout</span></a></li>
+                        {% endif %}
+                        {% if not user.is_authenticated %}
+                            <li class="ui-state-default ui-corner-all"><a href="/"><span class="ui-icon ui-icon-person" style="float: left" ></span><span>Logout</span></a></li>
+                        {% endif %}
+
+                    </ul>
+                </div>
+                {% endblock %}
+            </td>
+            <td width="*">
+                <div id="mserve"></div>
                 {% block content %}{% endblock %}
+
             </td>
         </tr>
         <tr>
@@ -197,18 +232,6 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    $(function() {
-        $( "#tabs" ).tabs();
-
-        $.address.change(function(event){
-            $("#tabs").tabs( "select" , window.location.hash )
-        })
-
-        $("#tabs").bind("tabsselect", function(event, ui) {
-            window.location.hash = ui.tab.hash;
-        })
-        
-    });
     $(".dropshadow").addClass(" ui-corner-all");
     $("input[type='text']").addClass("text ui-widget-content ui-corner-all")
     $("input[type='password']").addClass("text ui-widget-content ui-corner-all")

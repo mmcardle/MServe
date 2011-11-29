@@ -27,7 +27,7 @@
 
 import utils
 import logging
-import urlparse
+import datetime
 from django.conf import settings
 from models import NamedBase
 from models import HostingContainer
@@ -101,9 +101,11 @@ def append_dict(_dict, request):
                 mobile_browser = True
 
     _dict['mobile_browser'] = mobile_browser
+    if request.user.is_authenticated() and request.user.is_staff:
+        _dict['STORAGE_ROOT'] = settings.STORAGE_ROOT
     return _dict
 
-def home(request, form=HostingContainerForm()):
+def home(request):
     """Render the home page """
     hostings = HostingContainer.objects.all()
     usagesummary = Usage.usages_to_summary(Usage.objects.all())
@@ -112,7 +114,14 @@ def home(request, form=HostingContainerForm()):
     _dict["servicerequestform"] = servicerequestform
     if request.user.is_authenticated() and request.user.is_staff:
         _dict["hostingcontainers"] = hostings
-        _dict["form"] = form
+        _dict["hostingcontainerform"] = HostingContainerForm(initial={
+            'name': "Container",
+            })
+        _dict["serviceform"] = DataServiceForm(initial={
+            'name': "Service",
+            "starttime":datetime.datetime.today(),
+            "endtime":datetime.datetime.today() + datetime.timedelta(hours=1)
+            })
         _dict["usagesummary"] = usagesummary
         return render_to_response('home.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
@@ -289,6 +298,13 @@ def render_base(request, baseid):
             ID does not relate to a auth object." , baseid)
 
     return Http404()
+
+@login_required
+def test(request):
+    """Render the user page"""
+    _dict = {}
+    return render_to_response('test.html', append_dict(_dict, request), \
+            context_instance=RequestContext(request))
 
 @login_required
 def profile(request):

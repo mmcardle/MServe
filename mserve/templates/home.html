@@ -30,87 +30,6 @@
 
 {% block content %}
 
-    {% if user.is_staff %}
-
-            <h3>Admin <span class="red">Containers</span></h3>
-
-            <div id="containerpaginator" class="jcarousel-skin-tango" style="min-height: 230px;"></div>
-            <div style="clear:both" id="containermessages"></div>
-
-            <button id="createcontainerbutton" >New Container</button>
-
-            <script type="text/javascript">
-
-            </script>
-
-    {% else %}
-
-        {% if not user.is_authenticated %}
-            <p>Welcome, Please <a href="/accounts/login" >log in.</a></p>
-        {% else %}
-
-    {% endif %}
-
-
-{% endif %}
-
-        {% if user.is_authenticated %}
-        <h1>Resources you own</h1>
-
-            <div id="user_mfilemessages">
-
-            </div>
-
-            <div id="user_mfileholder" class="jcarousel-skin-tango">
-
-            </div>
-
-        <h1>Resources you have access to</h1>
-
-            <div id="user_authmessages">
-
-            </div>
-        
-            <div id="user_authholder">
-
-            </div>
-
-        <div class="clr"></div>
-
-        <table style="table-layout: fixed;width: 100%">
-            <tr>
-                {% if not user.is_staff %}
-                <td>
-                    <h1>Request a Service</h1>
-
-                    <div id="user-request-service" >
-                        <form id="user-request-service-form"  >
-                            <div id="user-request-service-form-errors" style="color:red;font-weight: bold"></div>
-                            {{ servicerequestform.as_p }}
-
-                        </form>
-                        <button id="user-request-service-button"  >Request a Service</button>
-                    </div>
-                </td>
-                {% endif %}
-                <td >
-                    <h1>Pending Requests</h1>
-                    <div id="pending-requests" style="height: 150px;overflow: auto;">
-                        
-                    </div>
-                </td>
-                <td>
-                    <h1>Requests</h1>
-                    <div id="done-requests" style="height: 150px;overflow: auto;">
-
-                    </div>
-                </td>
-            </tr>
-        </table>
-
-        <div class="clr"></div>
-    {% endif %}
-
 {% endblock %}
 
 {% block auths %}
@@ -118,33 +37,37 @@
 {% endblock auths %}
 
 {% block bottomscript %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $(function() {
 
-    
-  {% if user.is_authenticated %}
-    {% if user.is_staff %}
-    <script type="text/javascript">
-        isStaff= true
-        $(document).ready(function() {
-                    loadContainers();
-                    $("#createcontainerbutton" ).click(function() {  create_container() });
-        });
-    </script>
-    {% else %}
-    <script type="text/javascript">
-        isStaff= false
-    </script>
-    {% endif %}
-    <script type="text/javascript">
+            function loadURL(url) {
+                console.log("loadURL: " + url);
+                $("#mserve").mserve('loadpage',url)
+	    }
 
-        $(document).ready(function() {
+            console.log("Loading URL from hash ... "+window.location.hash)
 
-                $('button').button();
-                $('#user-request-service-button').click( function(){
-                    user_request_service("{% url user_requests %}")
-                });
-                load_user("{% url user %}","{% url consumer %}","#mfileTemplate");
-                load_user_requests("{% url user_requests %}");
-        });
-    </script>
-  {% endif %}
+	    // Event handlers
+	    $.address.init(function(event) {
+	        console.log("init: " + $("[rel='address:" + event.value + "']").attr('href'));
+	    }).change(function(event) {
+                console.log("event.value :"+ event.value)
+                r = $("[rel='address:" + event.value + "']").attr('href')
+                console.log("r :"+ r)
+                loadURL(event.value);
+	    	console.log("change");
+	    })
+
+            $('a[rel]').address(function() {
+                console.log("address this :"+this)
+                //console.log("address this.href :"+this.attr('href'))
+                console.log("address this.href.replace :"+$(this).attr('href').replace(/^#/, ''))
+                r = $(this).attr('href').replace('/^#/', '');
+                console.log(r)
+                return  r
+            });
+    });
+});
+</script>
 {% endblock %}
