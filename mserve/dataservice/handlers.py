@@ -229,7 +229,10 @@ class HostingContainerHandler(BaseHandler):
 class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET','POST','DELETE','PUT')
     model = DataService
-    fields = ('name', 'id', 'created', 'reportnum', 'starttime', 'endtime', 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority','subservices_url','folder_structure')
+    fields = ('name', 'id', 'created', 'reportnum', 'starttime', 'endtime',
+                'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority',
+                'subservices_url','stats_url','usage_url','folder_structure',
+                'properties_url', 'url', 'webdav_url')
     exclude = ('pk')
 
     def read(self,request, id=None, containerid=None,serviceid=None):

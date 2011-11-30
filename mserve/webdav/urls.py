@@ -29,5 +29,5 @@
 from django.conf.urls.defaults import *
 
 urlpatterns = patterns('webdav.views',
-    url(r'^webdav/(?P<id>[^/]+)/.*$', 'webdav')
+    url(r'^webdav/(?P<id>[^/]+)/.*$', 'webdav', name='webdav')
 )

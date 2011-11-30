@@ -89,28 +89,17 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                 var $this = $(this), data = $this.data('mserve')
 
-                $table = $("#mserveTemplate").tmpl()
-                $table.find("#mserve-new-folder-button").button(
-                    { icons: { primary: "ui-icon-circle-plus"} }
-                ).click( function(){
-                    selected = $("#mfoldertreecontainer").jstree('get_selected')
-                    alert("TODO - Create folder at "+selected)
-                })
-                $(obj).append($table);
-
                  // If the plugin hasn't been initialized yet
 
                  if ( ! data ) {
                    $(this).data('mserve', {
                        target : $this,
-                       table : $table,
-                       allcontent : {}
                    });
                  }
-
             });
+
     },
-    loadpage : function( page, staff ) {
+    loadpage : function( page ) {
         var defaults = {};
         var options = $.extend(defaults, options);
 
@@ -132,9 +121,14 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                 }
             }else if(page.startsWith('/services/')){
-                $(this).mserve('loadService', page);
+                var str = page.split(/\//g)
+                url = str[1]+"/"+str[2]
+                tab = str[3]
+
+                $(this).mserve('loadService', url, tab);
+
             }else if(page.startsWith('/mfiles/')){
-                $(this).mserve('loadMFile', page);
+                $this.mserve('loadMFile', page);
             }else{
                 console.log("dont know how to load "+page)
             }
@@ -271,7 +265,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
         });
     },
-    loadService: function(url) {
+    loadService: function(url, tab) {
         var defaults = {};
         var options = $.extend(defaults, options);
 
@@ -285,8 +279,96 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                type: "GET",
                url: url,
                success: function(service){
-                   $this.mserve( "init")
-                   $this.mserve( "loadMTree", {
+
+                    $tabs = $("#tabsTemplate").tmpl( {"tabid":service.id,"tabs":[
+                        {name:"Service Data",id:"servicetab-"+service.id,url:url},
+                        {name:"Jobs",id:"jobstab-"+service.id,url:url+"/jobs"},
+                        {name:"Config",id:"configtab-"+service.id,url:url+"/config"},
+                        {name:"Usage",id:"usagetab-"+service.id,url:url+"/usage"}
+                    ]} )
+
+                    $table = $("#mserveTemplate").tmpl()
+                    $table.find("#mserve-new-folder-button").button(
+                        { icons: { primary: "ui-icon-circle-plus"} }
+                        ).click( function(){
+                    selected = $("#mfoldertreecontainer").jstree('get_selected')
+                        alert("TODO - Create folder at "+selected)
+                    })
+
+                    $(obj).append($tabs);
+                    $("#servicetab-"+service.id).append($table);
+                    $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
+                    $("#usagetab-"+service.id).append($usageHolderTemplate);
+
+                    $("#jobstab-"+service.id).append("<div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
+                    loadJobs(service.id)
+
+                    $serviceConfigTemplate  = $("#serviceConfigTemplate").tmpl()
+                    $("#configtab-"+service.id).append($serviceConfigTemplate);
+
+                    service_loadmanagementproperties(service.id, service.properties_url );
+                    $("#managementpropertybutton").button().click(
+                        function(){
+                            service_postmanagementproperty_ajax(
+                                service.id,
+                                service.properties_url,
+                                $('#managementpropertyform').serialize()
+                            );
+                        }
+                    )
+                    $("#profilepaginator").mserve( "serviceprofiles", service.id )
+                    $("input[type=text]").css("border","1").css("color","#f6931f").css("font-weight","bold")
+                    $("#webdav").text("dav://"+window.location.hostname+":"+window.location.port+"/webdav/"+service.id+"/")
+                    
+                    hpmessage = "This service is in high priority"
+                    lpmessage = "This service is in low priority"
+
+                    if(service.priority){
+                        $("#highprioritybutton").hide()
+                        $("#strongMessageTemplate" ).tmpl( {"message": hpmessage  } ).appendTo("#prioritymessage")
+                    }else{
+                        $( "#messageTemplate" ).tmpl( {"message": lpmessage  } ).appendTo("#prioritymessage")
+                        $("#lowprioritybutton").hide()
+                    }
+
+                    function set_high_priority(){
+                        update_service_priority(service.url,true)
+                        $("#highprioritybutton").hide()
+                        $("#lowprioritybutton").show()
+                        $("#prioritymessage").empty()
+                        $("#strongMessageTemplate" ).tmpl( {"message": hpmessage  } ).appendTo("#prioritymessage")
+                    }
+                    function set_low_priority(){
+                        update_service_priority(service.url,false)
+                        $("#lowprioritybutton").hide()
+                        $("#highprioritybutton").show()
+                        $("#prioritymessage").empty()
+                        $( "#messageTemplate" ).tmpl( {"message": lpmessage  } ).appendTo("#prioritymessage")
+                    }
+
+                    $("#lowprioritybutton").button().click(set_low_priority)
+                    $("#highprioritybutton").button().click(set_high_priority)
+                    
+                    $($tabs).tabs()
+
+                    _loadusage = function(){
+                        $usageHolderTemplate.find("#mservelast24").mserveusage('stats', ["last24"], '/stats/'+service.id+'/' )
+                        $usageHolderTemplate.find("#mservelast1").mserveusage('stats', ["last1"], '/stats/'+service.id+'/' )
+                        $usageHolderTemplate.find("#mservejobs").mserveusage('stats', ["jobs"], '/stats/'+service.id+'/' )
+                        $usageHolderTemplate.find("#mservejobstype").mserveusage('stats', ["jobsbytype"], '/stats/'+service.id+'/' )
+                        $usageHolderTemplate.find("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], service.stats_url )
+                        $usageHolderTemplate.find("#usagesummary").mserveusage('usagesummary', service.usage_url )
+                    }
+
+                    $tabs.bind('tabsshow', function(event, ui) {
+                        if (ui.panel.id == "usagetab-"+service.id) {
+                            _loadusage()
+                        }
+                    });
+
+                    $tabs.tabs('select', '#' + tab+"tab-"+service.id);
+
+                    $this.mserve( "loadMTree", {
                         serviceid : service.id ,
                         mfolder_set : service.mfolder_set,
                         mfile_set : service.mfile_set,
@@ -496,7 +578,6 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                                                    data: data,
                                                    url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/',
                                                    success: function(newtaskset){
-                                                       console.log(newtaskset)
                                                         var tasksettmpl = $("#taskSetTemplate" ).tmpl( newtaskset, { "workflowid" : workflow.id } )
                                                         tasksettmpl.appendTo("#workflowbody-"+workflow.id );
                                                         updatetasksetbuttons(serviceid, profile.id, workflow.id, newtaskset)
@@ -581,8 +662,6 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 var mfile_set =  o.mfile_set
                 var folder_structure = o.folder_structure
 
-                $this.append("<div id='mservetree' style=''></div><div id='qscontainer' ></div>");
-
                 $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#qscontainer")
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#qscontainer")
 
@@ -592,7 +671,9 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 });
 
                 var allcontent = $('#qscontainer').clone(true)
-                data["allcontent"] = allcontent
+                if(!data.allcontent){
+                    data["allcontent"] = allcontent
+                }
 
                 var $filteredData = allcontent.find('li.rootfolder');
                 $('#qscontainer').quicksand($filteredData);

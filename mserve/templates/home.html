@@ -40,32 +40,18 @@
 <script type="text/javascript">
 $(document).ready(function() {
     $(function() {
-
-            function loadURL(url) {
-                console.log("loadURL: " + url);
-                $("#mserve").mserve('loadpage',url)
-	    }
-
             console.log("Loading URL from hash ... "+window.location.hash)
-
+            $("#mserve").mserve('init')
 	    // Event handlers
 	    $.address.init(function(event) {
-	        console.log("init: " + $("[rel='address:" + event.value + "']").attr('href'));
+	        //console.log("init: " + $("[rel='address:" + event.value + "']").attr('href'));
 	    }).change(function(event) {
-                console.log("event.value :"+ event.value)
-                r = $("[rel='address:" + event.value + "']").attr('href')
-                console.log("r :"+ r)
-                loadURL(event.value);
-	    	console.log("change");
+                url = event.value
+                console.log("Loading via mserve: " + url);
+                $("#mserve").mserve('loadpage', url)
 	    })
-
             $('a[rel]').address(function() {
-                console.log("address this :"+this)
-                //console.log("address this.href :"+this.attr('href'))
-                console.log("address this.href.replace :"+$(this).attr('href').replace(/^#/, ''))
-                r = $(this).attr('href').replace('/^#/', '');
-                console.log(r)
-                return  r
+                return  $(this).attr('href').replace('/^#/', '');
             });
     });
 });

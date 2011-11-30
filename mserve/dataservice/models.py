@@ -778,8 +778,10 @@ class HostingContainer(NamedBase):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = CONTAINER_METRICS
 
+    def url(self): return reverse('hostingcontainer', args=[self.id])
     def stats_url(self): return reverse('stats', args=[self.id])
     def usage_url(self): return reverse('hostingcontainer_usagesummary', args=[self.id])
+    def properties_url(self): return reverse('hostingcontainer_props', args=[self.id])
 
     def thumbs(self):
         thumbs = []
@@ -1125,8 +1127,11 @@ class DataService(NamedBase):
         "profiles": ["GET"],
         }
 
+    def url(self): return reverse('dataservice', args=[self.id])
+    def webdav_url(self): return reverse('webdav', args=[self.id])
     def stats_url(self): return reverse('stats', args=[self.id])
     def usage_url(self): return reverse('dataservice_usagesummary', args=[self.id])
+    def properties_url(self): return reverse('dataservice_props', args=[self.id])
 
     def folder_structure(self):
         return self._folder_structure(self.id)

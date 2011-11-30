@@ -4,6 +4,44 @@
     {{ serviceform.as_ul }}
 </script>
 
+<script id="usageHolderTemplate" type="text/x-jquery-tmpl">
+    <div>
+    <table style="width: 90%;table-layout: fixed">
+        <tr>
+            <td><div id="mservelast24" style="margin-top: 20px;"></div></td>
+            <td><div id="mservelast1" style="margin-top: 20px;"></div></td>
+        </tr>
+    </table>
+
+    <table style="width: 90%;table-layout: fixed">
+        <tr>
+            <td><div id="mservejobstype" style="margin-top: 20px;"></div></td>
+            <td><div id="deliverySuccess" style="margin-top: 20px;"></div></td>
+        </tr>
+    </table>
+
+    <div id="mservejobs" style="margin-top: 20px;"></div>
+    <div class="clr"></div>
+
+    <h3>Usage summary</h3>
+    <div id="usagesummary" ></div>
+</div>
+</script>
+
+<script id="tabsTemplate" type="text/x-jquery-tmpl">
+    <div id="tabs-${tabid}" >
+        <ul>
+        {%templatetag openvariable%}each(index, tab) tabs{%templatetag closevariable%}
+                <li><a href="#${tab.id}" rel="address:${tab.url}">${tab.name}</a></li>
+        {%templatetag openvariable%}/each{%templatetag closevariable%}
+        </ul>
+
+        {%templatetag openvariable%}each(index, tab) tabs{%templatetag closevariable%}
+                <div id="${tab.id}"></div>
+        {%templatetag openvariable%}/each{%templatetag closevariable%}
+    </div>
+</script>
+
 <script id="hostingcontainerformTemplate" type="text/x-jquery-tmpl">
         <div id="createcontainerholder" class="ui-corner-all" style="">
         <div class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons"
@@ -206,6 +244,86 @@
         </table>
     </div>
 </div>
+</script>
+
+<script id="serviceConfigTemplate" type="text/x-jquery-tmpl">
+    <h2>Properties</h2>
+
+           <table>
+               <tr>
+                   <td>
+                          <dl style="padding-left: 40px;">
+                            <dt>Start Time</dt>
+                            <dd>
+                                {% if service.starttime %}
+                                    {{service.starttime|date}} {{service.starttime|time}}
+                                {% else %}
+                                    <strong>No Start Time</strong>
+                                {% endif %}
+                            </dd>
+                            <dt>End Time</dt>
+                            <dd>
+                                {% if service.endtime %}
+                                    {{service.endtime|date}} {{service.endtime|time}}
+                                {% else %}
+                                    <strong>No End Time</strong>
+                                {% endif %}
+                            </dd>
+                        </dl>
+
+                   </td>
+                   <td>
+                       <div style="padding-left: 40px;">
+                           <table><tr>
+                                <td>
+                                     <div style="padding: 10px;" id="prioritymessage"></div>
+                              </td><td>
+                                    <div style="padding: 10px;"></div>
+                                        <button id="lowprioritybutton">Set to Low</button>
+                                        <button id="highprioritybutton">Set to High</button>
+                                    </div>
+                              </td></tr>
+                           </table>
+
+                       </div>
+                   </td>
+               </tr>
+           </table>
+
+
+            <h2>Access </h2>
+            <dl style="padding-left: 40px;">
+                <dt>WebDAV</dt>
+                <dd>
+                        <strong><span id="webdav"></span></strong>
+                </dd>
+            </dl>
+
+            <h2>Management Properties</h2>
+
+            <table id="managementpropertyholder" style="width:100%;vertical-align: middle;padding:10px;padding-left: 40px;" >
+                <tr>
+                    <th style="width: 10%">Name</th>
+                    <th style="width: 10%">Current Value</th>
+                    <th style="width: 50%">New Value</th>
+                    <th width="*" ></th>
+                </tr>
+            </table>
+
+            <h4></h4>
+                <table style="width:50%;vertical-align: middle;padding:10px;padding-left: 40px;" >
+                    <tr><th style="width: 25%" colspan="2" >New Management Property</th></tr>
+                    <form id="managementpropertyform">
+                            {{ managementpropertyform.as_table }}
+                    </form>
+                    <tr><td></td><td><button id="managementpropertybutton">New Property</button></td></tr>
+                </table>
+
+            <h2>Profile Configuration</h2>
+
+            <div id="profilepaginator">
+
+            </div>
 </script>
 
 <script id="managementpropertyTemplate-string" type="text/x-jquery-tmpl">
