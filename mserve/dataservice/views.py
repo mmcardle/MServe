@@ -103,6 +103,8 @@ def append_dict(_dict, request):
     _dict['mobile_browser'] = mobile_browser
     if request.user.is_authenticated() and request.user.is_staff:
         _dict['STORAGE_ROOT'] = settings.STORAGE_ROOT
+        _dict['managementpropertyform'] = ManagementPropertyForm()
+
     return _dict
 
 def home(request):

@@ -1,4 +1,74 @@
 
+<script id="template-upload" type="text/x-jquery-tmpl">
+    <tr class="template-upload{%templatetag openvariable%}if error{%templatetag closevariable%} ui-state-error{%templatetag openvariable%}/if{%templatetag closevariable%}">
+        <td class="preview"></td>
+        <th class="name">{%templatetag openvariable%}if name{%templatetag closevariable%}
+                            ${name}
+                         {%templatetag openvariable%}else{%templatetag closevariable%}
+                            Untitled
+                         {%templatetag openvariable%}/if{%templatetag closevariable%}
+        </th>
+        <td class="size">${sizef}</td>
+        {%templatetag openvariable%}if error{%templatetag closevariable%}
+            <td class="error" colspan="2">Error:
+                {%templatetag openvariable%}if error === 'maxFileSize'{%templatetag closevariable%}File is too big
+                {%templatetag openvariable%}else error === 'minFileSize'{%templatetag closevariable%}File is too small
+                {%templatetag openvariable%}else error === 'acceptFileTypes'{%templatetag closevariable%}Filetype not allowed
+                {%templatetag openvariable%}else error === 'maxNumberOfFiles'{%templatetag closevariable%}Max number of files exceeded
+                {%templatetag openvariable%}else{%templatetag closevariable%}${error}
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+            </td>
+        {%templatetag openvariable%}else{%templatetag closevariable%}
+            <td class="progress"><div></div></td>
+            <td class="start"><button>Start</button></td>
+        {%templatetag openvariable%}/if{%templatetag closevariable%}
+        <td class="cancel"><button>Cancel</button></td>
+    </tr>
+</script>
+
+
+<script id="template-download" type="text/x-jquery-tmpl">
+    <tr class="template-download{%templatetag openvariable%}if error{%templatetag closevariable%} ui-state-error{%templatetag openvariable%}/if{%templatetag closevariable%}">
+        {%templatetag openvariable%}if error{%templatetag closevariable%}
+            <td></td>
+            <td class="name">${name}</td>
+            <td class="size">${sizef}</td>
+            <td class="error" colspan="2">Error:
+                {%templatetag openvariable%}if error === 1{%templatetag closevariable%}File exceeds upload_max_filesize (php.ini directive)
+                {%templatetag openvariable%}else error === 2{%templatetag closevariable%}File exceeds MAX_FILE_SIZE (HTML form directive)
+                {%templatetag openvariable%}else error === 3{%templatetag closevariable%}File was only partially uploaded
+                {%templatetag openvariable%}else error === 4{%templatetag closevariable%}No File was uploaded
+                {%templatetag openvariable%}else error === 5{%templatetag closevariable%}Missing a temporary folder
+                {%templatetag openvariable%}else error === 6{%templatetag closevariable%}Failed to write file to disk
+                {%templatetag openvariable%}else error === 7{%templatetag closevariable%}File upload stopped by extension
+                {%templatetag openvariable%}else error === 'maxFileSize'{%templatetag closevariable%}File is too big
+                {%templatetag openvariable%}else error === 'minFileSize'{%templatetag closevariable%}File is too small
+                {%templatetag openvariable%}else error === 'acceptFileTypes'{%templatetag closevariable%}Filetype not allowed
+                {%templatetag openvariable%}else error === 'maxNumberOfFiles'{%templatetag closevariable%}Max number of files exceeded
+                {%templatetag openvariable%}else error === 'uploadedBytes'{%templatetag closevariable%}Uploaded bytes exceed file size
+                {%templatetag openvariable%}else error === 'emptyResult'{%templatetag closevariable%}Empty file upload result
+                {%templatetag openvariable%}else{%templatetag closevariable%}${error}
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+            </td>
+        {%templatetag openvariable%}else{%templatetag closevariable%}
+            <td class="preview">
+                {%templatetag openvariable%}if thumbnail_url{%templatetag closevariable%}
+                    <a href="${url}" title="${name}" rel="gallery"><img src="${thumbnail_url}"></a>
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
+            </td>
+            <td class="name">
+                <a href="${url}" title="${name}"{%templatetag openvariable%}if thumbnail_url{%templatetag closevariable%} rel="gallery"{%templatetag openvariable%}/if{%templatetag closevariable%}>${name}</a>
+            </td>
+            <td class="size">${sizef}</td>
+            <td colspan="2"></td>
+        {%templatetag openvariable%}/if{%templatetag closevariable%}
+        <td class="delete">
+            <button data-type="${delete_type}" data-url="${delete_url}">Delete</button>
+            <input type="checkbox" name="delete" value="1">
+        </td>
+    </tr>
+</script>
+
 <script id="serviceformTemplate" type="text/x-jquery-tmpl">
     {% csrf_token %} 
     {{ serviceform.as_ul }}
@@ -58,18 +128,51 @@
 </script>
 
 <script id="mserveTemplate" type="text/x-jquery-tmpl">
+<div>
+    <div id="fileupload-accordion" class="single-accordion">
+        <h3><a href="#">File Upload</a></h3>
+        <div id="fileupload">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="fileupload-buttonbar">
+                    <label class="fileinput-button">
+                        <span>Add files...</span>
+                        <input type="file" name="file" multiple>
+                    </label>
+                    <button type="submit" class="start">Start upload</button>
+                    <button type="reset" class="cancel">Cancel upload</button>
+                    <button type="button" class="delete">Delete selected</button>
+                    <input type="checkbox" class="toggle">
+                </div>
+            </form>
+            <div class="fileupload-content" style="height: 200px;overflow: scroll;overflow-x: hidden;">
+                    <div class="fileupload-progressbar"></div>
+                <table class="files" border="0"></table>
 
-    <table style="table-layout: fixed;width: 100%;" border="0">
-        <tr>
-            <td style="width: 20%">
-                <button id="mserve-new-folder-button" style="display: none;">New Folder</button>
-                <div id="mfoldertreecontainer"></div></td>
-            <td style="width: 60%">
-                <ul id="qscontainer" ></ul>
-            </td>
-        </tr>
-    </table>
+            </div>
+        </div>
+    </div>
+    <div class="ui-widget" style="margin-top: 10px">
+        <div class="ui-widget-header ui-corner-top fileupload-buttonbar">
+            <label class=" ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-primary" >
+                <span class="ui-button-icon-primary ui-icon ui-icon-folder-open"></span>
+                <span class="ui-button-text">
+                    <span>Folder Structure</span>
+                </span>
+            </label>
+        </div>
+        <table class="ui-widget-content" style="table-layout: fixed;width: 100%;" border="0">
+            <tr>
+                <td style="width: 20%">
+                    <button id="mserve-new-folder-button" style="display: none;">New Folder</button>
+                    <div id="mfoldertreecontainer"></div></td>
+                <td style="width: 60%">
+                    <ul id="qscontainer" ></ul>
+                </td>
+            </tr>
 
+        </table>
+    </div>
+</div>
 </script>
 
 <script id="requestTemplate" type="text/x-jquery-tmpl">
@@ -988,7 +1091,7 @@
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
                     </a>
                         <button id="newjobbutton-${id}" onclick="showmfiledialog('${id}')" >New Job</button>
-                        <button id="deletemfilebutton-${id}" onclick="mfile_delete('${id}')" >Delete</button>
+                        <button id="deletemfilebutton-${id}" onclick='$("#mserve").mserve("deletemfile","${id}")' >Delete</button>
                       </div>
                 </td></tr>
             </tbody>
