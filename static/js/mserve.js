@@ -296,7 +296,8 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                     $(obj).append($tabs);
                     $servicetab = $("#servicetab-"+service.id);
-                    $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files" })  );
+                    $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files,  or Drag and Drop files" })  );
+                    $servicetab.append("<input  type=\"checkbox\" id=\"fileuploadautobutton\" /><label for=\"fileuploadautobutton\">Auto upload</label>");
                     $servicetab.append($table);
 
                     $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
@@ -354,7 +355,6 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                     function do_tab(tab){
                         if (tab == "usagetab-"+service.id || tab =="usage") {
-                            console.log("load usage")
                             _loadusage()
                         }else if(tab == "servicetab-"+service.id || tab =="" || !tab) {
                             $this.mserve( "loadMTree", {
@@ -384,7 +384,12 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                         do_tab(ui.panel.id)
                     });
 
-                    $tabs.tabs('select', '#' + tab+"tab-"+service.id);
+                    if(tab!=undefined){
+                        console.log(tab)
+                        $tabs.tabs('select', '#' + tab+"tab-"+service.id);
+                    }else{
+                        do_tab(null)
+                    }
 
                     $.getScript('/mservemedia/js/blueimp-jQuery-File-Upload-cc02381/jquery.fileupload-ui.js');
                     
@@ -392,6 +397,20 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 			collapsible: true
                     }).accordion( "activate" , false );
 
+                    $uploadbutton = $("#fileuploadautobutton").button()
+                    $selectallbutton = $("#selectall").button()
+                    $("label[for=fileuploadautobutton] span").text("Autoupload is off")
+
+                    $uploadbutton.click(function(){
+                        autoupload = $('#fileupload').fileupload('option','autoUpload');
+                        $('#fileupload').fileupload('option','autoUpload',!autoupload);
+                        if(autoupload){
+                            $("label[for=fileuploadautobutton] span").text("Autoupload is off")
+                        }else{
+                            $("label[for=fileuploadautobutton] span").text("Autoupload is on")
+                        }
+                    })
+                    
                     $('#fileupload').fileupload({
                         previewMaxWidth: 100,
                         previewMaxHeight: 20,
@@ -414,7 +433,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                             }
                         },
                         done: function (e, data) {
-                            loadMFile(data.result)
+                            $(obj).mserve('renderMFile',data.result)
                             var that = $(this).data('fileupload');
                             if (data.context) {
                                 data.context.each(function (index) {
@@ -527,24 +546,6 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 }
             });
     },
-    showFolder : function( mfolderid ) {
-
-            var defaults = {};
-            var options = $.extend(defaults, options);
-
-            return this.each(function() {
-                var o = options;
-                var $this = $(this),
-                data = $this.data('mserve');
-
-                var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
-
-                $('#qscontainer').quicksand($filteredData, {
-                  duration: 800,
-                  easing: 'easeInOutQuad'
-                });
-            });
-    },
     deletemfile : function(mfileid) {
 
             var defaults = {};
@@ -581,7 +582,200 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 });
             });
     },
-    add : function( mfile ) {
+    renderMFile : function( mfile ){
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+                $("#nofiles").remove()
+                var $mft = $("#mfileTemplate" ).tmpl( mfile )
+                $mft.prependTo( "#qscontainer" );
+
+                $(this).mserve( 'addMFile' , mfile );
+
+                pnode = $("#mfoldertreecontainer .service")
+
+                $("#mfoldertreecontainer").jstree("create", pnode, "first",
+                    { "data" : {
+                            "title" : mfile.name,
+                            "icon" : mfile.thumburl
+                            },
+                        "attr" : {
+                            "id": mfile.id,
+                            "class" : "mfile"
+                            }
+                    }, null, true    );
+            });
+    },
+    showService: function( serviceid ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+                $("#mfilejobcontainer").empty()
+                var $filteredData = data.allcontent.find('li.rootfolder');
+                $('#qscontainer').quicksand($filteredData, {
+                  duration: 800,
+                  easing: 'easeInOutQuad'
+                });
+            });
+    },
+    showMFolder : function( mfolderid ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
+                $("#mfilejobcontainer").empty()
+                $('#qscontainer').quicksand($filteredData, {
+                  duration: 800,
+                  easing: 'easeInOutQuad'
+                });
+            });
+    },
+    showMFile : function( id ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+                var $filteredData = data.allcontent.find('li.'+id);
+
+                $("#mfilejobcontainer").empty().append($("#jobSubmitTemplate").tmpl())
+                $("#mfilejobcontainer").find("form")
+                $("#mfilejobcontainer").find(".jobsubmit").button().click(function(){
+                        var data =  $("#mfilejobcontainer").find("form").serialize()
+                        mfile_job_ajax(id,data);
+                })
+
+                $('#qscontainer').quicksand($filteredData, {
+                  duration: 800,
+                  easing: 'easeInOutQuad'
+                });
+
+                var rowpos = $('#qscontainer').position();
+                $('body').scrollTop(rowpos.top);
+
+                $.ajax({
+                   type: "GET",
+                   url: "/tasks/",
+                   success: function(jobdescriptions){
+                        var job = $("#mfilejobcontainer").find(".jobtype")
+                        var args = $("#mfilejobcontainer").find(".args" )
+                        var inputs = $("#mfilejobcontainer").find(".inputs" )
+                        jobtypes = jobdescriptions['regular']
+
+                        $filteredData.find(".jobtype").empty()
+                        for( t in jobtypes){
+                            $(".jobtype").append("<option value='"+jobtypes[t]+"'>"+jobtypes[t]+"</option>")
+                        }
+
+                        $("#mfilejobcontainer").find(".jobtype").change(function() {
+                            selected = job.val()
+
+                            $("#mfilejobcontainer").find(".args").empty()
+                            $("#mfilejobcontainer").find(".argsmessage").empty()
+                            $("#mfilejobcontainer").find(".inputs").empty()
+                            $("#mfilejobcontainer").find(".inputsmessage").empty()
+
+                            if(jobdescriptions['descriptions'][selected]){
+                               var targs = jobdescriptions['descriptions'][selected]['options']
+                               var nbinputs = jobdescriptions['descriptions'][selected]['nbinputs']
+
+                               if(targs.length == 0){
+                                    $("#mfilejobcontainer").find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguements"  } ))
+                               }
+
+                               for(t in targs){
+                                    $("#mfilejobcontainer").find(".args").append("<label for="+targs[t]+">"+targs[t]+"</label><input type='text' name="+targs[t]+" id="+targs[t]+"  value=''></input>")
+                               }
+
+                                if(nbinputs == 0){
+                                    $("#mfilejobcontainer").find(".inputsmessage").append("<em>No inputs</em>")
+                                }
+
+                                $("#mfilejobcontainer").find(".job-extra-input-preview").empty();
+                                ia = []
+                                for (var i=0;i<nbinputs;i++){
+                                    ia.push(i)
+                                }
+                                $(ia).each(function(index,i)
+                                {
+                                    inputkey = 'input-'+i
+                                    inputlabel = 'input-'+(i+1)
+                                    input = jobdescriptions['descriptions'][inputkey]
+                                    initialvalue = ""
+                                    if(i==0){
+                                        value=mfileid
+                                        $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
+                                    }else{
+                                        var $chooser = $( "#mfileChooserTemplate" ).tmpl( { "id" : "mfile-chooser-"+i } )
+                                        $chooser.appendTo("#job-extra-input-preview");
+                                        $chooser.find("button").button().click(function( ){
+                                            $.ajax({
+                                               type: "GET",
+                                               url: "/users/",
+                                               success: function(user){
+                                                    $("#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder").empty()
+                                                    create_new_choose_mfile_ui_dialog()
+                                                    $(user.mfiles).each(function(index,mfile){
+                                                        tmpl = $( "#mfileNoActionTemplate" ).tmpl( mfile )
+                                                        tmpl.appendTo( "#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder")
+                                                        tmpl.click(function(){
+                                                            $("#mfile-chooser-"+i).replaceWith(this)
+                                                            $("#dialog-choose-mfile-dialog-form").dialog( "close" )
+                                                            $("input[name='"+inputkey+"']").val(mfile.id)
+                                                        })
+
+                                                    })
+                                                    $(user.myauths).each(function(index,auth){
+                                                        tmpl = $( "#mfileNoActionTemplate" ).tmpl( auth )
+                                                        tmpl.appendTo( "#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder")
+                                                        tmpl.click(function(){
+                                                            $("#mfile-chooser-"+i).replaceWith(this)
+                                                            $( "#dialog-choose-mfile-dialog-form").dialog( "close" )
+                                                            $("input[name='"+inputkey+"']").val(auth.id)
+                                                        })
+
+                                                    })
+
+
+                                                }
+                                            });
+                                        })
+                                        $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value=''></input>")
+                                    }
+
+                                });
+                            }
+                         });
+                   }
+                 });
+                
+
+            });
+    },
+    addMFile : function( mfile ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -748,6 +942,11 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 var $filteredData = allcontent.find('li.rootfolder');
                 $('#qscontainer').quicksand($filteredData);
 
+                // Update MFile before cloning
+                $(mfile_set).each( function(index, mfile) {
+
+                });
+
                 $("#mfoldertreecontainer").jstree({
                      "json_data" : folder_structure,
                      "themes" : { "theme" : "default" },
@@ -756,31 +955,13 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 ).bind("select_node.jstree", function (event, data) {
                         id = data.rslt.obj.attr('id');
                         if(id==serviceid){
-                            var $filteredData = allcontent.find('li.rootfolder');
-
-                            $('#qscontainer').quicksand($filteredData, {
-                              duration: 800,
-                              easing: 'easeInOutQuad'
-                            });
+                            $(obj).mserve('showService', id)
                         }else{
-                            mfile = $("#mfileholder-"+id)
+                            mfile = allcontent.find("#mfileholder-"+id)
                             if(mfile.length>0){
-                                var $filteredData = allcontent.find('li.'+id);
-
-                                $('#qscontainer').quicksand($filteredData, {
-                                  duration: 800,
-                                  easing: 'easeInOutQuad'
-                                });
+                                $(obj).mserve('showMFile', id)
                             }else{
-                                mfolder = $("#mfolderholder-"+id)
-                                if(mfolder){
-                                    var $filteredData = allcontent.find('li.'+id);
-
-                                    $('#qscontainer').quicksand($filteredData, {
-                                      duration: 800,
-                                      easing: 'easeInOutQuad'
-                                    });
-                                }
+                                $(obj).mserve('showMFolder', id)
                             }
                         }
                 }).bind("loaded.jstree", function (event, data) {
@@ -1165,7 +1346,7 @@ function reloadMFiles(newfileid){
 }
 
 function showMFolder(mfolderid){
-    $("#mservetree").mserve( 'showFolder' , mfolderid);
+    $("#mservetree").mserve( 'showMFolder' , mfolderid);
 }
 
 function loadMFile(mfile){
@@ -1173,7 +1354,7 @@ function loadMFile(mfile){
     var $mft = $("#mfileTemplate" ).tmpl( mfile )
     $mft.prependTo( "#qscontainer" );
 
-    $("#mservetree").mserve( 'add' , mfile );
+    $("#mservetree").mserve( 'addMFile' , mfile );
 
     pnode = $("#mfoldertreecontainer .service")
 

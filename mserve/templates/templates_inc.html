@@ -130,7 +130,7 @@
 <script id="mserveTemplate" type="text/x-jquery-tmpl">
 <div>
     <div id="fileupload-accordion" class="single-accordion">
-        <h3><a href="#">File Upload</a></h3>
+        <h3><a href="#">File Upload</a> </h3>
         <div id="fileupload">
             <form method="POST" enctype="multipart/form-data">
                 <div class="fileupload-buttonbar">
@@ -141,7 +141,8 @@
                     <button type="submit" class="start">Start upload</button>
                     <button type="reset" class="cancel">Cancel upload</button>
                     <button type="button" class="delete">Delete selected</button>
-                    <input type="checkbox" class="toggle">
+                    <input type="checkbox" class="toggle" id="selectall"><label for="selectall">Select All</label>
+
                 </div>
             </form>
             <div class="fileupload-content" style="height: 200px;overflow: scroll;overflow-x: hidden;">
@@ -166,7 +167,9 @@
                     <button id="mserve-new-folder-button" style="display: none;">New Folder</button>
                     <div id="mfoldertreecontainer"></div></td>
                 <td style="width: 60%">
+
                     <ul id="qscontainer" ></ul>
+                    <div id="mfilejobcontainer" style="clear: none"></div>
                 </td>
             </tr>
 
@@ -1056,12 +1059,12 @@
 <script id="mfileTemplate" type="text/x-jquery-tmpl">
     
  {%templatetag openvariable%}if folder {%templatetag closevariable%}
-    <li class="infoholder ${folder.id} ${id}" data-id="mfileholder-${id}"  id="mfileholder-${id}" style="display: inline" >
+ <li class="infoholder ${folder.id} ${id}" data-id="mfileholder-${id}"  id="mfileholder-${id}" style="display: inline"  >
  {%templatetag openvariable%}else{%templatetag closevariable%}
     <li class="infoholder rootfolder ${id}" data-id="mfileholder-${id}" id="mfileholder-${id}" style="display: inline" >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-    <div id="image-${id}" class='fluid'
+    <div id="image-${id}" class='fluid' onclick='$("#mserve").mserve("showMFile","${id}")'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
                     onmouseout="$('#id-${id}').hide();"
@@ -1071,17 +1074,9 @@
             <colgroup><col>
             </colgroup>
             <tbody>
+            <tr><td><div class='title'>{% autoescape off %}${getShort(name,20)}{% endautoescape  %}</div></td></tr>
             <tr><td>
-                    <div class='title'>
-                        <a href='/mfiles/${id}' rel="address:/mfiles/${id}">
-                                {% autoescape off %}
-                                    ${getShort(name,20)}
-                                {% endautoescape  %}
-                        </a></div></td></tr>
-            <tr><td>
-
                     <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
-                        <a href='/mfiles/${id}' rel="address:/mfiles/${id}">
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
                           <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
@@ -1089,7 +1084,7 @@
                           <div style='font-size: x-small;'>Updated: ${updated}</div>
                           <div style='font-size: xx-small;'>Checksum:</div>
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
-                    </a>
+                        
                         <button id="newjobbutton-${id}" onclick="showmfiledialog('${id}')" >New Job</button>
                         <button id="deletemfilebutton-${id}" onclick='$("#mserve").mserve("deletemfile","${id}")' >Delete</button>
                       </div>
@@ -1097,9 +1092,7 @@
             </tbody>
         </table>
     </div>
-
     {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
-
         {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
         <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
@@ -1109,10 +1102,7 @@
          {%templatetag openvariable%}else{%templatetag closevariable%}
         <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}/if{%templatetag closevariable%}
-
     {%templatetag openvariable%}/if{%templatetag closevariable%}
-
-    
 </li>
 </script>
 
@@ -1191,6 +1181,39 @@
 
 </script>
 
+<script id="jobSubmitTemplate" type="text/x-jquery-tmpl">
+        <div  class="ui-corner-all " style="display: block">
+            <div class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons"
+                 style="margin: 10px;padding: 5px;width: 250px;border: 1px outset silver;">
+                <h3 class="red ui-accordion-header ui-helper-reset ui-state-default ui-corner-all" style="font-size: 14px;padding: 4px;margin:3px"
+                    role="tab" aria-expanded="false" tabindex="-1">New Job Form</h3>
+                <span id="job-input-preview"></span>
+                <span id="job-extra-input-preview"></span>
+                {% templatetag openvariable %}tmpl( {"message":"Choose a job type from the menu."} ) "#messageTemplate" {% templatetag closevariable %}
+                <form id="new-job-form" style="clear: both;">
+                <input style="width:300px" id="serviceid" value="" type="hidden" name="serviceid" />
+                <input style="width:300px" id="mfileid" value="" type="hidden" name="mfileid" />
+                <fieldset>
+
+                        <label for="jobtype">Job</label>
+                        <select name="jobtype" class="jobtype ui-widget-content ui-corner-all" ></select>
+
+                        <fieldset name="inputs" class="inputs">
+                            <!-- Filled dynamically -->
+                        </fieldset>
+
+                        <label for="args">Arguments</label>
+                        <div class="argsmessage" ></div>
+                        <fieldset name="args" class="args">
+
+                        </fieldset>
+                </fieldset>
+                </form>
+                <button class="jobsubmit">Create Job</button>
+            </div>
+        </div>
+</script>
+
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
     {%templatetag openvariable%}if thumburl != "" {%templatetag closevariable%}
         <a  target='_blank' href='/joboutputs/${id}/file/' ><img id="joboutput-${id}" src='${thumburl}' /></a>
@@ -1200,6 +1223,8 @@
         <a target='_blank' href='/joboutputs/${id}/file/' style="color:green;font-weight: bold;font-variant: small-caps;font-size: large" >Download Output</a>
     {%templatetag openvariable%}/if  {%templatetag closevariable%}
 </script>
+
+
 
 <div style="display:none">
 
@@ -1269,6 +1294,7 @@
                 </fieldset>
 	</fieldset>
 	</form>
+        <button type="submit">Create Job</button>
     </div>
 
    <div id="dialog-mfile-dialog" title="Delete the file?">
