@@ -217,7 +217,6 @@ class HostingContainerHandler(BaseHandler):
             form = HostingContainerForm(request.POST)
             if form.is_valid():
                 hostingcontainer = form.save()
-                print hostingcontainer
                 return hostingcontainer
             else:
                 r = rc.BAD_REQUEST

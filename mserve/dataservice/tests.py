@@ -727,7 +727,6 @@ class ClientTest(TestCase):
         self.failUnlessEqual(response.status_code,404)
 
 
-
 class APITest(TestCase):
 
     def test_roles(self):
@@ -956,11 +955,13 @@ class APITest(TestCase):
         self.failUnlessEqual(filecontents2, 'XXX content2')
         file2.file.close()
 
-        readfile = subservice.do("GET","mfiles")[1]
-        readfile.file.open()
-        filecontents3 = readfile.file.read()
-        self.failUnlessEqual(filecontents3, 'XXX content2')
-        readfile.file.close()
+        readfiles = subservice.do("GET","mfiles")
+        for readfile in readfiles:
+            if readfile.file.path == file2.file.path:
+                readfile.file.open()
+                filecontents3 = readfile.file.read()
+                self.failUnlessEqual(filecontents3, 'XXX content2')
+                readfile.file.close()
 
         file1.do("DELETE")
         self.failUnlessEqual(len(service.do("GET","mfiles")), 1)

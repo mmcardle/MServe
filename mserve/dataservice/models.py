@@ -858,14 +858,6 @@ class HostingContainer(NamedBase):
     def create_container(name):
         hostingcontainer = HostingContainer(name=name)
         hostingcontainer.save()
-        managementproperty = ManagementProperty(property="accessspeed", \
-                base=hostingcontainer, value=settings.DEFAULT_ACCESS_SPEED)
-        managementproperty.save()
-
-        hostingcontainerauth = Auth(base=hostingcontainer, authname="full")
-        hostingcontainerauth.setroles(['containeradmin'])
-        hostingcontainerauth.save()
-
         return hostingcontainer
 
     def create_data_service(self, name, duplicate_of=None):
