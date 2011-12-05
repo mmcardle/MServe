@@ -142,7 +142,7 @@ function load_jobs_mfile(mfileid){
      });
 }
 
-function create_job_holder(job,paginator){
+function create_job_holder(job, paginator){
     var tasks = job.tasks
     var jobholder = $("#job-"+job.id)
     if (jobholder.length == 0){
@@ -171,10 +171,10 @@ function create_job_holder(job,paginator){
         var id = job.id
         $('#jobpreviewpaginator-'+id).hide()
         $("#joboutputs-"+id).hide()
-        $('#jobheader-'+id).click(function() {          create_job_output_paginator(job);toggle_job(job);     });
-        $('#jobicon-'+id).click(function() {            create_job_output_paginator(job);toggle_job(job);     });
-        $('#jobinfo-'+id).click(function() {            create_job_output_paginator(job);toggle_job(job);     });
-        $('#jobprogressbar-'+id).click(function() {     create_job_output_paginator(job);toggle_job(job);     });
+        $('#jobheader-'+id).click(function() {      toggle_job(job);     });
+        $('#jobicon-'+id).click(function() {        toggle_job(job);     });
+        $('#jobinfo-'+id).click(function() {        toggle_job(job);     });
+        $('#jobprogressbar-'+id).click(function() { toggle_job(job);     });
 
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
         $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
@@ -301,7 +301,7 @@ function check_job(job){
                 $('#jobinfo-'+job.id).addClass('ui-state-error')
             }else{
                 create_job_holder(msg,$("#jobspaginator"))
-                create_job_output_paginator(msg)
+                //create_job_output_paginator(msg)
                 update_job_outputs(msg)
                 show_job(msg)
             }

@@ -279,6 +279,10 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                url: url,
                success: function(service){
 
+                   $(service.mfile_set).each( function(index, mfile){
+                        data[mfile.id] = mfile
+                   })
+
                     $tabs = $("#tabsTemplate").tmpl( {"tabid":service.id,"tabs":[
                         {name:"Service Data",id:"servicetab-"+service.id,url:url},
                         {name:"Jobs",id:"jobstab-"+service.id,url:url+"/jobs"},
@@ -622,7 +626,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 var o = options;
                 var $this = $(this),
                 data = $this.data('mserve');
-                $("#mfilejobcontainer").empty()
+                $("#mfilejobcontainer").hide()
                 var $filteredData = data.allcontent.find('li.rootfolder');
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
@@ -641,7 +645,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 data = $this.data('mserve');
 
                 var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
-                $("#mfilejobcontainer").empty()
+                $("#mfilejobcontainer").hide()
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
@@ -654,35 +658,55 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
             var options = $.extend(defaults, options);
 
             return this.each(function() {
+
                 var o = options;
                 var obj = $(this);
 
                 var $this = $(this),
                 data = $this.data('mserve');
-                var $filteredData = data.allcontent.find('li.'+id);
+                var $filteredData = data.allcontent.find('li#mfileposterholder-'+id);
 
-                $("#mfilejobcontainer").empty().append($("#jobSubmitTemplate").tmpl())
-                $("#mfilejobcontainer").find("form")
-                $("#mfilejobcontainer").find(".jobsubmit").button().click(function(){
-                        var data =  $("#mfilejobcontainer").find("form").serialize()
-                        mfile_job_ajax(id,data);
+                $("#mfilejobcontainer").show()
+                $("#mfilecreatejobcontainer").empty().append($("#jobSubmitTemplate").tmpl())
+                var $form = $("#mfilecreatejobcontainer").find("form")
+
+                $("#mfilecreatejobcontainer").find(".jobsubmit").button().click(function(){
+                        var postdata =  $form.serialize()
+                        $(obj).mserve('createMFileJob', id, postdata)
                 })
+
+                $(obj).mserve()
+                $.ajax({
+                   type: "GET",
+                   url: '/mfiles/'+id+"/jobs/",
+                   success: function(msg){
+                        if(msg.length > 0){
+                            $("#mfilecurrentjobscontainer").empty()
+                        }
+
+                        $(msg).each(function(index,job){
+                            console.log(job.name)
+                            $(obj).mserve("createJobHolder", job, $("#mfilecurrentjobscontainer"))
+                            //create_job_holder(job, $("#mfilecurrentjobscontainer"))
+                            if(!job.tasks.ready){
+                                check_job(job,id)
+                            }
+                        });
+                   }
+                 });
 
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
                 });
 
-                var rowpos = $('#qscontainer').position();
-                $('body').scrollTop(rowpos.top);
-
                 $.ajax({
                    type: "GET",
                    url: "/tasks/",
                    success: function(jobdescriptions){
-                        var job = $("#mfilejobcontainer").find(".jobtype")
-                        var args = $("#mfilejobcontainer").find(".args" )
-                        var inputs = $("#mfilejobcontainer").find(".inputs" )
+                        var job = $form.find(".jobtype")
+                        var args = $form.find(".args" )
+                        var inputs = $form.find(".inputs" )
                         jobtypes = jobdescriptions['regular']
 
                         $filteredData.find(".jobtype").empty()
@@ -690,31 +714,31 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                             $(".jobtype").append("<option value='"+jobtypes[t]+"'>"+jobtypes[t]+"</option>")
                         }
 
-                        $("#mfilejobcontainer").find(".jobtype").change(function() {
+                        $form.find(".jobtype").change(function() {
                             selected = job.val()
 
-                            $("#mfilejobcontainer").find(".args").empty()
-                            $("#mfilejobcontainer").find(".argsmessage").empty()
-                            $("#mfilejobcontainer").find(".inputs").empty()
-                            $("#mfilejobcontainer").find(".inputsmessage").empty()
+                            $form.find(".args").empty()
+                            $form.find(".argsmessage").empty()
+                            $form.find(".inputs").empty()
+                            $form.find(".inputsmessage").empty()
 
                             if(jobdescriptions['descriptions'][selected]){
                                var targs = jobdescriptions['descriptions'][selected]['options']
                                var nbinputs = jobdescriptions['descriptions'][selected]['nbinputs']
 
                                if(targs.length == 0){
-                                    $("#mfilejobcontainer").find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguements"  } ))
+                                    $form.find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguements"  } ))
                                }
 
                                for(t in targs){
-                                    $("#mfilejobcontainer").find(".args").append("<label for="+targs[t]+">"+targs[t]+"</label><input type='text' name="+targs[t]+" id="+targs[t]+"  value=''></input>")
+                                    $form.find(".args").append("<label for="+targs[t]+">"+targs[t]+"</label><input type='text' name="+targs[t]+" id="+targs[t]+"  value=''></input>")
                                }
 
                                 if(nbinputs == 0){
-                                    $("#mfilejobcontainer").find(".inputsmessage").append("<em>No inputs</em>")
+                                    $form.find(".inputsmessage").append("<em>No inputs</em>")
                                 }
 
-                                $("#mfilejobcontainer").find(".job-extra-input-preview").empty();
+                                $form.find(".job-extra-input-preview").empty();
                                 ia = []
                                 for (var i=0;i<nbinputs;i++){
                                     ia.push(i)
@@ -775,6 +799,135 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
             });
     },
+    createJobHolder : function( job, paginator, prepend ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                var tasks = job.tasks
+                var jobholder = $("#job-"+job.id)
+                if (jobholder.length == 0){
+
+                    if(prepend){
+                        $( "#jobTemplate" ).tmpl( job ).prependTo( paginator );
+                    }else{
+                        $( "#jobTemplate" ).tmpl( job ).appendTo( paginator );
+                    }
+                    
+                    if(job.joboutput_set.length>0){
+                        create_job_output_paginator(job)
+                    };
+
+                    var percent = (job.tasks.completed_count/job.tasks.total)*100
+                    var icon = $( "#jobicon-"+job.id )
+                    var progressbar = $( "#jobprogressbar-"+job.id )
+
+                    if(job.tasks.waiting){
+                        icon.addClass('taskrunning')
+                    }else{
+                        icon.addClass('ui-icon-check')
+                        icon.removeClass('taskrunning')
+                    }
+
+                    progressbar.progressbar({
+                            value: percent
+                    });
+
+                    $('#jobpreviewpaginator-'+job.id).hide()
+                    $("#joboutputs-"+job.id).hide()
+
+                    $('#jobheader-'+job.id+", #jobicon-"+job.id+", "+'#jobinfo-'+job.id+', #jobprogressbar-'+job.id).click(
+                        function() { $(obj).mserve("toggleJob",job) }
+                    );
+
+                    $("#jobdeletebutton-"+job.id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
+                    $("#jobdeletebutton-"+job.id ).click(function() { delete_job(job.id) });
+
+                    $(obj).mserve("updateJobOutput",job)
+
+                    if(job.tasks.failed){
+                        $('#jobinfo-'+job.id).addClass('ui-state-error ui-corner-all')
+                    }
+                }
+
+            });
+    },
+    toggleJob: function( job ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+                $('#joboutputs-'+job.id).toggle('slide');
+                $('#jobpreviewpaginator-'+job.id).toggle('blind');
+
+            });
+    },
+    updateJobOutput: function( job ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                $("#joboutputs-"+job.id).empty()
+                $( "#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+job.id)
+
+            });
+    },
+    createMFileJob : function( mfileid, postdata ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                url = "/mfiles/"+mfileid+"/jobs/",
+
+                 $.ajax({
+                   type: "POST",
+                   data: postdata,
+                   url: url,
+                   success: function(msg){
+                        $(obj).mserve("createJobHolder",msg, $("#mfilecurrentjobscontainer"), true)
+                        if(!msg.ready){
+                            check_job(msg)
+                        }
+                   },
+                   error: function(msg){
+                        json_response = eval('(' + msg.responseText + ')');
+                        if(json_response.error){
+                            showError("Error creating Job",json_response.error)
+                        }else{
+                            showError("Error creating Job",msg.responseText)
+                        }
+                   }
+                 });
+            });
+    },
     addMFile : function( mfile ) {
 
             var defaults = {};
@@ -791,6 +944,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 $(obj).mserve('updatemfile', mfile.id, {"pollthumb":"true"})
 
                 $(data.allcontent[0]).append($("#mfileholder-"+mfile.id).clone(true,true))
+                $(data.allcontent[0]).append($("#mfileposterholder-"+mfile.id).clone(true,true))
             });
     },
     serviceprofiles : function(serviceid){
@@ -928,9 +1082,10 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                 $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#qscontainer")
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#qscontainer")
+                $("#mfilePosterTemplate").tmpl(mfile_set).appendTo("#qscontainer")
 
-                // Update MFile before cloning
                 $(mfile_set).each( function(index, mfile) {
+                    $("#mfile_download_button-"+mfile.id).button()
                     $(obj).mserve( 'updatemfile', mfile.id, { "pollthumb":"false" })
                 });
 
@@ -941,11 +1096,6 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                 var $filteredData = allcontent.find('li.rootfolder');
                 $('#qscontainer').quicksand($filteredData);
-
-                // Update MFile before cloning
-                $(mfile_set).each( function(index, mfile) {
-
-                });
 
                 $("#mfoldertreecontainer").jstree({
                      "json_data" : folder_structure,
