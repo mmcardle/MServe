@@ -462,7 +462,7 @@ li.fluid a {
     float:left;
     padding:1px;
     background:url(/mservemedia/images/content_img.png) top no-repeat;
-
+    cursor: pointer;
 }
 
 .posterholder {

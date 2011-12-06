@@ -1,81 +1,4 @@
 
-
-function mservetimeout(obj,mfileid,depth){
-    $(obj).mserve('get_mfile_thumb', mfileid , depth )
-}
-
-function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
-
-    $("#addbutton-task-"+taskset.id).button({icons: {primary: "ui-icon-disk"}}).click(
-        function(){
-                 data = $("#newtaskform-taskset-"+taskset.id).serialize()
-                 $.ajax({
-                   type: "POST",
-                   data: data,
-                   url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
-                   success: function(newtask){
-                        var tasktmpl = $("#taskTemplate" ).tmpl( newtask, { "tasksetid" : taskset.id }  )
-                        tasktmpl.appendTo( "#tasksetbody-"+taskset.id );
-                        updatetaskbuttons(serviceid, profileid, taskset.id, newtask.id)
-                   },
-                   error: function(msg){
-                        showError("Error Adding Task",msg.responseText)
-                    }
-                 });
-        }
-    )
-
-    deletefunction = function(){
-         $.ajax({
-           type: "DELETE",
-           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasksets/'+taskset.id+'/',
-           success: function(msg){
-               $( "#taskset-"+taskset.id ).remove();
-           },
-           error: function(msg){
-                showError("Error Deleting Task", "")
-            }
-         });
-    }
-    $("#deletetasksetbutton-"+taskset.id).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
-}
-
-function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
-    deletefunction = function(){
-         $.ajax({
-           type: "DELETE",
-           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
-           success: function(msg){
-               $( "#task-"+taskid ).remove();
-           },
-           error: function(msg){
-                showError("Error Deleting Task",msg.responseText)
-            }
-         });
-    }
-    updatefunction = function(){
-            data = $("#taskform-task-"+taskid).serialize()
-             $.ajax({
-               type: "PUT",
-               data: data,
-               url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
-               success: function(task){
-                   var tasktmpl = $("#taskTemplate" ).tmpl( task, { "tasksetid" : tasksetid } )
-                   console.log(task)
-                   console.log(tasktmpl)
-                    $( "#task-"+taskid ).replaceWith(tasktmpl);
-                    updatetaskbuttons(serviceid, profileid, tasksetid, taskid)
-
-               },
-               error: function(msg){
-                    showError("Error Updating Task",msg.responseText)
-                }
-             });
-        }
-    $("#edittaskbutton-"+taskid).button({icons: {primary: "ui-icon-disk"}}).click(updatefunction)
-    $("#deletetaskbutton-"+taskid).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
-}
-
 (function( $ ){
 
   var methods = {
@@ -94,6 +17,8 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                  if ( ! data ) {
                    $(this).data('mserve', {
                        target : $this,
+                       cache : {},
+                       contentcache : {}
                    });
                  }
             });
@@ -110,25 +35,44 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
             var $this = $(this), data = $this.data('mserve')
 
             console.log("loading page "+page)
-            $this.empty()
+            
             if(!page){
                 page="/"
             }
             if(page=='/'){
                 if(isStaff){
+                    $this.empty()
                     $(this).mserve('loadContainers');
                 }else{
 
                 }
             }else if(page.startsWith('/services/')){
                 var str = page.split(/\//g)
+                var serviceid = str[2]
+                var url = str[1]+"/"+serviceid
+                var tab = str[3]
+
+                
+                if(!data.cache[serviceid]){
+                    console.log("Service is not cached")
+                    $this.empty()
+                    $(this).mserve('loadService', url, tab);
+                }else{
+                    data.allcontent = data.contentcache[serviceid]
+                    if($(this).find("#tabs-"+serviceid).length <= 0){
+                        console.log("Service is cached - but not on service page")
+                        $(this).empty()
+                        $(this).mserve('loadService', url, tab);
+                    }else{
+                        console.log("Service is cached and on service page - showing tab")
+                        $(this).mserve('showServiceTab', data[serviceid], tab);
+                    }
+                }
+            }else if(page.startsWith('/mfiles/')){
+                var str = page.split(/\//g)
                 url = str[1]+"/"+str[2]
                 tab = str[3]
-
-                $(this).mserve('loadService', url, tab);
-
-            }else if(page.startsWith('/mfiles/')){
-                $this.mserve('loadMFile', page);
+                $this.mserve('showMFile', str[2]);
             }else{
                 console.log("dont know how to load "+page)
             }
@@ -149,7 +93,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
             $container.find("input[type='password']").addClass("text ui-widget-content ui-corner-all")
             if(isNew){
                 $container.find("#containermessages-"+container.id).prepend(
-                    $("#strongMessageTemplate").tmpl({"cl":"container-message-"+container.id,"message":"New Container!" })
+                    $("#strongMessageTemplate").tmpl({"cl":"container-message-"+container.id,"message":"New Container!"})
                 );
             }
 
@@ -166,7 +110,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                        data: data,
                        success: function(service){
                             $(".container-message-"+container.id).remove()
-                            $("#serviceTemplate").tmpl( service, {containerid : container.id} ) .appendTo( "#containerserviceholder-"+container.id );
+                            $("#serviceTemplate").tmpl( service, {containerid : container.id} ) .prependTo( "#containerserviceholder-"+container.id );
                             $("#newsubservicebutton-"+service.id).button()
                        },
                        error: function(msg){
@@ -197,9 +141,9 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                     $("#containertabs").tabs().tabs( "add", "#tabs-services" , "Container Management" );
                     $servicetab = $("<div><table><tr><td id='td1'></td><td style='width:100%' id='td2'></td></tr></table></div>");
                     $servicetab.appendTo($("#tabs-services"))
-                    $servicetab.find('#td1').append( $("#messageTemplate").tmpl({"message":"Welcome to the container managment page of MServe. You can create new containers and manage existing ones from here" })  );
+                    $servicetab.find('#td1').append( $("#messageTemplate").tmpl({"message":"Welcome to the container managment page of MServe. You can create new containers and manage existing ones from here"})  );
                     $servicetab.find('#td1').append( $("#hostingcontainerformTemplate").tmpl() );
-                    $servicetab.find('#td2').append( $("#messageTemplate").tmpl({"message":"Here is a list of Containers in this MServe, scroll with the paginator below to view more" })  );
+                    $servicetab.find('#td2').append( $("#messageTemplate").tmpl({"message":"Here is a list of Containers in this MServe, scroll with the paginator below to view more"})  );
                     $servicetab.find('#td2').append("<div id='containerpaginator'></div>");
                     $servicetab.find('#td2').append("<div id='containermessages'></div>");
                     $servicetab.find('#td2').append("<div id='containerholder'></div>");
@@ -264,6 +208,22 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
         });
     },
+    showServiceTab: function( service, tab ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+                if(tab){
+                    $tabs.tabs('select', '#' + tab+"tab-"+service.id);
+                }else{
+                    $tabs.tabs('select', '#servicetab-'+service.id);
+                }
+            });
+    },
     loadService: function(url, tab) {
         var defaults = {};
         var options = $.extend(defaults, options);
@@ -279,6 +239,8 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                url: url,
                success: function(service){
 
+                   data[service.id] = service
+
                    $(service.mfile_set).each( function(index, mfile){
                         data[mfile.id] = mfile
                    })
@@ -292,7 +254,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                     $table = $("#mserveTemplate").tmpl()
                     $table.find("#mserve-new-folder-button").button(
-                        { icons: { primary: "ui-icon-circle-plus"} }
+                        {icons: {primary: "ui-icon-circle-plus"}}
                         ).click( function(){
                             selected = $("#mfoldertreecontainer").jstree('get_selected')
                             alert("TODO - Create folder at "+selected)
@@ -300,7 +262,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                     $(obj).append($tabs);
                     $servicetab = $("#servicetab-"+service.id);
-                    $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files,  or Drag and Drop files" })  );
+                    $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files,  or Drag and Drop files"})  );
                     $servicetab.append("<input  type=\"checkbox\" id=\"fileuploadautobutton\" /><label for=\"fileuploadautobutton\">Auto upload</label>");
                     $servicetab.append($table);
 
@@ -322,9 +284,9 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
 
                     if(service.priority){
                         $("#highprioritybutton").hide()
-                        $("#strongMessageTemplate" ).tmpl( {"message": hpmessage  } ).appendTo("#prioritymessage")
+                        $("#strongMessageTemplate" ).tmpl( {"message": hpmessage} ).appendTo("#prioritymessage")
                     }else{
-                        $( "#messageTemplate" ).tmpl( {"message": lpmessage  } ).appendTo("#prioritymessage")
+                        $( "#messageTemplate" ).tmpl( {"message": lpmessage} ).appendTo("#prioritymessage")
                         $("#lowprioritybutton").hide()
                     }
 
@@ -333,14 +295,14 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                         $("#highprioritybutton").hide()
                         $("#lowprioritybutton").show()
                         $("#prioritymessage").empty()
-                        $("#strongMessageTemplate" ).tmpl( {"message": hpmessage  } ).appendTo("#prioritymessage")
+                        $("#strongMessageTemplate" ).tmpl( {"message": hpmessage} ).appendTo("#prioritymessage")
                     }
                     function set_low_priority(){
                         update_service_priority(service.url,false)
                         $("#lowprioritybutton").hide()
                         $("#highprioritybutton").show()
                         $("#prioritymessage").empty()
-                        $( "#messageTemplate" ).tmpl( {"message": lpmessage  } ).appendTo("#prioritymessage")
+                        $( "#messageTemplate" ).tmpl( {"message": lpmessage} ).appendTo("#prioritymessage")
                     }
 
                     $("#lowprioritybutton").button().click(set_low_priority)
@@ -357,28 +319,26 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                         $usageHolderTemplate.find("#usagesummary").mserveusage('usagesummary', service.usage_url )
                     }
 
+                    $("#profilepaginator").mserve( "serviceprofiles", service.id )
+                    service_loadmanagementproperties(service.id, service.properties_url );
+                    $("#managementpropertybutton").button().click(
+                        function(){
+                            service_postmanagementproperty_ajax(
+                                service.id,
+                                service.properties_url,
+                                $('#managementpropertyform').serialize()
+                            );
+                        }
+                    )
+
                     function do_tab(tab){
                         if (tab == "usagetab-"+service.id || tab =="usage") {
                             _loadusage()
                         }else if(tab == "servicetab-"+service.id || tab =="" || !tab) {
-                            $this.mserve( "loadMTree", {
-                                serviceid : service.id ,
-                                mfolder_set : service.mfolder_set,
-                                mfile_set : service.mfile_set,
-                                folder_structure : service.folder_structure
-                            } )
+                            // Fix for fileupload being 0px height when tab changes
+                            $("#fileupload").css("height","274px")
                         }else if(tab == "configtab-"+service.id || tab =="config") {
-                            $("#profilepaginator").mserve( "serviceprofiles", service.id )
-                            service_loadmanagementproperties(service.id, service.properties_url );
-                            $("#managementpropertybutton").button().click(
-                                function(){
-                                    service_postmanagementproperty_ajax(
-                                        service.id,
-                                        service.properties_url,
-                                        $('#managementpropertyform').serialize()
-                                    );
-                                }
-                            )
+                            // Do nothing for config tab
                         }else if(tab == "jobstab-"+service.id || tab =="jobs") {
                             loadJobs(service.id)
                         }
@@ -389,11 +349,15 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                     });
 
                     if(tab!=undefined){
-                        console.log(tab)
                         $tabs.tabs('select', '#' + tab+"tab-"+service.id);
-                    }else{
-                        do_tab(null)
                     }
+
+                    $this.mserve( "loadMTree", {
+                        serviceid : service.id ,
+                        mfolder_set : service.mfolder_set,
+                        mfile_set : service.mfile_set,
+                        folder_structure : service.folder_structure
+                    } )
 
                     $.getScript('/mservemedia/js/blueimp-jQuery-File-Upload-cc02381/jquery.fileupload-ui.js');
                     
@@ -466,8 +430,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                             }
                         }
                     });
-
-
+                    data["cache"][service.id] = $(obj.clone(true,true))
                }
             });
 
@@ -536,12 +499,12 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                $("#newjobbutton-"+mfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+                $("#newjobbutton-"+mfileid ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
                 $('#newjobbutton-'+mfileid).click(function(){
                     $("#mfileid").val(mfileid);
                     $("#dialog-new-job-dialog-form").dialog( "open" );
                 });
-                $("#deletemfilebutton-"+mfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false }).click(function(){
+                $("#deletemfilebutton-"+mfileid ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
                     obj.mserve('deletemfile', mfileid)
                 });
 
@@ -599,14 +562,27 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 data = $this.data('mserve');
                 $("#nofiles").remove()
                 var $mft = $("#mfileTemplate" ).tmpl( mfile )
-                $mft.prependTo( "#qscontainer" );
+                data.allcontent.prepend($mft)
+                var $mfpt = $("#mfilePosterTemplate" ).tmpl( mfile )
+                data.allcontent.append($mfpt)
+
+                selected = $("#mfoldertreecontainer").jstree("get_selected")
+                if(selected.length==0 || $(selected).hasClass("service")){
+                    //$("#qscontainer").prepend($mft)
+                    var $filteredData = data.allcontent.find('li.rootfolder');
+                    $('#qscontainer').quicksand($filteredData, {
+                      duration: 800,
+                      easing: 'easeInOutQuad'
+                    });
+
+                }
 
                 $(this).mserve( 'addMFile' , mfile );
 
                 pnode = $("#mfoldertreecontainer .service")
 
                 $("#mfoldertreecontainer").jstree("create", pnode, "first",
-                    { "data" : {
+                    {"data" : {
                             "title" : mfile.name,
                             "icon" : mfile.thumburl
                             },
@@ -685,9 +661,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                         }
 
                         $(msg).each(function(index,job){
-                            console.log(job.name)
                             $(obj).mserve("createJobHolder", job, $("#mfilecurrentjobscontainer"))
-                            //create_job_holder(job, $("#mfilecurrentjobscontainer"))
                             if(!job.tasks.ready){
                                 check_job(job,id)
                             }
@@ -695,7 +669,9 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                    }
                  });
 
+                //$('#qscontainer').quicksand($filteredData)
                 $('#qscontainer').quicksand($filteredData, {
+                    adjustHeight: 'dynamic',
                   duration: 800,
                   easing: 'easeInOutQuad'
                 });
@@ -727,7 +703,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                                var nbinputs = jobdescriptions['descriptions'][selected]['nbinputs']
 
                                if(targs.length == 0){
-                                    $form.find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguements"  } ))
+                                    $form.find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguements"} ))
                                }
 
                                for(t in targs){
@@ -753,7 +729,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                                         value=mfileid
                                         $("#inputs").append("<input type='hidden' name="+inputkey+" id="+inputkey+"  value='"+value+"'></input>")
                                     }else{
-                                        var $chooser = $( "#mfileChooserTemplate" ).tmpl( { "id" : "mfile-chooser-"+i } )
+                                        var $chooser = $( "#mfileChooserTemplate" ).tmpl( {"id" : "mfile-chooser-"+i} )
                                         $chooser.appendTo("#job-extra-input-preview");
                                         $chooser.find("button").button().click(function( ){
                                             $.ajax({
@@ -845,11 +821,11 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                     $("#joboutputs-"+job.id).hide()
 
                     $('#jobheader-'+job.id+", #jobicon-"+job.id+", "+'#jobinfo-'+job.id+', #jobprogressbar-'+job.id).click(
-                        function() { $(obj).mserve("toggleJob",job) }
+                        function() {$(obj).mserve("toggleJob",job)}
                     );
 
-                    $("#jobdeletebutton-"+job.id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
-                    $("#jobdeletebutton-"+job.id ).click(function() { delete_job(job.id) });
+                    $("#jobdeletebutton-"+job.id ).button({icons: {primary: "ui-icon-circle-close"}, text: false});
+                    $("#jobdeletebutton-"+job.id ).click(function() {delete_job(job.id)});
 
                     $(obj).mserve("updateJobOutput",job)
 
@@ -975,7 +951,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                                 }
                                 
                                 var profiletabs = $( "<div></div>")
-                                $( "#profileTabsTemplate" ).tmpl( {"profiles":profiles } ) .appendTo( profiletabs );
+                                $( "#profileTabsTemplate" ).tmpl( {"profiles":profiles} ) .appendTo( profiletabs );
                                 $( "#profileTemplate" ).tmpl( profiles ) .appendTo( profiletabs );
                                 profiletabs.appendTo("#profilepaginator")
                                 profiletabs.tabs()
@@ -996,7 +972,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                                                    data: data,
                                                    url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/',
                                                    success: function(newtaskset){
-                                                        var tasksettmpl = $("#taskSetTemplate" ).tmpl( newtaskset, { "workflowid" : workflow.id } )
+                                                        var tasksettmpl = $("#taskSetTemplate" ).tmpl( newtaskset, {"workflowid" : workflow.id} )
                                                         tasksettmpl.appendTo("#workflowbody-"+workflow.id );
                                                         updatetasksetbuttons(serviceid, profile.id, workflow.id, newtaskset)
                                                    },
@@ -1027,7 +1003,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                                                            data: data,
                                                            url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/'+tasksetid+'/',
                                                            success: function(updatedtaskset){
-                                                               var tasksettmpl = $("#taskSetTemplate").tmpl( updatedtaskset , {"workflowid":workflow.id}  )
+                                                               var tasksettmpl = $("#taskSetTemplate").tmpl( updatedtaskset , {"workflowid":workflow.id} )
                                                                $( "#taskset-"+updatedtaskset.id ).replaceWith(tasksettmpl);
                                                                updatetasksetbuttons(serviceid, profile.id, workflow.id, updatedtaskset)
                                                                $(updatedtaskset.tasks).each(function(newtindex, task){
@@ -1080,26 +1056,28 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 var mfile_set =  o.mfile_set
                 var folder_structure = o.folder_structure
 
-                $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#qscontainer")
-                $("#mfileTemplate").tmpl(mfile_set).appendTo("#qscontainer")
-                $("#mfilePosterTemplate").tmpl(mfile_set).appendTo("#qscontainer")
+                $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#hiddenqscontainer")
+                $("#mfileTemplate").tmpl(mfile_set).appendTo("#hiddenqscontainer")
+                $("#mfilePosterTemplate").tmpl(mfile_set).appendTo("#hiddenqscontainer")
 
                 $(mfile_set).each( function(index, mfile) {
                     $("#mfile_download_button-"+mfile.id).button()
-                    $(obj).mserve( 'updatemfile', mfile.id, { "pollthumb":"false" })
+                    $(obj).mserve( 'updatemfile', mfile.id, {"pollthumb":"false"})
                 });
 
-                var allcontent = $('#qscontainer').clone(true,true)
-                if(!data.allcontent){
-                    data["allcontent"] = allcontent
-                }
+                var servicecontent = $('#hiddenqscontainer').clone(true,true)
+                data.contentcache[serviceid] = servicecontent
+                data["allcontent"]= servicecontent
 
-                var $filteredData = allcontent.find('li.rootfolder');
-                $('#qscontainer').quicksand($filteredData);
-
+                var $filteredData = servicecontent.find('li.rootfolder');
+                $('#qscontainer').quicksand($filteredData, {
+                  duration: 800,
+                  easing: 'easeInOutQuad'
+                });
+                
                 $("#mfoldertreecontainer").jstree({
                      "json_data" : folder_structure,
-                     "themes" : { "theme" : "default" },
+                     "themes" : {"theme" : "default"},
                      "plugins" : [ "themes", "json_data", "ui", "crrm"]
                     }
                 ).bind("select_node.jstree", function (event, data) {
@@ -1107,7 +1085,7 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                         if(id==serviceid){
                             $(obj).mserve('showService', id)
                         }else{
-                            mfile = allcontent.find("#mfileholder-"+id)
+                            mfile = servicecontent.find("#mfileholder-"+id)
                             if(mfile.length>0){
                                 $(obj).mserve('showMFile', id)
                             }else{
@@ -1143,7 +1121,7 @@ function load_user(userurl,consumerurl,template){
        success: function(msg){
             
             if(msg.mfiles.length==0){
-                message = $( "#messageTemplate" ).tmpl( {"message":"No Resources"  } )
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Resources"} )
                 message.css("width","400px")
                 message.appendTo( "#user_mfilemessages" );
                 $( "#user-request-service" ).show()
@@ -1152,7 +1130,7 @@ function load_user(userurl,consumerurl,template){
             }
 
             if(msg.myauths.length==0){
-                message = $( "#messageTemplate" ).tmpl( {"message":"No Auths - Request a service using the form below "  } )
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Auths - Request a service using the form below "} )
                 message.css("width","400px")
                 message.appendTo( "#user_authmessages" );
                 $( "#user-request-service" ).show()
@@ -1222,6 +1200,83 @@ function load_user(userurl,consumerurl,template){
 }
 
 
+
+function mservetimeout(obj,mfileid,depth){
+    $(obj).mserve('get_mfile_thumb', mfileid , depth )
+}
+
+function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
+
+    $("#addbutton-task-"+taskset.id).button({icons: {primary: "ui-icon-disk"}}).click(
+        function(){
+                 data = $("#newtaskform-taskset-"+taskset.id).serialize()
+                 $.ajax({
+                   type: "POST",
+                   data: data,
+                   url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
+                   success: function(newtask){
+                        var tasktmpl = $("#taskTemplate" ).tmpl( newtask, {"tasksetid" : taskset.id} )
+                        tasktmpl.appendTo( "#tasksetbody-"+taskset.id );
+                        updatetaskbuttons(serviceid, profileid, taskset.id, newtask.id)
+                   },
+                   error: function(msg){
+                        showError("Error Adding Task",msg.responseText)
+                    }
+                 });
+        }
+    )
+
+    deletefunction = function(){
+         $.ajax({
+           type: "DELETE",
+           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasksets/'+taskset.id+'/',
+           success: function(msg){
+               $( "#taskset-"+taskset.id ).remove();
+           },
+           error: function(msg){
+                showError("Error Deleting Task", "")
+            }
+         });
+    }
+    $("#deletetasksetbutton-"+taskset.id).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
+}
+
+function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
+    deletefunction = function(){
+         $.ajax({
+           type: "DELETE",
+           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
+           success: function(msg){
+               $( "#task-"+taskid ).remove();
+           },
+           error: function(msg){
+                showError("Error Deleting Task",msg.responseText)
+            }
+         });
+    }
+    updatefunction = function(){
+            data = $("#taskform-task-"+taskid).serialize()
+             $.ajax({
+               type: "PUT",
+               data: data,
+               url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
+               success: function(task){
+                   var tasktmpl = $("#taskTemplate" ).tmpl( task, {"tasksetid" : tasksetid} )
+                   console.log(task)
+                   console.log(tasktmpl)
+                    $( "#task-"+taskid ).replaceWith(tasktmpl);
+                    updatetaskbuttons(serviceid, profileid, tasksetid, taskid)
+
+               },
+               error: function(msg){
+                    showError("Error Updating Task",msg.responseText)
+                }
+             });
+        }
+    $("#edittaskbutton-"+taskid).button({icons: {primary: "ui-icon-disk"}}).click(updatefunction)
+    $("#deletetaskbutton-"+taskid).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
+}
+
 function user_request_service(requesturl){
 
     data = $("#user-request-service-form").serialize()
@@ -1282,7 +1337,7 @@ function update_service_request(requesturl,request,data){
        success: function(request){
             $("#request-"+request.id).remove()
             if(!$("#pending-requests").html().trim()){
-                message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff })
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff})
                 message.appendTo( "#pending-requests" );
             }
             $("#requestTemplate").tmpl(request).prependTo("#done-requests")
@@ -1310,12 +1365,12 @@ function load_user_requests(requesturl){
             })
 
             if(pending.length==0){
-                message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff })
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Pending Requests","cl":"amessage","isStaff": isStaff})
                 message.appendTo( "#pending-requests" );
             }
 
             if(done.length==0){
-                message = $( "#messageTemplate" ).tmpl( {"message":"No Requests","cl":"amessage","isStaff": isStaff })
+                message = $( "#messageTemplate" ).tmpl( {"message":"No Requests","cl":"amessage","isStaff": isStaff})
                 message.appendTo( "#done-requests" );
             }
 
@@ -1335,7 +1390,7 @@ function make_request_buttons(requesturl,request){
     $("#approve-button-"+request.id).button().click(function(){
         //update_service_request(requesturl,request,{"state":"A"})
 
-        data = {"requesturl":requesturl,"request":request,"state":"A" }
+        data = {"requesturl":requesturl,"request":request,"state":"A"}
 
         chooseContainer(data)
     })
@@ -1373,7 +1428,7 @@ function choose_dialog_ui(choices, title, message, callback, data) {
 
     id = "dialog-id-"+Math.floor(Math.random()*1000)
 
-    cdialog = $("#dialogTemplate").tmpl( {"id": id , "message" : message, "title": title } )
+    cdialog = $("#dialogTemplate").tmpl( {"id": id , "message" : message, "title": title} )
 
     inputbox = $('<select type="radio" >')
 
@@ -1509,7 +1564,7 @@ function loadMFile(mfile){
     pnode = $("#mfoldertreecontainer .service")
 
     $("#mfoldertreecontainer").jstree("create", pnode, "first",
-        { "data" : {
+        {"data" : {
                 "title" : mfile.name,
                 "icon" : mfile.thumburl
                 },
@@ -1537,7 +1592,7 @@ function showmfiledialog(gmfileid){
 }
 
 function mfile_buttons(gmfileid){
-    $("#newjobbutton-"+gmfileid ).button({ icons: { primary: "ui-icon-transferthick-e-w"}, text: false });
+    $("#newjobbutton-"+gmfileid ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
     $('#newjobbutton-'+gmfileid).click(function(){
         create_new_job_ui_dialog(gmfileid,true)
         $("#mfileid").val(gmfileid);

@@ -107,7 +107,7 @@
         </ul>
 
         {%templatetag openvariable%}each(index, tab) tabs{%templatetag closevariable%}
-                <div id="${tab.id}"></div>
+                <div id="${tab.id}" class="ui-tabs-hide"></div>
         {%templatetag openvariable%}/each{%templatetag closevariable%}
     </div>
 </script>
@@ -131,7 +131,7 @@
 <div>
     <div id="fileupload-accordion" class="single-accordion">
         <h3><a href="#">File Upload</a> </h3>
-        <div id="fileupload">
+        <div id="fileupload" style="display: none">
             <form method="POST" enctype="multipart/form-data">
                 <div class="fileupload-buttonbar">
                     <label class="fileinput-button">
@@ -168,7 +168,8 @@
                     <div id="mfoldertreecontainer"></div></td>
                 <td style="width: 65%">
                     <ul id="qscontainer" ></ul>
-                    <table id="mfilejobcontainer" style="width: 100%;display: none">
+                    <ul id="hiddenqscontainer" style="display: none"></ul>
+                    <table id="mfilejobcontainer" style="width: 100%;display: none;" >
                         <tr>
                             <th width="150px" >New Job</th>
                             <th width="*" >Current Jobs</th>
@@ -329,7 +330,7 @@
             <tbody>
             <tr><td>
                     <div class='title'>
-                        <a href='/browse/${id}/'>
+                        <a href='/services/${id}' rel="address:/services/${id}">
                                 {% autoescape off %}
                                     ${getShort(name,20)}
                                 {% endautoescape  %}
@@ -759,7 +760,7 @@
 
 <script id="mfileImageDetailsTemplate" type="text/x-jquery-tmpl">
         {% templatetag openvariable %}tmpl "#mfileDetailsTemplate" {% templatetag closevariable %}
-        <div class="posterholder">
+        <div class="posterholder" style="display: none">
             <div class="poster" id="image-preview" style=" height: 256px; padding: 0.4em; position: relative;" >
                 <img id="mfileposter" title="${name}" alt="${name}" src="${posterurl}" />
             </div>
@@ -1066,7 +1067,7 @@
 
 <script id="mfilePosterTemplate" type="text/x-jquery-tmpl">
     <li class="${id}" data-id="mfileposterholder-${id}" id="mfileposterholder-${id}" style="display: inline" >
-    <div id="content">
+        <div id="content">
         <table style="" border="0">
         <tr>
 
@@ -1091,7 +1092,7 @@
                 </tr>
             </table>
         </td>
-                    <td width="400px" rowspan="2">
+            <td width="400px" rowspan="2">
                 <div class="posterholder">
                     <div class="poster" id="image-${id}" style=" height: 256px; width: 420px; padding: 0.4em; position: relative;
                          background-image: url(${posterurl});
@@ -1118,17 +1119,20 @@
     <li class="infoholder rootfolder ${id}" data-id="mfileholder-${id}" id="mfileholder-${id}" style="display: inline" >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-    <div id="image-${id}" class='fluid' onclick='$("#mserve").mserve("showMFile","${id}")'
+    <div id="image-${id}" class='fluid'  onclick='$("#mserve").mserve("showMFile","${id}" )'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
                     onmouseout="$('#id-${id}').hide();"
                  {%templatetag openvariable%}/if{%templatetag closevariable%}
             >
+            
             <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}");' class='thumb'>
             <colgroup><col>
             </colgroup>
             <tbody>
-            <tr><td><div class='title'>{% autoescape off %}${getShort(name,20)}{% endautoescape  %}</div></td></tr>
+            <tr><td>
+                <div class='title'>{% autoescape off %}${getShort(name,20)}{% endautoescape  %}</div>
+            </td></tr>
             <tr><td>
                     <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
                           <div>Size: ${size}</div>
@@ -1145,7 +1149,9 @@
                 </td></tr>
             </tbody>
         </table>
+    
     </div>
+
     {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
         {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
         <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" ></div>
