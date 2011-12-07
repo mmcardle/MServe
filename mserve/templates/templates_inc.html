@@ -270,28 +270,36 @@
             </div>
         </div>
 
-        <div id="createserviceholder-${id}" class="ui-corner-all " style="display: block">
-            <div class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons" style="margin: 10px;padding: 5px;width: 250px;float: right;border: 1px outset silver;">
-                <h3 class="red ui-accordion-header ui-helper-reset ui-state-default ui-corner-all" style="font-size: 14px;padding: 4px;margin:3px"
-                    role="tab" aria-expanded="false" tabindex="-1">New Service Form</h3>
-                <form method="POST" id="createserviceform-${id}" style="width: 100%">
-                    {% templatetag openvariable %}tmpl "#serviceformTemplate" {% templatetag closevariable %}
-                </form>
-                <button id="createservicebutton-${id}">Create</button>
-            </div>
-        </div>
-
         <div id="containermessages-${id}" class="" style="padding: 0 .4em;margin: 10px;">
             {%templatetag openvariable%}if dataservice_set.length==0 {%templatetag closevariable%}
                 {% templatetag openvariable %}tmpl( {"cl":"container-message-"+id,"message":"No Services have been set up yet"} ) "#messageTemplate" {% templatetag closevariable %}
             {%templatetag openvariable%}/if{%templatetag closevariable%}
         </div>
 
-        <div id="containerserviceholder-${id}" class="" style="padding: 0 .4em;margin: 10px;">
-            {%templatetag openvariable%}each(index, service) dataservice_set{%templatetag closevariable%}
-                {% templatetag openvariable %}tmpl(service ) "#serviceTemplate" {% templatetag closevariable %}
-            {%templatetag openvariable%}/each{%templatetag closevariable%}
-        </div>
+        <table>
+            <tr>
+                <td>
+                    <div id="containerserviceholder-${id}" style="padding: 0 .4em;margin: 10px;">
+                        {%templatetag openvariable%}each(index, service) dataservice_set{%templatetag closevariable%}
+                            {% templatetag openvariable %}tmpl(service ) "#serviceTemplate" {% templatetag closevariable %}
+                        {%templatetag openvariable%}/each{%templatetag closevariable%}
+                    </div>
+                </td>
+                <td>
+                    <div id="createserviceholder-${id}" class="ui-corner-all " style="display: block">
+                        <div class="ui-widget ui-widget-content ui-corner-all ui-accordion ui-widget ui-helper-reset ui-accordion-icons" style="margin: 10px;padding: 5px;width: 250px;float: right;border: 1px outset silver;">
+                            <h3 class="red ui-accordion-header ui-helper-reset ui-state-default ui-corner-all" style="font-size: 14px;padding: 4px;margin:3px"
+                                role="tab" aria-expanded="false" tabindex="-1">New Service Form</h3>
+                            <form method="POST" id="createserviceform-${id}" style="width: 100%">
+                                {% templatetag openvariable %}tmpl "#serviceformTemplate" {% templatetag closevariable %}
+                            </form>
+                            <button id="createservicebutton-${id}">Create</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
 
         <div class="clr"></div>
     </div>
@@ -1066,13 +1074,11 @@
 </script>
 
 <script id="mfilePosterTemplate" type="text/x-jquery-tmpl">
-    <li class="${id}" data-id="mfileposterholder-${id}" id="mfileposterholder-${id}" style="display: inline" >
-        <div id="content">
-        <table style="" border="0">
+    <div class="${id}" data-id="mfileposterholder-${id}" id="mfileposterholder-${id}" style="display: inline-block;width: 100%" >
+        <table border="0" width="100%" >
         <tr>
-
-            <td width="*">
-                <table border="0" style="width:100%">
+            <td width="200px">
+                <table border="0" style="">
                 <tr>
                     <td>
                         <h3>${name}</h3>
@@ -1092,13 +1098,32 @@
                 </tr>
             </table>
         </td>
-            <td width="400px" rowspan="2">
-                <div class="posterholder">
-                    <div class="poster" id="image-${id}" style=" height: 256px; width: 420px; padding: 0.4em; position: relative;
-                         background-image: url(${posterurl});
-                         background-position:center;" ></div>
-                </div>
+         {%templatetag openvariable%}if mimetype.startsWith("video") {%templatetag closevariable%}
+            <td>
+            <iframe
+              scrolling="no"
+              width="95%"
+              height="280"
+              id="video_iframe"
+              marginheight="0"
+              frameborder="0"
+              src="/videoplayer/${id}/"  >
+            </iframe>
             </td>
+         {%templatetag openvariable%}else{%templatetag closevariable%}
+            {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
+                <td  rowspan="2">
+                    <div class="posterholder">
+                        <div class="poster" id="image-${id}" style=" height: 256px; width: 420px; padding: 0.4em; position: relative;
+                            background-image: url(${posterurl});
+                            background-position:center;" >
+                        </div>
+                    </div>
+                </td>
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
+         {%templatetag openvariable%}else{%templatetag closevariable%}
+            {% templatetag openvariable %}tmpl( {"message":"No Preview"} ) "#messageTemplate" {% templatetag closevariable %}
+         {%templatetag openvariable%}/if{%templatetag closevariable%}
         </tr>
         <tr>
             <td>
@@ -1108,7 +1133,6 @@
         </tr>
         </table>
     </div>
-    </li>
 </script>
 
 <script id="mfileTemplate" type="text/x-jquery-tmpl">

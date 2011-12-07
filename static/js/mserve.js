@@ -110,7 +110,7 @@
                        data: data,
                        success: function(service){
                             $(".container-message-"+container.id).remove()
-                            $("#serviceTemplate").tmpl( service, {containerid : container.id} ) .prependTo( "#containerserviceholder-"+container.id );
+                            $("#serviceTemplate").tmpl( service, {containerid : container.id} ).prependTo( "#containerserviceholder-"+container.id ).show('slide');
                             $("#newsubservicebutton-"+service.id).button()
                        },
                        error: function(msg){
@@ -563,12 +563,9 @@
                 $("#nofiles").remove()
                 var $mft = $("#mfileTemplate" ).tmpl( mfile )
                 data.allcontent.prepend($mft)
-                var $mfpt = $("#mfilePosterTemplate" ).tmpl( mfile )
-                data.allcontent.append($mfpt)
 
                 selected = $("#mfoldertreecontainer").jstree("get_selected")
                 if(selected.length==0 || $(selected).hasClass("service")){
-                    //$("#qscontainer").prepend($mft)
                     var $filteredData = data.allcontent.find('li.rootfolder');
                     $('#qscontainer').quicksand($filteredData, {
                       duration: 800,
@@ -640,7 +637,15 @@
 
                 var $this = $(this),
                 data = $this.data('mserve');
-                var $filteredData = data.allcontent.find('li#mfileposterholder-'+id);
+
+                var $filteredData = data.allcontent.find('#mfileposterholder-'+id);
+
+                if(!$filteredData.length>0){
+                    var $mfpt = $("#mfilePosterTemplate" ).tmpl( data[id] )
+                    data.allcontent.append($mfpt)
+                    $mfpt.find("#mfile_download_button-"+id).button()
+                    $filteredData = $mfpt
+                }
 
                 $("#mfilejobcontainer").show()
                 $("#mfilecreatejobcontainer").empty().append($("#jobSubmitTemplate").tmpl())
@@ -669,11 +674,10 @@
                    }
                  });
 
-                //$('#qscontainer').quicksand($filteredData)
                 $('#qscontainer').quicksand($filteredData, {
                     adjustHeight: 'dynamic',
-                  duration: 800,
-                  easing: 'easeInOutQuad'
+                    duration: 800,
+                    easing: null
                 });
 
                 $.ajax({
@@ -1058,10 +1062,8 @@
 
                 $("#mfolderTemplate").tmpl(mfolder_set).appendTo("#hiddenqscontainer")
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#hiddenqscontainer")
-                $("#mfilePosterTemplate").tmpl(mfile_set).appendTo("#hiddenqscontainer")
 
                 $(mfile_set).each( function(index, mfile) {
-                    $("#mfile_download_button-"+mfile.id).button()
                     $(obj).mserve( 'updatemfile', mfile.id, {"pollthumb":"false"})
                 });
 

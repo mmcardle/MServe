@@ -1,23 +1,52 @@
 @charset "utf-8";
-body {
+html, body {
     background: white;
     font-family: Tahoma, sans-serif;
     font-size: 10pt;
-    text-align:center;
     margin:0;
     padding:0;
     width:100%;
+    background-color: whitesmoke;
+    height: 100%;
 }
 
-html, .main {
-	padding:0;
-	margin:0;
-	background:#f1f1f1 url(/mservemedia/images/main_bg.gif) top repeat-x;
+/* must declare 0 margins on everything, also for main layout components use padding, not
+vertical margins (top and bottom) to add spacing, else those margins get added to total height
+and your footer gets pushed down a bit more, creating vertical scroll bars in the browser */
+html, body {}
+
+#wrap {min-height: 100%;}
+
+#main {overflow:auto;
+	padding-bottom: 180px;}  /* must be same height as the footer */
+
+#footer {position: relative;
+	margin-top: -180px; /* negative value of footer height */
+	height: 180px;
+	clear:both;}
+
+/*Opera Fix*/
+body:before {
+	content:"";
+	height:100%;
+	float:left;
+	width:0;
+	margin-top:-32767px;
 }
+/* IMPORTANT
+You also need to include this conditional style in the <head> of your HTML file to feed this style to IE 6 and lower and 8 and higher.
+<!--[if !IE 7]>
+	<style type="text/css">
+		#wrap {display:table;height:100%}
+	</style>
+<![endif]-->
+
+*/
 
 #mserve {
     margin-left: 10px;
     margin-right: 10px;
+    padding-bottom: 180px;
 }
 
 .clr {
@@ -37,6 +66,17 @@ html, .main {
 .logo img {
 	float:left;
 	margin:0 10px 0 0;
+}
+
+.header {
+    background: rgb(69,72,77); /* Old browsers */
+    background: -moz-linear-gradient(top,  rgba(69,72,77,1) 0%, rgba(0,0,0,1) 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(69,72,77,1)), color-stop(100%,rgba(0,0,0,1))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* IE10+ */
+    background: linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#45484d', endColorstr='#000000',GradientType=0 ); /* IE6-9 */
 }
 
 .header h1 {
@@ -780,12 +820,12 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 
 .fbg {
 	padding:0px 0 0 0;
-	background:#393939 url(/mservemedia/images/fbg_bg.gif) bottom repeat-x;
+	//background:#393939 url(/mservemedia/images/fbg_bg.gif) bottom repeat-x;
 	margin:0px 0 0 0;
 }
 .fbg_resize {
 	margin:0 auto;
-	padding:20px 20px;
+	padding:0px 0px;
 	width:930px;
 }
 .fbg h2 {
@@ -826,14 +866,21 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 	margin:8px 16px 4px 0;
 	float:left;
 }
+#footer {
+    background: rgb(69,72,77); /* Old browsers */
+    background: -moz-linear-gradient(top,  rgba(69,72,77,1) 0%, rgba(0,0,0,1) 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(69,72,77,1)), color-stop(100%,rgba(0,0,0,1))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* IE10+ */
+    background: linear-gradient(top,  rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#45484d', endColorstr='#000000',GradientType=0 ); /* IE6-9 */
+}
 .footer {
-	width:970px;
-	margin:0 auto;
-	padding:40px 0 20px 0;
+
+
 }
 .footer p {
-	margin:0;
-	padding:4px 0;
 	line-height:normal;
 }
 .footer a {

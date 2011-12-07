@@ -15,7 +15,6 @@
 <script type="text/javascript" src="/mservemedia/js/jquery.tmpl.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.blockUI.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.quicksand.js" ></script>
-
 <script type="text/javascript" src="/mservemedia/js/base.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/auth.js" ></script>
 <script type="text/javascript" src="/mservemedia/js/container.js" ></script>
@@ -33,7 +32,6 @@
 <script type="text/javascript" src="/mservemedia/js/jquery.relatize_date.js"></script>
 <script type="text/javascript" src="/mservemedia/js/mserve.usage.js"></script>
 
-<!--script type="text/javascript" src="/mservemedia/js/blueimp-jQuery-File-Upload-cc02381/jquery.fileupload-ui.js"></script-->
 
 {% block script %}{% endblock %}
 
@@ -80,16 +78,15 @@
     {% endif %}
   {% endif %}
 
-<!--<link rel="stylesheet" href="style.css" />-->
 <title>{% block title %}MServe{% endblock %}</title>
 </head>
 
-<body id="wrapper">
-
+<body >
+  <div id="wrap" >
   {% include "templates_inc.html" %}
 
   <div class="main">
-  <div class="header">
+    <div class="header">
     <div class="header_resize">
       <div class="logo">
         <h1><a href="/"><span class="blue">M</span>Serve</a><small> serving your needs</small></h1>
@@ -116,7 +113,7 @@
         <div class="clr"></div>
       </div>
       <div class="clr"></div>
-      <div class="header_img">
+      <div class="header_img" style="display: none">
 
           <div id="main_img" >
               {% block main_img %}
@@ -167,8 +164,6 @@
       </div>
     </div>
   </div>
-    {% block heading %}{% endblock %}
-
     <table id="maintable" >
         <tr>
             <td width="10%">
@@ -193,10 +188,9 @@
                 </div>
                 {% endblock %}
             </td>
-            <td width="*">
-                <div id="mserve"></div>
+            <td width="*" style="padding-left: 10px">
+                {% block heading %}{% endblock %}
                 {% block content %}{% endblock %}
-
             </td>
         </tr>
         <tr>
@@ -208,10 +202,11 @@
 
     </table>
 
-</div>
+    </div>
+  </div>
 
-    <div class="fbg ui-corner-all ui-widget-content">
-    <div class="fbg_resize">
+  <div class="fbg ui-corner-all ui-widget-content" id="footer" >
+      <div class="fbg_resize">
       <div class="col c2">
         <h2><span>MServe Systems</span></h2>
         <p>MServe is written in <a href="{% url redirect_to %}?to={{ 'http://python.org'|urlencode }}">Python.</a> using the <a href="{% url redirect_to %}?to={{ 'http://www.djangoproject.com/'|urlencode }}">Django.</a> framework.
@@ -224,13 +219,16 @@
         <p>For more information on MServe contact.<br/><em style="color:#78bbe6;">mm [at] it-innovation.soton.ac.uk</em><br />
         </p>
       </div>
-      <div class="clr"></div>
-    </div>
-    <div class="footer" >
+          <div class="clr"></div>
+              <div class="footer" >
       <p class="lf">&copy; Copyright <a href="{% url redirect_to %}?to={{ 'http://www.it-innovation.soton.ac.uk'|urlencode }}">IT Innovation</a>.</p>
       <p class="rf">Layout from <a href="{% url redirect_to %}?to={{ 'http://www.freewebsitetemplatez.com/'|urlencode }}">Free Website Templatez</a></p>
-      <div class="clr"></div>
+      
     </div>
+      <div class="clr"></div>
+
+    </div>
+
   </div>
 
 <script type="text/javascript">

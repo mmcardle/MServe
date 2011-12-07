@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <!--script type="text/javascript" src="http://html5.kaltura.org/js"></script-->
-
     <script type="text/javascript" src="/mservemedia/js/jquery-1.4.3.js" ></script>
     <link rel="stylesheet" href="/mservemedia/js/kaltura-html5player-widget/mwEmbed-player-static.css"></link>
     <script type="text/javascript" src="/mservemedia/js/kaltura-html5player-widget/mwEmbed-player-static.js"></script>
-	<!--
-    <script type="text/javascript" src="mwEmbed/mwEmbedLoader.php"></script>
-	-->
+
+    <style type="text/css">
+        body { margin: 0; text-align: center }
+    </style>
+
   </head>
   <body>
-      <div style="margin-left: 50px;">
-            <video controls poster="{{mfile.posterurl}}" width="720" height="500">
+      <div style="text-align: center; width: 200px;margin-left: 20%; margin-right: 20%">
+            <video controls poster="{{mfile.posterurl}}" width="420" height="256">
                 <source type="video/h264" src="{{mfile.proxyurl}}" ></source>
             </video>
           </div>

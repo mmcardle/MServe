@@ -29,7 +29,7 @@
 {% endblock %}
 
 {% block content %}
-
+<div id="mserve"></div>
 {% endblock %}
 
 {% block auths %}
@@ -46,13 +46,11 @@ $(document).ready(function() {
 	    $.address.init(function(event) {
 	        //console.log("init: " + $("[rel='address:" + event.value + "']").attr('href'));
 	    }).change(function(event) {
+                $.address.value($(this).attr('href'));
                 url = event.value
                 console.log("Loading via mserve: " + url);
                 $("#mserve").mserve('loadpage', url)
 	    })
-            $('a[rel]').address(function() {
-                return  $(this).attr('href').replace('/^#/', '');
-            });
     });
 });
 </script>
