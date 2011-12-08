@@ -87,6 +87,8 @@
             var o = options;
             var obj = $(this);
             var $this = $(this), data = $this.data('mserve')
+
+            $("#nocontainers").remove()
             $container = $( "#containerTemplate" ).tmpl( container )
             $container.prependTo( $this.find("#containerholder") );
             $container.find("input[type='text']").addClass("text ui-widget-content ui-corner-all")
@@ -401,7 +403,7 @@
                             }
                         },
                         done: function (e, data) {
-                            $(obj).mserve('renderMFile',data.result)
+                            $(obj).mserve('addMFile',data.result)
                             var that = $(this).data('fileupload');
                             if (data.context) {
                                 data.context.each(function (index) {
@@ -549,7 +551,7 @@
                 });
             });
     },
-    renderMFile : function( mfile ){
+    addMFile : function( mfile ){
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -563,19 +565,27 @@
                 $("#nofiles").remove()
                 data[mfile.id] = mfile
                 var $mft = $("#mfileTemplate" ).tmpl( mfile )
-                data.allcontent.prepend($mft)
 
+                // Update MFile before cloning
+                $(obj).mserve('updatemfile', mfile.id, {"pollthumb":"true"})
+
+                $mft.find("#newjobbutton-"+mfile.id ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
+                $mft.find('#newjobbutton-'+mfile.id).click(function(){
+                    $("#mfileid").val(mfile.id);
+                    $("#dialog-new-job-dialog-form").dialog( "open" );
+                });
+                $mft.find("#deletemfilebutton-"+mfile.id ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
+                    obj.mserve('deletemfile', mfile.id)
+                });
+
+                data.allcontent.prepend($mft.clone(true,true))
+               
                 selected = $("#mfoldertreecontainer").jstree("get_selected")
                 if(selected.length==0 || $(selected).hasClass("service")){
-                    var $filteredData = data.allcontent.find('li.rootfolder');
-                    $('#qscontainer').quicksand($filteredData, {
-                      duration: 800,
-                      easing: 'easeInOutQuad'
-                    });
+                    $('#qscontainer').prepend($mft)
+                    $mft.show('slide');
 
                 }
-
-                $(this).mserve( 'addMFile' , mfile );
 
                 pnode = $("#mfoldertreecontainer .service")
 
@@ -907,25 +917,6 @@
                         }
                    }
                  });
-            });
-    },
-    addMFile : function( mfile ) {
-
-            var defaults = {};
-            var options = $.extend(defaults, options);
-
-            return this.each(function() {
-                var o = options;
-                var obj = $(this);
-
-                var $this = $(this),
-                data = $this.data('mserve');
-
-                // Update MFile before cloning
-                $(obj).mserve('updatemfile', mfile.id, {"pollthumb":"true"})
-
-                $(data.allcontent[0]).append($("#mfileholder-"+mfile.id).clone(true,true))
-                $(data.allcontent[0]).append($("#mfileposterholder-"+mfile.id).clone(true,true))
             });
     },
     serviceprofiles : function(serviceid){
@@ -1555,28 +1546,6 @@ function reloadMFiles(newfileid){
 
 function showMFolder(mfolderid){
     $("#mservetree").mserve( 'showMFolder' , mfolderid);
-}
-
-function loadMFile(mfile){
-    $("#nofiles").remove()
-    var $mft = $("#mfileTemplate" ).tmpl( mfile )
-    $mft.prependTo( "#qscontainer" );
-
-    $("#mservetree").mserve( 'addMFile' , mfile );
-
-    pnode = $("#mfoldertreecontainer .service")
-
-    $("#mfoldertreecontainer").jstree("create", pnode, "first",
-        {"data" : {
-                "title" : mfile.name,
-                "icon" : mfile.thumburl
-                },
-            "attr" : {
-                "id": mfile.id,
-                "class" : "mfile"
-                }
-        }, null, true    );
-
 }
 
 function doMFileButtons(mfile){

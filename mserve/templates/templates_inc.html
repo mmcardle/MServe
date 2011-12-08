@@ -1077,7 +1077,7 @@
     <div class="${id}" data-id="mfileposterholder-${id}" id="mfileposterholder-${id}" style="display: inline-block;width: 100%" >
         <table border="0" width="100%" >
         <tr>
-            <td width="200px">
+            <td width="280px">
                 <table border="0" style="">
                 <tr>
                     <td>
@@ -1100,19 +1100,25 @@
         </td>
          {%templatetag openvariable%}if mimetype.startsWith("video") {%templatetag closevariable%}
             <td>
-            <iframe
-              scrolling="no"
-              width="95%"
-              height="280"
-              id="video_iframe"
-              marginheight="0"
-              frameborder="0"
-              src="/videoplayer/${id}/"  >
-            </iframe>
+                <h5>Video Proxy</h5>
+                {%templatetag openvariable%}if proxyurl {%templatetag closevariable%}
+                <iframe
+                  scrolling="no"
+                  width="95%"
+                  height="280"
+                  id="video_iframe"
+                  marginheight="0"
+                  frameborder="0"
+                  src="/videoplayer/${id}/"  >
+                </iframe>
+                {%templatetag openvariable%}else{%templatetag closevariable%}
+                    {% templatetag openvariable %}tmpl( {"message":"Video file has no proxy"} ) "#messageTemplate" {% templatetag closevariable %}
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
             </td>
          {%templatetag openvariable%}else{%templatetag closevariable%}
             {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
-                <td  rowspan="2">
+                <td>
+                    <h5>Image Poster</h5>
                     <div class="posterholder">
                         <div class="poster" id="image-${id}" style=" height: 256px; width: 420px; padding: 0.4em; position: relative;
                             background-image: url(${posterurl});
@@ -1126,8 +1132,8 @@
          {%templatetag openvariable%}/if{%templatetag closevariable%}
         </tr>
         <tr>
-            <td>
-                <h3>Actions</h3>
+            <td colspan="2">
+                <h5>Actions</h5>
                 <button id="mfile_download_button-${id}" onclick='window.open("/mfiles/${id}/file/")' >Download</button>
             </td>
         </tr>
