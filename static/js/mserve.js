@@ -561,6 +561,7 @@
                 var $this = $(this),
                 data = $this.data('mserve');
                 $("#nofiles").remove()
+                data[mfile.id] = mfile
                 var $mft = $("#mfileTemplate" ).tmpl( mfile )
                 data.allcontent.prepend($mft)
 
