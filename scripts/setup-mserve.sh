@@ -556,6 +556,14 @@ install_ffmpeg () {
         libopencore-amrnb-dev libopencore-amrwb-dev libsdl1.2-dev libtheora-dev \
         libvorbis-dev libx11-dev libxfixes-dev libxvidcore-dev zlib1g-dev || f_ "failed to install ffmpeg prereqs"
 
+    wget http://www.tortall.net/projects/yasm/releases/yasm-1.2.0.tar.gz || f_ "failed to get yasm"
+    tar xzvf yasm-1.2.0.tar.gz || f_ "failed to untar yasm"
+    cd yasm-1.2.0/
+    ./configure
+    make || f_ "failed to make x264"
+    make install || f_ "failed to install x264"
+    cd ..
+
     git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
     cd x264
     git checkout origin/stable
@@ -1205,6 +1213,14 @@ configure_apache () {
             BandWidthModule On\n\
             ForceBandWidthModule On\n\
             BandWidth all 10000000\n\
+        </Location>\n\n\
+        <Location /dl/100000000/>\n\
+            AuthTokenPrefix /dl/100000000/\n\
+            AuthTokenSecret 'ugeaptuk6'\n\
+            AuthTokenTimeout 60\n\
+            BandWidthModule On\n\
+            ForceBandWidthModule On\n\
+            BandWidth all 100000000\n\
         </Location>\n\n\
 	@" > $_target || f_ "failed to create mserve site correctly"	
 
