@@ -366,6 +366,51 @@ def _thumbvideo(videopath,width,height,tiled=False):
         logging.error("Could not import pyffmpeg, failing back to ffmpegthumbnailer")
         return _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=tiled)
 
+@task(default_retry_delay=5,max_retries=1,name="dumbtask")
+def dumbtask(inputs,outputs,options={},callbacks=[]):
+    logging.info("Processing dumb task")
+    try:
+        mfileid = inputs[0]
+        filepath = _get_mfile(mfileid)
+
+        toutfile = tempfile.NamedTemporaryFile(delete=False,suffix=".txt")
+        joboutput = outputs[0]
+
+        retcode = subprocess.call(["/bin/wcmine",filepath,toutfile.name])
+        _save_joboutput(joboutput,toutfile)
+
+        return {"success":True,"message":"Dumb task successful"}
+
+    except Exception as e:
+        logging.info("Error with dumb task %s" % e)
+        raise e
+
+@task(default_retry_delay=15,max_retries=3,name="swirl")
+def swirl(inputs,outputs,options={},callbacks=[]):
+    try:
+        mfileid = inputs[0]
+
+        path = _get_mfile(mfileid)
+
+        logging.info("Swirling image for %s (%s)" % (input, path))
+        img = PythonMagick.Image()
+        img.read(str(path))
+        img.swirl(90)
+	# XXX: Can't seem to write to the file path
+        #img.write(str(path))
+
+	# Create swirled image as job output	
+	toutfile = tempfile.NamedTemporaryFile(delete=False,suffix=".jpg")
+	img.write(toutfile.name)
+        joboutput = outputs[0]
+	_save_joboutput(joboutput,toutfile)
+
+        #image = _thumbimage(path,width,height)
+
+        return {"success":True,"message":"Swirl successful"}
+    except Exception ,e:
+        logging.info("Error with swirl %s" % e)
+
 @task(default_retry_delay=15,max_retries=3,name="thumbvideo")
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
 

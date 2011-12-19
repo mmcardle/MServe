@@ -1,4 +1,22 @@
 job_descriptions = {}
+job_descriptions['dumbtask'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "image/jpeg" },
+        "output-0" : { "mimetype" : "text/plain" },
+        "options" : [],
+        "results" :[]
+    }
+job_descriptions['dataservice.tasks.dumbtask'] = job_descriptions['dumbtask']
+job_descriptions['swirl'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 1,
+        "input-0" : { "mimetype" : "image/jpg" },
+        "output-0" : { "mimetype" : "image/jpg" },
+        "options" : [],
+        "results" :[]
+    }
+job_descriptions['dataservice.tasks.swirl'] =  job_descriptions['swirl']
 job_descriptions['thumbimage'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,
