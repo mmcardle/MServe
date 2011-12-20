@@ -17,6 +17,16 @@ job_descriptions['swirl'] = {
         "results" :[]
     }
 job_descriptions['dataservice.tasks.swirl'] =  job_descriptions['swirl']
+job_descriptions['imodel'] = {
+        "nbinputs" : 1,
+        "nboutputs" : 2,
+        "input-0" : { "mimetype" : "application/json" },
+        "output-0" : { "mimetype" : "text/csv" },
+        "output-1" : { "mimetype" : "text/plain" },
+        "options" : [],
+        "results" :[]
+    }
+job_descriptions['dataservice.tasks.imodel'] =  job_descriptions['imodel']
 job_descriptions['thumbimage'] = {
         "nbinputs" : 1,
         "nboutputs" : 0,

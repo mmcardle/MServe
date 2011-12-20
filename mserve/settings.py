@@ -38,6 +38,7 @@ except ImportError:
     MSERVE_DATA='/var/opt/mserve-data'
     MSERVE_LOG='/var/log/mserve'
     DBNAME='mservedb'
+    IMODEL_HOME='/opt/iModel-1.0-beta-3-SNAPSHOT'
 
 
 logging.basicConfig(
