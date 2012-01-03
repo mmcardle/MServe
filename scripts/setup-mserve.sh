@@ -536,7 +536,8 @@ install_mod_auth_token() {
 	./configure || f_ "failed to configure mod_auth_token"
 	make || f_ "failed to compile successfully mod_auth_token"
 	make install || f_ "failed to install mod_auth_token"
-        rm -rf mod_auth_token-1.0.5.tar.gz
+        cd ..
+        rm mod_auth_token-1.0.5.tar.gz
         rm -rf mod_auth_token-1.0.5
 }
 
@@ -560,9 +561,10 @@ install_ffmpeg () {
     tar xzvf yasm-1.2.0.tar.gz || f_ "failed to untar yasm"
     cd yasm-1.2.0/
     ./configure
-    make || f_ "failed to make x264"
-    make install || f_ "failed to install x264"
+    make || f_ "failed to make yasm"
+    make install || f_ "failed to install yasm"
     cd ..
+    rm -rf yasm-1.2.0
 
     git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
     cd x264
@@ -585,7 +587,7 @@ install_ffmpeg () {
     checkinstall --pkgname=lame-ffmpeg --pkgversion="3.98.4" --backup=no --default \
         --deldoc=yes || f_ "failed to install lame"
     cd ..
-    rm -rf lame-3.98.4
+    rm -rf lame-3.98.4 lame-3.98.4.tar.gz
 
     cd
     git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
@@ -854,7 +856,7 @@ if [ $? -ne 0 ]; then
 	git clone $python_oauth2_url || f_ "failed to fetch $python_oauth2_url"
 	cd python-oauth2/
 	make || f_ "failed to make python-oauth2"
-	easy_install dist/oauth2-1.5.170-py2.6.egg || f_ "failed to install python-oauth2" 
+	python setup.py install || f_ "failed to install python-oauth2"
 	cd ..
 	rm -rf python-oauth2
 else
