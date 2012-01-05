@@ -24,18 +24,14 @@
 from django.http import HttpResponse
 from anyjson import serialize as JSON_dump
 from celery.registry import tasks
-import static as static
+from jobservice.models import TaskDescription
 
-def list_jobs(request):
+def list_tasks(request):
     """
     A view returning all defined tasks as a JSON object.
     """
 
-    job_descriptions = static.job_descriptions
-
-    if request.user.is_staff:
-        job_descriptions.update(static.job_descriptions_admin)
-
+    task_descriptions = set(TaskDescription.objects.values_list("task_name",flat=True))
     reg = tasks.regular().keys()
     per = tasks.periodic().keys()
 
@@ -43,10 +39,9 @@ def list_jobs(request):
     perfilter = []
 
     for k in reg:
-        #if not k.startswith("celery."):
-        if job_descriptions.has_key(k):
+    #    #if not k.startswith("celery."):
+        if k in task_descriptions:
             regfilter.append(k)
-
     for k in per:
         if not k.startswith("celery."):
             perfilter.append(k)
@@ -55,18 +50,22 @@ def list_jobs(request):
     perfilter.sort()
 
     descriptions = {}
+    from jobservice import get_task_description
 
     for jobtype in regfilter:
         try:
-            #desc = cache.get(jobtype)
-            desc = job_descriptions[jobtype]
-            descriptions[jobtype] = desc
+            t = get_task_description(jobtype)
+            descriptions[jobtype] = t
         except Exception as e:
-            pass
+            print "No job description for job type '%s' %s" % (jobtype,e)
             #logging.debug("No job description for job type '%s' %s" % (jobtype,e) )
-    
+            pass
+
     response_data = {"regular": regfilter,
                      "periodic": perfilter,
                      "descriptions": descriptions
                      }
-    return HttpResponse(JSON_dump(response_data), mimetype="application/json")
+    try:
+        return HttpResponse(JSON_dump(response_data), mimetype="application/json")
+    except:
+        raise

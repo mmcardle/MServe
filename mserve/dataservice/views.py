@@ -281,14 +281,14 @@ def render_base(request, baseid):
 
         logging.debug("final auth %s" , (auth.id))
         base = parent.base
-        if utils.is_container(base):
-            return render_container_auth(request, baseid)
+        #if utils.is_container(base):
+        #    return render_container_auth(request, baseid)
 
         if utils.is_service(base):
             return render_service_auth(request, auth)
 
-        if utils.is_mfile(base):
-            return render_mfile_auth(request, auth)
+        #if utils.is_mfile(base):
+        #    return render_mfile_auth(request, auth)
 
         _dict = {}
         _dict["error"] = "Error displaying the auth with id='%s' " % baseid
@@ -301,9 +301,8 @@ def render_base(request, baseid):
 
     return Http404()
 
-@login_required
 def test(request):
-    """Render the user page"""
+    """Render the test page"""
     _dict = {}
     return render_to_response('test.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))

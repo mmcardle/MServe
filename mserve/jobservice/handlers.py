@@ -44,8 +44,8 @@ from piston.handler import BaseHandler
 from piston.utils import rc
 import settings as settings
 import dataservice.utils as utils
-
-job_descriptions = static.job_descriptions
+from django.core.cache import cache
+from . import get_task_description
 
 class JobServiceHandler(BaseHandler):
     allowed_methods = ('GET',)
@@ -95,19 +95,17 @@ class JobHandler(BaseHandler):
 
             logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
 
-            job_description = None
+            task_description = None
             try:
-                job_description = job_descriptions.get(jobtype)
+                task_description = get_task_description(jobtype)
             except Exception as e:
-                logging.info("No job description for job type '%s' %s" % (jobtype,e) )
-
-            if job_description == None:
+                logging.error("No job description for job type '%s' %s" % (jobtype,e) )
                 r = rc.BAD_REQUEST
                 r.write("\nJob has no description - Creation Failed!")
                 return r
 
-            nbinputs = job_description["nbinputs"]
-            nboutputs= job_description["nboutputs"]
+            nbinputs = task_description["nbinputs"]
+            nboutputs= task_description["nboutputs"]
 
             job = mfile.do("POST","jobs",**{"name":"Job"})
             job.save()
@@ -123,7 +121,7 @@ class JobHandler(BaseHandler):
                 return r
 
             for i in range(0,nboutputs):
-                outputmimetype = job_description["output-%s"%i]["mimetype"]
+                outputmimetype = task_description["output-%s"%i]["mimetype"]
                 output = JobOutput(name="Output %s '%s'"%(i,jobtype),job=job,mimetype=outputmimetype)
                 output.save()
                 outputs.append(output.id)

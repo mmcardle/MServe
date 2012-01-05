@@ -519,6 +519,9 @@ apt-get -y install rabbitmq-server || f_ "failed to install rabbitmq-server" || 
 	f_ "failed to install rabbitmq-server"
 rm rabbitmq.preseed
 
+##########################################
+# Setup Memcached
+apt-get -y install memcached python-memcache || f_ "failed to install memcached" || \
 
 ###################################
 # install other basic prerequisites
@@ -1366,6 +1369,9 @@ sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || \
 
 sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput || \
 	f_ "failed to migrate mserve database"
+
+sudo -u www-data ${MSERVE_HOME}/manage.py register_tasks dataservice \
+	jobservice ||  f_ "failed to migrate mserve database"
 
 if [ -f initial_data.json ]; then
 	rm initial_data.json

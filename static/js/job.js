@@ -1,7 +1,7 @@
-function loadJobs(serviceid){
+function loadJobs(url){
      $.ajax({
        type: "GET",
-       url: '/services/'+serviceid+"/jobs/",
+       url: url,
        success: function(msg){
             create_jobs_paginator(msg)
        }

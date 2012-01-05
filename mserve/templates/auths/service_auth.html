@@ -54,78 +54,19 @@
 
 <h2>Access to service <span class="red">{{auth.basename}}</span> with the role <span class="green">{{auth.authname}}</span> </h2>
 
-<div id="tabs">
-
-    <ul>
-            <li><a href="#tabs-1">Files</a></li>
-            <li><a href="#jobs-tab">Jobs</a></li>
-            <li><a href="#tabs-3">Access Control</a></li>
-            <li><a href="#tabs-usage">Usage</a></li>
-
-    </ul>
-
-    <div id="tabs-1">
-
-        <h3>Actions</h3>
-        <button id="importbutton" >Import Remote</button>
-        
-        <div id="mservetree" style="min-height: 500px"></div>
-
-        <div class="clr"></div>
-
-        <div class="paginator" id="managedresourcesmfilespaginator"></div>
-
-        <div id="managedresourcesmfilescontent" >
-
-        </div>
-
-
-        <div style="clear: both;"></div>
-        
-        <script type="text/javascript">
-            $(document).ready(function() {
-                $("#mservetree").mserve( "init" )
-                load_mfiles_auth('{{auth.id}}');
-            });
-        </script>
-
-    </div>
-
-    <div id="jobs-tab">
-
-        <div id="jobspaginator" >
-        </div>
-
-        <div style="clear: both;"></div>
-
-    </div>
-
-    <div id="tabs-3">
-        <h2>Auth </h2>
-
-        {% if "getauths" in methods %}
-
-                    {% include "auths/auth_auth.html" %}
-
-        {% else %}
-
-            <p>No Access to the Access Control</p>
-
-        {% endif %}
-    </div>
-
-    <div id="tabs-usage">
-       {% include "usage.html" with statsurl=auth.stats_url  usageurl=auth.usage_url %}
-    </div>
-
-</div>
-
+<div id="mserve"></div>
 
 <script type="text/javascript">
     $(document).ready(function() {
+        $("#mserve").mserve('init')
+        $("#mserve").mserve('loadpage','/auths/{{auth.id}}/')
+
+        //$("#mservetree").mserve( "init" )
         //load_mfiles_auth('{{auth.id}}');
-        load_jobs_auth('{{auth.id}}')
-        create_new_import_ui_dialog('{{auth.id}}',"{% url remoteservice %}","{% url consumer %}" )
+        //load_mfiles_auth('{{auth.id}}');
+        //load_jobs_auth('{{auth.id}}')
+        //create_new_import_ui_dialog('{{auth.id}}',"{% url remoteservice %}","{% url consumer %}" )
+
     });
 </script>
 

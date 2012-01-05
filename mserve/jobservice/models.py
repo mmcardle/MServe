@@ -33,7 +33,8 @@ from dataservice.tasks import thumbvideooutput
 from celery.result import TaskSetResult
 from djcelery.models import TaskState
 from django.http import HttpResponseNotFound
-import static
+from django.core.cache import cache
+from django.db.models.signals import post_save
 
 FILE_FIELD_LENGTH = 400
 thumbpath = settings.THUMB_PATH
@@ -42,6 +43,59 @@ mediapath = settings.MEDIA_URL
 metric_job = "http://mserve/job"
 
 job_metrics = [metric_job]
+
+class TaskDescription(models.Model):
+    task_name = models.CharField(max_length=200, blank=True, null=True)
+
+    def get_json(self):
+        task_description = {
+            "nbinputs" : self.inputs.count(),
+            "nboutputs" : self.outputs.count(),
+            "options" : list(self.options.values_list('name', flat=True)),
+            "results" : list(self.results.values_list('name', flat=True))
+        }
+        i = 0
+        for input in self.inputs.all():
+            task_description["input-%s"%i] = { "mimetype" : input.mimetype }
+            i = i+1
+        j = 0
+        for input in self.outputs.all():
+            task_description["output-%s"%j] = { "mimetype" : input.mimetype }
+            j = j+1
+        return task_description
+
+    def __unicode__(self):
+        return "%s" % (self.task_name);
+
+class TaskResult(models.Model):
+    taskdescription = models.ForeignKey('TaskDescription', related_name="results")
+    name = models.CharField(max_length=200, blank=True, null=True)
+
+    def __unicode__(self):
+        return "%s" % (self.name);
+
+class TaskOption(models.Model):
+    taskdescription = models.ForeignKey('TaskDescription', related_name="options")
+    name = models.CharField(max_length=200, blank=True, null=True)
+
+    def __unicode__(self):
+        return "%s" % (self.name);
+
+class TaskInput(models.Model):
+    taskdescription = models.ForeignKey('TaskDescription', related_name="inputs")
+    num = models.IntegerField()
+    mimetype = models.CharField(max_length=200, blank=True, null=True)
+
+    def __unicode__(self):
+        return "%s" % (self.mimetype);
+
+class TaskOutput(models.Model):
+    taskdescription = models.ForeignKey('TaskDescription', related_name="outputs")
+    num = models.IntegerField()
+    mimetype = models.CharField(max_length=200, blank=True, null=True)
+
+    def __unicode__(self):
+        return "%s" % (self.mimetype);
 
 class JobASyncResult(models.Model):
     async_id = models.CharField(max_length=200)
@@ -61,7 +115,7 @@ class Job(NamedBase):
     @staticmethod
     def get_job_plots(request, baseid=None):
         taskstates = TaskState.objects.none()
-        tasks_whitelist = static.job_descriptions.keys()
+        tasks_whitelist = TaskDescription.objects.values_list('task_name')
 
         if baseid:        
             jobs = None

@@ -49,10 +49,9 @@
             }else if(page.startsWith('/services/')){
                 var str = page.split(/\//g)
                 var serviceid = str[2]
-                var url = str[1]+"/"+serviceid
+                var url = "/"+str[1]+"/"+serviceid
                 var tab = str[3]
 
-                
                 if(!data.cache[serviceid]){
                     console.log("Service is not cached")
                     $this.empty()
@@ -66,6 +65,27 @@
                     }else{
                         console.log("Service is cached and on service page - showing tab")
                         $(this).mserve('showServiceTab', data[serviceid], tab);
+                    }
+                }
+            }else if(page.startsWith('/auths/')){
+                var str2 = page.split(/\//g)
+                var authid = str2[2]
+                var authurl = "/"+str2[1]+"/"+authid
+                var authtab = str2[3]
+
+                if(!data.cache[authid]){
+                    console.log("Auth is not cached")
+                    $this.empty()
+                    $(this).mserve('loadServiceAuth', authurl, authtab, authid);
+                }else{
+                    data.allcontent = data.contentcache[authid]
+                    if($(this).find("#tabs-"+authid).length <= 0){
+                        console.log("ServiceAuth is cached - but not on service page")
+                        $(this).empty()
+                        $(this).mserve('loadServiceAuth', authurl, authtab, authid);
+                    }else{
+                        console.log("Service is cached and on service page - showing tab")
+                        $(this).mserve('showServiceTab', data[authid], authtab, authid);
                     }
                 }
             }else if(page.startsWith('/mfiles/')){
@@ -226,6 +246,168 @@
                 }
             });
     },
+    loadServiceAuth: function(url, tab, authid) {
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+
+            var $this = $(this), data = $this.data('mserve')
+             $.ajax({
+               type: "GET",
+               url: url+"/base/",
+               success: function(auth){
+                   data[authid] = auth
+
+                   $(auth.mfile_set).each( function(index, mfile){
+                        data[mfile.id] = mfile
+                   })
+
+                    $tabs = $("#tabsTemplate").tmpl( {"tabid":authid,"tabs":[
+                        {name:"Service Data",id:"servicetab-"+authid,url:url},
+                        {name:"Jobs",id:"jobstab-"+authid,url:url+"/jobs"},
+                        {name:"Usage",id:"usagetab-"+authid,url:url+"/usage"}
+                    ]} )
+
+                    $table = $("#mserveTemplate").tmpl()
+                    $table.find("#mserve-new-folder-button").button(
+                        {icons: {primary: "ui-icon-circle-plus"}}
+                        ).click( function(){
+                            selected = $("#mfoldertreecontainer").jstree('get_selected')
+                            alert("TODO - Create folder at "+selected)
+                    })
+
+                    $(obj).append($tabs);
+                    $servicetab = $("#servicetab-"+authid);
+                    $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files,  or Drag and Drop files"})  );
+                    $servicetab.append("<input  type=\"checkbox\" id=\"fileuploadautobutton\" /><label for=\"fileuploadautobutton\">Auto upload</label>");
+                    $servicetab.append($table);
+
+                    $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
+                    $("#usagetab-"+authid).append($usageHolderTemplate);
+
+                    $("#jobstab-"+authid).append("<div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
+
+                    $($tabs).tabs()
+                    _loadusage = function(){
+                        $usageHolderTemplate.find("#mservelast24").mserveusage('stats', ["last24"], '/stats/'+authid+'/' )
+                        $usageHolderTemplate.find("#mservelast1").mserveusage('stats', ["last1"], '/stats/'+authid+'/' )
+                        $usageHolderTemplate.find("#mservejobs").mserveusage('stats', ["jobs"], '/stats/'+authid+'/' )
+                        $usageHolderTemplate.find("#mservejobstype").mserveusage('stats', ["jobsbytype"], '/stats/'+authid+'/' )
+                        $usageHolderTemplate.find("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '/stats/'+authid+'/')
+                        $usageHolderTemplate.find("#usagesummary").mserveusage('usagesummary', '/auths/'+authid+'/usagesummary/' )
+                    }
+
+                    function do_tab(tab){
+                        if (tab == "usagetab-"+authid || tab =="usage") {
+                            _loadusage()
+                        }else if(tab == "servicetab-"+authid || tab =="" || !tab) {
+                            // Fix for fileupload being 0px height when tab changes
+                            $("#fileupload").css("height","274px")
+                        }else if(tab == "configtab-"+authid || tab =="config") {
+                            // Do nothing for config tab
+                        }else if(tab == "jobstab-"+authid || tab =="jobs") {
+                            loadJobs("/auths/"+authid+"/jobs/")
+                        }
+                    }
+
+                    $tabs.bind('tabsshow', function(event, ui) {
+                        do_tab(ui.panel.id)
+                    });
+
+                    if(tab!=undefined){
+                        $tabs.tabs('select', '#' + tab+"tab-"+authid);
+                    }
+
+                    $this.mserve( "loadMTree", {
+                        serviceid : authid ,
+                        mfolder_set : auth.mfolder_set,
+                        mfile_set : auth.mfile_set,
+                        folder_structure : auth.folder_structure
+                    } )
+
+                    $.getScript('/mservemedia/js/blueimp-jQuery-File-Upload-cc02381/jquery.fileupload-ui.js');
+
+                    $(".single-accordion").accordion({
+			collapsible: true
+                    }).accordion( "activate" , false );
+
+                    $uploadbutton = $("#fileuploadautobutton").button()
+                    $selectallbutton = $("#selectall").button()
+                    $("label[for=fileuploadautobutton] span").text("Autoupload is off")
+
+                    $uploadbutton.click(function(){
+                        autoupload = $('#fileupload').fileupload('option','autoUpload');
+                        $('#fileupload').fileupload('option','autoUpload',!autoupload);
+                        if(autoupload){
+                            $("label[for=fileuploadautobutton] span").text("Autoupload is off")
+                        }else{
+                            $("label[for=fileuploadautobutton] span").text("Autoupload is on")
+                        }
+                    })
+
+                    $('#fileupload').fileupload({
+                        previewMaxWidth: 100,
+                        previewMaxHeight: 20,
+                        dataType: 'json',
+                        url: "/auths/"+authid+"/mfiles/",
+                        add: function (e, data) {
+                            $("#fileupload-accordion:not(:has(.ui-accordion-content-active))").accordion("activate", 0)
+                            var that = $(this).data('fileupload');
+                            that._adjustMaxNumberOfFiles(-data.files.length);
+                            data.isAdjusted = true;
+                            data.isValidated = that._validate(data.files);
+                            data.context = that._renderUpload(data.files)
+                                .appendTo($(this).find('.files')).fadeIn(function () {
+                                    // Fix for IE7 and lower:
+                                    $(this).show();
+                                }).data('data', data);
+                            if ((that.options.autoUpload || data.autoUpload) &&
+                                    data.isValidated) {
+                                data.jqXHR = data.submit();
+                            }
+                        },
+                        done: function (e, data) {
+                            $(obj).mserve('addMFile',data.result)
+                            l = $(this).find("#tabs-"+authid).length
+                            console.log(l)
+
+                            var that = $(this).data('fileupload');
+                            if (data.context) {
+                                data.context.each(function (index) {
+                                    file=data.result
+                                    if (file.error) {
+                                        that._adjustMaxNumberOfFiles(1);
+                                    }
+                                    $(this).fadeOut(function () {
+                                        that._renderDownload([file])
+                                            .css('display', 'none')
+                                            .replaceAll(this)
+                                            .fadeIn(function () {
+                                                // Fix for IE7 and lower:
+                                                $(this).show();
+                                            });
+                                    });
+                                });
+                            } else {
+                                that._renderDownload(data.result)
+                                    .css('display', 'none')
+                                    .appendTo($(this).find('.files'))
+                                    .fadeIn(function () {
+                                        // Fix for IE7 and lower:
+                                        $(this).show();
+                                    });
+                            }
+                        }
+                    });
+                    data["cache"][authid] = $(obj.clone(true,true))
+               }
+            });
+
+        });
+    },
     loadService: function(url, tab) {
         var defaults = {};
         var options = $.extend(defaults, options);
@@ -235,7 +417,7 @@
             var obj = $(this);
 
             var $this = $(this), data = $this.data('mserve')
-
+            console.log(url)
              $.ajax({
                type: "GET",
                url: url,
@@ -342,7 +524,7 @@
                         }else if(tab == "configtab-"+service.id || tab =="config") {
                             // Do nothing for config tab
                         }else if(tab == "jobstab-"+service.id || tab =="jobs") {
-                            loadJobs(service.id)
+                            loadJobs("/auths/"+service.id+"/jobs/")
                         }
                     }
 
@@ -581,10 +763,9 @@
                 data.allcontent.prepend($mft.clone(true,true))
                
                 selected = $("#mfoldertreecontainer").jstree("get_selected")
-                if(selected.length==0 || $(selected).hasClass("service")){
+                if($(selected).hasClass("service")){
                     $('#qscontainer').prepend($mft)
                     $mft.show('slide');
-
                 }
 
                 pnode = $("#mfoldertreecontainer .service")

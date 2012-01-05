@@ -24,5 +24,39 @@
 from jobservice.models import *
 from django.contrib import admin
 
+class TaskOptionInline(admin.StackedInline):
+    model = TaskOption
+    extra = 0
+    #max_num = 0
+    #can_delete = False
+    #readonly_fields = ("name",)
+
+class TaskResultInline(admin.StackedInline):
+    model = TaskResult
+    extra = 0
+    #max_num = 0
+    #can_delete = False
+    #readonly_fields = ("name",)
+
+class TaskOutputInline(admin.StackedInline):
+    model = TaskOutput
+    extra = 0
+    #max_num = 0
+    #can_delete = False
+    #readonly_fields = ("mimetype", "num")
+
+class TaskInputInline(admin.StackedInline):
+    model = TaskInput
+    extra = 0
+    #max_num = 0
+    #can_delete = False
+    #readonly_fields = ("mimetype", "num")
+    
+class TaskDescriptionAdmin(admin.ModelAdmin):
+    inlines = [
+        TaskInputInline, TaskOptionInline, TaskOutputInline, TaskResultInline
+    ]
+
+admin.site.register(TaskDescription, TaskDescriptionAdmin)
 admin.site.register(Job)
 admin.site.register(JobOutput)

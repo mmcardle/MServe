@@ -36,7 +36,7 @@ function load_mfiles_auth(authid){
        type: "GET",
        url: "/auths/"+authid+"/base/",
        success: function(auth){
-            $("#mservetree").mserve( "load", {
+            $("#mservetree").mserve( "loadMTree", {
                     serviceid : authid ,
                     mfolder_set : auth.mfolder_set,
                     mfile_set : auth.mfile_set,

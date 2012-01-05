@@ -333,6 +333,7 @@ class Usage(models.Model):
     def get_job_usagesummary(jobs):
         ''' Get usages for all Jobs '''
 
+        from jobservice.models import JobASyncResult
 
         asyncs = JobASyncResult.objects.filter(job__in=jobs)\
                                     .values_list("async_id",flat=True)
@@ -1072,19 +1073,18 @@ class DataServiceTask(models.Model):
 
         output_arr = []
 
-        from jobservice.static import job_descriptions
+        from jobservice import get_task_description
 
-        if task_name in job_descriptions:
-            job_description = job_descriptions[task_name]
-            nboutputs = job_description['nboutputs']
-            for i in range(0, nboutputs):
-                outputmimetype = \
-                    job_description["output-%s" % i]["mimetype"]
-                from jobservice.models import JobOutput
-                output = JobOutput(name="Output%s-%s" % (i, task_name),
-                                    job=job, mimetype=outputmimetype)
-                output.save()
-                output_arr.append(output.id)
+        job_description = get_task_description(task_name)
+        nboutputs = job_description['nboutputs']
+        for i in range(0, nboutputs):
+            outputmimetype = \
+                job_description["output-%s" % i]["mimetype"]
+            from jobservice.models import JobOutput
+            output = JobOutput(name="Output%s-%s" % (i, task_name),
+                                job=job, mimetype=outputmimetype)
+            output.save()
+            output_arr.append(output.id)
 
         prioritise = job.mfile.service.priority
         q = "normal.%s" % (task_name)
@@ -1298,7 +1298,6 @@ class DataService(NamedBase):
     def put(self, url, *args, **kwargs):
         if self.parent:
             return self.parent.put(url, *args, **kwargs)
-        logging.info("PUT SERVICE %s %s %s ", url, args, kwargs)
         if "request" in kwargs:
             request = kwargs["request"]
             if "name" in request.POST:
@@ -2115,5 +2114,3 @@ class Auth(Base):
         return "Auth: authname=%s base=%s roles=%s "\
                 % (self.authname, self.base, ",".join(self.getroles()))
 
-from jobservice.models import Job
-from jobservice.models import JobASyncResult

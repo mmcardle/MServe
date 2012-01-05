@@ -22,25 +22,35 @@
 #
 ########################################################################
 from django.core.cache import cache
+from models import *
+import base64
+import pickle
 
-cache.set('jobservice.tasks.copyfromurl',
-    {
-        "nbinputs" : 0,
-        "nboutputs" : 1,
-        "output-0" : { "mimetype" : "application/octet-stream" },
-        "options":['url'],
-        "results" :[]
-    }
-)
+def get_task_description(task_name):
+    task_description = cache.get(task_name)
+    if task_description:
+        return pickle.loads(base64.b64decode(task_description))
+    else:
+        try:
+            td = TaskDescription.objects.get(task_name=task_name)
+            task_description = td.get_json()
+            cache.set(task_name, base64.b64encode(pickle.dumps(task_description)))
+            return task_description
+        except TaskDescription.DoesNotExist:
+            raise Exception("No such job description '%s'" % task_name)
 
+def register_task_description(task_name, task_description):
+    cache.set(task_name, base64.b64encode(pickle.dumps(task_description)))
+    print cache.get(task_name)
+    #save_task_description(task_name, task_description)
 
-cache.set('jobservice.tasks.render_blender',
-    {
-        "nbinputs" : 1,
-        "nboutputs" : 1,
-        "input-0" : { "mimetype" : "application/octet-stream" },
-        "output-0" : { "mimetype" : "image/png"},
-        "options":['frame'],
-        "results" : []
-    }
-)
+def save_task_description(task_name, task_description):
+    td = TaskDescription.objects.get_or_create(task_name=task_name)[0]
+    for i in range(0,task_description['nbinputs']):
+        TaskInput.objects.get_or_create(taskdescription=td, num=i, mimetype=task_description['input-%s'%i]["mimetype"])
+    for i in range(0,task_description['nboutputs']):
+        TaskOutput.objects.get_or_create(taskdescription=td, num=i, mimetype=task_description['output-%s'%i]["mimetype"])
+    for o in task_description['options']:
+        TaskOption.objects.get_or_create(taskdescription=td, name=o)
+    for r in task_description['results']:
+        TaskResult.objects.get_or_create(taskdescription=td, name=r)
