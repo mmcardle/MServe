@@ -38,7 +38,6 @@ from mserve.jobservice.models import *
 from mserve.jobservice.models import Job
 from mserve.jobservice.models import JobOutput
 import dataservice.models as models
-import static as static
 import dataservice.usage_store as usage_store
 from piston.handler import BaseHandler
 from piston.utils import rc
