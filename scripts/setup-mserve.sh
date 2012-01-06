@@ -521,7 +521,7 @@ rm rabbitmq.preseed
 
 ##########################################
 # Setup Memcached
-apt-get -y install memcached python-memcache || f_ "failed to install memcached" || \
+apt-get -y install memcached python-memcache || f_ "failed to install memcached"
 
 ###################################
 # install other basic prerequisites
