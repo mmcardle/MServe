@@ -1,6 +1,10 @@
 _build
 *.log
 pylint.txt
+mserve/celerybeat-schedule
+mserve/pylov.py
+mserve/templates/test.html
+mserve/templates/test_*
 static/js/kaltura-html5player-widget/examples/*
 static/js/kaltura-html5player-widget/libraries/*
 static/js/kaltura-html5player-widget/modules/*
