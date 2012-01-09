@@ -268,25 +268,27 @@ class DataServiceHandler(BaseHandler):
         if form.is_valid(): 
             if 'name' in request.POST:
                 name = request.POST['name']
+                start = request.POST.get('starttime',None)
+                end = request.POST.get('endtime',None)
+                if start == '':
+                    start = None
+                if end == '':
+                    end = None
+                print start, " ", end
                 if service:
                     dataservice = service.create_subservice(name)
                 else:
                     if containerid:
                         container = HostingContainer.objects.get(id=containerid)
-                        dataservice = container.create_data_service(name)
+                        dataservice = container.create_data_service(name, starttime=start, endtime=end)
                     elif 'container' in request.POST:
                         containerid = request.POST['container']
                         container = HostingContainer.objects.get(id=containerid)
-                        dataservice = container.create_data_service(name)
+                        dataservice = container.create_data_service(name, starttime=start, endtime=end)
                     else:
                         r = rc.BAD_REQUEST
                         r.write("Invalid Request! - No name in POST parameters")
                         return r
-                if request.POST.has_key('starttime'):
-                    dataservice.starttime = request.POST['starttime']
-                if request.POST.has_key('endtime'):
-                    dataservice.endtime = request.POST['endtime']
-                dataservice.save()
                 return dataservice
             else:
                 r = rc.BAD_REQUEST

@@ -861,9 +861,10 @@ class HostingContainer(NamedBase):
         hostingcontainer.save()
         return hostingcontainer
 
-    def create_data_service(self, name, duplicate_of=None):
+    def create_data_service(self, name, duplicate_of=None, starttime=None, endtime=None):
 
-        dataservice = DataService(name=name, container=self)
+        dataservice = DataService(name=name, container=self,
+                                    starttime=starttime, endtime=endtime)
         dataservice.save()
 
         if duplicate_of:

@@ -454,8 +454,7 @@
                     $("#usagetab-"+service.id).append($usageHolderTemplate);
 
                     $("#jobstab-"+service.id).append("<div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
-                    
-                    $serviceConfigTemplate  = $("#serviceConfigTemplate").tmpl()
+                    $serviceConfigTemplate  = $("#serviceConfigTemplate").tmpl( service )
                     $("#configtab-"+service.id).append($serviceConfigTemplate);
 
                     $serviceConfigTemplate.find("input[type='text']").addClass("text ui-widget-content ui-corner-all")

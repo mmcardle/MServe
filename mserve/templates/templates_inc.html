@@ -358,7 +358,7 @@
                           {%templatetag openvariable%}/each{%templatetag closevariable%}
                         </a>
 
-                        <button id="newsubservicebutton-${id}" onclick="create_subservice('${id}','${containerid}')"  >New SubService</button>
+                        <!--button id="newsubservicebutton-${id}" onclick="create_subservice('${id}','${containerid}')"  >New SubService</button-->
 
                       </div>
                 </td>
@@ -371,29 +371,25 @@
 
 <script id="serviceConfigTemplate" type="text/x-jquery-tmpl">
     <h2>Properties</h2>
-
            <table>
                <tr>
                    <td>
                           <dl style="padding-left: 40px;">
+                            <dt>Created Time</dt>
+                            <dd>${created}&nbsp;</dd>
                             <dt>Start Time</dt>
-                            <dd>
-                                {% if service.starttime %}
-                                    {{service.starttime|date}} {{service.starttime|time}}
-                                {% else %}
-                                    <strong>No Start Time</strong>
-                                {% endif %}
-                            </dd>
+                            {%templatetag openvariable%}if starttime {%templatetag closevariable%}
+                            <dd>${starttime}&nbsp;</dd>
+                            {%templatetag openvariable%}else{%templatetag closevariable%}
+                            <dd>No Start time&nbsp;</dd>
+                            {%templatetag openvariable%}/if{%templatetag closevariable%}
                             <dt>End Time</dt>
-                            <dd>
-                                {% if service.endtime %}
-                                    {{service.endtime|date}} {{service.endtime|time}}
-                                {% else %}
-                                    <strong>No End Time</strong>
-                                {% endif %}
-                            </dd>
+                            {%templatetag openvariable%}if endtime {%templatetag closevariable%}
+                            <dd>${endtime}&nbsp;</dd>
+                            {%templatetag openvariable%}else{%templatetag closevariable%}
+                            <dd>No End time&nbsp;</dd>
+                            {%templatetag openvariable%}/if{%templatetag closevariable%}
                         </dl>
-
                    </td>
                    <td>
                        <div style="padding-left: 40px;">
