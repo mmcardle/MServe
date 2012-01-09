@@ -1370,8 +1370,7 @@ sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || \
 sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput || \
 	f_ "failed to migrate mserve database"
 
-sudo -u www-data ${MSERVE_HOME}/manage.py register_tasks dataservice \
-	jobservice ||  f_ "failed to migrate mserve database"
+sudo -u www-data ${MSERVE_HOME}/manage.py register_tasks dataservice
 
 if [ -f initial_data.json ]; then
 	rm initial_data.json

@@ -41,8 +41,7 @@ def get_task_description(task_name):
 
 def register_task_description(task_name, task_description):
     cache.set(task_name, base64.b64encode(pickle.dumps(task_description)))
-    print cache.get(task_name)
-    #save_task_description(task_name, task_description)
+    save_task_description(task_name, task_description)
 
 def save_task_description(task_name, task_description):
     td = TaskDescription.objects.get_or_create(task_name=task_name)[0]

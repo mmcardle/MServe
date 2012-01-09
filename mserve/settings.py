@@ -38,6 +38,7 @@ except ImportError:
     MSERVE_DATA='/var/opt/mserve-data'
     MSERVE_LOG='/var/log/mserve'
     DBNAME='mservedb'
+    IMODEL_HOME='/opt/iModel-1.0-beta-3-SNAPSHOT'
 
 
 logging.basicConfig(
@@ -207,6 +208,12 @@ if DEBUG:
     MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
     INTERNAL_IPS = ('127.0.0.1',)
     INSTALLED_APPS += ('debug_toolbar',)
+
+# Do RASCC setup
+RASCC = True
+if RASCC:
+    CELERY_IMPORTS += ("rassc.tasks",)
+    INSTALLED_APPS += ('rassc',)
 
 # Do POSTMark setup
 POSTMARK = False

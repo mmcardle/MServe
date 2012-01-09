@@ -31,20 +31,21 @@ def list_tasks(request):
     A view returning all defined tasks as a JSON object.
     """
 
-    task_descriptions = set(TaskDescription.objects.values_list("task_name",flat=True))
+    task_descriptions = TaskDescription.objects.values_list("task_name",flat=True)
     reg = tasks.regular().keys()
     per = tasks.periodic().keys()
 
     regfilter = []
     perfilter = []
 
-    for k in reg:
+    regfilter.extend(task_descriptions)
+    #for k in reg:
     #    #if not k.startswith("celery."):
-        if k in task_descriptions:
-            regfilter.append(k)
-    for k in per:
-        if not k.startswith("celery."):
-            perfilter.append(k)
+    #    if k in task_descriptions:
+    #        regfilter.append(k)
+    #for k in per:
+    #    if not k.startswith("celery."):
+    #        perfilter.append(k)
 
     regfilter.sort()
     perfilter.sort()
