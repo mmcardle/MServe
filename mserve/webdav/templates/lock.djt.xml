@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+{% comment %}
+################################################################################
+#
+# (C) University of Southampton IT Innovation Centre, 2012
+#
+# Copyright in this library belongs to the University of Southampton
+# University Road, Highfield, Southampton, UK, SO17 1BJ
+#
+# This software may not be used, sold, licensed, transferred, copied
+# or reproduced in whole or in part in any manner or form or in or
+# on any media by any person other than in accordance with the terms
+# of the Licence Agreement supplied with the software, or otherwise
+# without the prior written consent of the copyright owners.
+#
+# This software is distributed WITHOUT ANY WARRANTY, without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE, except where stated in the Licence Agreement supplied with
+# the software.
+#
+#    Created By :             Mark McArdle
+#    Created Date :           2012-01-11
+#    Created for Project :    Postmark
+#
+################################################################################
+#
+# Dependencies : none
+#
+################################################################################
+{% endcomment %}
+{% spaceless %}
+<D:prop xmlns:D="DAV:">
+<D:lockdiscovery>
+<D:activelock>
+<D:locktype><D:{{locktype}}/></D:locktype>
+<D:lockscope><D:{{lockscope}}/></D:lockscope>
+<D:depth>{{depth}}</D:depth>
+<ns0:owner xmlns:ns0="DAV:">{{owner}}</ns0:owner><D:timeout>{{timeout}}</D:timeout>
+<D:locktoken>
+<D:href>opaquelocktoken:{{token}}</D:href>
+</D:locktoken>
+</D:activelock>
+</D:lockdiscovery>
+{% endspaceless %}
+</D:prop>

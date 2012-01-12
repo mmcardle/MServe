@@ -26,6 +26,18 @@ from dataservice.models import *
 import base64
 import pickle
 
+class WebDavLock(models.Model):
+    base = models.ForeignKey(NamedBase)
+    owner = models.CharField(max_length=200)
+    timeout = models.CharField(max_length=200)
+    token = models.CharField(max_length=200)
+    depth = models.CharField(max_length=200)
+    lockscope = models.CharField(max_length=200)
+    locktype = models.CharField(max_length=200)
+
+    def __unicode__(self):
+        return "WebDavLock %s %s %s %s " % (self.owner, self.token, self.lockscope, self.locktype )
+    
 class WebDavProperty(models.Model):
     base            = models.ForeignKey(NamedBase)
     name            = models.CharField(max_length=200)
