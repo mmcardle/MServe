@@ -1364,12 +1364,9 @@ JSON
 
 fi
 
-sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || \
-	f_ "failed to configure mserve database"
-
-sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput || \
-	f_ "failed to migrate mserve database"
-
+sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || f_ "failed to configure mserve database"
+sudo -u www-data ${MSERVE_HOME}/manage.py schemamigration jobservice dataservice --auto || f_ "failed to schemamigrate mserve database"
+sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput || f_ "failed to migrate mserve database"
 sudo -u www-data ${MSERVE_HOME}/manage.py register_tasks dataservice
 
 if [ -f initial_data.json ]; then
