@@ -32,7 +32,7 @@ from mserve.webdav.models import *
 from datetime import datetime
 from datetime import tzinfo
 from datetime import timedelta
-import logging
+import logging as log
 import time
 import os.path
 import os
@@ -43,59 +43,47 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from lxml import etree
 
+logging = log.getLogger(__file__)
 
-################################
-################################
-################################
+MServeIfHdr = re.compile(r"(?P<base><.+?>)?\s*\((?P<litem>[^)]+)\)")
+MserveListItem = re.compile(r"(?P<not>not)?\s*(?P<litem><[a-zA-Z]+:[^>]*>|\[.*?\])",re.I)
 
-IfHdr = re.compile(
-	r"(?P<resource><.+?>)?\s*\((?P<listitem>[^)]+)\)"
-    )
-
-ListItem = re.compile(
-    r"(?P<not>not)?\s*(?P<listitem><[a-zA-Z]+:[^>]*>|\[.*?\])",re.I)
-
-class TagList:
+class MServeTagList:
     def __init__(self):
-        self.resource = None
-        self.list = []
-        self.NOTTED = 0
+        self.base = None
+        self.list = list()
+        self.ISNOT = 0
 
-def IfParser(hdr):
+
+def list_parser(litem):
     out = []
+    ISNOT = 0
     i = 0
     while 1:
-        m = IfHdr.search(hdr[i:])
+        m = MserveListItem.search(litem[i:])
         if not m: break
 
         i = i + m.end()
-        tag = TagList()
-        tag.resource = m.group('resource')
-        if tag.resource:                # We need to delete < >
-            tag.resource = tag.resource[1:-1]
-        listitem = m.group('listitem')
-        tag.NOTTED, tag.list = ListParser(listitem)
+        out.append(m.group('litem'))
+        if m.group('not'): ISNOT = 1
+
+    return ISNOT, out
+
+def if_parser(hdr):
+    out = []
+    i = 0
+    while 1:
+        match = MServeIfHdr.search(hdr[i:])
+        if not match: break
+        i = i + match.end()
+        tag = MServeTagList()
+        tag.base = match.group('base')
+        if tag.base:
+            tag.base = tag.base[1:-1]
+        listitem = match.group('litem')
+        tag.ISNOT, tag.list = list_parser(listitem)
         out.append(tag)
-
     return out
-
-def ListParser(listitem):
-    out = []
-    NOTTED = 0
-    i = 0
-    while 1:
-        m = ListItem.search(listitem[i:])
-        if not m: break
-
-        i = i + m.end()
-        out.append(m.group('listitem'))
-        if m.group('not'): NOTTED = 1
-
-    return NOTTED, out
-
-################################
-################################
-################################
 
 
 def webdav(request,id):
@@ -218,83 +206,51 @@ class DavServer(object):
 
     def __check_ifheader(self, request, ifheader, object):
         lh = request.META.get("HTTP_X_LITMUS", "litmus")
-        logging.info("XXXXX %s Parsing IFHEADER %s", lh , ifheader)
-        tags = IfParser(ifheader)
-        logging.info("XXXXX %s TAGS %s", lh , tags)
+        logging.debug("%s Parsing IFHEADER %s", lh , ifheader)
+        tags = if_parser(ifheader)
         passed = True
         error = HttpResponsePreconditionFailed()
         for t in tags:
-            if t.resource:
-                logging.info("XXXXX %s IfParser with resource %s", lh, t.resource)
-                x,y,resourceobject = _get_resource_for_path(t.resource,self.service,self.id)
-                logging.info("XXXXX %s resourceobject %s ", lh, resourceobject)
+            if t.base:
+                x,y,resourceobject = _get_resource_for_path(t.base,self.service,self.id)
                 wdl = WebDavLock.objects.get(base=resourceobject)
 
                 for token in t.list:
-                    logging.info("XXXXX %s IfParser %s ", lh, token)
-                    logging.info("XXXXX %s resourceobject %s ", lh, resourceobject)
-                    logging.info("XXXXX %s wdl %s ", lh, wdl)
-                    logging.info("XXXXX %s wdl.token %s ", lh, wdl.token)
                     token_val = token.replace('<','').replace('>','').split(':')[1]
-                    logging.info("XXXXX %s token_val %s ", lh, token_val)
                     if token_val == wdl.token:
                         passed = passed and True
                     else:
                         passed = passed and False
             else:
-                logging.info("XXXXX %s IfParser with no resource", lh)
-                logging.info("XXXXX %s IfParser with no resource: object: %s", lh, object)
-                logging.info("XXXXX %s IfParser with no resource: tag %s ", lh, t)
-                logging.info("XXXXX %s IfParser with no resource: list %s", lh, t.list)
-                logging.info("XXXXX %s IfParser with no resource: NOTTED %s ", lh, t.NOTTED)
-
                 try:
-                    wdl = WebDavLock.objects.get(base=object)
-                    logging.info("XXXXX %s IfParser with no resource: wdl %s ", lh, wdl)
-
                     for token in t.list:
-                        logging.info("XXXXX %s IfParser with no resource token %s ", lh, token)
                         if str(token) == "<DAV:no-lock>":
-                            logging.info("XXXXX \t%s DAV no lock Detected %s ", lh, token)
-                            logging.info("XXXXX \t%s NOTTED %s ", lh, t.NOTTED)
-                            if t.NOTTED:
-                                logging.info("XXXXX \t%s NOTTED True %s ", lh, t.NOTTED)
+                            if t.ISNOT:
                                 passed = passed and True
                             else:
-                                logging.info("XXXXX \t%s NOTTED False %s ", lh, t.NOTTED)
                                 passed = passed and False
-                            logging.info("XXXXX     %s CURRENT PASSED %s ", lh, passed)
                         else:
-                            logging.info("XXXXX     %s IfParser %s ", lh, token)
-                            logging.info("XXXXX     %s object %s ", lh, object)
-                            logging.info("XXXXX     %s wdl %s ", lh, wdl)
-                            logging.info("XXXXX     %s wdl.token %s ", lh, wdl.token)
+                            wdl = WebDavLock.objects.get(base=object)
                             if token.startswith('<') and token.endswith('>'):
                                 token_val = token.replace('<','').replace('>','').split(':')[1]
-                                logging.info("XXXXX     %s token_val %s ", lh, token_val)
                                 if token_val == wdl.token:
                                     passed = passed and True
                                 else:
                                     error = HttpResponseLocked()
                                     passed = passed and False
                             elif token.startswith('[') and token.endswith(']'):
-                                logging.info("XXXXX     %s HANDLE token %s ", lh, token)
                                 if '.' in token:
                                     passed = passed and False
                                 else:
                                     passed = passed and True
-                            logging.info("XXXXX     %s CURRENT PASSED %s ", lh, passed)
                 except WebDavLock.DoesNotExist:
-                    return False, HttpResponsePreconditionFailed()
+                    return True, HttpResponsePreconditionFailed()
         return passed, error
 
     def _handle_unlock(self, request):
-        lh = request.META.get("HTTP_X_LITMUS", "litmus")
         locktoken = request.META.get("HTTP_LOCK_TOKEN", None)
         ifheader = request.META.get("HTTP_IF",None)
-        logging.info("LOCK on %s" % self.service)
-        logging.info("XXXXXX %s ifheader %s", lh , ifheader)
-        logging.info("XXXXXX %s locktoken %s", lh , locktoken)
+        logging.info("UNLOCK on %s" % self.service)
 
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
         if not isFi and not isFo:
@@ -304,14 +260,11 @@ class DavServer(object):
             if isFo or isFi:
                 try:
                     token_value = locktoken.strip('<>').split(":")[1]
-                    logging.info("XXXXXX %s token_value %s", lh , token_value)
                     wdl = WebDavLock.objects.get(base=object,token=token_value)
-                    logging.info("XXXXXX %s wdl %s", lh , locktoken)
                     wdl.delete()
                     return HttpResponseNoContent()
                 except WebDavLock.DoesNotExist:
                     return HttpResponseBadRequest()
-
             return HttpResponseBadRequest()
         elif ifheader:
             passed, error = self.__check_ifheader(request, ifheader, object)
@@ -321,65 +274,39 @@ class DavServer(object):
             return HttpResponseBadRequest()
 
     def _handle_lock(self, request):
-        lh = request.META.get("HTTP_X_LITMUS", "litmus")
-        if lh == "litmus":
-            lh = request.META.get("HTTP_X_LITMUS_SECOND", "litmus")
         logging.info("LOCK on %s" % self.service)
         timeout = request.META.get("HTTP_TIMEOUT","Second-3600")
         depth = request.META.get("HTTP_DEPTH","0")
         ifheader = request.META.get("HTTP_IF",None)
-
-        logging.info("XXXXX %s ifheader %s", lh , ifheader)
-        logging.info("XXXXX %s ifheader %s", lh , timeout)
-        logging.info("XXXXX %s ifheader %s", lh , depth)
-
+        lh = request.META.get("HTTP_X_LITMUS", "litmus")
+        if lh == "litmus":
+            lh = request.META.get("HTTP_X_LITMUS_SECOND", "litmus")
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
-        if not isFi and not isFo:
-            logging.info("XXXXX %s Not file or folder", lh )
-            return HttpResponseBadRequest()
+
         if hasattr(request,"raw_post_data") and request.raw_post_data != '' and not ifheader:
-            logging.info("XXXXX %s has Body", lh )
             if isFo or isFi:
                 wdls = WebDavLock.objects.filter(base=object)
-                for wdl in wdls:
-                    logging.info("XXXXX %s wdl %s", lh , wdl)
 
-                #wdls = WebDavLock.objects.filter(base=object)
-                exclusive_wdls = WebDavLock.objects.filter(base=object, lockscope="exclusive")
-                for wdl in exclusive_wdls:
-                    logging.info("XXXXX %s wdl %s", lh , wdl)
-                if exclusive_wdls.count() > 0:
-                    return HttpResponseLocked()
                 try:
                     token = unique_id()
                     xmltree = etree.fromstring(request.raw_post_data)
                     owner = xmltree.xpath('*[local-name() = "owner"]')[0].text
 
                     lockscope = xmltree.xpath('*[local-name() = "lockscope"]')[0].xpath("*")[0].tag.split("}")[1]
-                    logging.info("XXXXX %s lockscope %s", lh , lockscope)
                     validscopes = ['shared','exclusive']
                     if lockscope not in validscopes:
-                        logging.info("XXXXX %s BAD lockscope_el %s", lh , lockscope)
                         return HttpResponseBadRequest()
 
                     locktype = xmltree.xpath('*[local-name() = "locktype"]')[0].xpath('*[local-name() = "write"]')[0].tag.split("}")[1]
-                    logging.info("XXXXX %s locktype %s", lh , locktype)
                     if locktype != "write":
-                        logging.info("XXXXX %s BAD locktype_el %s", lh , locktype_el)
                         return HttpResponseBadRequest()
 
                     if lockscope == "exclusive" and wdls.count() > 0:
-                        logging.info("XXXXX %s Trying to get exclusive lock but other locks exist %s", lh , wdls)
                         return HttpResponseLocked()
 
                     wdl, created = WebDavLock.objects.get_or_create(base=object,
                         timeout=timeout, owner=owner, token=token, depth=depth,
                         lockscope=lockscope, locktype=locktype)
-
-                    if created:
-                        logging.info("XXXXX %s CREATED NEW wdl %s", lh , wdl)
-                    else:
-                        logging.info("XXXXX %s EXISTING wdl %s", lh , wdl)
 
                     response = render_to_response("lock.djt.xml",
                         {'owner': owner, 'timeout': timeout,
@@ -387,21 +314,55 @@ class DavServer(object):
                         'lockscope': lockscope, 'locktype': locktype},
                         context_instance=RequestContext(request),
                         mimetype='text/xml')
-                    #logging.info("XXXXX %s response.content %s", lh , response.content)
                     response['Lock-Token'] = '<opaquelocktoken:%s>' % token
                     response['Content-Length'] = len(response.content)
                     return response
-                except:
+                except Exception as e:
                     return HttpResponseBadRequest()
-        elif ifheader:
-            tags = IfParser(ifheader)
-            for t in tags:
-                logging.info("XXXX IfParser ", t.resource)
-                for tt in t.list:
-                    logging.info("XXXX IfParser ", tt)
+            else:
+                logging.info("LOCK on unmapped URL")
+                ancestors,name = _get_path_info_request(request, self.id)
+                ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
+                mfile = None
 
+                if not isFo and ancestors_exist:
+                    mfile = self.service.create_mfile(name,request=request,folder=parentfolder)
+                    mfile.folder=parentfolder
+                    mfile.save()
+                    token = unique_id()
+                    xmltree = etree.fromstring(request.raw_post_data)
+                    owner = xmltree.xpath('*[local-name() = "owner"]')[0].text
+                    timeout = request.META.get("HTTP_TIMEOUT","Second-3600")
+                    depth = request.META.get("HTTP_DEPTH","0")
+                    lockscope = xmltree.xpath('*[local-name() = "lockscope"]')[0].xpath("*")[0].tag.split("}")[1]
+                    validscopes = ['shared','exclusive']
+                    if lockscope not in validscopes:
+                        return HttpResponseBadRequest()
+
+                    locktype = xmltree.xpath('*[local-name() = "locktype"]')[0].xpath('*[local-name() = "write"]')[0].tag.split("}")[1]
+                    if locktype != "write":
+                        return HttpResponseBadRequest()
+
+                    wdl, created = WebDavLock.objects.get_or_create(base=mfile,
+                        timeout=timeout, owner=owner, token=token, depth=depth,
+                        lockscope=lockscope, locktype=locktype)
+                    response = render_to_response("lock.djt.xml",
+                        {'owner': wdl.owner, 'timeout': timeout,
+                        'token': wdl.token, 'depth': wdl.depth,
+                        'lockscope': wdl.lockscope, 'locktype': wdl.locktype},
+                        context_instance=RequestContext(request),
+                        mimetype='text/xml')
+                    response['Lock-Token'] = '<opaquelocktoken:%s>' % wdl.token
+                    response['Content-Length'] = len(response.content)
+                    response.status_code = 201
+                    return response
+                else:
+                    return HttpResponseBadRequest("Error creating file")
+                return 
+        elif ifheader:
             rest = None
             if ifheader.startswith("<"):
+
                 resourcetag = ifheader.rsplit(">")[0][1:]
                 rest = ''.join(ifheader.rsplit(">")[1:])
                 resourcepath = resourcetag.split(self.id)[1]
@@ -412,28 +373,40 @@ class DavServer(object):
                 rest = ifheader
                 resourceobject = object
 
-            logging.info("XXXX resourcetag %s", resourcetag )
-            logging.info("XXXX rest %s", rest )
-            logging.info("XXXX resourceobject %s", resourceobject )
-
             for ifh in rest.split(')('):
                 ifh = ifh.replace('(','').replace(')','').replace('<','').replace('>','')
                 token_name, token_value = ifh.split(':')
                 if token_name == "opaquelocktoken":
-                    wdl = WebDavLock.objects.get(base=resourceobject,token=token_value)
-                    wdl.timeout = timeout
-                    wdl.save()
-                    response = render_to_response("lock.djt.xml",
-                        {'owner': wdl.owner, 'timeout': timeout,
-                        'token': wdl.token, 'depth': wdl.depth,
-                        'lockscope': wdl.lockscope, 'locktype': wdl.locktype},
-                        context_instance=RequestContext(request),
-                        mimetype='text/xml')
-                    response['Lock-Token'] = '<opaquelocktoken:%s>' % wdl.token
-                    response['Content-Length'] = len(response.content)
-                    return response
+                    try:
+                        wdl = WebDavLock.objects.get(base=resourceobject,token=token_value)
+                        wdl.timeout = timeout
+                        wdl.save()
+                        response = render_to_response("lock.djt.xml",
+                            {'owner': wdl.owner, 'timeout': timeout,
+                            'token': wdl.token, 'depth': wdl.depth,
+                            'lockscope': wdl.lockscope, 'locktype': wdl.locktype},
+                            context_instance=RequestContext(request),
+                            mimetype='text/xml')
+                        response['Lock-Token'] = '<opaquelocktoken:%s>' % wdl.token
+                        response['Content-Length'] = len(response.content)
+                        return response
+                    except WebDavLock.DoesNotExist:
+                        wdls = WebDavLock.objects.filter(token=token_value)
+                        for wdl in wdls:
+                            wdl.timeout = timeout
+                            wdl.save()
+                            response = render_to_response("lock.djt.xml",
+                                {'owner': wdl.owner, 'timeout': timeout,
+                                'token': wdl.token, 'depth': wdl.depth,
+                                'lockscope': wdl.lockscope, 'locktype': wdl.locktype},
+                                context_instance=RequestContext(request),
+                                mimetype='text/xml')
+                            response['Lock-Token'] = '<opaquelocktoken:%s>' % wdl.token
+                            response['Content-Length'] = len(response.content)
+                            return response
+                        return HttpResponseBadRequest()
                 else:
-                    logging.info("%s %s %s", lh , "Unknown toekn_name", token_name)
+                    logging.info("%s %s %s", lh , "Unknown token_name", token_name)
                     return HttpResponseBadRequest()
         else:
             logging.info("%s %s", lh , "Empty Body")
@@ -468,31 +441,14 @@ class DavServer(object):
             return HttpResponseBadRequest()
 
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
-        logging.info("XXXXX %s isFo,isFi,object  %s %s %s", lh , isFo,isFi,object)
 
         if isFi:
-            logging.info("XXXXX %s object.folder  %s", lh , object.folder)
-
             parent_wdls = WebDavLock.objects.filter(base=object.folder, lockscope="exclusive")
-            for wdl in parent_wdls:
-                logging.info("XXXXX %s TRYING TO DELETE with EXISTING PARENT wdl %s", lh , wdl)
             if parent_wdls.count() > 0:
-                logging.info("XXXXX %s TRYING TO DELETE with EXISTING PARENT wdl %s", lh , wdl)
                 return HttpResponseLocked()
 
         if isFo or isFi:
-
-            wdls = WebDavLock.objects.filter(base=object)
-            logging.info("XXXXX %s TRYING TO DELETE with EXISTING wdl %s", lh , wdls.count())
-            for wdl in wdls:
-                logging.info("XXXXX %s TRYING TO DELETE with EXISTING wdl %s", lh , wdl)
-            #if wdls.count() > 0:
-            #    logging.info("XXXXX %s TRYING TO DELETE with EXISTING wdl %s", lh , wdl)
-            #    return HttpResponseLocked()
-            #else:
-            #    pass
-            #    object.delete()
-
+            #wdls = WebDavLock.objects.filter(base=object)
             try:
                 WebDavLock.objects.get(base=object)
                 return HttpResponseLocked()
@@ -578,11 +534,9 @@ class DavServer(object):
         if isFo:
             return HttpResponseMethodNotAllowed()
 
-        is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
+        ancestors,name = _get_path_info_request(request,self.id)
 
-        logging.info("%s %s %s %s" , is_folder,ancestors,name,fname )
-
-        foldername = ancestors.pop()
+        logging.info("%s %s %s %s" , ancestors,name )
 
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
@@ -590,17 +544,19 @@ class DavServer(object):
             return HttpResponseConflict()
 
         try:
-            MFolder.objects.get(name=foldername,service=self.service,parent=parentfolder)
+            mf = MFolder.objects.get(name=name,service=self.service,parent=parentfolder)
+            logging.info("MKCOL HttpResponseMethodNotAllowed 1 %s mfolder=%s parent=%s" , self.service, mf, parentfolder)
             return HttpResponseMethodNotAllowed()
         except MFolder.DoesNotExist:
 
             try:
-                existingmfile = MFile.objects.get(service=self.service,name=foldername,folder=parentfolder)
+                MFile.objects.get(service=self.service,name=name,folder=parentfolder)
+                logging.info("MKCOL HttpResponseMethodNotAllowed 2 %s" % self.service)
                 return HttpResponseMethodNotAllowed()
             except MFile.DoesNotExist:
                 pass
 
-            mfolder = MFolder(name=foldername,service=self.service,parent=parentfolder)
+            mfolder = MFolder(name=name,service=self.service,parent=parentfolder)
             mfolder.save()
             r = HttpResponseCreated()
             return r
@@ -784,6 +740,11 @@ class DavServer(object):
             pass
 
         if isFi:
+            dest_parent_wdls = WebDavLock.objects.filter(base=object.folder, lockscope="exclusive")
+            if dest_parent_wdls.count() > 0:
+                return HttpResponseLocked()
+
+        if isFi:
             finfo = self.__get_file_info(request, self.service, object, props=props)
             if finfo:
                 files.append(finfo)
@@ -862,9 +823,7 @@ class DavServer(object):
         try:
             for foldername in ancestors:
                 if ancestors[0] == foldername:
-
                     folder = service.mfolder_set.get(name=foldername,parent=None)
-
                 else:
                     folder = folder.mfolder_set.get(name=foldername)
 
@@ -874,7 +833,8 @@ class DavServer(object):
         return True,folder
 
     def __do_move(self, request, service, dest_path, overwrite):
-
+        lh = request.META.get("HTTP_X_LITMUS", "litmus")
+        logging.info("%s MOVE 1", lh)
         created = True
 
         # Check Destination
@@ -888,13 +848,18 @@ class DavServer(object):
         if not isFi and not isFo:
             # Source doesn't exist, nothing to copy
             return HttpResponseNotFound()
-
+        logging.info("%s MOVE 1", lh)
         # Check source is not locked
         try:
             WebDavLock.objects.get(base=object)
             return HttpResponseLocked()
         except WebDavLock.DoesNotExist:
             pass
+
+        if isFi:
+            parent_wdls = WebDavLock.objects.filter(base=object.folder, lockscope="exclusive")
+            if parent_wdls.count() > 0:
+                return HttpResponseLocked()
 
         # Check destination is not locked
         if dest_object:
@@ -903,10 +868,15 @@ class DavServer(object):
                 return HttpResponseLocked()
             except WebDavLock.DoesNotExist:
                 pass
+
+        if isDestFi:
+            dest_parent_wdls = WebDavLock.objects.filter(base=dest_object.folder, lockscope="exclusive")
+            if dest_parent_wdls.count() > 0:
+                return HttpResponseLocked()
         # The OPTIONS
         # 1 src is file therefore rename file and change parent folder, delete dest file
         # 2 src is folder therefore rename folder and change parent folder, delete dest folder
-
+        logging.info("%s MOVE 1", lh)
         created = True
 
         #1
@@ -933,7 +903,7 @@ class DavServer(object):
                 dest_object.delete()
             mfile.save()
 
-
+        logging.info("%s MOVE 1", lh)
         #2
         if isFo:
             real_dest_path = dest_path.split(self.id)[-1:][0]
@@ -958,6 +928,7 @@ class DavServer(object):
                 dest_object.delete()
             mfolder.save()
 
+        logging.info("%s MOVE 1", lh)
         if created:
             return HttpResponseCreated()
         else:
@@ -989,6 +960,10 @@ class DavServer(object):
             except WebDavLock.DoesNotExist:
                 pass
 
+        if isDestFi:
+            dest_parent_wdls = WebDavLock.objects.filter(base=dest_object.folder, lockscope="exclusive")
+            if dest_parent_wdls.count() > 0:
+                return HttpResponseLocked()
         # The OPTIONS
         # 1 src is file therefore create new mfile, copy contents
         # 2 src is folder therefore create new mfolder, copy files and folders
@@ -1104,7 +1079,7 @@ class DavServer(object):
         f_props = deepcopy(props)
 
         # Check Source
-        is_folder,ancestors,filename,foldername = _get_path_info_request(request,self.id)
+        ancestors,filename = _get_path_info_request(request,self.id)
         a,src_folder = self.__ancestors_exist(service,ancestors)
         
         from datetime import datetime
@@ -1214,25 +1189,28 @@ class DavServer(object):
             return HttpResponseBadRequest("File path specified is a directory")
         
         if isFi:
-            try:
-                lh = request.META.get("HTTP_X_LITMUS", "litmus")
-                ifheader = request.META.get("HTTP_IF",None)
-
-                logging.info("XXXXX %s ifheader %s", lh , ifheader)
-                #logging.info("XXXXX %s timeout %s", lh , timeout)
-                #logging.info("XXXXX %s depth %s", lh , depth)
-
-                if ifheader != None:
-                    passed, error = self.__check_ifheader(request, ifheader, object)
-                    if not passed:
-                        return error
+            ifheader = request.META.get("HTTP_IF",None)
+            if ifheader != None:
+                passed, error = self.__check_ifheader(request, ifheader, object)
+                if not passed:
+                    return error
                 else:
-                    WebDavLock.objects.get(base=object)
+                    folderpassed, error = self.__check_ifheader(request, ifheader, object.folder)
+                    if not folderpassed:
+                        logging.info("LOCKED")
+                        return HttpResponseLocked()
+                folderpassed, foldererror = self.__check_ifheader(request, ifheader, object.folder)
+                if not folderpassed:
                     return HttpResponseLocked()
-            except WebDavLock.DoesNotExist:
-                pass
+            else:
+                wdls = WebDavLock.objects.filter(base=object)
+                if wdls.count() > 0:
+                    return HttpResponseLocked()
+                folderwdls = WebDavLock.objects.filter(base=object.folder)
+                if folderwdls.count() > 0:
+                    return HttpResponseLocked()
 
-        is_folder,ancestors,name,fname = _get_path_info_request(request,self.id)
+        ancestors,name = _get_path_info_request(request,self.id)
         ancestors_exist,parentfolder = self.__ancestors_exist(self.service, ancestors)
 
         mfile = None
@@ -1242,7 +1220,7 @@ class DavServer(object):
         if isFi:
             mfile = object
             mfile.update_mfile(name,request=request,post_process=True,folder=parentfolder)
-        elif not is_folder and ancestors_exist:
+        elif not isFo and ancestors_exist:
             created = True
             mfile = self.service.create_mfile(name,request=request,folder=parentfolder)
             mfile.folder=parentfolder
@@ -1409,17 +1387,11 @@ def _get_path_info(path,id):
 def __get_path_info(path):
 
     paths = path.split('/')
-    foldername = None
-    if paths[0] == '':
-        paths.remove('')
-    if paths[-1] == '' and len(paths)>2:
-        foldername = paths[-2]
+    paths = filter(lambda x : x != '', paths)
     ancestors = paths[0:-1]
     name = paths[-1:][0]
 
-    folder = (name=='')
-
-    return folder,ancestors,name,foldername
+    return ancestors,name
 
 def _get_resource_for_path(pathlist,service,id):
     p = pathlist.split(id)[-1:]

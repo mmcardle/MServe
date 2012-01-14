@@ -27,7 +27,7 @@ import base64
 import pickle
 
 class WebDavLock(models.Model):
-    base = models.ForeignKey(NamedBase)
+    base = models.ForeignKey(NamedBase, null=True, blank=True)
     owner = models.CharField(max_length=200)
     timeout = models.CharField(max_length=200)
     token = models.CharField(max_length=200)
@@ -36,7 +36,10 @@ class WebDavLock(models.Model):
     locktype = models.CharField(max_length=200)
 
     def __unicode__(self):
-        return "WebDavLock %s %s %s %s " % (self.owner, self.token, self.lockscope, self.locktype )
+        if self.base:
+            return "WebDavLock %s %s %s %s %s " % (self.base, self.owner, self.token, self.lockscope, self.locktype )
+        else:
+            return "WebDavLock %s %s %s %s %s " % (self.unmapped, self.owner, self.token, self.lockscope, self.locktype )
     
 class WebDavProperty(models.Model):
     base            = models.ForeignKey(NamedBase)
