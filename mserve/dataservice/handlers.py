@@ -274,7 +274,6 @@ class DataServiceHandler(BaseHandler):
                     start = None
                 if end == '':
                     end = None
-                print start, " ", end
                 if service:
                     dataservice = service.create_subservice(name)
                 else:

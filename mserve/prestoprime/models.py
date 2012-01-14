@@ -63,9 +63,6 @@ def mfile_get_handler( sender, mfile=False, **kwargs):
             mfiled10check=MFileD10Check.objects.get(mfile=mfile)
             tmpfile = tempfile.NamedTemporaryFile(mode="w")
             d10mxfchecksum([mfile.file.path],[tmpfile.name])
-
-            logging.info("Prestoprime handler %s " %  tmpfile.name )
-            logging.info("Prestoprime handler %s " %  mfiled10check.checkfile.path )
             
             if not filecmp.cmp(tmpfile.name,mfiled10check.checkfile.path):
                 lines1 = open(tmpfile.name).readlines()
@@ -158,11 +155,11 @@ MFILE_GET_SIGNAL.connect(mfile_get_handler, dispatch_uid="prestoprime.models")
 
 def post_save_handler( sender, instance=False, **kwargs):
     try:
-        logging.info("Prestoprime POST save handler %s %s" % (instance, instance.file))
+        logging.debug("Prestoprime POST save handler %s %s" % (instance, instance.file))
 
         # Record Additional Usage
         if instance.name is not None and not instance.initial_usage_recorded and instance.name.endswith(".mxf"):
-            logging.info("Prestoprime POST save handler %s id:'%s' " % (instance,instance.id))
+            logging.debug("Prestoprime POST save handler %s id:'%s' " % (instance,instance.id))
 
             mxfframecounttask = mxfframecount.subtask([[instance.id],[]])
 
@@ -186,13 +183,6 @@ def post_save_handler( sender, instance=False, **kwargs):
             mfiled10check.checkfile.save(suf.name+'.txt', suf, save=False)
             mfiled10check.save()
 
-            logging.info("Prestoprime created %s mfiled10check " % mfiled10check  )
-            logging.info("Prestoprime created %s temp_handle " % temp_handle  )
-            logging.info("Prestoprime created SimpleUploadedFile %s " % suf )
-            logging.info("Prestoprime saved %s mfiled10check " % mfiled10check  )
-            logging.info("Prestoprime input %s  " %  instance.file  )
-            logging.info("Prestoprime output %s  " % mfiled10check.checkfile.file  )
-
             d10mxfchecksumtask = d10mxfchecksum.subtask([[instance.id],[output]])
 
             ts = TaskSet(tasks=[d10mxfchecksumtask,mxfframecounttask])
@@ -203,9 +193,9 @@ def post_save_handler( sender, instance=False, **kwargs):
             job.taskset_id=tsr.taskset_id
             job.save()
             
-            logging.info("Prestoprime task %s  " % task  )
+            logging.debug("Prestoprime task %s  " % task  )
 
     except Exception as e:
-        logging.info("Prestoprime POST save handler failed %s " % e)
+        logging.error("Prestoprime POST save handler failed %s " % e)
 
 post_save.connect(post_save_handler, sender=MFile, dispatch_uid="prestoprime.models")

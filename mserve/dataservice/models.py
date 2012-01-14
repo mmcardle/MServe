@@ -689,7 +689,6 @@ class NamedBase(Base):
     def save(self, *args, **kwargs):
         super(NamedBase, self).save(*args, **kwargs)
         if not self.initial_usage_recorded:
-            logging.info("Processing %s ", self)
             import usage_store as usage_store
             startusages = []
             for metric in self.metrics:
@@ -697,16 +696,16 @@ class NamedBase(Base):
                 #  Recored Initial Values
                 v = self.get_value_for_metric(metric)
                 if v is not None:
-                    logging.info("Value for %s is %s", metric, v)
-                    logging.info("Recording usage for metric %s value= %s",
+                    logging.debug("Value for %s is %s", metric, v)
+                    logging.debug("Recording usage for metric %s value= %s",
                                     metric, v)
                     usage = usage_store.record(self.id, metric, v)
                     startusages.append(usage)
                 # Start recording initial rates
                 r = self.get_rate_for_metric(metric)
                 if r is not None:
-                    logging.info("Rate for %s is %s", metric, r)
-                    logging.info("Recording usage rate for metric %s value %s",
+                    logging.debug("Rate for %s is %s", metric, r)
+                    logging.debug("Recording usage rate for metric %s value %s",
                                     metric, r)
                     usage = usage_store.startrecording(self.id, metric, r)
                     startusages.append(usage)
@@ -721,20 +720,19 @@ class NamedBase(Base):
     def update_usage(self):
         import usage_store as usage_store
         for metric in self.metrics:
-            #logging.info("Processing metric %s" %metric)
             #  Recorded updated values
             v = self.get_updated_value_for_metric(metric)
 
             if v is not None:
-                logging.info("Value for %s is %s", metric, v)
-                logging.info("Recording usage for metric %s value= %s", \
+                logging.debug("Value for %s is %s", metric, v)
+                logging.debug("Recording usage for metric %s value= %s", \
                                 metric, v)
                 usage = usage_store.update(self.id, metric, v)
             # recording updated rates
             r = self.get_updated_rate_for_metric(metric)
             if r is not None:
-                logging.info("Rate for %s is %s", metric, r)
-                logging.info("Recording usage rate for metric %s value= %s",
+                logging.debug("Rate for %s is %s", metric, r)
+                logging.debug("Recording usage rate for metric %s value= %s",
                                 metric, r)
                 usage = usage_store.updaterecording(self.id, metric, r)
 
