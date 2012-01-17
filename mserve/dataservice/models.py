@@ -286,6 +286,7 @@ class Usage(models.Model):
     @staticmethod
     def get_full_usagesummary():
         ''' Return all the usage '''
+        from jobservice.models import Job
         usages = Usage.objects.all()
         usagesummary = Usage.usages_to_summary(usages)
         usagesummary.extend(Usage.get_job_usagesummary(Job.objects.all()))
