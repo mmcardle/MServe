@@ -2113,3 +2113,4 @@ class Auth(Base):
         return "Auth: authname=%s base=%s roles=%s "\
                 % (self.authname, self.base, ",".join(self.getroles()))
 
+from jobservice.models import *

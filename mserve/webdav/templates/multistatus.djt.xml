@@ -31,13 +31,13 @@
 {% spaceless %}
 <D:multistatus xmlns:D="DAV:">
 {% for f in files %}
-<D:response>
+<D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
   <D:href>{{f.href|urlencode}}</D:href>
   {% for status, props in f.properties.items %}
   <D:propstat>
     <D:prop>
       {% for p in props %}
-      {% if p.name == 'resourcetype' %}
+      {% if p.name == 'resourcetype' or p.name == 'supportedlock' %}
       <{{p.name}} xmlns="{{p.namespace}}">{%autoescape off%}{{p.value}}{%endautoescape%}</{{p.name}}>
       {% else %}
       	{% if status == '200 OK' and p.value %}

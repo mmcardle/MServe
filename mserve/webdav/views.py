@@ -59,7 +59,7 @@ def list_parser(litem):
     out = []
     ISNOT = 0
     i = 0
-    while 1:
+    while True:
         m = MserveListItem.search(litem[i:])
         if not m: break
 
@@ -86,7 +86,7 @@ def if_parser(hdr):
     return out
 
 
-def webdav(request,id):
+def webdav(request, id):
 
     try:
         logging.info("%s id:%s %s" % (request.method, id, request.path_info));
@@ -592,14 +592,14 @@ class DavServer(object):
         isFo,isFi,object = _get_resource_for_path(request.path_info,self.service,self.id)
 
         if isFi:
-            response['Allow'] = "COPY, DELETE, GET, HEAD, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, PUT"
+            response['Allow'] = "COPY, DELETE, GET, HEAD, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, PUT, LOCK, UNLOCK"
             response['Content-Type'] = object.mimetype
         elif isFo:
             response['Content-Type'] = 'httpd/unix-directory'
-            response['Allow'] = "COPY, DELETE, GET, HEAD, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH"
+            response['Allow'] = "COPY, DELETE, GET, HEAD, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, LOCK, UNLOCK"
         else:
             response['Content-Type'] = 'httpd/unix-directory'
-            response['Allow'] = "COPY, DELETE, GET, HEAD, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH"
+            response['Allow'] = "COPY, DELETE, GET, HEAD, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, LOCK, UNLOCK"
 
         return response
 
@@ -614,7 +614,6 @@ class DavServer(object):
         depth = '1'
         if request.META.has_key('HTTP_DEPTH'):
             depth = request.META['HTTP_DEPTH']
-
 
         # First, find out what properties were requested
         props = []
@@ -691,8 +690,7 @@ class DavServer(object):
             {'files': files, 'props': props},
             context_instance=RequestContext(request),
             mimetype='text/xml')
-
-
+        response['Content-Length'] = len(response.content)
         if response.status_code == 200:
             response.status_code = 207
         return response
@@ -1041,24 +1039,35 @@ class DavServer(object):
         while len(f_props) != 0:
             p = f_props.pop(0)
             if p.name in self.SUPPORTED_PROPERTIES:
-                if p.name == 'creationdate':
+                if p.name == 'resourcetype':
+                    p.value = '<D:collection/>'
+                elif p.name == 'creationdate':
                     dt = datetime.today()
                     p.value = dt.isoformat()
-                elif p.name == 'displayname':
-                    p.value = self.id
-                elif p.name == 'getcontentlength':
-                    p.value = 4096
-                elif p.name == 'getcontenttype':
-                    p.value = "application/x-directory"
+                elif p.name == 'getlastmodified':
+                    dt = datetime.today()
+                    p.value = dt.strftime("%a, %d %b %Y %H:%M:%S %Z")
                 elif p.name == 'getetag':
                     dt = datetime.today()
                     epoch_seconds = time.mktime(dt.timetuple())
                     p.value = "%s-%s" % (hex(int(epoch_seconds))[2:], 4096)
-                elif p.name == 'getlastmodified':
-                    dt = datetime.today()
-                    p.value = dt.strftime("%a, %d %b %Y %H:%M:%S %Z")
-                elif p.name == 'resourcetype':
-                    p.value = '<D:collection/>'
+                elif p.name == 'displayname':
+                    p.value = service.name
+                elif p.name == 'getcontentlength':
+                    p.value = 4096
+                elif p.name == 'getcontenttype':
+                    p.value = "application/x-directory"
+                elif p.name == 'lockdiscovery':
+                    p.value = ''
+                elif p.name == 'supportedlock':
+                    p.value = '<D:lockentry>\
+                                <D:lockscope><D:exclusive/></D:lockscope>\
+                                <D:locktype><D:write/></D:locktype>\
+                                </D:lockentry>\
+                                <D:lockentry>\
+                                <D:lockscope><D:shared/></D:lockscope>\
+                                <D:locktype><D:write/></D:locktype>\
+                                </D:lockentry>'
             elif p.status == '200 OK' and not p.removed:
                 # TODO: Custom properties
                 # See if we have a value for the custom property
@@ -1105,6 +1114,17 @@ class DavServer(object):
                     p.value = dt.strftime("%a, %d %b %Y %H:%M:%S %Z")
                 elif p.name == 'resourcetype':
                     p.value = '<D:collection/>'
+                elif p.name == 'lockdiscovery':
+                    p.value = ''
+                elif p.name == 'supportedlock':
+                    p.value = '<D:lockentry>\
+                                <D:lockscope><D:exclusive/></D:lockscope>\
+                                <D:locktype><D:write/></D:locktype>\
+                                </D:lockentry>\
+                                <D:lockentry>\
+                                <D:lockscope><D:shared/></D:lockscope>\
+                                <D:locktype><D:write/></D:locktype>\
+                                </D:lockentry>'
             elif p.status == '200 OK' and not p.removed:
                 # TODO: Custom properties
                 # See if we have a value for the custom property
@@ -1146,9 +1166,22 @@ class DavServer(object):
                 elif p.name == 'getetag':
                     p.value = "%s-%s" % (hex(int(fstat.st_mtime))[2:], fstat.st_size)
                 elif p.name == 'getlastmodified':
-                    p.value = self.__get_localized_datetime(fstat.st_mtime).strftime("%a, %d %b %Y %H:%M:%S %Z")
+                    # All HTTP date/time stamps MUST be represented in Greenwich Mean Time
+                    # rfc1123-date (defined in Section 3.3.1 of [RFC2616])
+                    p.value = self.__get_localized_datetime(fstat.st_mtime).strftime("%a, %d %b %Y %H:%M:%S GMT")
                 elif p.name == 'resourcetype':
                     p.value = ''
+                elif p.name == 'lockdiscovery':
+                    p.value = ''
+                elif p.name == 'supportedlock':
+                    p.value = '<D:lockentry>\
+                                <D:lockscope><D:exclusive/></D:lockscope>\
+                                <D:locktype><D:write/></D:locktype>\
+                                </D:lockentry>\
+                                <D:lockentry>\
+                                <D:lockscope><D:shared/></D:lockscope>\
+                                <D:locktype><D:write/></D:locktype>\
+                                </D:lockentry>'
             elif p.status == '200 OK' and not p.removed:
                 # TODO : Get MFile Properites
                 # See if we have a value for the custom property
@@ -1385,12 +1418,12 @@ def _get_path_info(path,id):
     return __get_path_info(pathlist[-1])
 
 def __get_path_info(path):
-
     paths = path.split('/')
     paths = filter(lambda x : x != '', paths)
+    name = None
     ancestors = paths[0:-1]
-    name = paths[-1:][0]
-
+    if len(paths) != 0:
+        name = paths[-1:][0]
     return ancestors,name
 
 def _get_resource_for_path(pathlist,service,id):
