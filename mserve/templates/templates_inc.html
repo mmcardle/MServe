@@ -1,4 +1,8 @@
 
+<script type="j">
+    RS={{STATIC_URL}}
+</script>
+
 <script id="template-upload" type="text/x-jquery-tmpl">
     <tr class="template-upload{%templatetag openvariable%}if error{%templatetag closevariable%} ui-state-error{%templatetag openvariable%}/if{%templatetag closevariable%}">
         <td class="preview"></td>
@@ -146,10 +150,19 @@
                 </div>
             </form>
             <div class="fileupload-content" style="height: 200px;overflow: scroll;overflow-x: hidden;">
-                    <div class="fileupload-progressbar"></div>
-                <table class="files" border="0"></table>
+            <div class="fileupload-progressbar"></div>
+                <table class="files" border="0">
 
+                </table>
             </div>
+        </div>
+    </div>
+    <div id="import-accordion" class="single-accordion">
+        <h3><a href="#">Remote Services</a> </h3>
+        <div>
+        <div id="remote-services" style="height: 200px;overflow: scroll;overflow-x: hidden;">
+
+        </div>
         </div>
     </div>
     <div class="ui-widget" style="margin-top: 10px">
@@ -169,13 +182,13 @@
                 <td style="width: 65%">
                     <ul id="qscontainer" ></ul>
                     <ul id="hiddenqscontainer" style="display: none"></ul>
-                    <table id="mfilejobcontainer" style="width: 100%;display: none;" >
+                    <table id="mfilejobcontainer" style="width: 100%;display: none;" border="0" >
                         <tr>
-                            <th width="150px" >New Job</th>
+                            <th width="180px" >New Job</th>
                             <th width="*" >Current Jobs</th>
                         </tr>
                         <tr>
-                            <td width="150px"  id="mfilecreatejobcontainer" ></td>
+                            <td width="180px"  id="mfilecreatejobcontainer" ></td>
                             <td width="*" id="mfilecurrentjobscontainer" ></td>
                         </tr>
                     </table>
@@ -405,6 +418,21 @@
                            </table>
 
                        </div>
+                   </td>
+                   <td>
+                       <h3>Authority to Access this service</h3>
+                        <dl style="padding-left: 40px;">
+                            {%templatetag openvariable%}each auth_set{%templatetag closevariable%}
+                            <dt>Auth ${$value.authname} (${$value.id})</dt>
+                            <dd>Auth giving access to the roles (
+                                {%templatetag openvariable%}each roles{%templatetag closevariable%}
+                                    <strong>${$value}</strong>&nbsp;
+                                {%templatetag openvariable%}/each{%templatetag closevariable%}
+                                &nbsp;)
+                                <a style="text-decoration: underline;" href="${$value.browse_url}">Browse this auth</a>
+                            </dd>
+                            {%templatetag openvariable%}/each{%templatetag closevariable%}
+                        </dl>
                    </td>
                </tr>
            </table>
@@ -1073,7 +1101,7 @@
     <div class="${id}" data-id="mfileposterholder-${id}" id="mfileposterholder-${id}" style="display: inline-block;width: 100%" >
         <table border="0" width="100%" >
         <tr>
-            <td width="280px">
+            <td width="40%">
                 <table border="0" style="">
                 <tr>
                     <td>
@@ -1095,7 +1123,7 @@
             </table>
         </td>
          {%templatetag openvariable%}if mimetype.startsWith("video") {%templatetag closevariable%}
-            <td>
+         <td width="50%">
                 <h5>Video Proxy</h5>
                 {%templatetag openvariable%}if proxyurl {%templatetag closevariable%}
                 <iframe
@@ -1113,7 +1141,7 @@
             </td>
          {%templatetag openvariable%}else{%templatetag closevariable%}
             {%templatetag openvariable%}if mimetype.startsWith("image") {%templatetag closevariable%}
-                <td>
+                <td width="50%">
                     <h5>Image Poster</h5>
                     <div class="posterholder">
                         <div class="poster" id="image-${id}" style=" height: 256px; width: 420px; padding: 0.4em; position: relative;
@@ -1156,10 +1184,13 @@
             <colgroup><col>
             </colgroup>
             <tbody>
-            <tr><td>
-                <div class='title'>{% autoescape off %}${getShort(name,20)}{% endautoescape  %}</div>
-            </td></tr>
-            <tr><td>
+            <tr>
+                <td>
+                    <div class='title'>{% autoescape off %}${getShort(name,20)}{% endautoescape  %}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
@@ -1172,7 +1203,8 @@
                         <button id="newjobbutton-${id}" onclick="showmfiledialog('${id}')" >New Job</button>
                         <button id="deletemfilebutton-${id}" onclick='$("#mserve").mserve("deletemfile","${id}")' >Delete</button>
                       </div>
-                </td></tr>
+                </td>
+            </tr>
             </tbody>
         </table>
     

@@ -148,7 +148,8 @@ check_mserve_admin_passwd () {
 }
 
 check_mysql_password () {
-	if [ -z $DATABASE_ADMIN_PASSWORD ]; then
+        echo "$DATABASE_ADMIN_PASSWORD"
+	if [ -z "$DATABASE_ADMIN_PASSWORD" ]; then
 		echo "no password provided for mysql, try connect with no password"
 		verify_pass=$(mysql -u root -Bse 'show databases')
 		if [ $? -ne 0 ]; then
@@ -619,6 +620,7 @@ install_ffmpeg || f_ "failed to install ffmpeg"
 # install http server
 case $HTTP_SERVER in 
 	apache) apt-get -y install apache2 libapache2-mod-fastcgi libapache2-mod-bw libapache2-mod-xsendfile
+		a2enmod headers
 		a2enmod auth_token
 		if [ $? -ne 0 ]; then
 			echo "mod_auth_token is not found, trying to install it"
@@ -1167,6 +1169,9 @@ configure_apache () {
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
         <Location /dl/>\n\
+            SetEnvIf Request_URI "^.*/([^/]*)$" FILENAME=$1\n\
+            Header set "Content-disposition" "attachment; filename=%{FILENAME}e"\n\
+            UnsetEnv FILENAME\n\
             AuthTokenSecret 'ugeaptuk6'\n\
             AuthTokenPrefix /dl/\n\
             AuthTokenTimeout 60\n\
@@ -1365,8 +1370,8 @@ JSON
 fi
 
 sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || f_ "failed to configure mserve database"
-sudo -u www-data ${MSERVE_HOME}/manage.py schemamigration jobservice dataservice --auto || f_ "failed to schemamigrate mserve database"
-sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput || f_ "failed to migrate mserve database"
+sudo -u www-data ${MSERVE_HOME}/manage.py schemamigration jobservice dataservice --auto
+sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput
 sudo -u www-data ${MSERVE_HOME}/manage.py register_tasks dataservice
 
 if [ -f initial_data.json ]; then

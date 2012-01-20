@@ -246,6 +246,70 @@
                 }
             });
     },
+    loadRemoteServices: function(authid, accordian) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                  $.ajax({
+                   type: "GET",
+                   url: remoteservice_url,
+                   success: function(msg){
+                       if(msg.length==0){
+                            $( "#import-dialog-items" ).append("<div class='ui-widget-content ui-corner-all ui-state-error'>No known Remote Services</div>")
+                       }
+
+                       $.each(msg, function(i,remoteservice){
+                            service = $("<div><button id='remoteserviceicon'"+remoteservice.id+">Text</button>&nbsp;Import data from <a href='#' id='remoteservicebutton-"+remoteservice.id+"' style='text-decoration:underline' >"+remoteservice.url+"</a></div>")
+                            service.appendTo(accordian.find("#remote-services"))
+                            service.find("#remoteserviceicon").button({
+                                icons: {
+                                    primary: "ui-icon-transferthick-e-w"
+                                },
+                                text: false
+                            })
+                            
+                            $("#remoteservicebutton-"+remoteservice.id+",#remoteserviceicon").click(
+                                function() {
+                                     var data = $.param({ "url" : remoteservice.url,"authid" : authid })
+                                     $.ajax({
+                                       type: "POST",
+                                       data: data,
+                                       url: consumer_url,
+                                       success: function(msg){
+                                           m = $("<div style='padding:2px;align:left'><button id='aiClose'>Close</button></div><iframe src="+msg.authurl+" width='100%' height='100%'><p>Your browser does not support iframes.</p></iframe>" );
+                                            $.blockUI({message: m, css: {
+                                                top:  '50px',
+                                                left:  '50px',
+                                                width: ($(window).width() - 100) + 'px',
+                                                height: ($(window).height() - 100) + 'px'
+                                            }});
+                                            $("#aiClose").button().click(function() {
+                                                $.unblockUI();
+                                            });
+                                       },
+                                       error: function(msg){
+                                           showError("Error Loading Remote Service", "Sorry the service could not be loaded - "+ msg.responseText)
+                                       }
+                                     });
+                                }
+                            );
+                       });
+
+
+                   },
+                   error: function(msg){
+                       showError("Error Loading Remote Services", msg)
+                   }
+                 });
+
+            });
+    },
     loadServiceAuth: function(url, tab, authid) {
         var defaults = {};
         var options = $.extend(defaults, options);
@@ -270,8 +334,17 @@
                         {name:"Jobs",id:"jobstab-"+authid,url:url+"/jobs"},
                         {name:"Usage",id:"usagetab-"+authid,url:url+"/usage"}
                     ]} )
-
+                
                     $table = $("#mserveTemplate").tmpl()
+
+                    $this.mserve( "loadRemoteServices", authid, $table.find('#import-accordion') )
+
+                    $table.find("#importbutton").button(
+                        {icons: {primary: "ui-icon-circle-plus"}}
+                        ).click( function(){
+                            create_new_import_ui_dialog(authid,remoteservice_url,consumer_url)
+                    })
+
                     $table.find("#mserve-new-folder-button").button(
                         {icons: {primary: "ui-icon-circle-plus"}}
                         ).click( function(){
@@ -437,6 +510,9 @@
                     ]} )
 
                     $table = $("#mserveTemplate").tmpl()
+
+                    $table.find('#import-accordion').hide()
+
                     $table.find("#mserve-new-folder-button").button(
                         {icons: {primary: "ui-icon-circle-plus"}}
                         ).click( function(){

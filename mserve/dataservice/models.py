@@ -1366,25 +1366,27 @@ class DataService(NamedBase):
             folder.save()
             return folder
 
-    def create_mfile(self, name, file=None, request=None,
-                        post_process=True, folder=None, duplicate_of=None):
-
-        logging.info("Create Mfile %s", self)
-        service = self
-
+    def get_unique_name(self, name, folder=None):
         # Check for duplicate name
+        fn, ext = os.path.splitext(name)
         done = False
         n = 0
-        fn, ext = os.path.splitext(name)
         while not done:
             existing_files = MFile.objects.filter(name=name, folder=folder,
-                                                    service=service)
+                                                    service=self)
             if len(existing_files) == 0:
                 done = True
             else:
                 n = n + 1
                 name = "%s-%s%s" % (fn, str(n), ext)
+        return name
 
+    def create_mfile(self, name, file=None, request=None, response=None,
+                        post_process=True, folder=None, duplicate_of=None):
+
+        logging.info("Create Mfile %s", self)
+        service = self
+        name = self.get_unique_name(name, folder)
         length = 0
 
         if request:
@@ -1730,7 +1732,7 @@ class MFile(NamedBase):
         return HttpResponseRedirect(redirecturl)
 
     def update_mfile(self, name, file=None, request=None, post_process=True,
-                        folder=None, duplicate_of=None):
+                        folder=None, duplicate_of=None,  response=None,):
         logging.info("Update Mfile %s", self)
         length = 0
 
@@ -1994,6 +1996,7 @@ class Auth(Base):
     usages = models.ManyToManyField("Usage")
     roles_csv = models.CharField(max_length=200)
 
+    def browse_url(self): return reverse('browse', args=[self.id])
     def stats_url(self): return reverse('stats', args=[self.id])
     def usage_url(self): return reverse('auth_usagesummary', args=[self.id])
 

@@ -30,8 +30,11 @@
 <script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.pie.js"></script>
 <script type="text/javascript" src="/mservemedia/js/flot/jquery.flot.resize.min.js"></script>
 <script type="text/javascript" src="/mservemedia/js/jquery.relatize_date.js"></script>
-<script type="text/javascript" src="/mservemedia/js/mserve.usage.js"></script>
 
+<script type="text/javascript" >
+    var remoteservice_url = '{% url remoteservice %}'
+    var consumer_url = '{% url consumer %}'
+</script>
 
 {% block script %}{% endblock %}
 

@@ -31,6 +31,7 @@ from mserveoauth.models import *
 import dataservice.utils as utils
 from celery.task.sets import TaskSet
 from django.http import HttpResponse
+from django.http import HttpResponseServerError
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -67,6 +68,7 @@ class ProtectedResourceHandler(BaseHandler):
 
 
 def oauth_access_token(request):
+
     oauth_server, oauth_request = pauth.initialize_server_request(request)
 
     if oauth_request is None:
@@ -109,7 +111,6 @@ class ReceiveHandler(BaseHandler):
             ACCESS_TOKEN_URL = cc.remote_service.get_access_token_url()
 
             resp, content = client.request(ACCESS_TOKEN_URL, "POST")
-
             access_token = dict(cgi.parse_qsl(content))
 
             RESOURCE_URL = remote_service.get_protected_resource_url()
@@ -161,7 +162,7 @@ class ReceiveHandler(BaseHandler):
             return rdict     
 
 class ConsumerHandler(BaseHandler):
-    allowed_methods = ('GET', 'PUT', 'POST','DELETE')
+    allowed_methods = ('PUT', 'POST','DELETE')
 
     def delete(self, request, id, oauth_token):
 
@@ -205,35 +206,40 @@ class ConsumerHandler(BaseHandler):
 
     def create(self, request):
 
-        CONSUMER_SERVER = request.POST['url']
-        authid= request.POST['authid']
+        try:
+            CONSUMER_SERVER = request.POST['url']
+            authid= request.POST['authid']
+            auth = Auth.objects.get(id=authid)
 
-        auth = Auth.objects.get(id=authid)
 
-        remote_service = get_object_or_404(RemoteService, url=CONSUMER_SERVER)
-        REQUEST_TOKEN_URL = remote_service.get_request_token_url()
+            remote_service = get_object_or_404(RemoteService, url=CONSUMER_SERVER)
+            REQUEST_TOKEN_URL = remote_service.get_request_token_url()
 
-        # key and secret granted by the service provider for this consumer application - same as the MockOAuthDataStore
-        consumer = oauth2.Consumer(remote_service.consumer_key, remote_service.consumer_secret)
-        client = oauth2.Client(consumer)
+            # key and secret granted by the service provider for this consumer application - same as the MockOAuthDataStore
+            consumer = oauth2.Consumer(remote_service.consumer_key, remote_service.consumer_secret)
+            client = oauth2.Client(consumer)
 
-        # Get a request token. This is a temporary token that is used for
-        # having the user authorize an access token and to sign the request to obtain
-        # said access token.
-        resp, content = client.request(REQUEST_TOKEN_URL, "GET")
-        if resp['status'] != '200':
-            raise Exception("Invalid response %s, on %s from  %s." % (resp, resp['status'],REQUEST_TOKEN_URL))
+            # Get a request token. This is a temporary token that is used for
+            # having the user authorize an access token and to sign the request to obtain
+            # said access token.
+            resp, content = client.request(REQUEST_TOKEN_URL, "GET")
+            if resp['status'] != '200':
+                logging.error("Invalid response %s, on %s from  %s." % (resp, resp['status'],REQUEST_TOKEN_URL))
+                return HttpResponseServerError()
 
-        request_token = dict(cgi.parse_qsl(content))
+            request_token = dict(cgi.parse_qsl(content))
 
-        cc = ClientConsumer(oauth_token=request_token['oauth_token'], \
-                oauth_token_secret=request_token['oauth_token_secret'], \
-                service_auth = auth, \
-                remote_service=remote_service)
-        cc.save()
+            cc = ClientConsumer(oauth_token=request_token['oauth_token'], \
+                    oauth_token_secret=request_token['oauth_token_secret'], \
+                    service_auth = auth, \
+                    remote_service=remote_service)
+            cc.save()
 
-        callback = request.build_absolute_uri(reverse('receive'))
+            callback = request.build_absolute_uri(reverse('receive'))
 
-        authurl = remote_service.get_full_authcallback_url(request_token['oauth_token'],callback)
+            authurl = remote_service.get_full_authcallback_url(request_token['oauth_token'],callback)
 
-        return { "authurl": authurl }
+            return { "authurl": authurl }
+        except Exception as e:
+            logging.error(e)
+            raise e

@@ -93,8 +93,8 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler, name='mfile_download'),
 
     # Auth URLs
-    url(r'^auths/$', auth_handler  ),
-    url(r'^auths/(?P<id>[^/]+)/$', auth_handler  ),
+    url(r'^auths/$', auth_handler, name='auths' ),
+    url(r'^auths/(?P<id>[^/]+)/$', auth_handler, name='auth'  ),
     url(r'^auths/(?P<authid>[^/]+)/properties/$', managementproperty_handler),
     url(r'^auths/(?P<authid>[^/]+)/usages/$', usage_handler),
     url(r'^auths/(?P<authid>[^/]+)/usagesummary/$', usagesummary_handler, name="auth_usagesummary"),
@@ -103,7 +103,7 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<authid>[^/]+)/services/$', dataservice_handler),
     url(r'^auths/(?P<authid>[^/]+)/mfiles/$', mfile_handler),
     url(r'^auths/(?P<authid>[^/]+)/mfolders/$', mfolder_handler),
-    url(r'^auths/(?P<authid>[^/]+)/file/$', mfile_contents_handler),
+    url(r'^auths/(?P<authid>[^/]+)/file/$', mfile_contents_handler, name='auth_download'),
 
     # Other URLs
     url(r'^backups/(?P<backupid>[^/]+)/$', backupfile_handler, name="backup_upload" ),
@@ -130,6 +130,6 @@ urlpatterns = patterns('',
     url(r'^traffic/$',  'dataservice.views.traffic'),
     url(r'^stats/$',  'dataservice.views.stats'),
     url(r'^stats/(?P<baseid>[^/]+)/$',  'dataservice.views.stats', name='stats'),
-    url(r'^browse/(?P<baseid>[^/]+)/$', "dataservice.views.render_base"),
+    url(r'^browse/(?P<baseid>[^/]+)/$', "dataservice.views.render_base", name='browse'),
     url(r'^redirect/$', 'dataservice.views.redirect_to', name="redirect_to"),
 )

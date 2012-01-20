@@ -1252,11 +1252,15 @@ class DavServer(object):
 
         if isFi:
             mfile = object
+            r = HttpResponse(status=200)
             mfile.update_mfile(name,request=request,post_process=True,folder=parentfolder)
+            return r
         elif not isFo and ancestors_exist:
             created = True
+            r = HttpResponse(status=201)
             mfile = self.service.create_mfile(name,request=request,folder=parentfolder)
             mfile.folder=parentfolder
+            return r
         else:
             return HttpResponseBadRequest("Error creating file")
 

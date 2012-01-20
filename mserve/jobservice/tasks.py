@@ -31,6 +31,19 @@ import string
 import shutil
 import pycurl
 import tempfile
+import re
+import pycurl
+import sys
+
+class Storage:
+    def __init__(self):
+        self.contents = []
+
+    def store(self, buf):
+        self.contents.append(buf) #= "%s%i: %s" % (self.contents, self.line, buf)
+
+    def __str__(self):
+        return ", ".join(self.contents)
 
 @task
 def copyfromurl(inputs,outputs,options={},callbacks=[]):
@@ -38,15 +51,24 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
     url = options["url"]
     logging.info(url)
     tfile = tempfile.NamedTemporaryFile('wb',delete=False)
+    retrieved_headers = Storage()
     f = open(tfile.name,'w')
     c = pycurl.Curl()
     c.setopt(c.URL, str(url))
     c.setopt(pycurl.FOLLOWLOCATION, 1)
     c.setopt(c.WRITEFUNCTION, f.write)
+    c.setopt(c.HEADERFUNCTION, retrieved_headers.store)
     c.perform()
     status = c.getinfo(c.HTTP_CODE)
     c.close()
     f.close()
+
+    logging.debug(retrieved_headers)
+
+    filename = "Imported File"
+    for header in retrieved_headers.contents:
+        if header.lower().startswith("content-disposition"):
+            filename = re.match(".*filename=(?P<filename>.*)", header).group('filename')
 
     if status > 400:
         logging.warn("Copy From URL %s return error status code '%s' " % (url, status))
@@ -55,8 +77,8 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         from mserve.dataservice.models import MFile
         mfile = MFile.objects.get(id=mfileid)
-        mfile.name = "Imported File"
-        mfile.update_mfile(mfile.name, file=File(open(tfile.name, 'r')))
+        filename = mfile.service.get_unique_name(filename)
+        mfile.update_mfile(filename, file=File(open(tfile.name, 'r')))
         mfile.save()
 
         for callback in callbacks:

@@ -23,7 +23,7 @@
 
     <form action="{% url piston.authentication.oauth_user_auth %}" method="POST">
         {{ form.as_p }}
-        <input type="hidden" name="stuff" value="additionalstuffhere" />
+        {% csrf_token %}
           <button type="submit">Confirm</button>
     </form>
 

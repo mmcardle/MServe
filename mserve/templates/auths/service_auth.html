@@ -59,14 +59,7 @@
 <script type="text/javascript">
     $(document).ready(function() {
         $("#mserve").mserve('init')
-        $("#mserve").mserve('loadpage','/auths/{{auth.id}}/')
-
-        //$("#mservetree").mserve( "init" )
-        //load_mfiles_auth('{{auth.id}}');
-        //load_mfiles_auth('{{auth.id}}');
-        //load_jobs_auth('{{auth.id}}')
-        //create_new_import_ui_dialog('{{auth.id}}',"{% url remoteservice %}","{% url consumer %}" )
-
+        $("#mserve").mserve('loadpage', '{% url auth auth.id %}')
     });
 </script>
 

@@ -231,7 +231,7 @@ class DataServiceHandler(BaseHandler):
     fields = ('name', 'id', 'created', 'reportnum', 'starttime', 'endtime',
                 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority',
                 'subservices_url','stats_url','usage_url','folder_structure',
-                'properties_url', 'url', 'webdav_url')
+                'properties_url', 'url', 'webdav_url', 'auth_set')
     exclude = ('pk')
 
     def read(self,request, id=None, containerid=None,serviceid=None):
@@ -735,7 +735,7 @@ class ManagementPropertyHandler(BaseHandler):
 class AuthHandler(BaseHandler):
     allowed_methods = ('GET','POST')
     model = Auth
-    fields = ('authname','id','auth_set','urls','methods','basename','thumburl',('roles' ,('id','rolename','description','methods') ) )
+    fields = ('authname','browse_url','id','auth_set','urls','methods','basename','thumburl',('roles' ,('id','rolename','description','methods') ) )
 
     def read(self,request, id=None, containerid=None,serviceid=None,mfileid=None,authid=None,murl=None):
         if id:

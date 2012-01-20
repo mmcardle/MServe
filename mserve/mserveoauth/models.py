@@ -44,12 +44,8 @@ class RemoteService(models.Model):
     def get_authorize_token_url(self):
         return "%s%s" % (self._get_url(),reverse('oauth_user_auth'))
 
-    #def get_callback_url(self,request):
-        #return "" % (self._get_url(),reverse('receive'))
-        #return "%s" % (request.build_absolute_uri(reverse('receive')))
-
     def get_auth_url(self,authid):
-        return "%s%s" % (self._get_url(),"/auth/%s/getcontents/" % authid)
+        return "%s%s" % (self._get_url(),reverse('auth_download', args=[authid]))
 
     def get_full_authcallback_url(self,oauth_token,callback):
         callback = urllib2.quote(callback)
