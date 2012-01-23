@@ -159,7 +159,7 @@
     </div>
     <div id="import-accordion" class="single-accordion">
         <h3><a href="#">Remote Services</a> </h3>
-        <div>
+        <div style="display: none">
         <div id="remote-services" style="height: 200px;overflow: scroll;overflow-x: hidden;">
 
         </div>
@@ -1099,7 +1099,7 @@
 
 <script id="mfilePosterTemplate" type="text/x-jquery-tmpl">
     <div class="${id}" data-id="mfileposterholder-${id}" id="mfileposterholder-${id}" style="display: inline-block;width: 100%" >
-        <table border="0" width="100%" >
+        <table border="0" >
         <tr>
             <td width="40%">
                 <table border="0" style="">
@@ -1123,12 +1123,12 @@
             </table>
         </td>
          {%templatetag openvariable%}if mimetype.startsWith("video") {%templatetag closevariable%}
-         <td width="50%">
+         <td width="600px">
                 <h5>Video Proxy</h5>
                 {%templatetag openvariable%}if proxyurl {%templatetag closevariable%}
                 <iframe
                   scrolling="no"
-                  width="95%"
+                  width="100%"
                   height="280"
                   id="video_iframe"
                   marginheight="0"

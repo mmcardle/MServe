@@ -1169,8 +1169,8 @@ configure_apache () {
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
         <Location /dl/>\n\
-            SetEnvIf Request_URI "^.*/([^/]*)$" FILENAME=$1\n\
-            Header set "Content-disposition" "attachment; filename=%{FILENAME}e"\n\
+            SetEnvIf Request_URI '^.*/([^/]*)$' FILENAME=$1\n\
+            Header set 'Content-disposition' 'attachment; filename=%{FILENAME}e'\n\
             UnsetEnv FILENAME\n\
             AuthTokenSecret 'ugeaptuk6'\n\
             AuthTokenPrefix /dl/\n\
