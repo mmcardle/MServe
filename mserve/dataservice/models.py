@@ -447,12 +447,9 @@ class Usage(models.Model):
         return newusage
 
     def __unicode__(self):
-        object = ""
-        if self.base:
-            object = unicode(self.base)
-        return "Usage:%s metric=%s total=%f reports=%s nInProgress=%s rate=%s \
+        return "Usage: metric=%s total=%f reports=%s nInProgress=%s rate=%s \
                     rateTime=%s rateCumulative=%s"\
-                    % (object, self.metric, self.total, self.reports,
+                    % (self.metric, self.total, self.reports,
                         self.nInProgress, self.rate, self.rateTime,
                         self.rateCumulative)
 
@@ -1113,7 +1110,7 @@ class DataService(NamedBase):
         "auths": ["GET", "PUT", "POST", "DELETE"],
         "properties": ["GET", "PUT"],
         "usages": ["GET"],
-        "mfiles": ["GET", "POST"],
+        "mfiles": ["GET","PUT", "POST","DELETE"],
         "mfolders": ["GET", "POST"],
         "jobs": ["GET"],
         "profiles": ["GET"],
@@ -1124,6 +1121,38 @@ class DataService(NamedBase):
     def stats_url(self): return reverse('stats', args=[self.id])
     def usage_url(self): return reverse('dataservice_usagesummary', args=[self.id])
     def properties_url(self): return reverse('dataservice_props', args=[self.id])
+
+    def get_folder_for_paths(self, paths):
+        try:
+            if len(paths) > 0:
+                foldername = paths[0]
+                folder = self.mfolder_set.get(name=foldername,parent=None)
+                if len(paths[1:]) == 0:
+                    return folder
+                else:
+                    return folder.get_folder_for_paths(paths[1:])
+            else:
+                return None
+        except Exception as e:
+            raise e
+            return None
+
+    def get_file_for_paths(self, paths):
+        try:
+            if len(paths) > 0:
+                name = paths[0]
+                try:
+                    mfile = self.mfile_set.get(name=name,folder=None)
+                    return mfile
+                except MFile.DoesNotExist:
+                    folder = self.mfolder_set.get(name=name,parent=None)
+                    if folder:
+                        return folder.get_file_for_paths(paths[1:])
+            else:
+                return None
+        except Exception as e:
+            raise e
+            return None
 
     def folder_structure(self):
         return self._folder_structure(self.id)
@@ -1441,8 +1470,40 @@ class RemoteMServeService(models.Model):
 
 class MFolder(NamedBase):
     service = models.ForeignKey(DataService)
-    parent = models.ForeignKey('self', null=True)
-    duplicate_of = models.ForeignKey('MFolder', null=True, related_name='duplicated_from')
+    parent = models.ForeignKey('self', null=True, blank=True)
+    duplicate_of = models.ForeignKey('MFolder', null=True, blank=True, related_name='duplicated_from')
+
+    def get_folder_for_paths(self, paths):
+        try:
+            if len(paths) > 0:
+                foldername = paths[0]
+                folder = self.mfolder_set.get(name=foldername,parent=self)
+                if len(paths[1:]) == 0:
+                    return folder
+                else:
+                    return folder.get_folder_for_paths(paths[1:])
+            else:
+                return None
+        except Exception as e:
+            raise e
+            return None
+
+    def get_file_for_paths(self, paths):
+        try:
+            if len(paths) > 0:
+                name = paths[0]
+                try:
+                    mfile = self.mfile_set.get(name=name,folder=self)
+                    return mfile
+                except MFile.DoesNotExist:
+                    folder = self.mfolder_set.get(name=name,parent=self)
+                    if folder:
+                        return folder.get_file_for_paths(paths[1:])
+            else:
+                return None
+        except Exception as e:
+            raise e
+            return None
 
     def duplicate(self, name, save=True, service=None):
         if service:
@@ -1731,32 +1792,37 @@ class MFile(NamedBase):
         redirecturl = os.path.join("/", redirecturl)
         return HttpResponseRedirect(redirecturl)
 
-    def update_mfile(self, name, file=None, request=None, post_process=True,
-                        folder=None, duplicate_of=None,  response=None,):
+    def update_mfile(self, name=None, file=None, request=None, post_process=True,
+                        folder=None, duplicate_of=None,  response=None):
         logging.info("Update Mfile %s", self)
-        length = 0
+
+        if name == None:
+            name = self.name
 
         if request:
             utils.write_request_to_field(request, self.file , self.name)
-        else:
+        elif file != None:
             if type(file) == django.core.files.base.ContentFile:
                 self.file.save(name, file)
-                length = file.size
             else:
                 self.file.save(name, File(file))
-                length = file.size
 
         if duplicate_of:
             self.duplicate_of = duplicate_of
 
         self.name = name
-        self.folder = folder
-        self.size = length
-        self.mimetype = mimefile([self.id], [], {})["mimetype"]
-        self.save()
 
-        import usage_store as usage_store
-        usage_store.record(self.id, METRIC_INGEST, int(length))
+        if folder:
+            self.folder = folder
+
+        self.mimetype = mimefile([self.id], [], {})["mimetype"]
+
+        if file:
+            self.size = os.stat(self.file.path).st_size
+            import usage_store as usage_store
+            usage_store.record(self.id, METRIC_INGEST, int(length))
+        
+        self.save()
 
         logging.info("MFile update '%s' ", self.name)
         logging.info("MFile PATH %s ", self.file.path)

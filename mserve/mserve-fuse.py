@@ -50,7 +50,7 @@ import logging
 from dataservice.models import *
 from django.core.files.base import ContentFile
 
-class Loopback(LoggingMixIn, Operations):
+class MServeFUSE(LoggingMixIn, Operations):
 
     def __init__(self):
         self.rwlock = Lock()
@@ -67,19 +67,62 @@ class Loopback(LoggingMixIn, Operations):
         return auth, rest
 
     def __call__(self, op, path, *args):
+        #print "CALL", op, path, args
         if path == '/' or path == "/*" or path == "./":
             self.auth = None
             self.restpath = None
             path = "./"
             restpath = path
-            return super(Loopback, self).__call__(op, path, *args)
+            return super(MServeFUSE, self).__call__(op, path, *args)
         else:
             authid, restpath = self._get_auth_from_path(path)
             self.restpath = restpath
             auth = Auth.objects.get(id=authid)
+
+            fds = auth.get_real_base().mfolder_set.get(name="afolder").mfile_set.all()
+            print fds
+
+            check = True
+            if op == "access":
+                check,err = auth.check("mfolders", "GET") and auth.check("mfiles", "GET")
+            elif op == "create":
+                check,err = auth.check("mfiles", "POST")
+            elif op == "fsync":
+                check,err = auth.check("mfiles", "PUT")
+            elif op == "fsyncdir":
+                check,err = auth.check("mfolders", "PUT")
+            elif op == "getattr":
+                check1,err1 = auth.check("mfolders", "GET")
+                check2,err2 = auth.check("mfiles", "GET")
+                check = check1 and check2
+            elif op == "mkdir":
+                check,err = auth.check("mfolders", "POST")
+            elif op == "open":
+                check,err = auth.check("mfiles", "GET")
+            elif op == "opendir":
+                check,err = auth.check("mfolders", "GET")
+            elif op == "read":
+                check,err = auth.check("mfiles", "GET")
+            elif op == "readdir":
+                check,err = auth.check("mfolders", "GET")
+            elif op == "rename":
+                logging.debug("rename check done in-method")
+            elif op == "rmdir":
+                check,err = auth.check("mfolders", "DELETE")
+            elif op == "truncate":
+                check,err = auth.check("mfiles", "PUT")
+            else:
+                msg = "CHECK for operation %s not done" % op
+                logging.debug(msg)
+                #print msg
+
+            #print "CHECK", op, check
+            if not check:
+                raise FuseOSError(EACCES)
+
             self.auth = auth
-            print "Auth = ", auth
-            return super(Loopback, self).__call__(op, "/".join(restpath), *args)
+            #print "Auth = ", auth
+            return super(MServeFUSE, self).__call__(op, os.path.sep.join(restpath), *args)
     
     def access(self, path, mode):
         pass
@@ -100,6 +143,8 @@ class Loopback(LoggingMixIn, Operations):
                 logging.info(e)
             try:
                 parentmfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath[:-1])
+                logging.info("CREATE %s parent = %s " % (path, parentmfolder) )
+                print "CREATE %s parent = %s " % (path, parentmfolder)
                 name = os.path.basename(path)
                 mfile = self.auth.get_real_base().create_mfile(name,folder=parentmfolder, file=ContentFile(''))
                 return os.open(mfile.file.path, os.O_WRONLY | os.O_CREAT, mode)
@@ -150,7 +195,7 @@ class Loopback(LoggingMixIn, Operations):
     getxattr = None
     
     def link(self, target, source):
-        return os.link(source, target)
+        raise FuseOSError(ENOTSUP)
 
     def open(self, path, fip):
         try:
@@ -205,6 +250,9 @@ class Loopback(LoggingMixIn, Operations):
             # Check if trying to move file
             mfile = self.auth.get_real_base().get_file_for_paths(self.restpath)
             if mfile:
+                check = self.auth.check("mfiles", "PUT")
+                if not check:
+                    raise FuseOSError(EACCES)
                 authid, newrestpath = self._get_auth_from_path(new)
                 if authid == self.auth.id:
                     try:
@@ -219,6 +267,9 @@ class Loopback(LoggingMixIn, Operations):
             # Check if trying to move folder
             mfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath)
             if mfolder:
+                check = self.auth.check("mfolders", "PUT")
+                if not check:
+                    raise FuseOSError(EACCES)
                 authid, newrestpath = self._get_auth_from_path(new)
                 print authid, newrestpath
                 if authid == self.auth.id:
@@ -279,7 +330,10 @@ class Loopback(LoggingMixIn, Operations):
     
 
 if __name__ == "__main__":
-    if len(argv) != 2:
-        print 'usage: %s <mountpoint>' % argv[0]
-        exit(1)
-    fuse = FUSE(Loopback(), argv[1], foreground=True)
+    print argv
+    #if len(argv) != 2:
+    #    print 'usage: %s <mountpoint>' % argv[0]
+    #    exit(1)
+    keyargs = {}
+    keyargs["allow_other"] = True
+    fuse = FUSE(MServeFUSE(), argv[1], foreground=True, **keyargs)
