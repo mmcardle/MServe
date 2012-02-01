@@ -23,7 +23,6 @@
 #
 ########################################################################
 
-
 from __future__ import with_statement
 
 from sys import argv
@@ -33,7 +32,9 @@ from errno import *
 import os
 import errno
 
-from mservefuse.fuse import FUSE, FuseOSError, Operations, LoggingMixIn, ENOTSUP
+from mservefuse.fuse import FUSE, FuseOSError, Operations
+from mservefuse.fuse import LoggingMixIn, ENOTSUP
+from mservefuse.fuse import fuse_get_context
 
 try:
     import settings # Assumed to be in the same directory.
@@ -50,24 +51,42 @@ import logging
 from dataservice.models import *
 from django.core.files.base import ContentFile
 
-class MServeFUSE(LoggingMixIn, Operations):
+class MServeLoggingMixIn:
+    def __call__(self, op, path, *args):
+        logging.info("-> %s %s %s ", op, path, repr(args))
+        ret = '[Unhandled Exception]'
+        try:
+            ret = getattr(self, op)(path, *args)
+            return ret
+        except OSError, e:
+            ret = str(e)
+            raise
+        finally:
+            logging.info("<- %s %s", op, repr(ret))
 
-    def __init__(self):
+#class MServeFUSE(MServeLoggingMixIn, Operations):
+#class MServeFUSE(LoggingMixIn, Operations):
+class MServeFUSE(Operations):
+
+    def __init__(self, *args, **kwargs):
+        self.uid = kwargs.get("uid",65534)
+        self.gid = kwargs.get("gid",65534)
         self.rwlock = Lock()
 
-    def _stat_to_dict(self, st):
-        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
+    def _stat_to_dict(self, st, override={}):
+        stats = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                 'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+        stats.update(override)
+        return stats
 
     def _get_auth_from_path(self, path):
         paths = path.split(os.path.sep)
-        paths.remove('')
+        if '' in paths: paths.remove('')
         auth = paths[0]
         rest = paths[1:]
         return auth, rest
 
     def __call__(self, op, path, *args):
-        #print "CALL", op, path, args
         if path == '/' or path == "/*" or path == "./":
             self.auth = None
             self.restpath = None
@@ -78,9 +97,6 @@ class MServeFUSE(LoggingMixIn, Operations):
             authid, restpath = self._get_auth_from_path(path)
             self.restpath = restpath
             auth = Auth.objects.get(id=authid)
-
-            fds = auth.get_real_base().mfolder_set.get(name="afolder").mfile_set.all()
-            print fds
 
             check = True
             if op == "access":
@@ -114,14 +130,11 @@ class MServeFUSE(LoggingMixIn, Operations):
             else:
                 msg = "CHECK for operation %s not done" % op
                 logging.debug(msg)
-                #print msg
 
-            #print "CHECK", op, check
             if not check:
                 raise FuseOSError(EACCES)
 
             self.auth = auth
-            #print "Auth = ", auth
             return super(MServeFUSE, self).__call__(op, os.path.sep.join(restpath), *args)
     
     def access(self, path, mode):
@@ -143,8 +156,6 @@ class MServeFUSE(LoggingMixIn, Operations):
                 logging.info(e)
             try:
                 parentmfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath[:-1])
-                logging.info("CREATE %s parent = %s " % (path, parentmfolder) )
-                print "CREATE %s parent = %s " % (path, parentmfolder)
                 name = os.path.basename(path)
                 mfile = self.auth.get_real_base().create_mfile(name,folder=parentmfolder, file=ContentFile(''))
                 return os.open(mfile.file.path, os.O_WRONLY | os.O_CREAT, mode)
@@ -169,12 +180,12 @@ class MServeFUSE(LoggingMixIn, Operations):
                 
     def getattr(self, path, fh=None):
         if self.auth == None:
-            st = os.lstat("./")
-            return self._stat_to_dict(st)
+            st = os.lstat(settings.MSERVE_DATA)
+            return self._stat_to_dict(st, {"st_uid":self.uid, "st_gid":self.gid})
         else:
             if len(path) == 0:
-                st = os.lstat("./")
-                return self._stat_to_dict(st)
+                st = os.lstat(settings.MSERVE_DATA)
+                return self._stat_to_dict(st, {"st_uid":self.uid, "st_gid":self.gid})
             else:
                 try:
                     mf = self.auth.get_real_base().get_file_for_paths(self.restpath)
@@ -185,11 +196,11 @@ class MServeFUSE(LoggingMixIn, Operations):
                 try:
                     mfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath)
                     # TODO - Check this is secure to return stat for ./
-                    st = os.lstat(".")
-                    return self._stat_to_dict(st)
+                    st = os.lstat(settings.MSERVE_DATA)
+                    return self._stat_to_dict(st,
+                        {"st_uid":self.uid, "st_gid":self.gid, "st_size":5000})
                 except Exception as e:
                     logging.info(e)
-                    #raise e
         raise FuseOSError(ENOENT)
     
     getxattr = None
@@ -250,6 +261,7 @@ class MServeFUSE(LoggingMixIn, Operations):
             # Check if trying to move file
             mfile = self.auth.get_real_base().get_file_for_paths(self.restpath)
             if mfile:
+                print "RENAME found", mfile
                 check = self.auth.check("mfiles", "PUT")
                 if not check:
                     raise FuseOSError(EACCES)
@@ -258,29 +270,32 @@ class MServeFUSE(LoggingMixIn, Operations):
                     try:
                         self.auth.get_real_base().get_file_for_paths(newrestpath)
                     except MFolder.DoesNotExist as e:
+                        print "RENAME MFOLDER DNE found", mfile
+                        newmfolder = self.auth.get_real_base().get_folder_for_paths(newrestpath[:-1])
                         mfile.name = os.path.basename(new)
+                        mfile.folder = newmfolder
                         mfile.save()
                     except MFile.DoesNotExist as e:
+                        print "RENAME MFILE DNE found", mfile
                         mfile.name = os.path.basename(new)
                         mfile.save()
-                
-            # Check if trying to move folder
-            mfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath)
-            if mfolder:
-                check = self.auth.check("mfolders", "PUT")
-                if not check:
-                    raise FuseOSError(EACCES)
-                authid, newrestpath = self._get_auth_from_path(new)
-                print authid, newrestpath
-                if authid == self.auth.id:
-                    try:
-                        self.auth.get_real_base().get_folder_for_paths(newrestpath)
-                    except MFolder.DoesNotExist as e:
-                        mfolder.name = os.path.basename(new)
-                        mfolder.save()
-                    except MFile.DoesNotExist as e:
-                        mfolder.name = os.path.basename(new)
-                        mfolder.save()
+            else:
+                # Check if trying to move folder
+                mfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath)
+                if mfolder:
+                    check = self.auth.check("mfolders", "PUT")
+                    if not check:
+                        raise FuseOSError(EACCES)
+                    authid, newrestpath = self._get_auth_from_path(new)
+                    if authid == self.auth.id:
+                        try:
+                            self.auth.get_real_base().get_folder_for_paths(newrestpath)
+                        except MFolder.DoesNotExist as e:
+                            mfolder.name = os.path.basename(new)
+                            mfolder.save()
+                        except MFile.DoesNotExist as e:
+                            mfolder.name = os.path.basename(new)
+                            mfolder.save()
 
         except Exception as e:
             logging.info(e)
@@ -290,19 +305,27 @@ class MServeFUSE(LoggingMixIn, Operations):
         try:
             # First get the folder from the path
             folder = self.auth.get_real_base().get_folder_for_paths(self.restpath)
-            folder.delete()
+            num_mfiles = folder.mfile_set.count()
+            num_mfolders = folder.mfolder_set.count()
+            print "NUM FILES ", num_mfiles
+            print "NUM FOLDERS", num_mfolders
+            if num_mfiles + num_mfolders == 0:
+                folder.delete()
+            else:
+                raise FuseOSError(errno.ENOTEMPTY)
+                #return FuseOSError(EACCES)
         except Exception as e:
             logging.info(e)
             raise e
 
     def statfs(self, path):
-        stv = os.statvfs(path)
+        stv = os.statvfs(settings.MSERVE_DATA)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
     
     def symlink(self, target, source):
-        return os.symlink(source, target)
+        raise FuseOSError(ENOTSUP)
 
     def truncate(self, path, length, fh=None):
         try:
@@ -321,7 +344,24 @@ class MServeFUSE(LoggingMixIn, Operations):
             logging.info(e)
             raise e
 
-    utimens = os.utime
+    def utimens(self, path, times=None):
+        """Times is a (atime, mtime) tuple. If None use current time."""
+        try:
+            # Check if trying to move file
+            mfile = self.auth.get_real_base().get_file_for_paths(self.restpath)
+            if mfile:
+                check = self.auth.check("mfiles", "PUT")
+                if not check:
+                    raise FuseOSError(EACCES)
+                return os.utime(mfile.file.path, times)
+
+            mfolder = self.auth.get_real_base().get_folder_for_paths(self.restpath)
+            if mfolder:
+                raise FuseOSError(ENOTSUP)
+
+        except Exception as e:
+            logging.info(e)
+            raise e
     
     def write(self, path, data, offset, fh):
         with self.rwlock:
@@ -330,10 +370,14 @@ class MServeFUSE(LoggingMixIn, Operations):
     
 
 if __name__ == "__main__":
-    print argv
-    #if len(argv) != 2:
-    #    print 'usage: %s <mountpoint>' % argv[0]
-    #    exit(1)
+    if len(argv) != 2:
+        print 'usage: %s <mountpoint>' % argv[0]
+        import fuse
+        print fuse.Fuse.fusage
+        exit(1)
     keyargs = {}
     keyargs["allow_other"] = True
-    fuse = FUSE(MServeFUSE(), argv[1], foreground=True, **keyargs)
+    keyargs["uid"] = 65534
+    keyargs["gid"] = 65534
+    keyargs["foreground"] = True
+    fuse = FUSE(MServeFUSE(**keyargs), argv[1], **keyargs)

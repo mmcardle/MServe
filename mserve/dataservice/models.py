@@ -1111,7 +1111,7 @@ class DataService(NamedBase):
         "properties": ["GET", "PUT"],
         "usages": ["GET"],
         "mfiles": ["GET","PUT", "POST","DELETE"],
-        "mfolders": ["GET", "POST"],
+        "mfolders": ["GET", "POST","PUT","DELETE"],
         "jobs": ["GET"],
         "profiles": ["GET"],
         }
