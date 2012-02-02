@@ -61,14 +61,14 @@ function scaleNumber( number, decimals, dec_point, thousands_sep ) {
          number = number_format(number / 1073741824, decimals, dec_point, thousands_sep) + ' G';
     } else {
             if (number >= 1048576) {
-            number = number_format(number / 1048576, 2, decimals, dec_point, thousands_sep) + ' M';
-    } else {
-            if (number >= 1024) {
-                number = number_format(number / 1024, decimals, dec_point, thousands_sep) + ' K';
-            } else {
-                number = number_format(number, decimals, dec_point, thousands_sep) + ' ';
-            };
-        };
+                number = number_format(number / 1048576, decimals, dec_point, thousands_sep) + ' M';
+        } else {
+                if (number >= 1024) {
+                    number = number_format(number / 1024, decimals, dec_point, thousands_sep) + ' K';
+                } else {
+                    number = number_format(number, decimals, dec_point, thousands_sep) + ' ';
+                };
+             };
     };
   return number;
 }
