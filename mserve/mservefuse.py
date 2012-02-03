@@ -70,7 +70,7 @@ class MServeLoggingMixIn:
 
     def __call__(self, operation, path, *args):
         if operation == "write":
-            logging.info("MServeFUSE -> %s %s", operation, path)
+            logging.debug("MServeFUSE -> %s %s", operation, path)
         else:
             logging.info("MServeFUSE -> %s %s %s ", operation, path, repr(args))
         ret = '[Unhandled Exception]'
@@ -82,9 +82,10 @@ class MServeLoggingMixIn:
             raise
         finally:
             if operation == "read":
-                logging.info("MServeFUSE <- %s", operation)
+                logging.debug("MServeFUSE <- %s", operation)
             else:
                 logging.info("MServeFUSE <- %s %s", operation, repr(ret))
+
 
 def _get_auth_from_path(path):
     paths = path.split(os.path.sep)
@@ -94,8 +95,9 @@ def _get_auth_from_path(path):
     return auth, rest
 
 def _stat_to_dict(fstats, override=dict()):
-    stats = dict((key, getattr(fstats, key)) for key in ('st_atime', 'st_ctime',
-        'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+    stats = dict((key, getattr(fstats, key)) for key in ('st_atime',
+        'st_ctime', 'st_gid', 'st_mode', 'st_mtime', 'st_nlink',
+        'st_size', 'st_uid'))
     stats.update(override)
     return stats
 
@@ -107,6 +109,7 @@ class MServeFUSE(Operations):
         self.gid = kwargs.get("gid", 65534)
         self.authcache = {}
         self.usagecache = {}
+        self.pathcache = {}
         self.rwlock = Lock()
         self.usagelock = Lock()
         self.ops = ["access", "create", "fsync", "fsyncdir", "getattr", "mkdir",
@@ -114,20 +117,35 @@ class MServeFUSE(Operations):
                 "rmdir", "truncate", "unlink"]
         super(MServeFUSE, self).__init__()
 
+    def _get_mfileid_forpath(self, path):
+        mfileid = self.pathcache.get(path, None)
+        if mfileid:
+            return mfileid
+        else:
+            authid, restpath = _get_auth_from_path(path)
+            auth, realbase, restpath, validops, deniedops = self._getvars(path)
+            mfile = realbase.get_file_for_paths(restpath)
+            self.pathcache[path] = mfile.id
+            return mfile.id
+
     def _getvars(self, path):
         if not path:
             return (None, None, None, None, None)
         authid, restpath = _get_auth_from_path(path)
-        auth, realbase, validops, deniedops = self.authcache.get(authid, (None, None, None, None))
+        auth, realbase, validops, deniedops = \
+            self.authcache.get(authid, (None, None, None, None))
         return auth, realbase, restpath, validops, deniedops
 
     def __report_usage(self, authid, mfileid):
         with self.usagelock:
-            usages = self.usagecache[authid][mfileid]
-            for metric in usages:
-                logging.info("reporting %s = %s " , metric, usages[metric])
-                usage_store.record(mfileid, metric, usages[metric], report=False)
-            self.usagecache[authid][mfileid] = {}
+            if authid in self.usagecache:
+                if mfileid in self.usagecache[authid]:
+                    usages = self.usagecache[authid][mfileid]
+                    for metric in usages:
+                        logging.info("MServeFUSE reporting %s = %s " , metric, usages[metric])
+                        usage_store.record(mfileid, metric, usages[metric],
+                                                                report=False)
+                    self.usagecache[authid][mfileid] = {}
 
     def __get_usage(self, authid, mfileid):
         if authid in self.usagecache:
@@ -136,13 +154,14 @@ class MServeFUSE(Operations):
         return None
 
     def _update_usage_cache(self, authid, mfileid, metric, usage):
-        if not authid in self.usagecache:
-            self.usagecache[authid] = {}
-        if not mfileid in self.usagecache[authid]:
-            self.usagecache[authid][mfileid] = {}
-        if not metric in self.usagecache[authid][mfileid]:
-            self.usagecache[authid][mfileid][metric] = 0
-        self.usagecache[authid][mfileid][metric] += usage
+        with self.usagelock:
+            if not authid in self.usagecache:
+                self.usagecache[authid] = {}
+            if not mfileid in self.usagecache[authid]:
+                self.usagecache[authid][mfileid] = {}
+            if not metric in self.usagecache[authid][mfileid]:
+                self.usagecache[authid][mfileid][metric] = 0
+            self.usagecache[authid][mfileid][metric] += usage
 
     def __call__(self, operation, path, *args):
         if path == '/' or path == "/*" or path == "./":
@@ -251,9 +270,10 @@ class MServeFUSE(Operations):
     def flush(self, path, fileh):
         auth, realbase, restpath, validops, deniedops = self._getvars(path)
         try:
-            mfile = realbase.get_file_for_paths(restpath)
-            usage = self.__get_usage(auth.id, mfile.id)
-            if mfile and usage and len(usage) > 0:
+            mfileid = self._get_mfileid_forpath(path)
+            usage = self.__get_usage(auth.id, mfileid)
+            if usage and len(usage) > 0 and usage.has_key(METRIC_INGEST):
+                mfile = MFile.objects.get(id=mfileid)
                 mfile.update_mfile()
         except Exception as exception:
             logging.info(exception)
@@ -262,11 +282,11 @@ class MServeFUSE(Operations):
 
     def fsync(self, path, datasync, fileh):
         auth, realbase, restpath, validops, deniedops = self._getvars(path)
-        self.usagecache[auth.id]
         try:
-            mfile = realbase.get_file_for_paths(restpath)
-            usage = self.__get_usage(auth.id, mfile.id)
-            if mfile and len(usage) > 0:
+            mfileid = self._get_mfileid_forpath(path)
+            usage = self.__get_usage(auth.id, mfileid)
+            if usage and len(usage) > 0 and usage.has_key(METRIC_INGEST):
+                mfile = MFile.objects.get(id=mfileid)
                 mfile.update_mfile()
         except Exception as exception:
             logging.info(exception)
@@ -287,10 +307,11 @@ class MServeFUSE(Operations):
             else:
                 try:
                     mfile = realbase.get_file_for_paths(restpath)
-                    stats = os.stat(mfile.file.path)
-                    return _stat_to_dict(stats)
+                    if mfile:
+                        stats = os.stat(mfile.file.path)
+                        return _stat_to_dict(stats)
                 except Exception as exception:
-                    logging.info(exception)
+                    logging.debug(exception)
                 try:
                     realbase.get_folder_for_paths(restpath)
                     # TODO - Check this is secure to return stat for ./
@@ -298,7 +319,7 @@ class MServeFUSE(Operations):
                     return _stat_to_dict(stats,
                         {"st_uid":self.uid, "st_gid":self.gid, "st_size":5000})
                 except Exception as exception:
-                    logging.info(exception)
+                    logging.debug(exception)
         raise FuseOSError(ENOENT)
     
     getxattr = None
@@ -332,12 +353,12 @@ class MServeFUSE(Operations):
     def read(self, path, size, offset, fileh):
         with self.rwlock:
             auth, realbase, restpath, validops, deniedops = self._getvars(path)
-            mfile = realbase.get_file_for_paths(restpath)
+            mfileid = self._get_mfileid_forpath(path)
             try:
                 os.lseek(fileh, offset, 0)
                 return os.read(fileh, size)
             finally:
-                self._update_usage_cache(auth.id, mfile.id, METRIC_ACCESS, size)
+                self._update_usage_cache(auth.id, mfileid, METRIC_ACCESS, size)
     
     def readdir(self, path, fileh):
         auth, realbase, restpath, validops, deniedops = self._getvars(path)
@@ -481,12 +502,12 @@ class MServeFUSE(Operations):
 
     def write(self, path, data, offset, fileh):
         with self.rwlock:
-            auth, realbase, restpath, validops, deniedops = self._getvars(path)
-            authid, rest = _get_auth_from_path(path)
             os.lseek(fileh, offset, 0)
             bytes_written = os.write(fileh, data)
-            mfile = realbase.get_file_for_paths(restpath)
-            self._update_usage_cache(authid, mfile.id, METRIC_INGEST, bytes_written)
+            mfileid = self._get_mfileid_forpath(path)
+            authid, rest = _get_auth_from_path(path)
+            self._update_usage_cache(
+                    authid, mfileid, METRIC_INGEST, bytes_written)
             return bytes_written
 
 
@@ -494,12 +515,11 @@ if __name__ == "__main__":
     if len(argv) != 2:
         print 'usage: %s <mountpoint>' % argv[0]
         sys.exit(1)
-    kwargs = {}
-    kwargs["allow_other"] = True
-    kwargs["uid"] = 65534
-    kwargs["gid"] = 65534
-    kwargs["foreground"] = True
-    #keyargs["noforget"] = True
+    mkwargs = {}
+    mkwargs["allow_other"] = True
+    mkwargs["uid"] = 65534
+    mkwargs["gid"] = 65534
+    mkwargs["foreground"] = False
     if settings.DEBUG:
-        MServeFUSE.__bases__ = (MServeLoggingMixIn,Operations,)
-    fuse = FUSE(MServeFUSE(**kwargs), argv[1], **kwargs)
+        MServeFUSE.__bases__ = (MServeLoggingMixIn, Operations,)
+    FUSE(MServeFUSE(**mkwargs), argv[1], **mkwargs)
