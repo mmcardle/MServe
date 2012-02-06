@@ -1333,13 +1333,18 @@
 </script>
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
-    {%templatetag openvariable%}if thumburl != "" {%templatetag closevariable%}
-        <a  target='_blank' href='/joboutputs/${id}/file/' ><img id="joboutput-${id}" src='${thumburl}' /></a>
-    {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
-        <div id="text-${id}" style="width:100%;height:200px;overflow: scroll;border: 1px inset silver;padding: 0px;margin: 5px;" ></div>
-    {%templatetag openvariable%}else{%templatetag closevariable%}
-        <a target='_blank' href='/joboutputs/${id}/file/' style="color:green;font-weight: bold;font-variant: small-caps;font-size: large" >Download Output</a>
-    {%templatetag openvariable%}/if  {%templatetag closevariable%}
+    <table>
+        <tr><th>${name}</th></tr>
+        <tr>
+            <td>
+                {%templatetag openvariable%}if thumburl != "" {%templatetag closevariable%}
+                    <a  target='_blank' href='/joboutputs/${id}/file/' ><img id="joboutput-${id}" src='${thumburl}' /></a>
+                {%templatetag openvariable%}else{%templatetag closevariable%}
+                    <a target='_blank' href='/joboutputs/${id}/file/' style="color:green;font-weight: bold;font-variant: small-caps;font-size: large" >Download Output</a>
+                {%templatetag openvariable%}/if  {%templatetag closevariable%}
+            </td>
+        </tr>
+    </table>
 </script>
 
 

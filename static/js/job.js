@@ -66,11 +66,6 @@ function create_job_output_paginator(job){
                 }
             })
 
-            for(var j=start;j<end;j++) {
-                if(joboutputs[j].file != "" && joboutputs[j].mimetype && joboutputs[j].mimetype.startsWith('text')){
-                    load_joboutput_text(joboutputs[j].id)
-                }
-            }
             return false;
         }
 
@@ -80,20 +75,6 @@ function create_job_output_paginator(job){
                 items_per_page:4,
                 callback:handlePaginationClick
         });
-}
-
-function load_joboutput_text(id){
-
- $.ajax({
-   type: "GET",
-   url: "/joboutputs/"+id+"/contents/",
-   success: function(msg){
-                $("#text-"+id).append("<pre>"+msg+"</pre>");
-   },
-   error: function(msg){
-                $("#text-"+id).append("<h3 class='error'>Error</h3><pre>"+msg+"</pre>");
-   }
- });
 }
 
 function load_render_preview(mfileid){
@@ -189,7 +170,15 @@ function create_job_holder(job, paginator){
 
 function update_job_outputs(job){
     $("#joboutputs-"+job.id).empty()
-    $( "#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+job.id)
+    $("#jobTaskResultTemplate" ).tmpl(job.tasks.result).appendTo("#joboutputs-"+job.id)
+    $("#jobpreviewpaginator-"+job.id ).empty()
+    $(job.joboutput_set).each(function(index, joboutput){
+        if(joboutput.file != ""){
+            $( "#jobOutputTemplate" ).tmpl( joboutput ) .appendTo( "#jobpreviewpaginator-"+job.id );
+        }else{
+            $('<div></div>').html("<span class='red'>Output '"+joboutput.name+"' Empty&nbsp;</span>").appendTo( "#jobpreviewpaginator-"+job.id  );
+        }
+    })
 }
 
 function get_joboutput_thumb(job){
@@ -300,6 +289,7 @@ function check_job(job){
             if(msg.tasks.failed){
                 $('#jobinfo-'+job.id).addClass('ui-state-error')
             }else{
+                console.log(msg)
                 create_job_holder(msg,$("#jobspaginator"))
                 //create_job_output_paginator(msg)
                 update_job_outputs(msg)
