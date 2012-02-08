@@ -29,7 +29,9 @@
 {% endblock %}
 
 {% block content %}
+
 <div id="mserve"></div>
+
 {% endblock %}
 
 {% block auths %}
@@ -43,10 +45,8 @@ $(document).ready(function() {
             console.log("Loading URL from hash ... "+window.location.hash)
             $("#mserve").mserve('init')
 	    // Event handlers
-	    $.address.init(function(event) {
-	        //console.log("init: " + $("[rel='address:" + event.value + "']").attr('href'));
+	    $.address.init(function(event){
 	    }).change(function(event) {
-                $.address.value($(this).attr('href'));
                 url = event.value
                 console.log("Loading via mserve: " + url);
                 $("#mserve").mserve('loadpage', url)

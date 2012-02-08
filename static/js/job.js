@@ -10,19 +10,20 @@ function loadJobs(url){
 
 function create_jobs_paginator(jobs){
 
+        var jobspaginatorheader = $("#jobspaginatorheader")
         var jobpaginator = $("#jobspaginator")
-
-        function handlePaginationClick(new_page_index, jobpaginator) {
+        var jobsperpage = 10
+        function onChangePage(new_page_index) {
+            jobpaginator.empty()
             // This selects elements from a content array
-            start = new_page_index*this.items_per_page
-            end   = (new_page_index+1)*this.items_per_page
+            start = (new_page_index-1)*jobsperpage
+            end   = (new_page_index)*jobsperpage
 
             if(end>jobs.length){
                 end=jobs.length;
             }
 
             $(jobs.slice(start,end)).each(function(index,job){
-
                 create_job_holder(job,jobpaginator)
                 if(!job.tasks.ready){
                     check_job(job,serviceid)
@@ -31,13 +32,10 @@ function create_jobs_paginator(jobs){
 
             return false;
         }
-
-        // First Parameter: number of items
-        // Second Parameter: options object
-        jobpaginator.pagination(jobs.length, {
-                items_per_page:10,
-                callback:handlePaginationClick
+        sp = jobspaginatorheader.smartpaginator({ totalrecords: jobs.length, recordsperpage: jobsperpage, initval:1 , next: 'Next',
+            prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
         });
+        onChangePage(1)
 }
 
 function create_job_output_paginator(job){
@@ -47,12 +45,14 @@ function create_job_output_paginator(job){
         var joboutputs = job.joboutput_set
         var jobresults = tasks.result
         
+        var jobspaginatorheader = $("#jobpreviewpaginatorheader-"+jobid)
         var jobpaginator = $("#jobpreviewpaginator-"+jobid)
-
-        function handlePaginationClick(new_page_index, jobpaginator) {
+        var joboutputsperpage = 4
+        function onChangePage(new_page_index) {
+            jobpaginator.empty()
             // This selects elements from a content array
-            start = new_page_index*this.items_per_page
-            end   = (new_page_index+1)*this.items_per_page
+            start = (new_page_index-1)*joboutputsperpage
+            end   = (new_page_index)*joboutputsperpage
 
             if(end>joboutputs.length){
                 end=joboutputs.length;
@@ -68,13 +68,10 @@ function create_job_output_paginator(job){
 
             return false;
         }
-
-        // First Parameter: number of items
-        // Second Parameter: options object
-        jobpaginator.pagination(joboutputs.length, {
-                items_per_page:4,
-                callback:handlePaginationClick
+        jobspaginatorheader.smartpaginator({ totalrecords: joboutputs.length, recordsperpage: joboutputsperpage, initval:1 , next: 'Next',
+            prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
         });
+        onChangePage(1)
 }
 
 function load_render_preview(mfileid){
@@ -150,6 +147,7 @@ function create_job_holder(job, paginator){
         });
 
         var id = job.id
+        $('#jobpreviewpaginatorheader-'+id).hide()
         $('#jobpreviewpaginator-'+id).hide()
         $("#joboutputs-"+id).hide()
         $('#jobheader-'+id).click(function() {      toggle_job(job);     });
@@ -203,6 +201,7 @@ function get_joboutput_thumb(job){
 
 function show_job(job){
     $('#joboutputs-'+job.id).show('slide');
+    $('#jobpreviewpaginatorheader-'+job.id).show('blind');
     $('#jobpreviewpaginator-'+job.id).show('blind');
     get_joboutput_thumb(job)
 
@@ -210,6 +209,7 @@ function show_job(job){
 
 function toggle_job(job){
     $('#joboutputs-'+job.id).toggle('slide');
+    $('#jobpreviewpaginatorheader-'+job.id).show('blind');
     $('#jobpreviewpaginator-'+job.id).toggle('blind');
 }
 

@@ -769,44 +769,6 @@ form.file_upload button,
   font-size: 1em;
 }
 
-/*
-   *** PAGINATION ***
-*/
-
-.pagination {
-   font-size: 80%;
-   height: auto;
-}
-
-.pagination a {
-    text-decoration: none;
-    border: solid 1px silver;
-    color: #000;
-}
-
-.pagination a, .pagination span {
-    display: inline-block;
-    padding: 0.3em 0.5em;
-    margin-right: 5px;
-    margin-bottom: 5px;
-    min-width:1em;
-    text-align:center;
-}
-
-.pagination .current {
-    background: #e6e6e6;
-    color: #000;
-    border: solid 1px silver;
-    font-weight: bold;
-}
-
-.pagination .current.prev, .pagination .current.next{
-    background: #e6e6e6;
-    color:#999;
-    border-color:#fff;
-}
-
-
 label, input[type=text] { display:block; }
 input.text { margin-bottom:12px; width:95%; padding: .4em; }
 fieldset { padding:0; border:0; margin-top:5px; }

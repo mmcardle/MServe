@@ -345,39 +345,35 @@
                  {%templatetag openvariable%}/if{%templatetag closevariable%}
                     style="position: relative; top: -130px">
 
-        <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;">
-            <colgroup><col>
-            </colgroup>
-            <tbody>
-            <tr><td>
-                    <div class='title'>
-                        <a href='/services/${id}' rel="address:/services/${id}">
-                                {% autoescape off %}
-                                    ${getShort(name,20)}
-                                {% endautoescape  %}
-                        </a></div></td></tr>
-            <tr>
-                <td>
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
-                        <a href='/services/${id}' rel="address:/services/${id}" >
-                          <div>${mfile_set.length} files </div>
-                          <div style="font-weight: bold">Latest Files :</div>
+            <table cellpadding='0' cellspacing='0'  class='thumb' style="z-index: 2;" onclick="$.address.value('/services/${id}');"  >
+                <colgroup><col>
+                </colgroup>
+                <tbody>
+                <tr>
+                    <td>
+                        <div class='title'>{% autoescape off %}${getShort(name,20)}{% endautoescape  %}</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                              <div>${mfile_set.length} files </div>
+                              <div style="font-weight: bold">Latest Files :</div>
 
-                          {%templatetag openvariable%}each mfile_set{%templatetag closevariable%}
-                                <!-- Show Last 4 files -->
-                              {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
-                                <div>${getShort($value.name,30)}</div>
-                              {%templatetag openvariable%}/if{%templatetag closevariable%}
-                          {%templatetag openvariable%}/each{%templatetag closevariable%}
-                        </a>
+                              {%templatetag openvariable%}each mfile_set{%templatetag closevariable%}
+                                    <!-- Show Last 4 files -->
+                                  {%templatetag openvariable%}if $index < 4 {%templatetag closevariable%}
+                                    <div>${getShort($value.name,30)}</div>
+                                  {%templatetag openvariable%}/if{%templatetag closevariable%}
+                              {%templatetag openvariable%}/each{%templatetag closevariable%}
 
-                        <!--button id="newsubservicebutton-${id}" onclick="create_subservice('${id}','${containerid}')"  >New SubService</button-->
+                            <!--button id="newsubservicebutton-${id}" onclick="create_subservice('${id}','${containerid}')"  >New SubService</button-->
 
-                      </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                          </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
     </div>
 </div>
 </script>
@@ -949,6 +945,7 @@
         <tr>
         </table>
         <div  id='joboutputs-${id}' ></div>
+        <div  id='jobpreviewpaginatorheader-${id}' class="jobpaginators" ></div>
         <div  id='jobpreviewpaginator-${id}' class="jobpaginators" ></div>
     </div>
 </script>

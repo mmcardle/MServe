@@ -115,10 +115,11 @@ function loadServices(containerid){
                 $("#noservices").remove()
             }
 
-            function handlePaginationClick(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
+            servicesperpage=16
+
+            function onChangePage(new_page_index) {
+                start = (new_page_index-1)*servicesperpage
+                end   = (new_page_index)*servicesperpage
                 if(end>services.length){
                     end=services.length;
                 }
@@ -129,12 +130,11 @@ function loadServices(containerid){
                 return false;
             }
 
-            // First Parameter: number of items
-            // Second Parameter: options object
-            $("#servicepaginator").pagination(services.length, {
-                    items_per_page:16,
-                    callback:handlePaginationClick
+            $servicetab.find("#containerpaginator").smartpaginator({ totalrecords: services.length, recordsperpage: servicesperpage, initval:1 , next: 'Next',
+                prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
             });
+
+            onChangePage(1)
        }
      });
 }
@@ -180,11 +180,11 @@ function service_loadprofiles_remote(serviceid, tasks){
 
                 $("#noprofiles").remove()
             }
-
-            function handlePaginationClick(new_page_index, pagination_container) {
+            var profilesperpage=5
+            function onChangePage(new_page_index) {
+                start = (new_page_index-1)*profilesperpage
+                end   = (new_page_index)*profilesperpage
                 // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end = (new_page_index+1)*this.items_per_page
                 if(end>profiles.length){
                     end=profiles.length;
                 }
@@ -232,12 +232,12 @@ function service_loadprofiles_remote(serviceid, tasks){
                 return false;
             }
 
-            // First Parameter: number of items
-            // Second Parameter: options object
-            $("#servicepaginator").pagination(profiles.length, {
-                    items_per_page:5,
-                    callback:handlePaginationClick
+            $servicetab.find("#containerpaginator").smartpaginator({ totalrecords: profiles.length, recordsperpage: profilesperpage, initval:1 , next: 'Next',
+                prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
             });
+
+            onChangePage(1)
+
        }
      });
 }

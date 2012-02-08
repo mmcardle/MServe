@@ -39,6 +39,7 @@
             if(!page){
                 page="/"
             }
+            
             if(page=='/'){
                 if(isStaff){
                     $this.empty()
@@ -96,7 +97,7 @@
             }else{
                 console.log("dont know how to load "+page)
             }
-
+            $.address.value(page);
         });
     },
     initContainer: function(container, isNew) {
@@ -197,30 +198,27 @@
                         $("#containermessages").empty()
                     }
 
-                    function handlePaginationClick(new_page_index, pagination_container) {
-                        // This selects elements from a content array
-                        //$( "#containerholder" ).empty()
-                        start = new_page_index*this.items_per_page
-                        end   = (new_page_index+1)*this.items_per_page
+                    containersperpage = 2
+
+                    function onChangePage(new_page_index) {
+                        $this.find("#containerholder").empty()
+                        start = (new_page_index-1)*containersperpage
+                        end   = (new_page_index)*containersperpage
                         if(end>containers.length){
                             end=containers.length;
                         }
-
                         slice = containers.slice(start, end)
-                        
                         $(slice.reverse()).each(function(index,container){
                             $(obj).mserve('initContainer', container)
                         })
-
                         return false;
                     }
 
-                    // First Parameter: number of items
-                    // Second Parameter: options object
-                    $servicetab.find("#containerpaginator").pagination(containers.length, {
-                            items_per_page:4,
-                            callback:handlePaginationClick
+                    $servicetab.find("#containerpaginator").smartpaginator({ totalrecords: containers.length, recordsperpage: containersperpage, initval:1 , next: 'Next',
+                        prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
                     });
+
+                    onChangePage(1)
 
                },
                error: function(msg){
@@ -361,7 +359,7 @@
                     $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
                     $("#usagetab-"+authid).append($usageHolderTemplate);
 
-                    $("#jobstab-"+authid).append("<div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
+                    $("#jobstab-"+authid).append("<div id='jobspaginatorheader'></div><div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
 
                     $($tabs).tabs()
                     _loadusage = function(){
@@ -445,7 +443,6 @@
                         done: function (e, data) {
                             $(obj).mserve('addMFile',data.result)
                             l = $(this).find("#tabs-"+authid).length
-                            console.log(l)
 
                             var that = $(this).data('fileupload');
                             if (data.context) {
@@ -490,7 +487,7 @@
             var obj = $(this);
 
             var $this = $(this), data = $this.data('mserve')
-            console.log(url)
+            console.log("Loading "+url)
              $.ajax({
                type: "GET",
                url: url,
@@ -529,7 +526,7 @@
                     $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
                     $("#usagetab-"+service.id).append($usageHolderTemplate);
 
-                    $("#jobstab-"+service.id).append("<div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
+                    $("#jobstab-"+service.id).append("<div id='jobspaginatorheader'></div><div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
                     $serviceConfigTemplate  = $("#serviceConfigTemplate").tmpl( service )
                     $("#configtab-"+service.id).append($serviceConfigTemplate);
 
@@ -599,7 +596,7 @@
                         }else if(tab == "configtab-"+service.id || tab =="config") {
                             // Do nothing for config tab
                         }else if(tab == "jobstab-"+service.id || tab =="jobs") {
-                            loadJobs("/auths/"+service.id+"/jobs/")
+                            loadJobs("/services/"+service.id+"/jobs/")
                         }
                     }
 
@@ -1088,6 +1085,7 @@
                             value: percent
                     });
 
+                    $('#jobpreviewpaginatorheader-'+job.id).hide()
                     $('#jobpreviewpaginator-'+job.id).hide()
                     $("#joboutputs-"+job.id).hide()
 
@@ -1119,6 +1117,7 @@
                 var $this = $(this),
                 data = $this.data('mserve');
                 $('#joboutputs-'+job.id).toggle('slide');
+                $('#jobpreviewpaginatorheader-'+job.id).toggle('blind');
                 $('#jobpreviewpaginator-'+job.id).toggle('blind');
 
             });
@@ -1389,11 +1388,11 @@ function load_user(userurl,consumerurl,template){
             }
 
             var mfiles = msg.mfiles
+            var mfilesperpage= 4
 
-            function handlePaginationClick(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
+            function onChangePage(new_page_index) {
+                start = (new_page_index-1)*mfilesperpage
+                end   = (new_page_index)*mfilesperpage
                 if(end>mfiles.length){
                     end=mfiles.length;
                 }
@@ -1402,20 +1401,18 @@ function load_user(userurl,consumerurl,template){
                 return false;
             }
 
-
-            // First Parameter: number of items
-            // Second Parameter: options object
-            $("#user_mfileholder").pagination(mfiles.length, {
-                    items_per_page:4,
-                    callback:handlePaginationClick
+            $("#user_mfileholder").smartpaginator({ totalrecords: mfiles.length, recordsperpage: mfilesperpage, initval:1 , next: 'Next',
+                prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
             });
 
-            var myauths = msg.myauths
+            onChangePage(1)
 
-            function handlePaginationClick2(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
+            var myauths = msg.myauths
+            var authsperpage = 4
+
+            function onChangePage2(new_page_index) {
+                start = (new_page_index-1)*authsperpage
+                end   = (new_page_index)*authsperpage
                 if(end>myauths.length){
                     end=myauths.length;
                 }
@@ -1424,12 +1421,11 @@ function load_user(userurl,consumerurl,template){
                 return false;
             }
 
-            // First Parameter: number of items
-            // Second Parameter: options object
-            $("#user_authholder").pagination(myauths.length, {
-                    items_per_page:4,
-                    callback:handlePaginationClick2
+            $("#user_authholder").smartpaginator({ totalrecords: myauths.length, recordsperpage: authsperpage, initval:1 , next: 'Next',
+                prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage2
             });
+
+            onChangePage2(1)
 
             oauth_token = getParameterByName("oauth_token")
 
@@ -1512,8 +1508,6 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
                success: function(task){
                    var tasktmpl = $("#taskTemplate" ).tmpl( task, {"tasksetid" : tasksetid} )
-                   console.log(task)
-                   console.log(tasktmpl)
                     $( "#task-"+taskid ).replaceWith(tasktmpl);
                     updatetaskbuttons(serviceid, profileid, tasksetid, taskid)
 
@@ -1761,10 +1755,15 @@ function reloadMFiles(newfileid){
                 $("#nofiles").remove()
             }
 
-            function handlePaginationClick(new_page_index, pagination_container) {
-                // This selects elements from a content array
-                start = new_page_index*this.items_per_page
-                end   = (new_page_index+1)*this.items_per_page
+            function onChangePage(new_page_index) {
+
+                if(this.recordsperpage){
+                    start = (new_page_index-1)*this.recordsperpage
+                    end   = (new_page_index)*this.recordsperpage
+                }else{
+                    start = (new_page_index-1)*1
+                    end   = (new_page_index)*1
+                }
                 if(end>mfiles.length){
                     end=mfiles.length;
                 }
@@ -1787,15 +1786,11 @@ function reloadMFiles(newfileid){
                 return false;
             }
 
-            // First Parameter: number of items
-            // Second Parameter: options object
-
-            // Render the template with the data and insert
-            // the rendered HTML under the "mfilepaginator" element
-            $("#mfilepaginator").pagination(mfiles.length, {
-                    items_per_page:12,
-                    callback:handlePaginationClick
+            $servicetab.find("#containerpaginator").smartpaginator({ totalrecords: mfiles.length, recordsperpage: 12, initval:1 , next: 'Next',
+                prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
             });
+
+            onChangePage(1)
        }
      });
 }
