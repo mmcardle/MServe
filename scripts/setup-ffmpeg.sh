@@ -35,6 +35,8 @@ f_ () {
 
 #######################
 # install ffmpeg and update to latest
+#######################
+# install ffmpeg and update to latest
 install_ffmpeg () {
     cd
     apt-get -y update
@@ -46,6 +48,15 @@ install_ffmpeg () {
         libopencore-amrnb-dev libopencore-amrwb-dev libsdl1.2-dev libtheora-dev \
         libvorbis-dev libx11-dev libxfixes-dev libxvidcore-dev zlib1g-dev || f_ "failed to install ffmpeg prereqs"
 
+    wget http://www.tortall.net/projects/yasm/releases/yasm-1.2.0.tar.gz || f_ "failed to get yasm"
+    tar xzvf yasm-1.2.0.tar.gz || f_ "failed to untar yasm"
+    cd yasm-1.2.0/
+    ./configure
+    make || f_ "failed to make yasm"
+    make install || f_ "failed to install yasm"
+    cd ..
+    rm -rf yasm-1.2.0
+
     git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
     cd x264
     git checkout origin/stable
@@ -53,6 +64,8 @@ install_ffmpeg () {
     make || f_ "failed to make x264"
     checkinstall --pkgname=x264 --default --pkgversion="3:$(./version.sh | \
         awk -F'[" ]' '/POINT/{print $4"+git"$5}')" --backup=no --deldoc=yes || f_ "failed to install x264"
+    cd ..
+    rm -rf x264
 
     apt-get -y remove libmp3lame-dev
     apt-get -y install nasm
@@ -64,6 +77,8 @@ install_ffmpeg () {
     make || f_ "failed to make lame"
     checkinstall --pkgname=lame-ffmpeg --pkgversion="3.98.4" --backup=no --default \
         --deldoc=yes || f_ "failed to install lame"
+    cd ..
+    rm -rf lame-3.98.4 lame-3.98.4.tar.gz
 
     cd
     git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
@@ -80,7 +95,8 @@ install_ffmpeg () {
     make tools/qt-faststart || f_ "failed to make qt-faststart"
     checkinstall --pkgname=qt-faststart --pkgversion="$(./version.sh)" --backup=no \
         --deldoc=yes --default install -D -m755 tools/qt-faststart /usr/local/bin/qt-faststart || f_ "failed to install qt-faststart"
-
+    cd ..
+    rm -rf ffmpeg
     # Copy Presets
     cp  /usr/share/ffmpeg/* /usr/local/share/ffmpeg/ || f_ "failed to copy ffmpeg presets"
 }

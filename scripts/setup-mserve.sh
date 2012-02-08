@@ -643,7 +643,8 @@ apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
 	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
 	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
 	python-setuptools python-flup python-magic python-dev python-pythonmagick \
-	sendmail python-imaging python-pycurl python-openid python-lxml python-pip || \
+	python-fuse sendmail python-imaging python-pycurl python-openid \
+        python-lxml python-pip || \
 	f_ "failed to install erlang packages and python libraries"
 
 
