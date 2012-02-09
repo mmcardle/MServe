@@ -188,10 +188,12 @@ def _transcode_ffmpeg(videopath, options):
     else:
         height = settings.postersize[1]
 
+    _ffmpeg_args = ["-vcodec","libx264","-vpre","baseline","-vf","scale=%s:%s"%(width,height),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+
     if "ffmpeg_args" in options:
-        _ffmpeg_args=options["ffmpeg_args"]
-    else:
-        _ffmpeg_args = ["-vcodec","libx264","-vpre","lossless_fast","-vf","scale=%s:%s"%(width,height),"-acodec","libfaac","-ac","2","-ab","64","-ar","44100"]
+        user_args=options["ffmpeg_args"]
+        if len(user_args) > 0:
+                _ffmpeg_args=options["ffmpeg_args"]
 
     # TODO: Replace with Job Logs
     nulfp = open(os.devnull, "w")
