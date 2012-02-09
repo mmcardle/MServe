@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manageJobRequest xmlns="http://base.fims.tv">
+  <!--jobCommand - MEWS currently supports a sub-set of the FIMS jobCommand values.
+  This can be one of:-
+    terminate   - stop job and keep result so far 
+    cancel      - cancel job and remove any output generated
+    cleanup     - remove job reference from MEWS - this shuld be sent on completion of the job
+                                                   to reset MEWS
+  -->
+  <jobCommand>cleanup</jobCommand>
+  <jobID>
+    <!--jobGUID - this is the job ID that you supplied when you started the job-->
+    <jobGUID>{{jobguid}}</jobGUID>
+    <!--serviceProviderJobID - internal job ID assigned by MEWS (not currently used)-->
+    <serviceProviderJobID>serviceProviderJobID1</serviceProviderJobID>
+  </jobID>
+ </manageJobRequest>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This represents a cut-down version of a FIMS Transfrom Request XML that is
+used to drive Marquis FIMS engine (MEWS)
+-->
+<transformRequest xmlns="http://transformmedia.fims.tv" >
+  <!--priority is ignored at present but for MEWS this would always expect to be set ot immediate-->
+  <priority xmlns="http://base.fims.tv">immediate</priority>
+  <!--jobGUID is the unique job ID that the caller assigns to this job.  Transfer
+  will fail if the job ID is currently in-use-->
+  <jobGUID xmlns="http://base.fims.tv">{{jobguid}}</jobGUID>
+  <bmo xmlns="http://base.fims.tv">
+    <bmContent xmlns="http://base.fims.tv" id="8FDF8A71-DA68-4295-8B44-CBFB02DFFFAC" >
+      <!-- description of the source meid item - is currently ignored by MEWS-->
+      <description xmlns="http://base.fims.tv">MarquisEDL</description>
+      <!--locator describes the location of the source media - this must be "smb" or "file"
+      for the MEWS service-->
+      <locator xmlns="http://base.fims.tv">{{bmcontent_locator}}</locator>
+    </bmContent>
+  </bmo>
+  <!--outputFileNamePattern - currently ignored by MEWS.  Output filename will be based 
+  on filename of source media -->
+  <outputFileNamePattern xmlns="">test</outputFileNamePattern>
+  <transformProfile xmlns="">
+    <ref xmlns="http://base.fims.tv">http://uri1</ref>
+    <transformAtom>
+      <videoFormat xmlns="http://base.fims.tv">
+
+       <!--videoEncoding - only the typeLabel attribute is important here. This decribes the
+       required output video codec.  This must match one of:- 
+       
+       For SD Resolutions
+        
+        dv25
+        dvcpro25
+        dvcpro50
+        mpeg2 imx 30000000b
+        mpeg2 imx 40000000b
+        mpeg2 imx 50000000b
+       
+     
+        For 720p resolutions
+     
+     
+        dnxhd 720p (60/120/145 mb/s)
+        dnxhd 720p (90/185/220 mb/s)
+        dnxhd 720p x (185/220 mb/s)
+        dvcprohd 720p (100 mb/s)")
+        apple prores 422 (proxy) 720p
+        apple prores 422 (lt) 720p
+        apple prores 422 720p
+        apple prores 422 (hq) 720p
+        avc intra class 50 720p
+        avc intra class 100 720p
+        xdcam_hd 50 720p
+
+        For 1080i resolutions
+        
+        dnxhd 1080i (120/145 mb/s)
+        dnxhd 1080i (185/220 mb/s)
+        dnxhd 1080i x (185/220 mb/s)
+        dvcprohd 1080i (100 mb/s)")
+        apple prores 422 (proxy) 1080i
+        apple prores 422 (lt) 1080i
+        apple prores 422 1080i
+        apple prores 422 (hq) 1080i
+        avc intra class 50 1080i
+        avc intra class 100 1080i
+        xdcam_hd 35 1080i
+        xdcam_hd 50 1080i
+     
+        -->
+        <videoEncoding xmlns="http://base.fims.tv" typeLabel="MPEG2 IMX 40000000b" typeDefinition="MPEG2 IMX 40000000b" />
+      </videoFormat>
+      <!--audioFormat - not currently required for MEWS.  All audio 48 KHz PCM-->
+      <audioFormat xmlns="http://base.fims.tv">
+        <!--samplingRate - this represent the output audio sample rate.  MEWS will only support
+        48000 (standard broadcast sample rate)-->
+        <samplingRate xmlns="http://base.fims.tv">48000</samplingRate>
+        <!--audioEncoding - represents the audio encoding-->
+        <audioEncoding xmlns="http://base.fims.tv" typeLabel="PCM" typeDefinition="PCM" />
+        <!--trackConfiguration - represents audio track mapping-->
+        <trackConfiguration xmlns="http://base.fims.tv" typeLabel="MONO" typeDefinition="Mono audio track"/>
+      </audioFormat>
+      <!--containerFormat - only the formatLabel attribute is important here.  This must match
+      one of the following:-
+        
+        Quicktime             - self-contained QT movie wrapper
+        Quicktime Reference   - QT movie that references external essence files
+        MXF EVTR              - specialised MXF file format specifically used with IMX video types
+        MXF OP1A Standard     - generic MF wrapper for interleaved video and audio
+        MXF OP1A RDD09        - specialised MXF file format for XDCAM HD media (MPEG2 Long GOP)
+      -->
+      <containerFormat xmlns="http://base.fims.tv" formatLabel="MXF EVTR" formatDefinition="MXF-OP1A file format SMPTE 386" />
+    </transformAtom>
+    <transferAtom>
+      <!--destination - folder path where the output file should be written.  MEWS always writes
+      over SMB/CIFS mounted file systems, so this must be "smb" or "file"-->
+      <locator xmlns="http://base.fims.tv">{{transfer_locator}}</locator>
+      <destination xmlns="http://base.fims.tv" >{{transfer_destination}}</destination>
+    </transferAtom>
+  </transformProfile>
+</transformRequest>
+
