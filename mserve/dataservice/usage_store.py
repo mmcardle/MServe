@@ -51,7 +51,7 @@ def update(id,metric,total,report=True):
             reportusage(base)
         return usage
     except Usage.DoesNotExist:
-        logging.debug("Usage DoesNotExist  ")
+        logging.debug("Usage DoesNotExist")
 
 def startrecording(id,metric,rate,report=True):
     base = NamedBase.objects.get(pk=id)

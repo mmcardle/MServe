@@ -202,22 +202,25 @@ class JobOutputHandler(BaseHandler):
             return HttpResponseNotAllowed([])
 
     def create(self, request, outputid, field=None):
-        joboutput = JobOutput.objects.get(id=outputid)
+        try:
+            joboutput = JobOutput.objects.get(id=outputid)
 
-        if field == "thumb":
-            file = request.FILES["thumb"]
-            joboutput.thumb.save("thumb.png", file, save=True)
-            return {"message":"updated job output thumb"}
+            if field == "thumb":
+                file = request.FILES["thumb"]
+                joboutput.thumb.save("thumb.png", file, save=True)
+                return {"message":"updated job output thumb"}
 
-        if field == "file":
-            file = request.FILES["file"]
-            joboutput.file.save(joboutput.name, file, save=True)
-            logging.info("request.FILES SAVED")
-            return {"message":"updated job output"}
-        else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request! no file in request.")
-            return r
+            if field == "file":
+                file = request.FILES["file"]
+                joboutput.file.save(joboutput.name, file, save=True)
+                logging.info("request.FILES SAVED")
+                return {"message":"updated job output"}
+            else:
+                r = rc.BAD_REQUEST
+                r.write("Invalid Request! no file in request.")
+                return r
+        except Exception as e:
+            raise e
 
     def read(self, request, outputid, field=None):
         if outputid:
