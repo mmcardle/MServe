@@ -1,5 +1,6 @@
 _build
 *.log
+.svn*
 pylint.txt
 mserve/celerybeat-schedule
 mserve/pylov.py
