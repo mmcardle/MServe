@@ -25,21 +25,6 @@
 
 from __future__ import with_statement
 
-import os
-import errno
-from sys import argv
-from threading import Lock
-from errno import EACCES
-from errno import EEXIST
-from errno import ENOTEMPTY
-from errno import ENOENT
-
-
-from mservefuse.fuse import FUSE
-from mservefuse.fuse import FuseOSError
-from mservefuse.fuse import Operations
-from mservefuse.fuse import ENOTSUP
-
 try:
     import settings # Assumed to be in the same directory.
 except ImportError:
@@ -53,8 +38,20 @@ except ImportError:
 
 from django.core.management import setup_environ
 setup_environ(settings)
-import logging
 
+import logging
+import os
+import errno
+from sys import argv
+from threading import Lock
+from errno import EACCES
+from errno import EEXIST
+from errno import ENOTEMPTY
+from errno import ENOENT
+from mservefuse.fuse import FUSE
+from mservefuse.fuse import FuseOSError
+from mservefuse.fuse import Operations
+from mservefuse.fuse import ENOTSUP
 from dataservice.models import MFolder
 from dataservice.models import MFile
 from dataservice.models import Auth
@@ -514,6 +511,7 @@ class MServeFUSE(Operations):
 if __name__ == "__main__":
     if len(argv) != 2:
         print 'usage: %s <mountpoint>' % argv[0]
+        import sys
         sys.exit(1)
     mkwargs = {}
     mkwargs["allow_other"] = True
