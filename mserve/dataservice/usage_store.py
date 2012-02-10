@@ -21,14 +21,13 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from models import NamedBase
-from dataservice.models import *
 import utils as utils
 import datetime
 import time
 import logging
 
 def record(id,metric,total,report=True):
+    from models import NamedBase, Usage
     base = NamedBase.objects.get(pk=id)
     usage = Usage(base=base,metric=metric,total=total,rate=0,rateCumulative=0,rateTime=datetime.datetime.now(),nInProgress=0,reports=1,squares=(total*total))
     usage.save()
@@ -39,6 +38,7 @@ def record(id,metric,total,report=True):
     return usage
 
 def update(id,metric,total,report=True):
+    from models import NamedBase, Usage
     base = NamedBase.objects.get(pk=id)
     try:
         usage = Usage.objects.get(base=base,metric=metric)
@@ -54,6 +54,7 @@ def update(id,metric,total,report=True):
         logging.debug("Usage DoesNotExist")
 
 def startrecording(id,metric,rate,report=True):
+    from models import NamedBase, Usage
     base = NamedBase.objects.get(pk=id)
     logging.debug("Start Recording base %s "% base)
 
@@ -92,6 +93,7 @@ def update_usage(usage,rate=None):
     return usage
 
 def updaterecording(id,metric,rate,report=True):
+    from models import NamedBase, Usage
     base = NamedBase.objects.get(pk=id)
 
     try:
@@ -136,10 +138,9 @@ def _stoprecording_(usage, obj=None):
         obj.save()
 
 def stoprecording(id,metric,report=True):
+    from models import NamedBase, Usage
     logging.debug("Stop Recording "+id)
-
     base = NamedBase.objects.get(id=id)
-
     try:
         usages = Usage.objects.filter(base=str(base))
         logging.info("Usages %s" % usages)
@@ -148,9 +149,11 @@ def stoprecording(id,metric,report=True):
         _stoprecording_(usage)
 
     except Usage.DoesNotExist:
-        logging.error("ERROR : Usage Rate does not exist to stop recording %s metric=%s" % (base,metric) )
+        logging.error("ERROR : Usage Rate does not exist to stop"
+                            " recording %s metric=%s" % (base,metric) )
     
 def reportusage(base):
+    from models import HostingContainer, DataService
     toreport = []
 
     if utils.is_container(base):

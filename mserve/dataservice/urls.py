@@ -1,4 +1,15 @@
-"""The MServe dataservice urls """
+"""
+
+MServe URLS
+-----------
+
+::
+
+ This class defines the MServe URL mapping for the dataservice module
+
+https://docs.djangoproject.com/en/dev/topics/http/urls/
+
+"""
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -56,7 +67,7 @@ urlpatterns = patterns('',
 
     # Container URLs
     url(r'^containers/$', hosting_handler, name="hostingcontainers" ),
-    url(r'^containers/(?P<id>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
+    url(r'^containers/(?P<containerid>[^/]+)/$', hosting_handler, name="hostingcontainer" ),
     url(r'^containers/(?P<containerid>[^/]+)/properties/$', managementproperty_handler, name="hostingcontainer_props" ),
     url(r'^containers/(?P<containerid>[^/]+)/usages/$', usage_handler ,name="hostingcontainer_usages"),
     url(r'^containers/(?P<containerid>[^/]+)/usagesummary/$', usagesummary_handler, name='hostingcontainer_usagesummary'),
@@ -66,14 +77,14 @@ urlpatterns = patterns('',
 
     # Service URLs
     url(r'^services/$', dataservice_handler, name="dataservices" ),
-    url(r'^services/(?P<id>[^/]+)/$', dataservice_handler, name="dataservice" ),
+    url(r'^services/(?P<serviceid>[^/]+)/$', dataservice_handler, name="dataservice" ),
     url(r'^services/(?P<serviceid>[^/]+)/properties/$', managementproperty_handler, name="dataservice_props"),
     url(r'^services/(?P<serviceid>[^/]+)/usages/$', usage_handler, name="dataservice_usages"),
     url(r'^services/(?P<serviceid>[^/]+)/usagesummary/$', usagesummary_handler, name='dataservice_usagesummary'),
     url(r'^services/(?P<serviceid>[^/]+)/auths/$', auth_handler, name="dataservice_auths"),
     url(r'^services/(?P<serviceid>[^/]+)/mfiles/$', mfile_handler, name="dataservice_mfiles"),
     url(r'^services/(?P<serviceid>[^/]+)/mfolders/$', mfolder_handler, name="dataservice_mfolders"),
-    url(r'^services/(?P<serviceid>[^/]+)/subservices/$', dataservice_handler, name="dataservice_subservices"),
+    url(r'^services/(?P<serviceid>[^/]+)/subservices/$', dataservice_handler, {"suburl":"subservices"}, name="dataservice_subservices"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/$', dataservice_profile_handler, name="dataservice_profiles"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
     url(r'^services/(?P<serviceid>[^/]+)/profiles/(?P<profileid>[^/]+)/tasksets/(?P<tasksetid>[^/]+)/$', dataservice_taskset_handler, name="dataservice_profiles_tasksets"),
@@ -82,10 +93,10 @@ urlpatterns = patterns('',
 
     # MFile URLs
     url(r'^mfiles/$', mfile_handler, name="mfiles"  ),
-    url(r'^mfiles/(?P<id>[^/]+)/$', mfile_handler, name="mfile"  ),
-    url(r'^mfiles/(?P<id>[^/]+)/thumb/$', mfile_handler, {"field":"thumb"}, name="mfile_upload_thumb"  ),
-    url(r'^mfiles/(?P<id>[^/]+)/poster/$', mfile_handler, {"field":"poster"}, name="mfile_upload_poster"   ),
-    url(r'^mfiles/(?P<id>[^/]+)/proxy/$', mfile_handler, {"field":"proxy"}, name="mfile_upload_proxy"   ),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/$', mfile_handler, name="mfile"  ),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/thumb/$', mfile_handler, {"field":"thumb"}, name="mfile_upload_thumb"  ),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/poster/$', mfile_handler, {"field":"poster"}, name="mfile_upload_poster"   ),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/proxy/$', mfile_handler, {"field":"proxy"}, name="mfile_upload_proxy"   ),
     url(r'^mfiles/(?P<mfileid>[^/]+)/properties/$', managementproperty_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/usages/$', usage_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/usagesummary/$', usagesummary_handler, name='mfile_usagesummary'),
@@ -94,7 +105,7 @@ urlpatterns = patterns('',
 
     # Auth URLs
     url(r'^auths/$', auth_handler, name='auths' ),
-    url(r'^auths/(?P<id>[^/]+)/$', auth_handler, name='auth'  ),
+    url(r'^auths/(?P<authid>[^/]+)/$', auth_handler, name='auth'  ),
     url(r'^auths/(?P<authid>[^/]+)/properties/$', managementproperty_handler),
     url(r'^auths/(?P<authid>[^/]+)/usages/$', usage_handler),
     url(r'^auths/(?P<authid>[^/]+)/usagesummary/$', usagesummary_handler, name="auth_usagesummary"),

@@ -22,13 +22,18 @@
 #
 ########################################################################
 from django import forms
-from dataservice.models import *
 from django.forms import ModelForm
 from static import *
 import logging
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Avg, Max, Min, Count
-
+from django.db.models import Max
+from models import ServiceRequest
+from models import DataServiceTaskSet
+from models import DataServiceTask
+from models import HostingContainer
+from models import ManagementProperty
+from models import DataService
+from models import MFile
+from models import Auth
 ID_FIELD_LENGTH  = 200
 
 class ServiceRequestForm(ModelForm):
@@ -44,26 +49,6 @@ class DataServiceTaskSetForm(ModelForm):
         if instance.order == -1 and instance.id == None:
             max_order = instance.workflow.tasksets.aggregate(max_order=Max('order'))["max_order"] or -1 and 0
             instance.order = max_order +1
-
-        '''if instance.order != -1 and instance.id != None:
-            logging.info("XXX 1 %s" , instance)
-            try:
-                previnst = DataServiceTaskSet.objects.get(id=instance.id)
-                logging.info("XXX 2 %s" , instance)
-                previnstorder = previnst.order
-                logging.info("XXX 3 %s" , previnstorder)
-                try:
-                    logging.info("XXX 3.2 %s" , previnstorder)
-                    duplicateinstances = instance.workflow.tasksets.filter(order=previnstorder)
-                    logging.info("XXX 4 %s" , duplicateinstances )
-                    for duplicateinstance in duplicateinstances:
-                        duplicateinstance.order = previnstorder
-                        duplicateinstance.save()
-                except ObjectDoesNotExist:
-                    logging.info("XXX 5 %s" , instance)
-                    raise e
-            except Exception as e:
-                raise e'''
         if commit:
             instance.save()
         logging.info("XXX %s" , instance)

@@ -1,4 +1,15 @@
-"""The MServe dataservice models """
+"""
+
+MServe Models
+---------------
+
+::
+
+ This class defines all the MServe dataservice django models
+
+https://docs.djangoproject.com/en/dev/topics/db/models/
+
+"""
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -22,17 +33,17 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-
-import storage
 import logging
 import datetime
 import time
 import os
 import shutil
+import settings as settings
 import utils as utils
 import static as static
-import django.dispatch
-import settings
+import storage as storage
+import usage_store as usage_store
+from django.dispatch import Signal
 from tasks import continue_workflow_taskset
 from piston.utils import rc
 from django.db import models
@@ -55,8 +66,9 @@ from django.core.files import File
 from django.db.models import Count, Max, Min, Avg, Sum, StdDev, Variance
 from dataservice.tasks import mimefile
 
+
 # Declare Signals
-MFILE_GET_SIGNAL = django.dispatch.Signal(providing_args=["mfile"])
+MFILE_GET_SIGNAL = Signal(providing_args=["mfile"])
 
 FILE_FIELD_LENGTH = 400
 ID_FIELD_LENGTH = 200
@@ -286,9 +298,9 @@ class Usage(models.Model):
     @staticmethod
     def get_full_usagesummary():
         ''' Return all the usage '''
-        from jobservice.models import Job
         usages = Usage.objects.all()
         usagesummary = Usage.usages_to_summary(usages)
+        from jobservice.models import Job
         usagesummary.extend(Usage.get_job_usagesummary(Job.objects.all()))
         return usagesummary
 
@@ -297,7 +309,6 @@ class Usage(models.Model):
         ''' Aggregate a set of usage objects '''
         for usage in usages:
             if usage.nInProgress > 0:
-                import usage_store
                 usage_store.update_usage(usage)
 
         return usages.values('metric') \
@@ -333,9 +344,7 @@ class Usage(models.Model):
     @staticmethod
     def get_job_usagesummary(jobs):
         ''' Get usages for all Jobs '''
-
         from jobservice.models import JobASyncResult
-
         asyncs = JobASyncResult.objects.filter(job__in=jobs)\
                                     .values_list("async_id",flat=True)
         taskstates = TaskState.objects.filter(task_id__in=asyncs)
@@ -448,10 +457,9 @@ class Usage(models.Model):
 
     def __unicode__(self):
         return "Usage: metric=%s total=%f reports=%s nInProgress=%s rate=%s \
-                    rateTime=%s rateCumulative=%s"\
-                    % (self.metric, self.total, self.reports,
-                        self.nInProgress, self.rate, self.rateTime,
-                        self.rateCumulative)
+                    rateTime=%s rateCumulative=%s" % (self.metric, self.total,
+                        self.reports, self.nInProgress, self.rate,
+                        self.rateTime, self.rateCumulative)
 
 
 class Base(models.Model):
@@ -555,7 +563,6 @@ class Base(models.Model):
 
                 if 'true' in values or 'True' in values:
                     logging.info("full usage true")
-                    import usage_store
                     usages = self.get_usage()
 
                     usages = usages
@@ -583,11 +590,11 @@ class Base(models.Model):
         if method == "PUT" and url == "properties":
             for k in kwargs.keys():
                 try:
-                    mp = self.get_real_base()\
+                    manage_prop = self.get_real_base()\
                         .managementproperty_set.get(
                             base=self, property=k)
-                    mp.value = kwargs[k]
-                    mp.save()
+                    manage_prop.value = kwargs[k]
+                    manage_prop.save()
                 except ManagementProperty.DoesNotExist:
                     return HttpResponseNotFound()
             return self.get_real_base().managementproperty_set.all()
@@ -641,8 +648,7 @@ class Base(models.Model):
         if method == "DELETE":
             if url == None:
                 self.delete()
-                r = rc.DELETED
-                return r
+                return rc.DELETED
             if url == "auths":
                 if 'request' in kwargs:
                     if 'name' in kwargs["request"].POST:
@@ -650,24 +656,22 @@ class Base(models.Model):
                         auth = self.auth_set.get(authname=name)
                         logging.info("DELETE AUTH %s", auth.authname)
                         auth.delete()
-                        r = rc.DELETED
-                        r.write("Deleted '%s'" % name)
-                        return r
+                        response = rc.DELETED
+                        response.write("Deleted '%s'" % name)
+                        return response
                     else:
                         return HttpResponseBadRequest()
                 else:
                     return HttpResponseBadRequest()
             return HttpResponseNotFound()
 
-        logging.info("ERROR: 404 Pattern not matched for %s on %s",\
-                        method, url)
-
+        logging.info("ERROR: 404 Pattern not matched "
+                            "for %s on %s", method, url)
         return rc.NOT_FOUND
 
     def clean_base(self, authid):
         logging.info("Override this clean method %s", self)
-        dict = {}
-        return dict
+        return {}
 
     class Meta:
         abstract = True
@@ -687,25 +691,24 @@ class NamedBase(Base):
     def save(self, *args, **kwargs):
         super(NamedBase, self).save(*args, **kwargs)
         if not self.initial_usage_recorded:
-            import usage_store as usage_store
             startusages = []
             for metric in self.metrics:
                 #logging.info("Processing metric %s" %metric)
                 #  Recored Initial Values
-                v = self.get_value_for_metric(metric)
-                if v is not None:
-                    logging.debug("Value for %s is %s", metric, v)
+                val = self.get_value_for_metric(metric)
+                if val is not None:
+                    logging.debug("Value for %s is %s", metric, val)
                     logging.debug("Recording usage for metric %s value= %s",
-                                    metric, v)
-                    usage = usage_store.record(self.id, metric, v)
+                                    metric, val)
+                    usage = usage_store.record(self.id, metric, val)
                     startusages.append(usage)
                 # Start recording initial rates
-                r = self.get_rate_for_metric(metric)
-                if r is not None:
-                    logging.debug("Rate for %s is %s", metric, r)
+                rate = self.get_rate_for_metric(metric)
+                if rate is not None:
+                    logging.debug("Rate for %s is %s", metric, rate)
                     logging.debug("Recording usage rate for metric %s value %s",
-                                    metric, r)
-                    usage = usage_store.startrecording(self.id, metric, r)
+                                    metric, rate)
+                    usage = usage_store.startrecording(self.id, metric, rate)
                     startusages.append(usage)
 
             self.usages = startusages
@@ -716,23 +719,22 @@ class NamedBase(Base):
             self.update_usage()
 
     def update_usage(self):
-        import usage_store as usage_store
         for metric in self.metrics:
             #  Recorded updated values
-            v = self.get_updated_value_for_metric(metric)
+            val = self.get_updated_value_for_metric(metric)
 
-            if v is not None:
-                logging.debug("Value for %s is %s", metric, v)
+            if val is not None:
+                logging.debug("Value for %s is %s", metric, val)
                 logging.debug("Recording usage for metric %s value= %s", \
-                                metric, v)
-                usage = usage_store.update(self.id, metric, v)
+                                metric, val)
+                usage_store.update(self.id, metric, val)
             # recording updated rates
-            r = self.get_updated_rate_for_metric(metric)
-            if r is not None:
-                logging.debug("Rate for %s is %s", metric, r)
+            rate = self.get_updated_rate_for_metric(metric)
+            if rate is not None:
+                logging.debug("Rate for %s is %s", metric, rate)
                 logging.debug("Recording usage rate for metric %s value= %s",
-                                metric, r)
-                usage = usage_store.updaterecording(self.id, metric, r)
+                                metric, rate)
+                usage_store.updaterecording(self.id, metric, rate)
 
         super(NamedBase, self).save()
 
@@ -753,7 +755,6 @@ class NamedBase(Base):
         return None
 
     def _delete_usage_(self):
-        import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage)
 
@@ -777,8 +778,10 @@ class HostingContainer(NamedBase):
 
     def url(self): return reverse('hostingcontainer', args=[self.id])
     def stats_url(self): return reverse('stats', args=[self.id])
-    def usage_url(self): return reverse('hostingcontainer_usagesummary', args=[self.id])
-    def properties_url(self): return reverse('hostingcontainer_props', args=[self.id])
+    def usage_url(self): return reverse('hostingcontainer_usagesummary',
+                                                            args=[self.id])
+    def properties_url(self): return reverse('hostingcontainer_props',
+                                                            args=[self.id])
 
     def thumbs(self):
         thumbs = []
@@ -806,14 +809,15 @@ class HostingContainer(NamedBase):
         logging.info("PUT CONTAINER %s %s", url, args)
         if url == None:
             from forms import HostingContainerForm
-            form = HostingContainerForm(kwargs["request"].POST,instance=self)
+            form = HostingContainerForm(
+                        kwargs["request"].POST, instance=self)
             if form.is_valid():
                 hostingcontainer = form.save()
                 return hostingcontainer
             else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request! ")
-                return r
+                response = rc.BAD_REQUEST
+                response.write("Invalid Request! ")
+                return response
         return HttpResponseNotFound()
 
     def get_usage(self):
@@ -857,7 +861,8 @@ class HostingContainer(NamedBase):
         hostingcontainer.save()
         return hostingcontainer
 
-    def create_data_service(self, name, duplicate_of=None, starttime=None, endtime=None):
+    def create_data_service(self, name, duplicate_of=None,
+                                    starttime=None, endtime=None):
 
         dataservice = DataService(name=name, container=self,
                                     starttime=starttime, endtime=endtime)
@@ -901,12 +906,12 @@ class HostingContainer(NamedBase):
                     value=settings.DEFAULT_DELIVERY_SUCCESS_CONSTANT_MIN)
             mp_delivery_const.save()
 
-        pr = DEFAULT_PROFILE
+        defprofile = DEFAULT_PROFILE
         if self.default_profile != None and self.default_profile != "":
-            pr = self.default_profile
+            defprofile = self.default_profile
 
         managementproperty = ManagementProperty(property="profile",
-                                                base=dataservice, value=pr)
+                                                base=dataservice, value=defprofile)
         managementproperty.save()
 
         for profile_name in static.default_profiles.keys():
@@ -914,31 +919,29 @@ class HostingContainer(NamedBase):
             dsp = DataServiceProfile(service=dataservice, name=profile_name)
             dsp.save()
 
-            ks = profile.keys()
-            ks.sort()
-            for workflow_name in ks:
+            keys = profile.keys()
+            keys.sort()
+            for workflow_name in keys:
                 workflow = profile[workflow_name]
-                wf = DataServiceWorkflow(profile=dsp, name=workflow_name)
-                wf.save()
+                wflow = DataServiceWorkflow(profile=dsp, name=workflow_name)
+                wflow.save()
 
                 tasksets = workflow['tasksets']
-                workflow['tasksets']
-
                 dstaskset = None
                 prev = None
                 order = 0
                 for taskset in tasksets:
                     tsname = taskset['name']
                     dstaskset = DataServiceTaskSet(name=tsname,
-                                                workflow=wf, order=order)
+                                                workflow=wflow, order=order)
                     dstaskset.save()
                     order = order +1
                     if prev:
                         prev.next = dstaskset
                         prev.save()
 
-                    tasks = taskset['tasks']
-                    for task in tasks:
+                    _tasks = taskset['tasks']
+                    for task in _tasks:
                         task_name = task['task']
                         name = task['name']
                         condition = ""
@@ -973,7 +976,6 @@ class HostingContainer(NamedBase):
             hostingcontainerauth.save()
 
     def _delete_usage_(self):
-        import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage)
 
@@ -1001,24 +1003,24 @@ class DataServiceWorkflow(models.Model):
 
     def continue_workflow_job(self, mfileid, taskid):
 
-        task = self.tasksets.get(id=taskid)
-        if task is None:
+        thistask = self.tasksets.get(id=taskid)
+        if thistask is None:
             raise Exception("Workflow %s has no taskset to run", self.name)
 
         mfile = MFile.objects.get(id=mfileid)
         from mserve.jobservice.models import Job
-        jobname = "Workflow %s - Task %s" % (self.name, task.name)
+        jobname = "Workflow %s - Task %s" % (self.name, thistask.name)
         job = Job(name=jobname, mfile=mfile)
         job.save()
-        tsr = task.create_workflow_taskset(mfileid, job)
+        tsr = thistask.create_workflow_taskset(mfileid, job)
         job.taskset_id = tsr.taskset_id
         job.save()
 
-        tasks = self.tasksets.filter(order__gt=task.order).order_by("order")
-        if len(tasks) > 0:
-            continue_workflow_taskset.delay(mfileid, job.id, tasks[0].id )
+        _tasks = self.tasksets.filter(order__gt=thistask.order).order_by("order")
+        if len(_tasks) > 0:
+            continue_workflow_taskset.delay(mfileid, job.id, _tasks[0].id )
         else:
-            logging.info("Last job %s in workflow running", task.order)
+            logging.info("Last job %s in workflow running", thistask.order)
         return job
 
 
@@ -1032,8 +1034,8 @@ class DataServiceTaskSet(models.Model):
 
     def create_workflow_taskset(self, mfileid, job):
         in_tasks = filter(lambda t : t != None ,
-                    [task.create_workflow_task(mfileid, job)
-                        for task in self.tasks.all()])
+                    [_task.create_workflow_task(mfileid, job)
+                        for _task in self.tasks.all()])
         ts = TaskSet(tasks=in_tasks)
         tsr = ts.apply_async()
         tsr.save()
@@ -1084,10 +1086,10 @@ class DataServiceTask(models.Model):
             output_arr.append(output.id)
 
         prioritise = job.mfile.service.priority
-        q = "normal.%s" % (task_name)
+        queue = "normal.%s" % (task_name)
         if prioritise:
-            q = "priority.%s" % (task_name)
-        options = {"routing_key": q}
+            queue = "priority.%s" % (task_name)
+        options = {"routing_key": queue}
         task = subtask(task=task_name,
                         args=[[mfileid], output_arr, args],
                         options=options)
@@ -1116,43 +1118,46 @@ class DataService(NamedBase):
         "profiles": ["GET"],
         }
 
-    def url(self): return reverse('dataservice', args=[self.id])
-    def webdav_url(self): return reverse('webdav', args=[self.id])
-    def stats_url(self): return reverse('stats', args=[self.id])
-    def usage_url(self): return reverse('dataservice_usagesummary', args=[self.id])
-    def properties_url(self): return reverse('dataservice_props', args=[self.id])
+    def url(self):
+        return reverse('dataservice', args=[self.id])
+    def webdav_url(self):
+        return reverse('webdav', args=[self.id])
+    def stats_url(self):
+        return reverse('stats', args=[self.id])
+    def usage_url(self):
+        return reverse('dataservice_usagesummary', args=[self.id])
+    def properties_url(self):
+        return reverse('dataservice_props', args=[self.id])
 
     def get_folder_for_paths(self, paths):
         try:
             if len(paths) > 0:
                 foldername = paths[0]
-                folder = self.mfolder_set.get(name=foldername,parent=None)
+                folder = self.mfolder_set.get(name=foldername, parent=None)
                 if len(paths[1:]) == 0:
                     return folder
                 else:
                     return folder.get_folder_for_paths(paths[1:])
             else:
                 return None
-        except Exception as e:
+        except:
             raise e
-            return None
 
     def get_file_for_paths(self, paths):
         try:
             if len(paths) > 0:
                 name = paths[0]
                 try:
-                    mfile = self.mfile_set.get(name=name,folder=None)
+                    mfile = self.mfile_set.get(name=name, folder=None)
                     return mfile
                 except MFile.DoesNotExist:
-                    folder = self.mfolder_set.get(name=name,parent=None)
+                    folder = self.mfolder_set.get(name=name, parent=None)
                     if folder:
                         return folder.get_file_for_paths(paths[1:])
             else:
                 return None
-        except Exception as e:
+        except:
             raise e
-            return None
 
     def folder_structure(self):
         return self._folder_structure(self.id)
@@ -1165,13 +1170,13 @@ class DataService(NamedBase):
 
         thisid = id or self.id
 
-        dict = {}
+        _dict = {}
         if mfolder:
-            dict["data"] = mfolder.name
-            dict["attr"] = {"id": mfolder.id}
+            _dict["data"] = mfolder.name
+            _dict["attr"] = {"id": mfolder.id}
         else:
-            dict["data"] = self.name
-            dict["attr"] = {"id": thisid, "class": "service"}
+            _dict["data"] = self.name
+            _dict["attr"] = {"id": thisid, "class": "service"}
 
         children = []
 
@@ -1186,8 +1191,8 @@ class DataService(NamedBase):
                     "attr": {"id": mfile.id,
                     "class": "mfile"}})
 
-        dict["children"] = children
-        return dict
+        _dict["children"] = children
+        return _dict
 
     def __init__(self, *args, **kwargs):
         super(DataService, self).__init__(*args, **kwargs)
@@ -1351,8 +1356,8 @@ class DataService(NamedBase):
         if self.parent:
             return self.parent.get_profile()
         try:
-            mp = self.managementproperty_set.get(property="profile")
-            return mp.value
+            manage_prop = self.managementproperty_set.get(property="profile")
+            return manage_prop.value
         except ManagementProperty.DoesNotExist:
             return DEFAULT_PROFILE
 
@@ -1376,7 +1381,6 @@ class DataService(NamedBase):
         return servicedict
 
     def _delete_usage_(self):
-        import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage, obj=self.container)
 
@@ -1387,8 +1391,7 @@ class DataService(NamedBase):
         try:
             MFolder.objects.get(name=name, service=self, parent=parent,
                                 duplicate_of=duplicate_of)
-            r = rc.DUPLICATE_ENTRY
-            return r
+            return rc.DUPLICATE_ENTRY
         except MFolder.DoesNotExist:
             folder = MFolder(name=name, service=self, parent=parent,
                                 duplicate_of=duplicate_of)
@@ -1399,15 +1402,15 @@ class DataService(NamedBase):
         # Check for duplicate name
         fn, ext = os.path.splitext(name)
         done = False
-        n = 0
+        num = 0
         while not done:
             existing_files = MFile.objects.filter(name=name, folder=folder,
                                                     service=self)
             if len(existing_files) == 0:
                 done = True
             else:
-                n = n + 1
-                name = "%s-%s%s" % (fn, str(n), ext)
+                num = num + 1
+                name = "%s-%s%s" % (fn, str(num), ext)
         return name
 
     def create_mfile(self, name, file=None, request=None, response=None,
@@ -1428,7 +1431,7 @@ class DataService(NamedBase):
                           duplicate_of=duplicate_of)
             mfile.file.save(name, emptyfile)
         else:
-            if type(file) == django.core.files.base.ContentFile:
+            if type(file) == ContentFile:
                 mfile = MFile(name=name, service=service,
                                 duplicate_of=duplicate_of)
                 mfile.file.save(name, file)
@@ -1445,7 +1448,6 @@ class DataService(NamedBase):
         mfile.save()
 
         if not duplicate_of:
-            import usage_store as usage_store
             usage_store.record(mfile.id, METRIC_INGEST, int(length))
 
         logging.debug("MFile creation started '%s' ", mfile.name)
@@ -1471,13 +1473,14 @@ class RemoteMServeService(models.Model):
 class MFolder(NamedBase):
     service = models.ForeignKey(DataService)
     parent = models.ForeignKey('self', null=True, blank=True)
-    duplicate_of = models.ForeignKey('MFolder', null=True, blank=True, related_name='duplicated_from')
+    duplicate_of = models.ForeignKey('MFolder', null=True,
+                                    blank=True, related_name='duplicated_from')
 
     def get_folder_for_paths(self, paths):
         try:
             if len(paths) > 0:
                 foldername = paths[0]
-                folder = self.mfolder_set.get(name=foldername,parent=self)
+                folder = self.mfolder_set.get(name=foldername, parent=self)
                 if len(paths[1:]) == 0:
                     return folder
                 else:
@@ -1493,10 +1496,10 @@ class MFolder(NamedBase):
             if len(paths) > 0:
                 name = paths[0]
                 try:
-                    mfile = self.mfile_set.get(name=name,folder=self)
+                    mfile = self.mfile_set.get(name=name, folder=self)
                     return mfile
                 except MFile.DoesNotExist:
-                    folder = self.mfolder_set.get(name=name,parent=self)
+                    folder = self.mfolder_set.get(name=name, parent=self)
                     if folder:
                         return folder.get_file_for_paths(paths[1:])
             else:
@@ -1712,14 +1715,12 @@ class MFile(NamedBase):
             except ObjectDoesNotExist:
                 pass
 
-        file = mfile.file
+        thisfile = mfile.file
 
         sigret = MFILE_GET_SIGNAL.send(sender=self, mfile=mfile)
 
         for k, v in sigret:
             logging.info("Signal %s returned %s ", k, v)
-
-        import usage_store as usage_store
 
         check1 = mfile.checksum
 
@@ -1740,7 +1741,7 @@ class MFile(NamedBase):
                         check4 = utils.md5_for_file(backup.file)
                         if(check3 == check4):
                             shutil.copy(backup.file.path, mfile.file.path)
-                            file = backup.file
+                            thisfile = backup.file
                         else:
                             logging.info("The file %s has been lost", mfile)
                             usage_store.record(mfile.id,
@@ -1750,7 +1751,7 @@ class MFile(NamedBase):
                     logging.info("There is no backup file for %s ", mfile)
                     return rc.NOT_HERE
 
-        file = mfile.file
+        thisfile = mfile.file
 
         MFILE_GET_SIGNAL.send(sender=self, mfile=mfile)
 
@@ -1759,17 +1760,17 @@ class MFile(NamedBase):
         else:
             dlfoldername = os.path.join("dl", accessspeed)
 
-        path = unicode(file)
+        path = unicode(thisfile)
 
-        redirecturl = utils.gen_sec_link_orig(file.name, dlfoldername)
-        logging.info("%s %s ", file.name, dlfoldername)
+        redirecturl = utils.gen_sec_link_orig(thisfile.name, dlfoldername)
+        logging.info("%s %s ", thisfile.name, dlfoldername)
         redirecturl = redirecturl[1:]
 
         SECDOWNLOAD_ROOT = settings.SECDOWNLOAD_ROOT
 
         fullfilepath = os.path.join(SECDOWNLOAD_ROOT, dlfoldername, path)
         fullfilepathfolder = os.path.dirname(fullfilepath)
-        mfilefilepath = file.path
+        mfilefilepath = thisfile.path
 
         if not os.path.exists(fullfilepathfolder):
             os.makedirs(fullfilepathfolder)
@@ -1780,20 +1781,18 @@ class MFile(NamedBase):
             logging.info("to %s ", fullfilepath)
             try:
                 os.link(mfilefilepath, fullfilepath)
-            except Exception as e:
-                logging.info("Caught error linking file, trying copy. %s", \
-                                str(e))
+            except:
+                logging.info("Caught error linking file, trying copy.")
                 shutil.copy(mfilefilepath, fullfilepath)
-
-        import dataservice.models as models
 
         usage_store.record(mfile.id, METRIC_ACCESS, mfile.size)
 
         redirecturl = os.path.join("/", redirecturl)
         return HttpResponseRedirect(redirecturl)
 
-    def update_mfile(self, name=None, file=None, request=None, post_process=True,
-                        folder=None, duplicate_of=None,  response=None):
+    def update_mfile(self, name=None, file=None, request=None,
+                        post_process=True, folder=None,
+                        duplicate_of=None,  response=None):
         logging.info("Update Mfile %s", self)
 
         if name == None:
@@ -1802,7 +1801,7 @@ class MFile(NamedBase):
         if request:
             utils.write_request_to_field(request, self.file , self.name)
         elif file != None:
-            if type(file) == django.core.files.base.ContentFile:
+            if type(file) == ContentFile:
                 self.file.save(name, file)
             else:
                 self.file.save(name, File(file))
@@ -1819,8 +1818,7 @@ class MFile(NamedBase):
 
         if file:
             self.size = os.stat(self.file.path).st_size
-            import usage_store as usage_store
-            usage_store.record(self.id, METRIC_INGEST, int(length))
+            usage_store.record(self.id, METRIC_INGEST, int(self.size))
         
         self.save()
 
@@ -1965,7 +1963,6 @@ class MFile(NamedBase):
         super(MFile, self).save(*args, **kwargs)
 
     def _delete_usage_(self):
-        import usage_store as usage_store
         for usage in self.usages.all():
             usage_store._stoprecording_(usage, obj=self.service)
 
@@ -2086,9 +2083,9 @@ class Auth(Base):
 
     def thumburl(self):
         if utils.is_service(self.base):
-            ds = DataService.objects.get(id=self.base.id)
-            if len(ds.mfile_set.all()) > 0:
-                return list(ds.mfile_set.all())[0].thumburl()
+            dservice = DataService.objects.get(id=self.base.id)
+            if len(dservice.mfile_set.all()) > 0:
+                return list(dservice.mfile_set.all())[0].thumburl()
         return os.path.join(settings.MEDIA_URL,
                     "images", "package-x-generic.png")
 
@@ -2182,5 +2179,3 @@ class Auth(Base):
     def __unicode__(self):
         return "Auth: authname=%s base=%s roles=%s "\
                 % (self.authname, self.base, ",".join(self.getroles()))
-
-from jobservice.models import *

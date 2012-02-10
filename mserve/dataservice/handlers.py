@@ -1,3 +1,42 @@
+"""
+
+MServe Handlers
+---------------
+
+::
+
+ This class defines the piston handlers for the dataservice module
+ 
+All the handlers follow the same basic pattern. Each handler is attached to a
+Django Model, defined in models.py. Each handler maps the four basic HTTP
+methods onto CRUD methods
+
++------------+------------+
+| HTTP       | CRUD       |
++============+============+
+| GET        | read       |
++------------+------------+
+| PUT        | update     |
++------------+------------+
+| POST       | create     |
++------------+------------+
+| DELETE     | delete     |
++------------+------------+
+
+The methods that are allowed in a handler are specified in the 'allowed_methods'
+field.
+
+A handler is called when a pattern in urls.py is mapped onto a handler and the
+variables from the pattern are passed to it e.g. (?P<containerid>[^/]+) would
+pass the variable containerid to the handler
+All handlers also recieve the request object which contains information about
+the request, e.g. request.user
+The 'fields' field in each handler defines which fields and methods from the
+handlers model is serialized and returned as JSON
+
+More info https://bitbucket.org/jespern/django-piston/wiki/Documentation
+
+"""
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -21,85 +60,113 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from models import RemoteMServeService
-from django.http import HttpResponseForbidden
 from piston.handler import BaseHandler
 from piston.utils import rc
-from dataservice.models import *
-from dataservice.forms import *
-from django.conf import settings
-from django.http import *
+from models import MServeProfile
+from models import ServiceRequest
+from models import Usage
+from models import NamedBase
+from models import HostingContainer
+from models import DataServiceProfile
+from models import DataServiceWorkflow
+from models import DataServiceTaskSet
+from models import DataServiceTask
+from models import DataService
+from models import RemoteMServeService
+from models import MFolder
+from models import MFile
+from models import BackupFile
+from models import ManagementProperty
+from models import Auth
+from forms import ServiceRequestForm
+from forms import HostingContainerForm
+from forms import SubServiceForm
+from forms import DataServiceForm
+from forms import UpdateMFileForm
+from forms import MFileForm
+from forms import ManagementPropertyForm
+from forms import DataServiceTaskForm
+from forms import DataServiceTaskSetForm
+from django.http import HttpResponse
+from django.http import HttpResponseForbidden
+from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseRedirect
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
-from django.conf import settings
-import settings as settings
 import utils as utils
 import logging
 
-sleeptime = 10
-DEFAULT_ACCESS_SPEED = settings.DEFAULT_ACCESS_SPEED
 
 class ProfileHandler(BaseHandler):
-    ''' Profile Handler '''
+    """The piston handlers for the MServeProfile class"""
     allowed_methods = ('GET', 'PUT')
     model = MServeProfile
-    fields = (('user', () ),'mfiles','mfolders', 'myauths' ,('dataservices', ('id', 'name','mfile_set')), ('containers', ('id', 'name')),   )
+    fields = (('user', ()), 'mfiles', 'mfolders', 'myauths', ('dataservices',
+                ('id', 'name', 'mfile_set')), ('containers', ('id', 'name')),)
 
     def read(self, request):
         if not request.user.is_authenticated():
             return {}
         try:
-            profile = MServeProfile.objects.get(user=request.user)           
-            return  profile
+            profile = MServeProfile.objects.get(user=request.user)
+            return profile
 
         except MServeProfile.DoesNotExist:
             logging.info("PortalProfile Does not exist for this user!")
-            pp = MServeProfile(user=request.user)
-            pp.save()
-            return pp
+            mserve_profile = MServeProfile(user=request.user)
+            mserve_profile.save()
+            return mserve_profile
+
 
 class ServiceRequestHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST', 'DELETE','PUT')
+    """The piston handlers for the ServiceRequest class"""
+    allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = ServiceRequest
-    fields = ('id','name','reason','state','status','time','ctime', ('profile', ( 'id',  'user' )  ))
+    fields = ('id', 'name', 'reason', 'state', 'status', 'time', 'ctime',
+             ('profile', ('id', 'user')))
 
     def update(self, request, servicerequestid=None):
         if request.user.is_staff:
-            if request.POST.has_key("state"):
+            if "state" in request.POST:
                 if request.POST['state'] == "A":
 
-                    if request.POST.has_key('cid'):
+                    if "cid" in request.POST:
 
                         cid = request.POST['cid']
-                        sr = ServiceRequest.objects.get(id=servicerequestid)
+                        service_req = ServiceRequest.objects.get(
+                                                    id=servicerequestid)
 
-                        sr.state = "A"
-                        sr.save()
+                        service_req.state = "A"
+                        service_req.save()
 
-                        dataservice = HostingContainer.objects.get(id=cid).create_data_service(sr.name)
+                        dataservice = HostingContainer.objects.\
+                            get(id=cid).create_data_service(service_req.name)
 
-                        custauth = dataservice.auth_set.get(authname="customer")
+                        custauth = dataservice.auth_set.get(
+                                                    authname="customer")
 
-                        sr.profile.auths.add(custauth)
+                        service_req.profile.auths.add(custauth)
 
-                        return sr
+                        return service_req
                     else:
-                        r = rc.BAD_REQUEST
-                        r.write("Invalid arguments - No Container id specified")
-                        return r
+                        response = rc.BAD_REQUEST
+                        response.write("Invalid arguments - "\
+                            "No Container id specified")
+                        return response
                 elif request.POST['state'] == "R":
-                    sr = ServiceRequest.objects.get(id=servicerequestid)
-                    sr.state = "R"
-                    sr.save()
-                    return sr
+                    service_req = ServiceRequest.objects.get(
+                                                id=servicerequestid)
+                    service_req.state = "R"
+                    service_req.save()
+                    return service_req
                 else:
-                    r = rc.BAD_REQUEST
-                    r.write("Unknown state")
-                    return r
+                    response = rc.BAD_REQUEST
+                    response.write("Unknown state")
+                    return response
             else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid arguments")
-                return r
+                response = rc.BAD_REQUEST
+                response.write("Invalid arguments")
+                return response
 
         else:
             response = HttpResponse("Not Authorised.")
@@ -111,11 +178,10 @@ class ServiceRequestHandler(BaseHandler):
             response = HttpResponse("Not Authorised.")
             response.status_code = 401
             return response
-        sr = ServiceRequest.objects.get(id=servicerequestid)
-        if request.user.get_profile() == sr.profile:
-            sr.delete()
-            r = rc.DELETED
-            return r
+        service_req = ServiceRequest.objects.get(id=servicerequestid)
+        if request.user.get_profile() == service_req.profile:
+            service_req.delete()
+            return rc.DELETED
         else:
             response = HttpResponse("Not Authorised.")
             response.status_code = 401
@@ -125,12 +191,9 @@ class ServiceRequestHandler(BaseHandler):
 
         if request.user.is_staff:
             if servicerequestid:
-                sr = ServiceRequest.objects.get(id=servicerequestid)
-                return sr
+                return ServiceRequest.objects.get(id=servicerequestid)
             else:
-                sr = ServiceRequest.objects.all()
-                return sr
-
+                return ServiceRequest.objects.all()
         if not request.user.is_authenticated():
             response = HttpResponse("Not Authorised.")
             response.status_code = 401
@@ -144,7 +207,8 @@ class ServiceRequestHandler(BaseHandler):
             profile.save()
 
         if servicerequestid:
-            return ServiceRequest.objects.filter(profile=profile,id=servicerequestid)
+            return ServiceRequest.objects.filter(
+                            profile=profile, id=servicerequestid)
         else:
             return ServiceRequest.objects.filter(profile=profile)
 
@@ -167,50 +231,53 @@ class ServiceRequestHandler(BaseHandler):
             servicerequest = srform.save()
             profile.servicerequests.add(servicerequest)
             profile.save()
-            return  servicerequest
+            return servicerequest
         else:
-            r = rc.BAD_REQUEST
-            r.write(srform.as_p())
-            return r
+            response = rc.BAD_REQUEST
+            response.write(srform.as_p())
+            return response
+
 
 class HostingContainerHandler(BaseHandler):
-    allowed_methods = ('GET', 'POST', 'DELETE','PUT')
+    """The piston handler for the HostingContainer class"""
+    allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = HostingContainer
     fields = ('name', 'id', 'created', 'default_profile', 'default_path',
-                ('dataservice_set', ('name', 'id', 'reportnum', 'starttime', 'endtime','thumbs','mfile_set')  )
-                ,'reportnum', 'thumbs', ('properties', ('id','value','property', ), ), )
+                'reportnum', 'thumbs',
+                ('dataservice_set',
+                ('name', 'id', 'reportnum', 'starttime', 'endtime', 'thumbs',
+                    'mfile_set')),
+                ('properties', ('id', 'value', 'property', ), ), )
     exclude = ()
 
-    def update(self, request, id):
+    def update(self, request, containerid):
         if request.user.is_staff:
-            return HostingContainer.objects.get(id=id).do("PUT", request=request)
+            return HostingContainer.objects.get(id=containerid).do(
+                                            "PUT", request=request)
         else:
             return HttpResponseForbidden()
 
-    def read(self, request, id=None, murl=None):
+    def read(self, request, containerid=None, murl=None):
 
-        if id == None and request.user.is_staff:
+        if containerid == None and request.user.is_staff:
             return super(HostingContainerHandler, self).read(request)
 
-        if murl and id:
-            hc =  get_object_or_404(HostingContainer,id=id)
-            r = hc.do(request.method,murl)
-            return r
+        if murl and containerid:
+            hosting_con = get_object_or_404(HostingContainer, id=containerid)
+            return hosting_con.do(request.method, murl)
 
-        if id == None and not request.user.is_staff:
-            r = rc.FORBIDDEN
-            return r
+        if containerid == None and not request.user.is_staff:
+            return rc.FORBIDDEN
 
-        if id:
-            hc = get_object_or_404(HostingContainer,id=id)
-            return hc.do("GET")
+        if containerid:
+            hosting_con = get_object_or_404(HostingContainer, id=containerid)
+            return hosting_con.do("GET")
         else:
-            r = rc.FORBIDDEN
-            return r
+            return rc.FORBIDDEN
 
-    def delete(self, request, id):
-        logging.info("Deleting Container %s " % id)
-        return HostingContainer.objects.get(id=str(id)).do("DELETE")
+    def delete(self, request, containerid):
+        logging.info("Deleting Container %s ", containerid)
+        return HostingContainer.objects.get(id=str(containerid)).do("DELETE")
 
     def create(self, request):
         if request.user.is_staff:
@@ -219,57 +286,62 @@ class HostingContainerHandler(BaseHandler):
                 hostingcontainer = form.save()
                 return hostingcontainer
             else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request! %s " % (form))
-                return r
+                response = rc.BAD_REQUEST
+                response.write("Invalid Request! %s " % (form))
+                return response
         else:
             return HttpResponseForbidden()
 
+
 class DataServiceHandler(BaseHandler):
-    allowed_methods = ('GET','POST','DELETE','PUT')
+    """The piston handler for the DataService class"""
+    allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = DataService
     fields = ('name', 'id', 'created', 'reportnum', 'starttime', 'endtime',
-                'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'priority',
-                'subservices_url','stats_url','usage_url','folder_structure',
-                'properties_url', 'url', 'webdav_url', 'auth_set')
+                'mfile_set', 'job_set', 'mfolder_set', 'thumbs',
+                'folder_structure', 'subservices_url', 'stats_url',
+                'usage_url', 'priority', 'properties_url', 'url',
+                'webdav_url', 'auth_set')
     exclude = ('pk')
 
-    def read(self,request, id=None, containerid=None,serviceid=None):
-        if serviceid:
+    def read(self, request, serviceid=None, containerid=None, suburl=None):
+        if suburl:
             return self.model.objects.get(id=serviceid).subservices.all()
         if containerid:
-            return HostingContainer.objects.get(pk=containerid).do("GET","services")
-        if id:
-            dataservice = get_object_or_404(self.model, pk=id)
+            return HostingContainer.objects.get(pk=containerid).do(
+                                                        "GET", "services")
+        if serviceid:
+            dataservice = get_object_or_404(self.model, pk=serviceid)
             return dataservice.do("GET")
         return HttpResponseNotAllowed(['POST'])
 
-    def update(self, request, id):
+    def update(self, request, serviceid, suburl=None):
         try:
-            service = DataService.objects.get(pk=id).do("PUT",request=request)
+            service = DataService.objects.get(pk=serviceid).do("PUT",
+                                                        request=request)
             return service
-        except Exception as e:
-            r = rc.BAD_REQUEST
-            logging.info("Exception %s" % (e))
-            r.write("Invalid Request!")
-            return r
+        except DataService.DoesNotExist as excep:
+            response = rc.BAD_REQUEST
+            logging.info("Exception %s", excep)
+            response.write("Invalid Request!")
+            return response
 
-    def delete(self, request, id):
-        logging.info("Deleting Service %s " % id)
-        return DataService.objects.get(id=id).do("DELETE")
+    def delete(self, request, serviceid, suburl=None):
+        logging.info("Deleting Service %s ", serviceid)
+        return DataService.objects.get(id=serviceid).do("DELETE")
 
-    def create(self, request, containerid=None, serviceid=None):
+    def create(self, request, containerid=None, serviceid=None, suburl=None):
         service = None
         if serviceid:
             service = DataService.objects.get(id=serviceid)
             form = SubServiceForm(request.POST)
         else:
             form = DataServiceForm(request.POST)
-        if form.is_valid(): 
+        if form.is_valid():
             if 'name' in request.POST:
                 name = request.POST['name']
-                start = request.POST.get('starttime',None)
-                end = request.POST.get('endtime',None)
+                start = request.POST.get('starttime', None)
+                end = request.POST.get('endtime', None)
                 if start == '':
                     start = None
                 if end == '':
@@ -278,78 +350,89 @@ class DataServiceHandler(BaseHandler):
                     dataservice = service.create_subservice(name)
                 else:
                     if containerid:
-                        container = HostingContainer.objects.get(id=containerid)
-                        dataservice = container.create_data_service(name, starttime=start, endtime=end)
+                        container = HostingContainer.objects.get(
+                                                        id=containerid)
+                        dataservice = container.create_data_service(
+                                            name, starttime=start, endtime=end)
                     elif 'container' in request.POST:
                         containerid = request.POST['container']
-                        container = HostingContainer.objects.get(id=containerid)
-                        dataservice = container.create_data_service(name, starttime=start, endtime=end)
+                        container = HostingContainer.objects.get(
+                                            id=containerid)
+                        dataservice = container.create_data_service(
+                                            name, starttime=start, endtime=end)
                     else:
-                        r = rc.BAD_REQUEST
-                        r.write("Invalid Request! - No name in POST parameters")
-                        return r
+                        response = rc.BAD_REQUEST
+                        response.write("Invalid Request! - "
+                            "No name in POST parameters")
+                        return response
                 return dataservice
             else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request! - No container in POST parameters")
-                return r
+                response = rc.BAD_REQUEST
+                response.write("Invalid Request! - "
+                            "No container in POST parameters")
+                return response
         else:
             logging.info(form)
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
+            response = rc.BAD_REQUEST
+            response.write("Invalid Request!")
+            return response
+
 
 class SubServiceHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
+    """The piston handler for the subservices"""
+    allowed_methods = ('GET', 'POST')
 
     def read(self, request, containerid=None):
         if containerid:
             return DataService.objects.filter(parent__container=containerid)
         else:
-            r = rc.FORBIDDEN
-            return r
+            response = rc.FORBIDDEN
+            return response
 
     def create(self, request, containerid=None):
-        if "serviceid" in request.POST and "name" in request.POST :
+        if "serviceid" in request.POST and "name" in request.POST:
             serviceid = request.POST['serviceid']
             name = request.POST['name']
             container = HostingContainer.objects.get(id=containerid)
             service = container.dataservice_set.get(id=serviceid)
             subservice = service.create_subservice(name=name)
-            if request.POST.has_key('starttime'):
+            if 'starttime' in request.POST:
                 subservice.starttime = request.POST['starttime']
-            if request.POST.has_key('endtime'):
+            if 'endtime' in request.POST:
                 subservice.endtime = request.POST['endtime']
             subservice.save()
             return subservice
         else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request! %s not valid " % request.POST)
-            return r
+            response = rc.BAD_REQUEST
+            response.write("Invalid Request! %s not valid " % request.POST)
+            return response
 
 
 class DataServiceProfileHandler(BaseHandler):
+    """The piston handler for the DataServiceProfile class"""
     allowed_methods = ('GET')
     model = DataServiceProfile
-    fields = ('name','id','workflows')
+    fields = ('name', 'id', 'workflows')
 
     def read(self, request, serviceid):
         service = DataService.objects.get(id=serviceid)
-        return service.do("GET","profiles")
+        return service.do("GET", "profiles")
 
 
 class DataServiceWorkflowHandler(BaseHandler):
+    """The piston handler for the DataServiceWorkflow class"""
     allowed_methods = ('GET')
     model = DataServiceWorkflow
     fields = ('name', 'id', 'tasksets', )
 
 
 class DataServiceTaskSetHandler(BaseHandler):
-    allowed_methods = ('GET','PUT','POST','DELETE')
+    """The piston handler for the DataServiceTaskSet class"""
+    allowed_methods = ('GET', 'PUT', 'POST', 'DELETE')
     model = DataServiceTaskSet
     fields = ('name', 'id', 'tasks', 'order')
 
-    def read(self, request, serviceid, profileid, tasksetid=None ):
+    def read(self, request, serviceid, profileid, tasksetid=None):
         if tasksetid:
             dsts = DataServiceTaskSet.objects.get(
                 workflow__profile__service=serviceid,
@@ -362,42 +445,43 @@ class DataServiceTaskSetHandler(BaseHandler):
                 workflow__profile=profileid)
             return dsts
 
-    def delete(self, request, serviceid, profileid, tasksetid ):
+    def delete(self, request, serviceid, profileid, tasksetid):
         dsts = DataServiceTaskSet.objects.get(id=tasksetid)
         dsts.delete()
-        r = rc.DELETED
-        return r
+        return rc.DELETED
 
-    def update(self, request, serviceid, profileid, tasksetid ):
+    def update(self, request, serviceid, profileid, tasksetid):
         dsts = DataServiceTaskSet.objects.get(id=tasksetid)
         dstsf = DataServiceTaskSetForm(request.POST, instance=dsts)
         if dstsf.is_valid():
             dsts = dstsf.save()
             return dsts
         else:
-            r = rc.BAD_REQUEST
+            response = rc.BAD_REQUEST
             logging.info(dstsf)
-            r.write("Invalid Request!")
-            return r
+            response.write("Invalid Request!")
+            return response
 
-    def create(self, request, serviceid, profileid ):
+    def create(self, request, serviceid, profileid):
         DataService.objects.get(id=serviceid).profiles.get(id=profileid)
         dstsf = DataServiceTaskSetForm(request.POST)
         if dstsf.is_valid():
             dst = dstsf.save()
             return dst
         else:
-            r = rc.BAD_REQUEST
+            response = rc.BAD_REQUEST
             logging.info(dstsf)
-            r.write("Invalid Request!")
-            return r
+            response.write("Invalid Request!")
+            return response
+
 
 class DataServiceTaskHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT','DELETE')
+    """The piston handler for the DataServiceTask class"""
+    allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = DataServiceTask
     fields = ('name', 'task_name', 'id', 'condition', 'args')
 
-    def read(self, request, serviceid, profileid, taskid=None ):
+    def read(self, request, serviceid, profileid, taskid=None):
         if taskid:
             dst = DataServiceTask.objects.get(
                     taskset__workflow__profile__service=serviceid,
@@ -410,39 +494,39 @@ class DataServiceTaskHandler(BaseHandler):
                     taskset__workflow__profile=profileid)
             return dst
 
-    def delete(self, request, serviceid, profileid, taskid ):
+    def delete(self, request, serviceid, profileid, taskid):
         dst = DataServiceTask.objects.get(id=taskid)
         dst.delete()
-        r = rc.DELETED
-        return r
+        return rc.DELETED
 
-    def update(self, request, serviceid, profileid, taskid ):
+    def update(self, request, serviceid, profileid, taskid):
         dst = DataServiceTask.objects.get(id=taskid)
         dstf = DataServiceTaskForm(request.POST, instance=dst)
         if dstf.is_valid():
             dst = dstf.save()
             return dst
         else:
-            r = rc.BAD_REQUEST
+            response = rc.BAD_REQUEST
             logging.info(dstf)
-            r.write("Invalid Request!")
-            return r
+            response.write("Invalid Request!")
+            return response
 
-    def create(self, request, serviceid, profileid ):
+    def create(self, request, serviceid, profileid):
         DataService.objects.get(id=serviceid).profiles.get(id=profileid)
         dstf = DataServiceTaskForm(request.POST)
         if dstf.is_valid():
             dst = dstf.save()
             return dst
         else:
-            r = rc.BAD_REQUEST
+            response = rc.BAD_REQUEST
             logging.info(dstf)
-            r.write("Invalid Request!")
-            return r
+            response.write("Invalid Request!")
+            return response
 
 
 class BackupFileHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT','DELETE')
+    """The piston handler for the BackupFile class"""
+    allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = BackupFile
 
     def read(self, request, backupid=None):
@@ -452,152 +536,164 @@ class BackupFileHandler(BaseHandler):
 
     def create(self, request, backupid):
         backupfile = BackupFile.objects.get(pk=backupid)
-        if request.FILES.has_key("file"):
-            file = request.FILES["file"]
-            backupfile.file.save(backupfile.name, file, save=True)
-            return {"message":"updated backup file"}
+        if "file" in request.FILES:
+            postfile = request.FILES["file"]
+            backupfile.file.save(backupfile.name, postfile, save=True)
+            return {"message": "updated backup file"}
         else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request! no file in request.")
-            return r
+            response = rc.BAD_REQUEST
+            response.write("Invalid Request! no file in request.")
+            return response
 
     def update(self, request, backupid):
         backupfile = BackupFile.objects.get(pk=backupid)
         try:
-            utils.write_request_to_field(request, backupfile.file, "%s_%s"%("backup",backupfile.mfile.name))
-            return {"message":"updated backup file"}
-        except Exception, e:
-            logging.info(e)
-            raise e
+            utils.write_request_to_field(
+                request, backupfile.file,
+                "%s_%s" % ("backup", backupfile.mfile.name)
+               )
+            return {"message": "updated backup file"}
+        except:
+            raise
+
 
 class MFolderHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT','DELETE')
+    """The piston handler for the MFolder class"""
+    allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = MFolder
-    fields = ('name','id','parent')
+    fields = ('name', 'id', 'parent')
 
-    def read(self,request, id=None, serviceid=None, authid=None):
-        if id:
-            return self.model.objects.get(id=id).do("GET")
+    def read(self, request, mfolderid=None, serviceid=None, authid=None):
+        if mfolderid:
+            return self.model.objects.get(id=mfolderid).do("GET")
         if serviceid:
             service = DataService.objects.get(pk=serviceid)
-            return service.do("GET","mfolders")
+            return service.do("GET", "mfolders")
         if authid:
             auth = Auth.objects.get(pk=authid)
-            return auth.do("GET","mfolders")
+            return auth.do("GET", "mfolders")
         return []
 
-class MFileHandler(BaseHandler):
-    allowed_methods = ('GET','POST','PUT','DELETE')
-    model = MFile
-    fields = ('name', 'id' ,'file', 'checksum', 'size', 'mimetype', 'thumb', 'poster', 'proxy', \
-                'created' , 'updated', 'thumburl', 'posterurl', 'proxyurl', 'reportnum',\
-                ('folder', ('id','name') ) )
 
-    def read(self,request, id=None, serviceid=None, authid=None, field=None):
+class MFileHandler(BaseHandler):
+    """The piston handler for the MFile class"""
+    allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
+    model = MFile
+    fields = ('name', 'id', 'file', 'checksum', 'size', 'mimetype', 'thumb',
+                'poster', 'proxy', 'created', 'updated', 'thumburl', \
+                'posterurl', 'proxyurl', 'reportnum',\
+                ('folder', ('id', 'name')))
+
+    def read(self, request, mfileid=None, serviceid=None,
+                authid=None, field=None):
         if field:
             return HttpResponseNotAllowed(['POST'])
-        if id :
-            return self.model.objects.get(id=id).do("GET")
+        if mfileid:
+            return self.model.objects.get(id=mfileid).do("GET")
         if serviceid:
             service = DataService.objects.get(pk=serviceid)
-            return service.do("GET","mfiles")
+            return service.do("GET", "mfiles")
         if authid:
             auth = Auth.objects.get(pk=authid)
-            return auth.do("GET","mfiles")
+            return auth.do("GET", "mfiles")
         return HttpResponseNotAllowed(['POST'])
 
-    def delete(self, request, id , field=None):
+    def delete(self, request, mfileid, field=None):
         if field:
             return HttpResponseNotAllowed(['POST'])
-        logging.info("Deleting mfile %s " % id)
+        logging.info("Deleting mfile %s ", mfileid)
         #MFile.objects.get(id=id).delete()
-        MFile.objects.get(id=id).do("DELETE")
-        r = rc.DELETED
-        return r
+        MFile.objects.get(id=mfileid).do("DELETE")
+        return rc.DELETED
 
-    def update(self, request, id, field=None):
+    def update(self, request, mfileid, field=None):
 
-        mfile = MFile.objects.get(pk=id)
+        mfile = MFile.objects.get(pk=mfileid)
         if field == "thumb":
             utils.write_request_to_field(request, mfile.thumb, 'thumb.png')
-            return {"message":"updated thumb"}
+            return {"message": "updated thumb"}
         if field == "poster":
             utils.write_request_to_field(request, mfile.poster, 'poster.png')
-            return {"message":"updated poster"}
+            return {"message": "updated poster"}
         if field == "proxy":
             utils.write_request_to_field(request, mfile.proxy, 'proxy.mp4')
-            return {"message":"updated proxy"}
+            return {"message": "updated proxy"}
 
-        form = UpdateMFileForm(request.POST,request.FILES)
-        if form.is_valid(): 
-            file = request.FILES['file']
-            mfile = MFile.objects.get(pk=id)
-            logging.info("Update %s with file %s" % (id,file))
-            mfile.file = file
-            mfile.name = file.name
-            mfile.size = file.size
+        form = UpdateMFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            postfile = request.FILES['file']
+            mfile = MFile.objects.get(pk=mfileid)
+            logging.info("Update %s with file %s", mfileid, postfile)
+            mfile.file = postfile
+            mfile.name = postfile.name
+            mfile.size = postfile.size
             mfile.save()
             mfile.post_process()
-            backup = BackupFile(name="backup_%s"%file.name,mfile=mfile,mimetype=mfile.mimetype,checksum=mfile.checksum,file=file)
+            backup = BackupFile(name="backup_%s" % postfile.name,
+                    mfile=mfile, mimetype=mfile.mimetype,
+                    checksum=mfile.checksum, file=postfile
+                   )
             backup.save()
             return mfile
         else:
-            r = rc.BAD_REQUEST
-            logging.info("Bad Form %s" % (form))
-            r.write("Invalid Request!")
-            return r
+            response = rc.BAD_REQUEST
+            logging.info("Bad Form %s", form)
+            response.write("Invalid Request!")
+            return response
 
-    def create(self, request, id=None ,serviceid=None, authid=None, field=None):
+    def create(self, request, mfileid=None, serviceid=None,
+                authid=None, field=None):
 
         if field:
             try:
-                mfile = MFile.objects.get(pk=id)
+                mfile = MFile.objects.get(pk=mfileid)
                 if field == "thumb":
-                    file = request.FILES[field]
-                    mfile.thumb.save("thumb.png", file, save=True)
-                    return {"message":"updated thumb"}
+                    postfile = request.FILES[field]
+                    mfile.thumb.save("thumb.png", postfile, save=True)
+                    return {"message": "updated thumb"}
                 if field == "poster":
-                    file = request.FILES[field]
-                    mfile.poster.save("poster.png", file, save=True)
-                    return {"message":"updated poster"}
+                    postfile = request.FILES[field]
+                    mfile.poster.save("poster.png", postfile, save=True)
+                    return {"message": "updated poster"}
                 if field == "proxy":
-                    file = request.FILES[field]
-                    mfile.proxy.save("proxy.mp4", file, save=True)
-                    return {"message":"updated proxy"}
+                    postfile = request.FILES[field]
+                    mfile.proxy.save("proxy.mp4", postfile, save=True)
+                    return {"message": "updated proxy"}
             except MFile.DoesNotExist:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request!")
-                return r
+                response = rc.BAD_REQUEST
+                response.write("Invalid Request!")
+                return response
 
         form = MFileForm(request.POST, request.FILES)
         if form.is_valid():
 
-            kwargs = {}
-            if request.FILES.has_key('file'):
-                file = request.FILES['file']
-                kwargs = {"name":file.name,"file":file}
+            name = ""
+            postfile = None
+            if "file" in request.FILES:
+                postfile = request.FILES['file']
+                name = postfile.name
             else:
-                file = None
-                kwargs = {"name":"Empty File","file":None}
-
+                postfile = None
+                name = "Empty File"
             if serviceid:
                 service = DataService.objects.get(pk=serviceid)
-                return service.do("POST","mfiles",**kwargs)
+                return service.do("POST", "mfiles", name=name, file=postfile)
             if authid:
                 auth = Auth.objects.get(pk=authid)
-                return auth.do("POST","mfiles",**kwargs)
+                return auth.do("POST", "mfiles", name=name, file=postfile)
             else:
-                r = rc.BAD_REQUEST
-                r.write("Invalid Request when submitting creating mfile")
-                return r
-
+                response = rc.BAD_REQUEST
+                response.write("Invalid Request when "
+                                "submitting creating mfile")
+                return response
         else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request! Submitted Form Invalid %s"% form)
-            return r
+            response = rc.BAD_REQUEST
+            response.write("Invalid Request! Submitted Form Invalid %s" % form)
+            return response
 
 
 class RemoteMServeServiceHandler(BaseHandler):
+    """The piston handler for the RemoteMServeService class"""
     allowed_methods = ('GET')
     model = RemoteMServeService
 
@@ -607,47 +703,57 @@ class RemoteMServeServiceHandler(BaseHandler):
         else:
             return []
 
+
 class MFileContentsHandler(BaseHandler):
+    """A piston handler to handle gettings the file field of an MFile"""
     allowed_methods = ('GET')
 
     def read(self, request, mfileid=None, authid=None):
-
         if mfileid:
             logging.info("MFileContentsHandler mfile")
-            return MFile.objects.get(pk=mfileid).do("GET","file")
+            return MFile.objects.get(pk=mfileid).do("GET", "file")
         elif authid:
             logging.info("MFileContentsHandler auth")
-            return Auth.objects.get(pk=authid).do("GET","file")
+            return Auth.objects.get(pk=authid).do("GET", "file")
         else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
+            response = rc.BAD_REQUEST
+            response.write("Invalid Request!")
+            return response
+
 
 class UsageHandler(BaseHandler):
+    """The piston handler for the Usage class"""
     allowed_methods = ('GET')
     model = Usage
-    fields = ('squares','total','nInProgress','metric','rate','reports','time,','rateCumulative','total','rateTime')
+    fields = ('squares', 'total', 'nInProgress', 'metric',
+                'rate', 'reports', 'time', 'rateCumulative',
+                'total', 'rateTime')
 
-    def read(self,request, containerid=None,serviceid=None,mfileid=None,authid=None):
+    def read(self, request, containerid=None, serviceid=None,
+                 mfileid=None, authid=None):
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
-            return container.do("GET","usages",**request.GET)
+            return container.do("GET", "usages", **request.GET)
         if serviceid:
             service = DataService.objects.get(pk=serviceid)
-            return service.do("GET","usages",**request.GET)
+            return service.do("GET", "usages", **request.GET)
         if mfileid:
             mfile = MFile.objects.get(pk=mfileid)
-            return mfile.do("GET","usages",**request.GET)
+            return mfile.do("GET", "usages", **request.GET)
         if authid:
             auth = Auth.objects.get(pk=authid)
-            return auth.do("GET","usages",**request.GET)
+            return auth.do("GET", "usages", **request.GET)
+
 
 class UsageSummaryHandler(BaseHandler):
+    """The piston handler for the usage summarys"""
     allowed_methods = ('GET')
 
-    def read(self, request, containerid=None, serviceid=None, mfileid=None, authid=None ):
+    def read(self, request, containerid=None, serviceid=None,
+                mfileid=None, authid=None):
         if containerid or serviceid or mfileid:
-            base = NamedBase.objects.get(id__in=[containerid,serviceid,mfileid])
+            base = NamedBase.objects.get(
+                    id__in=[containerid, serviceid, mfileid])
             result = {}
             result["usages"] = base.get_real_base().get_usage_summary()
             result["reportnum"] = base.reportnum
@@ -665,99 +771,106 @@ class UsageSummaryHandler(BaseHandler):
             result["reportnum"] = -1
             return result
         else:
-            r = rc.BAD_REQUEST
-            r.write("Invalid Request!")
-            return r
+            response = rc.BAD_REQUEST
+            response.write("Invalid Request!")
+            return response
 
 
 class ManagementPropertyHandler(BaseHandler):
+    """The piston handler for the ManagementProperty class"""
     allowed_methods = ('GET', 'PUT', 'POST')
     model = ManagementProperty
-    fields = ("value","property","id","values")
+    fields = ("value", "property", "id", "values")
     exclude = ()
-            
-    def read(self, request, containerid=None, serviceid=None, mfileid=None, authid=None):
+
+    def read(self, request, containerid=None, serviceid=None,
+                mfileid=None, authid=None):
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
-            return container.do("GET","properties")
+            return container.do("GET", "properties")
         if serviceid:
             service = DataService.objects.get(pk=serviceid)
-            return service.do("GET","properties")
+            return service.do("GET", "properties")
         if mfileid:
             mfile = MFile.objects.get(pk=mfileid)
-            return mfile.do("GET","properties")
+            return mfile.do("GET", "properties")
         if authid:
             auth = Auth.objects.get(pk=authid)
-            return auth.do("GET","properties")
+            return auth.do("GET", "properties")
         return []
 
-    def create(self, request, id=None, serviceid=None):
-        if id==None:
-            id=serviceid
+    def create(self, request, serviceid=None):
         form = ManagementPropertyForm(request.POST)
         if form.is_valid():
-            mp = form.save(commit=False)
-            mp.base = DataService.objects.get(id=id)
+            manage_prop = form.save(commit=False)
+            manage_prop.base = DataService.objects.get(id=serviceid)
             try:
-                ManagementProperty.objects.get(property=mp.property, base=mp.base)
-                logging.info("Bad Form %s " % form)
+                ManagementProperty.objects.get(
+                            property=manage_prop.property,
+                            base=manage_prop.base
+                           )
+                logging.info("Bad Form %s ", form)
                 resp = rc.BAD_REQUEST
-                resp.write(". A Management Property called '%s' allready exists " % (mp.property))
+                resp.write(". A Management Property "
+                    "called '%s' allready exists " % (manage_prop.property))
                 return resp
             except ManagementProperty.DoesNotExist:
                 pass
-            mp.save()
-            return mp
+            manage_prop.save()
+            return manage_prop
         else:
-            logging.info("Bad Form %s " % form)
+            logging.info("Bad Form %s ", form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
 
-    def update(self, request, id=None, serviceid=None):
-        if id==None:
-            id=serviceid
-        form = ManagementPropertyForm(request.POST) 
+    def update(self, request, serviceid=None):
+        form = ManagementPropertyForm(request.POST)
         if form.is_valid():
             try:
-                property = form.cleaned_data['property']
-                base = NamedBase.objects.get(id=id)
-                existingmanagementproperty = ManagementProperty.objects.get(property=property,base=base)
-                form = ManagementPropertyForm(request.POST,instance=existingmanagementproperty)
-                mp = form.save()
-                return mp
+                manage_prop = form.cleaned_data['property']
+                base = NamedBase.objects.get(id=serviceid)
+                existingmanagementproperty = ManagementProperty.objects.get(
+                                            property=manage_prop, base=base)
+                form = ManagementPropertyForm(request.POST,
+                                        instance=existingmanagementproperty)
+                return form.save()
             except ObjectDoesNotExist:
-                resp = rc.BAD_REQUEST
-                resp.write(" The Management Property '%s' doesn't exist " % (property))
-                return resp
+                response = rc.BAD_REQUEST
+                response.write(" The Management Property '%s' doesn't exist "
+                            % manage_prop)
+                return response
         else:
-            logging.info("Bad Form %s " % form)
+            logging.info("Bad Form %s ", form)
             return HttpResponseRedirect(request.META["HTTP_REFERER"])
-        
-class AuthHandler(BaseHandler):
-    allowed_methods = ('GET','POST')
-    model = Auth
-    fields = ('authname','browse_url','id','auth_set','urls','methods','basename','thumburl',('roles' ,('id','rolename','description','methods') ) )
 
-    def read(self,request, id=None, containerid=None,serviceid=None,mfileid=None,authid=None,murl=None):
-        if id:
+
+class AuthHandler(BaseHandler):
+    """The piston handler for the Auth class"""
+    allowed_methods = ('GET', 'POST')
+    model = Auth
+    fields = ('authname', 'browse_url', 'id', 'auth_set', 'urls', 'methods',
+            'basename', 'thumburl',
+            ('roles', ('id', 'rolename', 'description', 'methods')))
+
+    def read(self, request, containerid=None, serviceid=None,
+                mfileid=None, authid=None, murl=None):
+        if authid and not murl:
             return self.model.objects.get(id=id).do("GET")
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
-            return container.do("GET","auths")
+            return container.do("GET", "auths")
         if serviceid:
             service = DataService.objects.get(pk=serviceid)
-            return service.do("GET","auths")
+            return service.do("GET", "auths")
         if mfileid:
             mfile = MFile.objects.get(pk=mfileid)
-            return mfile.do("GET","auths")
-        if authid:
+            return mfile.do("GET", "auths")
+        if authid and murl:
             auth = Auth.objects.get(pk=authid)
-            return auth.do("GET",murl)
-
+            return auth.do("GET", murl)
         return []
 
-    def create(self, request, id=None, containerid=None, serviceid=None,
-                        mfileid=None, authid=None):
-
+    def create(self, request, authid=None, containerid=None, serviceid=None,
+                        mfileid=None):
         if containerid:
             container = HostingContainer.objects.get(id=containerid)
             return container.do("POST", "auths", request=request)
@@ -765,11 +878,10 @@ class AuthHandler(BaseHandler):
             dataservice = DataService.objects.get(id=serviceid)
             return dataservice.do("POST", "auths", request=request)
         elif mfileid:
-            mf = MFile.objects.get(id=mfileid)
-            return mf.do("POST", "auths", request=request)
+            mfile = MFile.objects.get(id=mfileid)
+            return mfile.do("POST", "auths", request=request)
         elif authid:
             auth = Auth.objects.get(id=authid)
             return auth.do("POST", "auths", request=request)
         else:
-            resp = rc.BAD_REQUEST
-            return resp
+            return rc.BAD_REQUEST
