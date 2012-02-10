@@ -545,77 +545,6 @@ install_mod_auth_token() {
         rm -rf mod_auth_token-1.0.5
 }
 
-
-
-
-#######################
-# install ffmpeg and update to latest
-install_ffmpeg () {
-    cd
-    apt-get -y update
-
-    # To get presets (.ff presets)
-    apt-get -y install ffmpeg
-
-    apt-get -y install build-essential git-core checkinstall yasm texi2html libfaac-dev \
-        libopencore-amrnb-dev libopencore-amrwb-dev libsdl1.2-dev libtheora-dev \
-        libvorbis-dev libx11-dev libxfixes-dev libxvidcore-dev zlib1g-dev || f_ "failed to install ffmpeg prereqs"
-
-    wget http://www.tortall.net/projects/yasm/releases/yasm-1.2.0.tar.gz || f_ "failed to get yasm"
-    tar xzvf yasm-1.2.0.tar.gz || f_ "failed to untar yasm"
-    cd yasm-1.2.0/
-    ./configure
-    make || f_ "failed to make yasm"
-    make install || f_ "failed to install yasm"
-    cd ..
-    rm -rf yasm-1.2.0
-
-    git clone git://git.videolan.org/x264 || f_ "failed to checkout x264"
-    cd x264
-    git checkout origin/stable
-    ./configure --enable-static || f_ "failed to configure x264"
-    make || f_ "failed to make x264"
-    checkinstall --pkgname=x264 --default --pkgversion="3:$(./version.sh | \
-        awk -F'[" ]' '/POINT/{print $4"+git"$5}')" --backup=no --deldoc=yes || f_ "failed to install x264"
-    cd ..
-    rm -rf x264
-
-    apt-get -y remove libmp3lame-dev
-    apt-get -y install nasm
-    cd
-    wget http://downloads.sourceforge.net/project/lame/lame/3.98.4/lame-3.98.4.tar.gz || f_ "failed to wget lame"
-    tar xzvf lame-3.98.4.tar.gz || f_ "failed to untar lame"
-    cd lame-3.98.4
-    ./configure --enable-nasm --disable-shared || f_ "failed to configure lame"
-    make || f_ "failed to make lame"
-    checkinstall --pkgname=lame-ffmpeg --pkgversion="3.98.4" --backup=no --default \
-        --deldoc=yes || f_ "failed to install lame"
-    cd ..
-    rm -rf lame-3.98.4 lame-3.98.4.tar.gz
-
-    cd
-    git clone git://git.videolan.org/ffmpeg || f_ "failed to git clone ffmpeg"
-    cd ffmpeg
-    git checkout n0.8.5
-    ./configure --enable-gpl --enable-version3 --enable-nonfree --enable-postproc \
-        --enable-libfaac --enable-libopencore-amrnb --enable-libopencore-amrwb \
-        --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid \
-        --enable-x11grab --enable-libmp3lame || f_ "failed to configure ffmpeg"
-    make || f_ "failed to make ffmpeg"
-    checkinstall --pkgname=ffmpeg --pkgversion="5:$(./version.sh)" --backup=no \
-        --deldoc=yes --default || f_ "failed to install ffmpeg"
-    hash x264 ffmpeg ffplay ffprobe
-    make tools/qt-faststart || f_ "failed to make qt-faststart"
-    checkinstall --pkgname=qt-faststart --pkgversion="$(./version.sh)" --backup=no \
-        --deldoc=yes --default install -D -m755 tools/qt-faststart /usr/local/bin/qt-faststart || f_ "failed to install qt-faststart"
-    cd ..
-    rm -rf ffmpeg
-    # Copy Presets
-    cp  /usr/share/ffmpeg/* /usr/local/share/ffmpeg/ || f_ "failed to copy ffmpeg presets"
-}
-
-install_ffmpeg || f_ "failed to install ffmpeg"
-
 #######################
 # install http server
 case $HTTP_SERVER in 
@@ -633,8 +562,6 @@ case $HTTP_SERVER in
         lighttpd) apt-get -y install lighttpd
                 ;;
 esac
-
-
 
 ##################
 # install erlang and python
@@ -794,81 +721,17 @@ cd
 mkdir mserve$$
 cd mserve$$
 
-
-
 ######################
 #Install django-south
-# import oauth
-echo "import sys
-try:
-   import south
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing django south"
-	django_south_url="http://www.aeracode.org/releases/south/south-0.7.3.tar.gz"
-	wget $django_south_url || f_ "failed to fetch django south from $django_south_url"
-	tar xfz south-0.7.3.tar.gz || f_ "failed to untar south-0.7.3.tar.gz"
-	cd  south
-
-	python setup.py install || f_ "failed to install django south"
-	cd ..
-	rm -rf south
-else
-	echo "south found"
-fi
-
-
+pip install South
 
 ######################
 #Install django-oauth
-# import oauth
-echo "import sys
-try:
-   import oauth
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing django-oauth"
-	django_oauth_url="http://bitbucket.org/david/django-oauth"
-	hg clone $django_oauth_url || f_ "failed to checkout django-auth from $django_oauth_url"
-	cd django-oauth
-	python setup.py install || f_ "failed to install django-oauth"
-	cd ..
-	rm -rf django-oauth
-else
-	echo "django-auth found"
-fi
-
+pip install django-oauth
 
 ################
 # install oauth2
-#import oauth2
-#oauth2.__version__
-echo "import sys
-try:
-   import oauth2
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing oauth2"
-	python_oauth2_url="https://github.com/simplegeo/python-oauth2.git"
-	git clone $python_oauth2_url || f_ "failed to fetch $python_oauth2_url"
-	cd python-oauth2/
-	make || f_ "failed to make python-oauth2"
-	python setup.py install || f_ "failed to install python-oauth2"
-	cd ..
-	rm -rf python-oauth2
-else
-	echo "oauth2 found"
-fi
-
+pip install oauth2
 
 #######################
 # Install django-piston
@@ -894,82 +757,15 @@ fi
 
 #######################
 # install celery
-celery_min_version="2.3.0"
-install_celery () {
-	echo "installing celery"
-        pip install Celery
-}
-
-echo "import sys
-try:
-   import celery
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	install_celery
-else
-	echo "check existing celery version"
-	celery_version=$(echo "import celery
-print celery.__version__" | python) || f_ "failed to check celery version"
-	echo "celery version found: $celery_version"
-	
-	if [[ "$celery_version" < "$celery_min_version" ]] ; then
-		echo "found celery version is old, updating celery"
-		install_celery
-	fi	
-fi
+pip install Celery
 
 #######################
 # Install django-celery
-#from distutils.version import LooseVersion as V
-#v1 = V('FunkyVersion')
-#v2 = V('GroovieVersion')
-#v1 > v2
-# import djcelery
-echo "import sys
-try:
-   import djcelery
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing django-celery"
-	django_celery_url="http://pypi.python.org/packages/source/d/django-celery/django-celery-2.4.2.tar.gz"
-	wget $django_celery_url || f_ "failed to fetch django-celery from $django_celery_url"
-	tar xfz django-celery-2.4.2.tar.gz || f_ "failed to untar django-celery-2.4.2.tar.gz"
-	cd  django-celery-2.4.2
-	python setup.py install || f_ "failed to install django-celery"
-	cd ..
-	rm -rf django-celery-2.4.2
-else
-	echo "django-celery found"
-fi
-
+pip install django-celery
 
 #########################
 # Install django-request
-# import request
-echo "import sys
-try:
-   import request
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing django-request"
-	django_request_url="https://github.com/kylef/django-request.git"
-	git clone $django_request_url || f_ "failed to fetch django-request from $django_request_url"
-	cd django-request
-	python setup.py install || f_ "failed to install django-request"
-	cd ..
-	rm -rf django-project
-else
-	echo "django-request found"
-fi
+pip install django-request
 
 ############################
 # Install django-openid-auth
