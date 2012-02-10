@@ -32,9 +32,6 @@ f_ () {
 	exit 2
 }
 
-
-#######################
-# install ffmpeg and update to latest
 #######################
 # install ffmpeg and update to latest
 install_ffmpeg () {
