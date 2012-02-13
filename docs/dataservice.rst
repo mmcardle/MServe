@@ -6,6 +6,3 @@ MServe DataService API
 
 .. automodule:: dataservice.handlers
     :members:
-
-.. automodule:: dataservice.urls
-    :members:
