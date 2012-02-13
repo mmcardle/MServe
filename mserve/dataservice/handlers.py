@@ -24,7 +24,8 @@ methods onto CRUD methods
 +------------+------------+
 
 The methods that are allowed in a handler are specified in the 'allowed_methods'
-field.
+field. If a method is specified in 'allowed_methods' but is not implemented
+in the class, it will be handled by the BaseHandler piston class.
 
 A handler is called when a pattern in urls.py is mapped onto a handler and the
 variables from the pattern are passed to it e.g. (?P<containerid>[^/]+) would
@@ -98,7 +99,18 @@ import logging
 
 
 class ProfileHandler(BaseHandler):
-    """The piston handlers for the MServeProfile class"""
+    """
+    
+    The piston handlers for the :class:`.MServeProfile` class
+    
+    This allows a user to get their MServeProfile, with contains references to
+    auth capabilites for MFiles, MFolders, DataServices and auths owned by that
+    user. 
+    
+    If a user does not have a MServeProfile this is caught via 'DoesNotExist'
+    and one is created.
+
+    """
     allowed_methods = ('GET', 'PUT')
     model = MServeProfile
     fields = (('user', ()), 'mfiles', 'mfolders', 'myauths', ('dataservices',
@@ -119,7 +131,17 @@ class ProfileHandler(BaseHandler):
 
 
 class ServiceRequestHandler(BaseHandler):
-    """The piston handlers for the ServiceRequest class"""
+    """
+    
+    The piston handlers for the :class:`.ServiceRequest` class
+
+    A ServiceRequest object is created by a regular user via POST.
+    A User can check the status of the request with a GET.
+    A staff member can update the request  to either approved 'A' or rejected
+    'R' via a 'PUT'
+    The user that made the request can delete it with a DELETE
+
+    """
     allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = ServiceRequest
     fields = ('id', 'name', 'reason', 'state', 'status', 'time', 'ctime',
@@ -239,7 +261,15 @@ class ServiceRequestHandler(BaseHandler):
 
 
 class HostingContainerHandler(BaseHandler):
-    """The piston handler for the HostingContainer class"""
+    """
+    
+    The piston handler for the :class:`.HostingContainer` class
+
+    A HostingContainer object is created by a staff member with a POST.
+    It can be updated with a PUT, read with a GET and deleted with DELETE.
+    Only valid staff members can call any of the methods on hosting containers.
+
+    """
     allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = HostingContainer
     fields = ('name', 'id', 'created', 'default_profile', 'default_path',
@@ -294,7 +324,16 @@ class HostingContainerHandler(BaseHandler):
 
 
 class DataServiceHandler(BaseHandler):
-    """The piston handler for the DataService class"""
+    """
+    
+    The piston handler for the :class:`.DataService` class
+
+    A DataService object is created by a staff member with a POST.
+    It can be updated with a PUT, read with a GET and deleted with DELETE.
+    Only valid staff members can call any of the methods on data services.
+
+
+    """
     allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = DataService
     fields = ('name', 'id', 'created', 'reportnum', 'starttime', 'endtime',
@@ -379,7 +418,15 @@ class DataServiceHandler(BaseHandler):
 
 
 class SubServiceHandler(BaseHandler):
-    """The piston handler for the subservices"""
+    """
+    
+    The piston handler for the subservices
+
+    This handler is not tied to a class, but allows creation of a DataService
+    object that shares data with another DataService. This relationship will be
+    held via a parent relationship.
+
+    """
     allowed_methods = ('GET', 'POST')
 
     def read(self, request, containerid=None):
@@ -409,7 +456,15 @@ class SubServiceHandler(BaseHandler):
 
 
 class DataServiceProfileHandler(BaseHandler):
-    """The piston handler for the DataServiceProfile class"""
+    """
+    
+    The piston handler for the :class:`.DataServiceProfile` class
+
+    This handler allows the reading of the DataServiceProfile objects for a
+    DataService. Profiles can be used to control how a service operates,
+    examples are 'default' and 'transcode'
+
+    """
     allowed_methods = ('GET')
     model = DataServiceProfile
     fields = ('name', 'id', 'workflows')
@@ -420,14 +475,28 @@ class DataServiceProfileHandler(BaseHandler):
 
 
 class DataServiceWorkflowHandler(BaseHandler):
-    """The piston handler for the DataServiceWorkflow class"""
+    """
+    
+    The piston handler for the :class:`.DataServiceWorkflow` class
+
+    This allows data service workflows to be read with a 'GET' workflows
+    examples are 'ingest', 'update' and 'access'.
+
+    """
     allowed_methods = ('GET')
     model = DataServiceWorkflow
     fields = ('name', 'id', 'tasksets', )
 
 
 class DataServiceTaskSetHandler(BaseHandler):
-    """The piston handler for the DataServiceTaskSet class"""
+    """
+    
+    The piston handler for the :class:`.DataServiceTaskSet` class
+
+    DataServiceTaskSets can be created, updated, read and deleted with this
+    handler.
+
+    """
     allowed_methods = ('GET', 'PUT', 'POST', 'DELETE')
     model = DataServiceTaskSet
     fields = ('name', 'id', 'tasks', 'order')
@@ -476,7 +545,14 @@ class DataServiceTaskSetHandler(BaseHandler):
 
 
 class DataServiceTaskHandler(BaseHandler):
-    """The piston handler for the DataServiceTask class"""
+    """
+    
+    The piston handler for the :class:`.DataServiceTask` class
+
+    DataServiceTasks can be created, updated, read and deleted with this
+    handler.
+
+    """
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = DataServiceTask
     fields = ('name', 'task_name', 'id', 'condition', 'args')
@@ -525,7 +601,15 @@ class DataServiceTaskHandler(BaseHandler):
 
 
 class BackupFileHandler(BaseHandler):
-    """The piston handler for the BackupFile class"""
+    """
+    
+    The piston handler for the :class:`.BackupFile` class
+
+    BackupFiles are used internally by MServe for replication. This handler
+    allows saving, upodating and reading of a BackupFile object and the related
+    file.
+
+    """
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = BackupFile
 
@@ -558,7 +642,13 @@ class BackupFileHandler(BaseHandler):
 
 
 class MFolderHandler(BaseHandler):
-    """The piston handler for the MFolder class"""
+    """
+    
+    The piston handler for the :class:`.MFolder` class
+
+    This allows reading of a MFolder objects with a GET
+
+    """
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = MFolder
     fields = ('name', 'id', 'parent')
@@ -576,7 +666,19 @@ class MFolderHandler(BaseHandler):
 
 
 class MFileHandler(BaseHandler):
-    """The piston handler for the MFile class"""
+    """
+    
+    The piston handler for the :class:`.MFile` class
+    
+    MFile objects are created with a POST to this handler. This handler also
+    manages creating and updating of the thumbnail, poster and proxy objects, 
+    which are mainly called by the backend during the processing of workflows.
+    
+    Empty MFiles objects can also be created with an empty 'file' parameter 
+    in the POST
+    
+    """
+    # TODO: Check this logic - HttpResponseNotAllowed(['POST'])?
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = MFile
     fields = ('name', 'id', 'file', 'checksum', 'size', 'mimetype', 'thumb',
@@ -587,6 +689,7 @@ class MFileHandler(BaseHandler):
     def read(self, request, mfileid=None, serviceid=None,
                 authid=None, field=None):
         if field:
+            # TODO: Check this logic
             return HttpResponseNotAllowed(['POST'])
         if mfileid:
             return self.model.objects.get(id=mfileid).do("GET")
@@ -693,7 +796,7 @@ class MFileHandler(BaseHandler):
 
 
 class RemoteMServeServiceHandler(BaseHandler):
-    """The piston handler for the RemoteMServeService class"""
+    """The piston handler for the :class:`.RemoteMServeService` class"""
     allowed_methods = ('GET')
     model = RemoteMServeService
 
@@ -705,7 +808,12 @@ class RemoteMServeServiceHandler(BaseHandler):
 
 
 class MFileContentsHandler(BaseHandler):
-    """A piston handler to handle gettings the file field of an MFile"""
+    """
+    
+    A piston handler to handle reading the file field of an MFile or an
+    Auth capability
+
+    """
     allowed_methods = ('GET')
 
     def read(self, request, mfileid=None, authid=None):
@@ -722,7 +830,14 @@ class MFileContentsHandler(BaseHandler):
 
 
 class UsageHandler(BaseHandler):
-    """The piston handler for the Usage class"""
+    """
+    
+    The piston handler for the :class:`.Usage` class
+
+    This handler returns usage recorded against HostingContainers, DataServices
+    MFiles or Auth capabilites.
+
+    """
     allowed_methods = ('GET')
     model = Usage
     fields = ('squares', 'total', 'nInProgress', 'metric',
@@ -746,7 +861,12 @@ class UsageHandler(BaseHandler):
 
 
 class UsageSummaryHandler(BaseHandler):
-    """The piston handler for the usage summarys"""
+    """
+
+    The piston handler for the usage summarys, a usage summary os an aggregated
+    report of usage for a particular object.
+
+    """
     allowed_methods = ('GET')
 
     def read(self, request, containerid=None, serviceid=None,
@@ -777,7 +897,13 @@ class UsageSummaryHandler(BaseHandler):
 
 
 class ManagementPropertyHandler(BaseHandler):
-    """The piston handler for the ManagementProperty class"""
+    """
+    
+    The piston handler for the :class:`.ManagementProperty` class
+
+    Management properties can be created, updated and read using this handler.
+
+    """
     allowed_methods = ('GET', 'PUT', 'POST')
     model = ManagementProperty
     fields = ("value", "property", "id", "values")
@@ -844,7 +970,15 @@ class ManagementPropertyHandler(BaseHandler):
 
 
 class AuthHandler(BaseHandler):
-    """The piston handler for the Auth class"""
+    """
+    
+    The piston handler for the :class:`.Auth` class
+
+    The Auth Handler returns a list of Auth capabilites for an HostingContainer
+    DataService, MFile or another Auth object. For examples the handler would
+    return "servicecustomer" and "serviceadmin" for a DataService object.
+
+    """
     allowed_methods = ('GET', 'POST')
     model = Auth
     fields = ('authname', 'browse_url', 'id', 'auth_set', 'urls', 'methods',

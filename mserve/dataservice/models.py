@@ -119,7 +119,7 @@ for task in tasks.regular().keys():
 
 
 class MServeProfile(models.Model):
-    '''A Profile for a MServe user '''
+    '''A Profile for a MServe user, holding objects this user has access to'''
     user = models.ForeignKey(User, unique=True)
     bases = models.ManyToManyField('NamedBase', related_name='bases',
         null=True, blank=True)
@@ -127,14 +127,14 @@ class MServeProfile(models.Model):
         null=True, blank=True)
 
     def myauths(self):
-        '''Returns a users auths'''
+        '''Returns auths this user has access to'''
         ret = []
         for auth in self.auths.all():
             ret.append(Auth.objects.get(id=auth.id))
         return set(ret)
 
     def mfiles(self):
-        '''Returns a users mfiles'''
+        '''Returns mfiles this user has access to'''
         ret = []
         for base in self.bases.all():
             if utils.is_mfile(base):
@@ -147,7 +147,7 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def dataservices(self):
-        '''Returns a users data services'''
+        '''Returns data services this user has access to'''
         ret = []
         for base in self.bases.all():
             if utils.is_service(base):
@@ -155,7 +155,7 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def mfolders(self):
-        '''Returns a users mfolders'''
+        '''Returns mfolders this user has access to'''
         ret = []
         for base in self.bases.all():
             if utils.is_mfolder(base):
@@ -166,7 +166,7 @@ class MServeProfile(models.Model):
         return set(ret)
 
     def containers(self):
-        '''Returns a users containers'''
+        '''Returns containers this user has access to'''
         ret = []
         for base in self.bases.all():
             if utils.is_container(base):
@@ -187,23 +187,28 @@ SERVICEREQUEST_STATES = (
 class ServiceRequest(models.Model):
     ''' A request for a service from a user '''
     name = models.CharField(max_length=200)
+    """Requested name of the service"""
     reason = models.TextField()
+    """Reason for the request"""
     profile = models.ForeignKey('MServeProfile', null=True, blank=True,
                                         related_name="servicerequests")
+    """Profile of the user making the request"""
     state = models.CharField(max_length=1, choices=SERVICEREQUEST_STATES,
         default='P')
+    """Current state of the request"""
     time = models.DateTimeField(auto_now_add=True)
+    """Time the request was made"""
 
     class Meta:
         '''set ordering to time'''
         ordering = ["-time"]
 
     def ctime(self):
-        ''' return the ctime for this request '''
+        ''' Return the time for this request was made'''
         return self.time.ctime()
 
     def status(self):
-        ''' return the long version of the status '''
+        '''Returns the long version of the status '''
         for index, word in SERVICEREQUEST_STATES:
             if index == self.state:
                 return word
@@ -214,31 +219,29 @@ class ServiceRequest(models.Model):
 
 
 class Usage(models.Model):
-    """
-    base - The base object this report refers to,
-    metric - The metric this report is recording,
-    time - Time first recorded (shouldnt change),
-    reports - Number of reports,
-    total - Sum of report values,
-    squares - Sum of squares of report values,
-    rateTime - Time the rate last changed,
-    rate - The current rate (change in value per second),
-    rateCumulative - Cumulative unreported usage before rateTime.
-    """
+    """A django model to record usage of a resource"""
     base = models.ForeignKey('NamedBase', null=True, blank=True)
+    "The base object this report refers to"
     metric = models.CharField(max_length=4096)
+    "The metric this report is recording"
     time = models.DateTimeField(auto_now_add=True)
+    "Time first recorded (shouldnt change)"
     reports = models.BigIntegerField(default=0)
+    "Number of reports"
     total = models.FloatField(default=0)
+    "Sum of report values"
     squares = models.FloatField(default=0)
     nInProgress = models.BigIntegerField(default=0)
     rateTime = models.DateTimeField()
+    "Time the rate last changed"
     rate = models.FloatField()
+    "The current rate (change in value per second)"
     rateCumulative = models.FloatField()
+    "Cumulative unreported usage before rateTime"
 
     @staticmethod
     def get_usage_plots(request, baseid=None):
-        ''' Return jqplot json for usage '''
+        ''' Return jqplot json for usage - used by html views '''
         request_types = request.GET
         plots = []
         base = None
@@ -297,7 +300,7 @@ class Usage(models.Model):
     
     @staticmethod
     def get_full_usagesummary():
-        ''' Return all the usage '''
+        ''' Return all the usage for the whole service - expensive '''
         usages = Usage.objects.all()
         usagesummary = Usage.usages_to_summary(usages)
         from jobservice.models import Job
@@ -441,12 +444,15 @@ class Usage(models.Model):
         super(Usage, self).save(*args, **kwargs)
 
     def fmt_ctime(self):
+        """Returns the ctime of the time field"""
         return self.time.ctime()
 
     def fmt_rtime(self):
+        """Returns the ctime of the rateTime field"""
         return self.rateTime.ctime()
 
     def copy(self, base, save=False):
+        """Make a new copy of this usage object"""
         newusage = Usage(base=base, metric=self.metric, total=self.total,
                     reports=self.reports, nInProgress=self.nInProgress,
                     rate=self.rate, rateTime=self.rateTime,
@@ -463,8 +469,14 @@ class Usage(models.Model):
 
 
 class Base(models.Model):
-    id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
+    """
 
+    The Base object is an abstract objects that hold functionality common to
+    any resource
+
+    """
+    id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
+    """The unique unguessable id for the resource"""
     methods = []
     urls = {
         "auths": [],
@@ -472,12 +484,15 @@ class Base(models.Model):
         "usages": []}
 
     def getmethods(self):
+        """Returns the allowed methods for this object - default []"""
         return self.methods
 
     def geturls(self):
+        """Returns the allowed urls for this object"""
         return self.urls
 
     def get_real_base(self):
+        """Gets the super object that this base refers to"""
         if utils.is_container(self):
             return HostingContainer.objects.get(id=self.id)
         if utils.is_service(self):
@@ -497,6 +512,10 @@ class Base(models.Model):
         return Usage.usages_to_summary(usages)
 
     def check(self, url, method):
+        """
+        Validation check to make sure this base allows the method 'method'
+        against the url 'url'
+        """
         if url == None:
             if method in self.methods:
                 return True, None
@@ -512,6 +531,10 @@ class Base(models.Model):
                 return False, HttpResponseNotFound()
 
     def do(self, method, url=None, *args, **kwargs):
+        """
+        Main method called by the handlers to perform operations of objects
+        Must pass the 'check' method in order for the operation to continue
+        """
         if url == None:
             if method not in ["GET", "PUT", "POST", "DELETE"]:
                 return HttpResponseForbidden()
@@ -670,6 +693,10 @@ class Base(models.Model):
         return rc.NOT_FOUND
 
     def clean_base(self, authid):
+        """
+        Method should be overriden to return a 'cleaned' version of this
+        object for serialization to the user, removing any ids.
+        """
         logging.info("Override this clean method %s", self)
         return {}
 
@@ -678,12 +705,22 @@ class Base(models.Model):
 
 
 class NamedBase(Base):
+    """
+    NamedBase is a concrete class that all resources inheirit from. It hold the
+    usage field where all usage against a resource is recorded.
+    """
     metrics = []
+    """A list of metric to report - default [] """
     initial_usage_recorded = models.BooleanField(default=False)
+    """Boolean to record if initial usage has been recorded"""
     name = models.CharField(max_length=200)
+    """The name of the resource"""
     usages = models.ManyToManyField("Usage")
+    """A django many-to-many field to hold :class:`.Usage` """
     reportnum = models.IntegerField(default=1)
+    """A counter for the report number, incremented every report"""
     created = models.DateTimeField(auto_now_add=True)
+    """When this object was created"""
 
     class Meta:
         ordering = ["-created"]
@@ -719,6 +756,7 @@ class NamedBase(Base):
             self.update_usage()
 
     def update_usage(self):
+        """Trigger usage has changed, updated usage reports"""
         for metric in self.metrics:
             #  Recorded updated values
             val = self.get_updated_value_for_metric(metric)
@@ -739,19 +777,19 @@ class NamedBase(Base):
         super(NamedBase, self).save()
 
     def get_value_for_metric(self, metric):
-        '''Override this method to report usage for metric'''
+        '''Override this method to report value for metric'''
         return None
 
     def get_rate_for_metric(self, metric):
-        '''Override this method to report usage for metric'''
+        '''Override this method to report rate for metric'''
         return None
 
     def get_updated_value_for_metric(self, metric):
-        '''Override this method to report usage for metric'''
+        '''Override this method to report updated value for metric'''
         return None
 
     def get_updated_rate_for_metric(self, metric):
-        '''Override this method to report usage for metric'''
+        '''Override this method to report updated rate for metric'''
         return None
 
     def _delete_usage_(self):
@@ -763,9 +801,17 @@ class NamedBase(Base):
 
 
 class HostingContainer(NamedBase):
-    default_profile = models.CharField(max_length=200, blank=True, null=True)
-    default_path = models.CharField(max_length=200, blank=True, null=True)
+    """
 
+    A Hosting Container is an object to hold groups of services in a
+    manageable container. It provides defaults for profiles and storage
+    locations
+
+    """
+    default_profile = models.CharField(max_length=200, blank=True, null=True)
+    """The default profile to create services with"""
+    default_path = models.CharField(max_length=200, blank=True, null=True)
+    """The default path to store data"""
     methods = ["GET", "POST", "PUT", "DELETE"]
     urls = {"auths": ["GET", "PUT", "POST", "DELETE"],
         "properties": ["GET", "PUT"],
@@ -776,14 +822,24 @@ class HostingContainer(NamedBase):
         super(HostingContainer, self).__init__(*args, **kwargs)
         self.metrics = CONTAINER_METRICS
 
-    def url(self): return reverse('hostingcontainer', args=[self.id])
-    def stats_url(self): return reverse('stats', args=[self.id])
-    def usage_url(self): return reverse('hostingcontainer_usagesummary',
-                                                            args=[self.id])
-    def properties_url(self): return reverse('hostingcontainer_props',
-                                                            args=[self.id])
+    def url(self):
+        """The REST API url for this Container"""
+        return reverse('hostingcontainer', args=[self.id])
+
+    def stats_url(self):
+        """The REST API url for stats for this container - used by html views"""
+        return reverse('stats', args=[self.id])
+
+    def usage_url(self):
+        """The REST API url for usage for this container"""
+        return reverse('hostingcontainer_usagesummary', args=[self.id])
+
+    def properties_url(self):
+        """The REST API url for properties for this container"""
+        return reverse('hostingcontainer_props', args=[self.id])
 
     def thumbs(self):
+        """A list of thumbnail images representing this container"""
         thumbs = []
         for service in self.dataservice_set.all()[:4]:
             for mfile in service.mfile_set.exclude(thumb__exact='')[:4]:
@@ -794,18 +850,21 @@ class HostingContainer(NamedBase):
         return thumbs
 
     def get(self, url, *args, **kwargs):
+        """Perform a GET on this container"""
         if url == "services":
             return self.dataservice_set.all()
         if not url:
             return self
 
     def post(self, url, *args, **kwargs):
+        """Perform a POST on this container"""
         if url == "services":
             return self.create_data_service(kwargs['name'])
         else:
             return None
 
     def put(self, url, *args, **kwargs):
+        """Perform a PUT on this container"""
         logging.info("PUT CONTAINER %s %s", url, args)
         if url == None:
             from forms import HostingContainerForm
@@ -821,6 +880,7 @@ class HostingContainer(NamedBase):
         return HttpResponseNotFound()
 
     def get_usage(self):
+        """Get all usage for this container, including child resources"""
         serviceids = [service.id for service in self.dataservice_set.all()]
         mfileids = [mfile.id for service in self.dataservice_set.all()
                             for mfile in service.mfile_set.all()]
@@ -831,6 +891,7 @@ class HostingContainer(NamedBase):
         return usages
 
     def get_usage_summary(self):
+        """Get a usage summary for this container, including child resources"""
         from jobservice.models import Job
         serviceids = [service.id for service in self.dataservice_set.all()]
         mfileids = [mfile.id for service in self.dataservice_set.all()
@@ -845,24 +906,28 @@ class HostingContainer(NamedBase):
         return summary
 
     def jobs(self):
+        """Get all jobs under this container"""
         from jobservice.models import Job
         dataservices = self.dataservice_set.all()
         mfiles = MFile.objects.filter(service__in=dataservices).all()
         return Job.objects.filter(mfile__in=mfiles)
 
     def mfiles(self):
+        """Get all mfiles under this container"""
         dataservices = self.dataservice_set.all()
         mfiles = MFile.objects.filter(service__in=dataservices).all()
         return mfiles
 
     @staticmethod
     def create_container(name):
+        """Create a new HostingContainer"""
         hostingcontainer = HostingContainer(name=name)
         hostingcontainer.save()
         return hostingcontainer
 
     def create_data_service(self, name, duplicate_of=None,
                                     starttime=None, endtime=None):
+        """Create a new dataservice under this container"""
 
         dataservice = DataService(name=name, container=self,
                                     starttime=starttime, endtime=endtime)
@@ -981,28 +1046,36 @@ class HostingContainer(NamedBase):
 
 
 class DataServiceProfile(models.Model):
+    """A DataServiceProfile holds workflows for a dataservice"""
     service = models.ForeignKey('DataService', related_name="profiles")
+    """The :class:`.DataService` that this profile relates to"""
     name = models.CharField(max_length=200)
+    """The name of the profile"""
 
     def __unicode__(self):
         return "Profile %s for %s" % (self.name, self.service.name)
 
 
 class DataServiceWorkflow(models.Model):
+    """A DataServiceWorkflow holds an ordered set of tasksets to be executed"""
     profile = models.ForeignKey(DataServiceProfile, related_name="workflows")
+    """The :class:`.DataServiceProfile` that this workflow relates to"""
     name = models.CharField(max_length=200)
+    """The name of the workflow"""
     
     def __unicode__(self):
         return "Workflow %s for %s" % (self.name, self.profile.name)
 
     def create_workflow_job(self, mfileid):
+        """Start a workflow job with the initial task of this workflow"""
+        # TODO - Rename Method
         initial = self.tasksets.get(order=0)
         if initial is None:
             raise Exception("Workflow has no initial taskset to run")
         return self.continue_workflow_job(mfileid, initial.id)
 
     def continue_workflow_job(self, mfileid, taskid):
-
+        """Continue workflow job with the next task of this workflow,taskid"""
         thistask = self.tasksets.get(id=taskid)
         if thistask is None:
             raise Exception("Workflow %s has no taskset to run", self.name)
@@ -1016,7 +1089,8 @@ class DataServiceWorkflow(models.Model):
         job.taskset_id = tsr.taskset_id
         job.save()
 
-        _tasks = self.tasksets.filter(order__gt=thistask.order).order_by("order")
+        _tasks = self.tasksets.filter(order__gt=thistask.order)\
+                                                .order_by("order")
         if len(_tasks) > 0:
             continue_workflow_taskset.delay(mfileid, job.id, _tasks[0].id )
         else:
@@ -1025,14 +1099,19 @@ class DataServiceWorkflow(models.Model):
 
 
 class DataServiceTaskSet(models.Model):
+    """A DataServiceTaskSet holds a set of tasks to be executed"""
     name = models.CharField(max_length=200)
+    """The name of the taskset"""
     workflow = models.ForeignKey(DataServiceWorkflow, related_name="tasksets")
+    """The :class:`.DataServiceWorkflow` that this task set relates to"""
     order = models.IntegerField()
+    """The order of the task set"""
 
     class Meta:
         ordering = ["order"]
 
     def create_workflow_taskset(self, mfileid, job):
+        """Create a set of tasks, add them to the queue to be executed"""
         in_tasks = filter(lambda t : t != None ,
                     [_task.create_workflow_task(mfileid, job)
                         for _task in self.tasks.all()])
@@ -1043,13 +1122,20 @@ class DataServiceTaskSet(models.Model):
 
 
 class DataServiceTask(models.Model):
+    """A DataServiceTask holds a description of a single task to be executed"""
     name = models.CharField(max_length=200)
+    """The name of the task"""
     taskset = models.ForeignKey(DataServiceTaskSet, related_name="tasks")
+    """The :class:`.DataServiceTaskSet` that this task relates to"""
     task_name = models.CharField(max_length=200, choices=TASK_CHOICES)
+    """The name of the celery registered task"""
     condition = models.CharField(max_length=200, blank=True, null=True)
+    """A condition to evaluate to see if the task is run"""
     args = models.TextField(blank=True, null=True)
+    """Arguments to be passed to the task execution"""
 
     def create_workflow_task(self, mfileid, job):
+        """Creates a celery executable task for this DataServiceTask"""
         task_name = self.task_name
         logging.debug("Processing task %s ", task_name)
         mfile = MFile.objects.get(id=mfileid)
@@ -1101,12 +1187,26 @@ class DataServiceTask(models.Model):
         return "Task %s for %s" % (self.task_name, self.taskset.name)
 
 class DataService(NamedBase):
+    """
+    A DataService hold a logic structure of :class:`.MFile` objects and
+    :class:`.MFolder` objects that represent a file system.
+
+    A DataService can be in one of many :class:`DataServiceProfile`,
+    each of which has different tasks that are run upon ingest, update and
+    access of Mfiles
+
+    """
     container = models.ForeignKey(HostingContainer, blank=True, null=True)
+    """The :class:`.HostingContainer` that this task relates to"""
     parent = models.ForeignKey('DataService', blank=True, null=True,
                                     related_name="subservices")
+    """The :class:`.DataService` that is this services parent if this a subservice"""
     starttime = models.DateTimeField(blank=True, null=True)
+    """Start time of the service"""
     endtime = models.DateTimeField(blank=True, null=True)
+    """End time of the service"""
     priority = models.BooleanField(default=False)
+    """If the service is in priority mode"""
     methods = ["GET", "POST", "PUT", "DELETE"]
     urls = {
         "auths": ["GET", "PUT", "POST", "DELETE"],
@@ -1119,17 +1219,31 @@ class DataService(NamedBase):
         }
 
     def url(self):
+        """The REST API url for this DataService"""
         return reverse('dataservice', args=[self.id])
+
     def webdav_url(self):
+        """The WebDAVurl for this Container"""
         return reverse('webdav', args=[self.id])
+
     def stats_url(self):
+        """The REST API url for stats for this service, used by html views"""
         return reverse('stats', args=[self.id])
+
     def usage_url(self):
+        """The REST API url for usage for this service"""
         return reverse('dataservice_usagesummary', args=[self.id])
+
     def properties_url(self):
+        """The REST API url for properties for this container"""
         return reverse('dataservice_props', args=[self.id])
 
+    def subservices_url(self):
+        """The REST API url for subservice for this container"""
+        return reverse('dataservice_subservices', args=[self.id])
+
     def get_folder_for_paths(self, paths):
+        """Tries to find a folder at the specified paths ['path','to','folder'] """
         try:
             if len(paths) > 0:
                 foldername = paths[0]
@@ -1144,6 +1258,7 @@ class DataService(NamedBase):
             raise e
 
     def get_file_for_paths(self, paths):
+        """Tries to find a file at the specified paths ['path','to','file'] """
         try:
             if len(paths) > 0:
                 name = paths[0]
@@ -1160,6 +1275,7 @@ class DataService(NamedBase):
             raise e
 
     def folder_structure(self):
+        """Returns the folder structure for the UI to display"""
         return self._folder_structure(self.id)
 
     def _folder_structure(self, id=None):
@@ -1199,7 +1315,7 @@ class DataService(NamedBase):
         self.metrics = SERVICE_METRICS
 
     def get_usage(self):
-
+        """Returns all usage for this service, including child resources"""
         ids = [mfile.id for mfile in self.mfile_set.all()] \
                 + [job.id for job in self.jobs()] + [self.id]
         thisusage = Usage.objects.filter(base__in=ids)
@@ -1229,6 +1345,7 @@ class DataService(NamedBase):
         return combine | thisusage
 
     def get_usage_summary(self):
+        """Returns a usage summary for this service, including child resources"""
         ids = [mfile.id for mfile in self.mfile_set.all()] \
                 + [job.id for job in self.jobs()] + [self.id]
         usages = Usage.objects.filter(base__in=ids)
@@ -1236,10 +1353,9 @@ class DataService(NamedBase):
         summary.extend(Usage.get_job_usagesummary(self.jobs()))
         return summary
 
-    def subservices_url(self):
-        return reverse('dataservice_subservices', args=[self.id])
 
     def create_subservice(self, name, save=True):
+        """Create a subservice with this service as the parent"""
         if self.parent:
             service = self.parent.create_subservice(name, save=False)
             service.parent = self
@@ -1253,6 +1369,7 @@ class DataService(NamedBase):
             return HttpResponseBadRequest()
 
     def thumbs(self):
+        """A list of 4 thumbnail images representing this service"""
         thumbs = []
         for mfile in self.mfile_set.exclude(thumb__exact='')[:4]:
             thumbs.append(mfile.thumburl())
@@ -1262,6 +1379,7 @@ class DataService(NamedBase):
         return thumbs
 
     def get(self, url, *args, **kwargs):
+        """Perform a GET on this service"""
         if url == "mfiles":
             return self.mfile_set.all()
         if url == "mfolders":
@@ -1277,14 +1395,17 @@ class DataService(NamedBase):
             return self
 
     def jobs(self):
+        """Returns all jobs for this service"""
         from jobservice.models import Job
         mfiles = MFile.objects.filter(service=self).all()
         return Job.objects.filter(mfile__in=mfiles)
 
     def mfiles(self):
+        """Returns all MFiles for this service"""
         return self.mfile_set.all()
 
     def check_times(self):
+        """Check if now() is in this service start and end times"""
         now = datetime.datetime.now()
         if (self.starttime and now < self.starttime)\
                 or (self.endtime and now > self.endtime):
@@ -1294,6 +1415,7 @@ class DataService(NamedBase):
         return None
 
     def post(self, url, *args, **kwargs):
+        """Perform a POST on this service"""
         # TODO : Jobs
         logging.info("%s %s ", args, kwargs)
 
@@ -1330,6 +1452,7 @@ class DataService(NamedBase):
                 subservice.__duplicate__(mfile)
 
     def put(self, url, *args, **kwargs):
+        """Perform a PUT on this service"""
         if self.parent:
             return self.parent.put(url, *args, **kwargs)
         if "request" in kwargs:
@@ -1353,6 +1476,7 @@ class DataService(NamedBase):
             return 1
 
     def get_profile(self):
+        """Get the current profile for this service"""
         if self.parent:
             return self.parent.get_profile()
         try:
@@ -1367,6 +1491,7 @@ class DataService(NamedBase):
         super(DataService, self).save(*args, **kwargs)
 
     def clean_base(self, authid):
+        """Called by an Auth to return a cleaned version of this service"""
         servicedict = {}
         servicedict["name"] = self.name
         servicedict["mfile_set"] = self.mfile_set
@@ -1385,6 +1510,7 @@ class DataService(NamedBase):
             usage_store._stoprecording_(usage, obj=self.container)
 
     def create_mfolder(self, name, parent=None, duplicate_of=None):
+        """Create a MFolder at this service with optional parent"""
         if self.parent:
             return self.parent.create_mfolder(name, parent=None,
                                 duplicate_of=duplicate_of)
@@ -1399,6 +1525,8 @@ class DataService(NamedBase):
             return folder
 
     def get_unique_name(self, name, folder=None):
+        """Get a unique name for an new MFile object"""
+        # TODO: get race conditions here?
         # Check for duplicate name
         fn, ext = os.path.splitext(name)
         done = False
@@ -1415,7 +1543,14 @@ class DataService(NamedBase):
 
     def create_mfile(self, name, file=None, request=None, response=None,
                         post_process=True, folder=None, duplicate_of=None):
+        """
 
+        Create a MFile at this service from the file object or the request
+        object. The boolean post_process will make the 'ingest' workflow
+        run or not, which can be used for partial content uploads. The folder
+        objects will create the file in a specific MFolder.
+
+        """
         logging.info("Create Mfile %s", self)
         service = self
         name = self.get_unique_name(name, folder)
@@ -1463,20 +1598,33 @@ class DataService(NamedBase):
 
 
 class RemoteMServeService(models.Model):
+    """
+
+    A RemoteMServeService is a link to another MServe that a user can use with
+    the OAuth protocol to transfer files.
+
+    """
     url = models.URLField()
+    """The url of the remote MServe service"""
     name = models.CharField(max_length=200)
+    """The name of the remote MServe service"""
 
     def __unicode__(self):
         return "MServe : %s" % (self.name)
 
 
 class MFolder(NamedBase):
+    """A MFolder is a representation of a file system folder in a service"""
     service = models.ForeignKey(DataService)
+    """The :class:`.DataService` that this folder belongs to"""
     parent = models.ForeignKey('self', null=True, blank=True)
+    """The parent :class:`.MFolder`"""
     duplicate_of = models.ForeignKey('MFolder', null=True,
                                     blank=True, related_name='duplicated_from')
+    """The :class:`.MFolder` if this folder is a duplicate of another"""
 
     def get_folder_for_paths(self, paths):
+        """Tries to find a folder at the specified paths ['path','to','folder'] """
         try:
             if len(paths) > 0:
                 foldername = paths[0]
@@ -1492,6 +1640,7 @@ class MFolder(NamedBase):
             return None
 
     def get_file_for_paths(self, paths):
+        """Tries to find a file at the specified paths ['path','to','file'] """
         try:
             if len(paths) > 0:
                 name = paths[0]
@@ -1509,6 +1658,7 @@ class MFolder(NamedBase):
             return None
 
     def duplicate(self, name, save=True, service=None):
+        """Make a duplicate of the MFolder and sub folder structure"""
         if service:
             new_mfolder = service.create_mfolder(name,
                                             duplicate_of=self)
@@ -1521,7 +1671,7 @@ class MFolder(NamedBase):
         return new_mfolder
 
     def make_copy(self, name, parent):
-        
+        """Makes a copy of the MFolder anf entire sub folder structure"""
         if name == None:
             name = self.name
 
@@ -1545,6 +1695,7 @@ class MFolder(NamedBase):
         return "MFolder: %s " % self.name
 
     def get_rel_path(self):
+        """Gets the relative path for the mfolder in the current hierarchy"""
         if self.parent is not None:
             return os.path.join(self.parent.get_rel_path(), self.name)
         else:
@@ -1557,16 +1708,25 @@ class MFolder(NamedBase):
 
 
 class MFile(NamedBase):
+    """
+    An MFile represents a single file on the system at a service
+    """
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     empty = models.BooleanField(default=False)
+    """If the file is empty"""
     service = models.ForeignKey(DataService)
+    """The :class:`.DataService` that this file belongs to"""
     folder = models.ForeignKey(MFolder, null=True)
+    """The :class:`.MFolder` that contains this MFile"""
     file = models.FileField(upload_to=utils.mfile_upload_to,
                         blank=True, null=True, max_length=FILE_FIELD_LENGTH,
                         storage=storage.getdiscstorage())
     mimetype = models.CharField(max_length=200, blank=True, null=True)
+    """The mimetype of the file"""
     checksum = models.CharField(max_length=32, blank=True, null=True)
+    """The md5 checksum of the file"""
     size = models.BigIntegerField(default=0)
+    """The size of the file in bytes"""
     thumb = models.ImageField(upload_to=utils.create_filename,
                             null=True, storage=storage.getthumbstorage())
     poster = models.ImageField(upload_to=utils.create_filename,
@@ -1574,7 +1734,9 @@ class MFile(NamedBase):
     proxy = models.ImageField(upload_to=utils.create_filename,
                             null=True, storage=storage.getproxystorage())
     updated = models.DateTimeField(auto_now=True)
+    """The last time the file was updated"""
     duplicate_of = models.ForeignKey('MFile', null=True)
+    """The duplicate of this file. Not the same as :class:`BackupFile`"""
 
     methods = ["GET", "POST", "PUT", "DELETE"]
     urls = {
@@ -1586,11 +1748,33 @@ class MFile(NamedBase):
             "jobs": ["GET", "POST"],
             }
 
-    def stats_url(self): return reverse('stats', args=[self.id])
-    def usage_url(self): return reverse('mfile_usagesummary', args=[self.id])
+    def stats_url(self):
+        """The REST API url for stats for this MFile, used by html views"""
+        return reverse('stats', args=[self.id])
+    
+    def usage_url(self):
+        """The REST API url for usage for this MFile"""
+        return reverse('mfile_usagesummary', args=[self.id])
+
+    def get_download_path(self):
+        """The REST API url for downloading this MFile"""
+        return reverse('mfile_download', args=[self.id])
+
+    def get_upload_thumb_path(self):
+        """The REST API url for uploading a new thumbnail"""
+        return reverse('mfile_upload_thumb', args=[self.id])
+
+    def get_upload_poster_path(self):
+        """The REST API url for uploading a new poster"""
+        return reverse('mfile_upload_poster', args=[self.id])
+
+    def get_upload_proxy_path(self):
+        """The REST API url for uploading a new proxy"""
+        return reverse('mfile_upload_proxy', args=[self.id])
 
     @staticmethod
     def get_mfile_plots(request, baseid=None):
+        """Get any plots to be charted in the GUI, currently return []"""
         return []
 
     class Meta:
@@ -1602,19 +1786,9 @@ class MFile(NamedBase):
     def __str__(self):
         return "MFile  %s" % (self.name.encode("utf-8"))
 
-    def get_download_path(self):
-        return reverse('mfile_download', args=[self.id])
-
-    def get_upload_thumb_path(self):
-        return reverse('mfile_upload_thumb', args=[self.id])
-
-    def get_upload_poster_path(self):
-        return reverse('mfile_upload_poster', args=[self.id])
-
-    def get_upload_proxy_path(self):
-        return reverse('mfile_upload_proxy', args=[self.id])
 
     def delete(self):
+        """Delete this MFile and any duplicates"""
         if self.duplicate_of:
             self.duplicate_of.delete()
         else:
@@ -1625,16 +1799,19 @@ class MFile(NamedBase):
         self.metrics = MFILE_METRICS
 
     def get_usage(self):
+        """Returns all usage for this MFile, including child resources"""
         ids = [self.id]
         usages = Usage.objects.filter(base__in=ids)
         return usages
 
     def get_usage_summary(self):
+        """Returns a usage summary for this MFile, including child resources"""
         ids = [self.id]
         usages = Usage.objects.filter(base__in=ids)
         return self._usages_to_summary(usages)
 
     def get(self, url, *args, **kwargs):
+        """Perform a GET on this MFile"""
         if url == "jobs":
             return self.job_set.all()
         elif url == "file":
@@ -1649,6 +1826,7 @@ class MFile(NamedBase):
         return None
 
     def post(self, url, *args, **kwargs):
+        """Perform a POST on this MFile"""
         if url == "jobs":
             if 'name' in kwargs:
                 name = kwargs['name']
@@ -1664,6 +1842,7 @@ class MFile(NamedBase):
         return HttpResponseBadRequest()
 
     def put(self, url, *args, **kwargs):
+        """Perform a PUT on this MFile"""
         if url == None:
             if 'file' in kwargs:
                 file = kwargs['file']
@@ -1674,6 +1853,7 @@ class MFile(NamedBase):
         return HttpResponseNotFound()
 
     def clean_base(self, authid):
+        """Called by an Auth to return a cleaned version of this mfile"""
         mfiledict = {}
         mfiledict["name"] = self.name
         mfiledict["file"] = self.file
@@ -1793,6 +1973,14 @@ class MFile(NamedBase):
     def update_mfile(self, name=None, file=None, request=None,
                         post_process=True, folder=None,
                         duplicate_of=None,  response=None):
+        """
+
+        Update an MFile at this service from the file object or the request
+        object. The boolean post_process will make the 'update' workflow
+        run or not, which can be used for partial content uploads. The folder
+        objects will update the file to the specificed MFolder.
+
+        """
         logging.info("Update Mfile %s", self)
 
         if name == None:
@@ -1832,12 +2020,14 @@ class MFile(NamedBase):
         return self
 
     def create_job(self, name):
+        """Create a Job Object with this MFile as a parameter"""
         from jobservice.models import Job
         job = Job(name=name, mfile=self)
         job.save()
         return job
 
     def duplicate(self, save=True, service=None):
+        """Create a duplicate MFile with this file as input"""
         if service:
             new_mfile = service.create_mfile(self.name, file=self.file,
                                             folder=self.folder,
@@ -1851,12 +2041,15 @@ class MFile(NamedBase):
         return new_mfile
 
     def create_read_only_auth(self):
+        """Create a read only authority to this MFile"""
         mfileauth_ro = Auth(base=self, authname="%s Read Only" % self)
         mfileauth_ro.setroles(["mfilereadonly"])
         mfileauth_ro.save()
         return mfileauth_ro
 
     def create_workflow_job(self, name):
+        """Create a workflow job from the workflow named 'name' with this MFile
+        as input"""
         if self.file:
 
             if not self.mimetype:
@@ -1873,9 +2066,11 @@ class MFile(NamedBase):
             return None
 
     def post_process(self):
+        """Post process this MFile, i.e. run the 'ingest' task"""
         return self.create_workflow_job("ingest")
 
     def get_rel_path(self):
+        """Gets the relative path for the mfile in the current hierarchy"""
         if self.folder is not None:
             return os.path.join(self.folder.get_rel_path(), self.name)
         else:
@@ -1909,6 +2104,8 @@ class MFile(NamedBase):
                     return self.size
 
     def thumburl(self):
+        """Return the url for the thumbnail of this file. either from the
+        thumbnail field or a sensible default"""
         if self.thumb and self.thumb != "":
             return "%s%s" % (settings.THUMB_PATH, self.thumb)
         elif self.mimetype:
@@ -1924,6 +2121,8 @@ class MFile(NamedBase):
                     "package-x-generic.png")
 
     def posterurl(self):
+        """Return the url for the poster of this file. either from the
+        poster field or a sensible default"""
         if self.poster and self.poster != "":
             return "%s%s" % (settings.THUMB_PATH, self.poster)
         else:
@@ -1938,6 +2137,8 @@ class MFile(NamedBase):
                                         "images", "package-x-generic.png")
 
     def proxyurl(self):
+        """Return the url for the proxy of this file. either from the
+        thumbnail field or a sensible default"""
         if self.proxy and self.proxy != "":
             return "%s%s" % (settings.THUMB_PATH, self.proxy)
         else:
@@ -1968,10 +2169,12 @@ class MFile(NamedBase):
 
 
 def pre_delete_handler_mfile(sender, instance=None, **kwargs):
+    """Handler to catch deletion of mfiles"""
     if instance:
         instance._delete_usage_()
 
 def pre_delete_handler(sender, instance=None, **kwargs):
+    """Handler to catch deletion of objects"""
     if instance:
         instance._delete_usage_()
 
@@ -1998,18 +2201,25 @@ post_save.connect(post_save_handler, sender=MFile,
 
 
 class BackupFile(NamedBase):
+    """
+    A BackupFile is an internal object to manage replication
+    """
     mfile = models.ForeignKey(MFile)
+    """The :class:`MFile` this is a backup of"""
     file = models.FileField(upload_to=utils.create_filename,
                             max_length=FILE_FIELD_LENGTH,
                             storage=storage.gettapestorage())
     mimetype = models.CharField(max_length=200, blank=True, null=True)
+    """The mimetype of the backup"""
     checksum = models.CharField(max_length=32, blank=True, null=True)
+    """The md5sum of the backup"""
 
     def __init__(self, *args, **kwargs):
         super(BackupFile, self).__init__(*args, **kwargs)
         self.metrics = BACKUPFILE_METRICS
 
     def get_upload_path(self):
+        """The REST API url for uploading a backup file"""
         return reverse('backup_upload', args=[self.id])
 
     def get_value_for_metric(self, metric):
@@ -2031,14 +2241,22 @@ class BackupFile(NamedBase):
 
 
 class ManagementProperty(models.Model):
+    """
+    A Management Property holds configuration parameters for HostingContainers
+    DataServices and MFiles
+    """
     base = models.ForeignKey(NamedBase)
+    """The resource this Property relates to"""
     property = models.CharField(max_length=200)
+    """The property name"""
     value = models.CharField(max_length=200)
+    """The property value"""
 
     def __unicode__(self):
         return "Management Property %s:%s" % (self.property, self.value)
 
     def values(self):
+        """The possible values for the property"""
         if self.property == "accessspeed":
             return {
                 "type": "enum",
@@ -2053,35 +2271,57 @@ class ManagementProperty(models.Model):
 
 
 class Auth(Base):
+    """
+    An Auth object is a capability to access a HostingContainer, DataService
+    or MFile
+    """
     authname = models.CharField(max_length=50)
+    """Name for the Auth"""
     base = models.ForeignKey(NamedBase, blank=True, null=True)
+    """The resource this Property relates to"""
     parent = models.ForeignKey('Auth', blank=True, null=True)
+    """The parent Auth of this Auth"""
     usages = models.ManyToManyField("Usage")
+    """A django many-to-many field to hold :class:`.Usage` """
     roles_csv = models.CharField(max_length=200)
+    """A comma separated list of valid roles"""
 
-    def browse_url(self): return reverse('browse', args=[self.id])
-    def stats_url(self): return reverse('stats', args=[self.id])
-    def usage_url(self): return reverse('auth_usagesummary', args=[self.id])
+    def browse_url(self):
+        """The REST API url for browsing this Auth"""
+        return reverse('browse', args=[self.id])
+
+    def stats_url(self):
+        """The REST API url for stats about this auth - used by html views"""
+        return reverse('stats', args=[self.id])
+
+    def usage_url(self):
+        """The REST API url for usage"""
+        return reverse('auth_usagesummary', args=[self.id])
 
     def __init__(self, *args, **kwargs):
         super(Auth, self).__init__(*args, **kwargs)
 
     def geturls(self):
+        """Return valid the urls for this Auth"""
         urls = {}
         for rolename in self.getroles():
             urls.update(static.default_roles[rolename]['urls'])
         return urls
 
     def urls(self):
+        """Return valid the urls for this Auth"""
+        # TODO: duplicate of above method?
         urls = {}
         for rolename in self.getroles():
             urls.update(static.default_roles[rolename]['urls'])
         return urls
 
     def basename(self):
+        """Return name of the base object"""
         return self.base.name
 
     def thumburl(self):
+        """Return a thumbnail for this Auth"""
         if utils.is_service(self.base):
             dservice = DataService.objects.get(id=self.base.id)
             if len(dservice.mfile_set.all()) > 0:
@@ -2090,24 +2330,30 @@ class Auth(Base):
                     "images", "package-x-generic.png")
 
     def getroles(self):
+        """Return a list of valid roles"""
         return self.roles_csv.split(",")
 
     def roles(self):
+        """Return a list of valid roles"""
+        # TODO: duplicate of above method?
         return self.roles_csv.split(",")
 
     def setroles(self, new_roles):
+        """Set the valid roles for this Auth"""
         for rolename in new_roles:
             if rolename not in static.default_roles.keys():
                 raise Exception("Rolename '%s' not valid " % rolename)
         self.roles_csv = ",".join(new_roles)
 
     def getmethods(self):
+        """Get the valid methods for this Auth"""
         methods = []
         for rolename in self.getroles():
             methods = methods + static.default_roles[rolename]['methods']
         return methods
 
     def check(self, url, method):
+        """Check Method 'method' on url 'url' is allowed by this Auth"""
         if url == None:
             if self.base:
                 if method in self.getmethods() and self.base.get_real_base()\
@@ -2148,14 +2394,17 @@ class Auth(Base):
                     return False, HttpResponseForbidden()
 
     def get_usage(self):
+        """Get usage for the base object"""
         base = self.get_real_base()
         return base.get_usage()
 
     def get_usage_summary(self):
+        """Get usage summary for the base object"""
         base = self.get_real_base()
         return base.get_usage_summary()
 
     def get(self, url, *args, **kwargs):
+        """Perform a GET on this Auth"""
         logging.info("AUTH %s %s ", self.authname, url)
         if not url:
             return self
@@ -2164,9 +2413,11 @@ class Auth(Base):
         return self.base.get_real_base().do("GET", url)
 
     def put(self, url, *args, **kwargs):
+        """Perform a PUT on this Auth"""
         return self.get_real_base().do("PUT", url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
+        """Perform a POST on this Auth"""
         return self.get_real_base().do("POST", url, *args, **kwargs)
 
     def save(self, *args, **kwargs):
