@@ -32,14 +32,17 @@ urlpatterns = patterns('',
     (r'^', include('mserve.webdav.urls')),
     (r'^', include('mserve.mserveoauth.urls')),
 
-    (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/home/mm/dev/pp-dataservice/static/'}),
-    (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/home/mm/mserve-test-data/www-root/mservethumbs'}),
-
     (r'^admin/', include(admin.site.urls)),
 
 )
 import settings
 if settings.DEBUG:
+    import os
+    cwd = os.getcwd()
+    DEV_STATIC_DIR = os.path.join(cwd, '..', 'static')
+    DEV_THUMBS_DIR = os.path.join(settings.MSERVE_DATA, 'www-root', 'mservethumbs')
     urlpatterns += patterns('',
         (r'^test/', 'dataservice.views.test' ),
+        (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': DEV_STATIC_DIR}),
+        (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': DEV_THUMBS_DIR}),
     )
