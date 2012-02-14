@@ -1,7 +1,7 @@
 Prerequisites for Ubuntu 10.10 desktop
 ======================================
 
-## Django Version must be 1.2+
+# Django Version must be 1.2+
 
 sudo apt-get install lighttpd
 sudo apt-get install python-django
