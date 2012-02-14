@@ -103,6 +103,7 @@ extract_payload () {
 f_ () {
 	printf "\033[01;31m\nMSERVE setup %s\n\n" "$1"
 	tput sgr0
+        print_summary
 	exit 2
 }
 
@@ -522,12 +523,12 @@ install_dependencies () {
     apt-get -y remove python-crypto
     # import crypto
     echo "import sys
-    try:
-       import Crypto
-       from Crypto.Random import atfork
-       sys.exit(0)
-    except ImportError:
-       sys.exit(1)
+try:
+   import Crypto
+   from Crypto.Random import atfork
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
     " | python
     if [ $? -ne 0 ]; then
             echo "installing python-crypto"
@@ -546,12 +547,12 @@ install_dependencies () {
     #Install paramiko
     # import paramiko
     echo "import sys
-    try:
-       import paramiko
-       sys.exit(0)
-    except ImportError:
-       sys.exit(1)
-    " | python
+try:
+   import paramiko
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
+" | python
     if [ $? -ne 0 ]; then
             echo "installing paramiko"
             paramiko_url="http://www.lag.net/paramiko/download/paramiko-1.7.7.1.tar.gz"
@@ -648,12 +649,12 @@ install_dependencies () {
     #######################
     # Install django-piston
     # import piston
-    echo "import sys
-    try:
-       import piston
-       sys.exit(0)
-    except ImportError:
-       sys.exit(1)
+echo "import sys
+try:
+   import piston
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
     " | python
     if [ $? -ne 0 ]; then
             echo "installing django-piston"
@@ -683,11 +684,11 @@ install_dependencies () {
     # Install django-openid-auth
     # import django_openid_auth
     echo "import sys
-    try:
-       import django_openid_auth
-       sys.exit(0)
-    except ImportError:
-       sys.exit(1)
+try:
+   import django_openid_auth
+   sys.exit(0)
+except ImportError:
+   sys.exit(1)
     " | python
     if [ $? -ne 0 ]; then
             echo "installing django-openid-auth"
@@ -794,46 +795,28 @@ fi
 
 ############################################################
 # create a temp directory and install mserve components here
-cd 
-mkdir mserve$$
-cd mserve$$
 
+MSERVE_CHECKOUT=`mktemp -d`
+MSERVE_TEMP=`mktemp -d`
 
 #########################
 # Install mserve 
 echo -n "installing mserve from"
 if [ "$MSERVE_ARCHIVE" == "NOTSET" ]; then
-	mserve_url="git://soave.it-innovation.soton.ac.uk/git/pp-dataservice"
-	echo "Installing MSERVE from repository $mserve_rul"
-	git clone $mserve_url || f_ "failed to fetch mserve from $mserve_url"
-	cd pp-dataservice
-
-	# checkout mm version
-	git checkout mm-pp-dataservice
-
-	git submodule init || f_ "failed to init submodule"
-	git submodule update || f_ "failed to update submodule"
-
-	cd ..
-	
-	echo "cleaning up local repository copy"
-	mkdir mserve || f_ "failed could not create a temp mserve directory"
-	cp -a ./pp-dataservice/mserve/* mserve || f_ "failed to copy mserve files in temp dir"
-	cp -a ./pp-dataservice/{scripts,static,README.txt} mserve || f_ "failed to copy scripts, static in temp dir"
+	mserve_url="git://soave.it-innovation.soton.ac.uk/git/mserve"
+	echo " $mserve_url"
+	git clone $mserve_url $MSERVE_CHECKOUT || f_ "failed to fetch mserve from $mserve_url"
 else
 	# use the provided mserve archive, we assume tgz file
 	echo " $MSERVE_ARCHIVE"
-	tar xvfz $MSERVE_ARCHIVE #|| f_ "failed to untar MSERVE archive"
-	cd pp-dataservice
-	[ -d mserve ] || f_ "failed to undtar MSERVE archive"
-	cd ..
-
-	echo "cleaning up local repository copy"
-	mkdir mserve || f_ "failed could not create a temp mserve directory"
-	cp -a ./pp-dataservice/mserve/* mserve || f_ "failed to copy mserve files in temp dir"
-	cp -a ./pp-dataservice/{scripts,static,README.txt} mserve || f_ "failed to copy scripts, static in temp dir"
+        tar -C $MSERVE_CHECKOUT --extract --file=$MSERVE_ARCHIVE mserve || f_ "failed to untar MSERVE archive"
+        MSERVE_CHECKOUT="$MSERVE_CHECKOUT/mserve"
 fi
 
+cp -a $MSERVE_CHECKOUT/mserve/* $MSERVE_TEMP || f_ "failed to copy mserve files in temp dir"
+cp -a $MSERVE_CHECKOUT/{scripts,static,README.txt} $MSERVE_TEMP || f_ "failed to copy scripts, static in temp dir"
+
+cd $MSERVE_TEMP
 
 #########################################
 # Configuring MSERVE in standalone mode
@@ -849,54 +832,54 @@ fi
 
 #####################################
 #Configuration of mserve settings.py
-mv mserve/settings.py mserve/settings_dist.py
+mv $MSERVE_TEMP/settings.py $MSERVE_TEMP/settings_dist.py
 sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#; \
 	s#\('USER'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_USER\2#; \
 	s#\('PASSWORD'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_PASSWORD\2#" \
-	mserve/settings_dist.py > mserve/settings.py
+	$MSERVE_TEMP/settings_dist.py > $MSERVE_TEMP/settings.py
 
 
 ###########################
-# modify mserve/restart.sh
-mv mserve/restart.sh mserve/restart_dist.sh
+# modify restart.sh
+mv $MSERVE_TEMP/restart.sh $MSERVE_TEMP/restart_dist.sh
 sed -e "s#^MSERVE_HOME=/opt/mserve#MSERVE_HOME=${MSERVE_HOME}#; \
 	s#^MSERVE_DATA=/var/opt/mserve-data#MSERVE_DATA=${MSERVE_DATA}#" \
-	mserve/restart_dist.sh > mserve/restart.sh
-chmod +x mserve/restart.sh
+	$MSERVE_TEMP/restart_dist.sh > $MSERVE_TEMP/restart.sh
+chmod +x $MSERVE_TEMP/restart.sh
 
 
 ####################
 # modify celaryd.sh
-mv mserve/celeryd.sh mserve/celeryd_dist.sh
+mv $MSERVE_TEMP/celeryd.sh $MSERVE_TEMP/celeryd_dist.sh
 sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
-	mserve/celeryd_dist.sh > mserve/celeryd.sh
+	$MSERVE_TEMP/celeryd_dist.sh > $MSERVE_TEMP/celeryd.sh
 
-chmod +x mserve/celeryd.sh
+chmod +x $MSERVE_TEMP/celeryd.sh
 
 ############################
 # configure init scripts
-if [ -f scripts/mserve-service ]; then
-	mv scripts/mserve-service scripts/mserve-service_dist
+if [ -f $MSERVE_TEMP/scripts/mserve-service ]; then
+	mv $MSERVE_TEMP/scripts/mserve-service $MSERVE_TEMP/scripts/mserve-service_dist
 	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
-		scripts/mserve-service_dist > scripts/mserve-service
-	chmod +x scripts/mserve-service
+		$MSERVE_TEMP/scripts/mserve-service_dist > $MSERVE_TEMP/scripts/mserve-service
+	chmod +x $MSERVE_TEMP/scripts/mserve-service
 else
-	echo "No scripts/mserve-service found"
+	echo "No $MSERVE_TEMP/scripts/mserve-service found"
 fi
 
-if [ -f scripts/celeryd-service ]; then
-	mv scripts/celeryd-service scripts/celeryd-service_dist
+if [ -f $MSERVE_TEMP/scripts/celeryd-service ]; then
+	mv $MSERVE_TEMP/scripts/celeryd-service $MSERVE_TEMP/scripts/celeryd-service_dist
 	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
 		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
-		scripts/celeryd-service_dist > scripts/celeryd-service
-	chmod +x scripts/celeryd-service
+		$MSERVE_TEMP/scripts/celeryd-service_dist > $MSERVE_TEMP/scripts/celeryd-service
+	chmod +x $MSERVE_TEMP/scripts/celeryd-service
 else
 	echo "No scripts/celeryd-service found"
 fi
@@ -930,7 +913,7 @@ configure_lighttpd () {
 		cp /etc/lighttpd/conf-available/10-fastcgi.conf /etc/lighttpd/conf-available/10-fastcgi.conf-dist
 	fi
 
-	cat scripts/10-mserve-EXAMPLE.conf | sed -e "s#/var/mserve/dl#$MSERVE_DATA/dl#" > \
+	cat $MSERVE_TEMP/scripts/10-mserve-EXAMPLE.conf | sed -e "s#/var/mserve/dl#$MSERVE_DATA/dl#" > \
 		/etc/lighttpd/conf-available/10-fastcgi.conf
 
 
@@ -1068,8 +1051,6 @@ case $HTTP_SERVER in
 esac
 
 
-
-
 ####################################
 # PART III deploy mserve in /var/opt
 ####################################
@@ -1086,15 +1067,9 @@ fi
 
 echo "copying mserve directory"
 cd
-mkdir ${MSERVE_HOME} || f_ "failed to create $MSERVE_HOME directory"
-cp -ar mserve$$/mserve/* ${MSERVE_HOME} || f_ "failed to copy mserve files in MSERVE_HOME location $MSERVE_HOME"
-#cp -ar mserve$$/pp-dataservice/mserve/* ${MSERVE_HOME} || \
-#	f_ "failed to deploy mserve files into ${MSERVE_HOME}"
-#cp -ar mserve$$/pp-dataservice/{scripts,static,README.txt} ${MSERVE_HOME} || \
-#	f_ "failed to deploy scripts, static into ${MSERVE_HOME}"
+mv $MSERVE_TEMP ${MSERVE_HOME} || f_ "failed to copy mserve files in MSERVE_HOME location $MSERVE_HOME"
 chown -R www-data:www-data ${MSERVE_HOME} || f_ "failed to change ${MSERVE_HOME} permissions to www-data"
-rm -rf mserve$$ || f_ "failed to remove temporary mserve$$ directory"
-
+chmod 755 ${MSERVE_HOME} || f_ "failed to chmod MSERVE_HOME $MSERVE_HOME to 755"
 
 #######################
 # create media links
