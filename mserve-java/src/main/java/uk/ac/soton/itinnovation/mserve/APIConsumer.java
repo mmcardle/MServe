@@ -13,7 +13,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HostConfiguration;
@@ -45,101 +44,11 @@ public class APIConsumer {
 
     public static void main(String[] args){
 
-
-
-        /*try {
-            APIConsumer consumer = new APIConsumer();
-            //String cid = consumer.createContainer();
-            //String cid = "05ac6c9b-02e7-419b-a9d9-6b70cc76eafa";
-
-
-            //System.out.println("makeServiceURL");
-            //String sid = consumer.makeServiceREST(cid);
-            //String mid = consumer.makeEmptyMFileREST(sid);
-            //consumer.putToEmptyMFile(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-
-
-            String path = "http://ogio/webdav/VUpBSGVKZEhxblZVTEhvZlFjM0ZYVkkyTmNQODlKTFNZbGlaVlBXWnRwTT0/";
-
-            File file = new File("/home/mm/Pictures/muppits/DSC_0676.jpg");
-            consumer.doChunkedPutToWebdavURL(path, file);
-
-
-            //consumer.getUsage(cid);
-            //consumer.getUsage(sid);
-            //consumer.getUsage(mid);
-            //consumer.deleteContainer(cid);
-
-            //String mid1 = consumer.makeMFileURL(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-            //String mid2 = consumer.makeMFileREST(sid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-            //String mid = consumer.makeEmptyMFileREST(sid);
-            //consumer.putToEmptyMFileREST(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-            //consumer.putToEmptyMFileURL(mid, new File("/home/mm/Pictures/muppits/DSC_0676.jpg"));
-
-        } catch (MalformedURLException ex) {
-            Logger.getLogger(APIConsumer.class.getName()).log(Level.SEVERE, null, ex);
-        }*/
-
-            String path = "/pic/somefolder//picture.jpg";
-
-            String[] split = path.replace("//", "/").split("/");
-
-
-            System.out.println("split " + split);
-
-
-            ArrayList arr = new ArrayList();
-            
-            Collections.addAll(arr, split);
-
-            String filename = (String)arr.get(arr.size()-1);
-            List<String> folderList = arr.subList(0, arr.size()-1);
-            folderList.remove("");
-
-            System.out.println("filename " + filename);
-            System.out.println("folderList " + folderList);
-
-            String base = "/";
-            for(String folder : folderList){
-                base = base +  folder + "/";
-                System.out.println("mkcol " + base);
-            }
-
-
-
-
-            //APIConsumer consumer = new APIConsumer();
-            //System.out.println(""+consumer);
-            //String path = "http://ogio/webdav/VUpBSGVKZEhxblZVTEhvZlFjM0ZYVkkyTmNQODlKTFNZbGlaVlBXWnRwTT0/hello.txt";
-            //System.out.println(""+path);
-            //consumer.partial(path);
-
-            //consumer.doHeadToWebdavURL(path);
-            //Header[] hs = consumer.head(path);
-            //for (Header h : hs){
-            //    System.out.println(""+h);
-            //}
-
-            //File file = new File("/home/mm/upload_test");
-
-
-
-            /*consumer.doChunkedPutToWebdavURL(path, file, "");
-
-
-            consumer.doChunkedPutToWebdavURL(path, file, "bytes=2-8");
-
-
-            for(int i = 1;i<4;i++){
-                File cfile = new File("/home/mm/chunk."+i);
-                long len = cfile.length();
-                long start = (i-1)*len;
-                long end = (i)*len;
-                consumer.doChunkedPutToWebdavURL(path, cfile,"bytes="+start+"-"+end);
-            }*/
+        APIConsumer consumer = new APIConsumer();
+        // Use the API
     }
     
-        public void partial(String url) {
+    public void partial(String url) {
         try{
                 HttpClient client = new HttpClient();
                 PutMethod putMethod = new PutMethod(url);
