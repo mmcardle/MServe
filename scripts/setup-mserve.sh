@@ -74,18 +74,18 @@ fi
 usage_f() {
 	echo "usage: $0 [-m mserve home] [-d mserve data] [-s http server] [-t mserve tarball]
 	OPTIONS:
-	-c <install|update|uninstall>	# script operation, default: install
-	-m <MSERVE home directory>	# default: /var/opt/mserve
-	-d <MSERVE data directory>	# default: /var/opt/mserve-data
-	-l <MSERVE log directory>	# defautl: /var/log/mserve
-	-t <MSERVE HTTP server>     	# [apache|lighttpd] default: apache
-	-u <MSERVE admin user name> 	# administrtor user name, default: admin
-	-p <MSERVE admin password>	# admin password
-	-e <MSERVE admin email>		# administrator email, default: admin@my.email.com
-	-U <Database admin user>	# Database admin user, default root
-	-P <Database admin password>	# Database admin password
-	-a <mserve tarball>  		# MSERVE distribution archive
-	-s <schema>       		# Schema (http/https)
+	-c <install|update|uninstall|dependencies>  # script operation, default: install
+	-m <MSERVE home directory>                  # default: /var/opt/mserve
+	-d <MSERVE data directory>                  # default: /var/opt/mserve-data
+	-l <MSERVE log directory>                   # defautl: /var/log/mserve
+	-t <MSERVE HTTP server>                     # [apache|lighttpd] default: apache
+	-u <MSERVE admin user name>                 # administrtor user name, default: admin
+	-p <MSERVE admin password>                  # admin password
+	-e <MSERVE admin email>                     # administrator email, default: admin@my.email.com
+	-U <Database admin user>                    # Database admin user, default root
+	-P <Database admin password>                # Database admin password
+	-a <mserve tarball>                         # MSERVE distribution archive
+	-s <schema>                                 # Schema (http/https)
 	-v verbose mode
 
 	example: $0 -s apache
@@ -437,6 +437,272 @@ update_mserve () {
 
 }
 
+install_dependencies () {
+    #############################
+    # update system repositories
+    apt-get update || f_ "fail, could not update system repositories"
+
+    apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
+    apt-get -y install git-core mercurial ffmpegthumbnailer || \
+            f_ "failed to install git-core mercurial ffmpegthumbnailer"
+
+
+    ##########################################
+    # skip rabbitmq-server confirmation screen
+    echo "rabbitmq-server	rabbitmq-server/upgrade_previous	note" > rabbitmq.preseed
+    cat rabbitmq.preseed | sudo debconf-set-selections
+
+    apt-get -y install rabbitmq-server || f_ "failed to install rabbitmq-server" || \
+            f_ "failed to install rabbitmq-server"
+    rm rabbitmq.preseed
+
+    echo "RabbitMQ setup"
+    rabbitmqctl add_user myuser mypassword
+    rabbitmqctl add_vhost myvhost
+    rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
+
+    ##########################################
+    # Setup Memcached
+    apt-get -y install memcached python-memcache || f_ "failed to install memcached"
+
+    ###################################
+    # install other basic prerequisites
+
+    install_mod_auth_token() {
+            apt-get -y install autoconf libtool apache2-threaded-dev || \
+                    f_ "failed to install autoconf libtool apache2-threaded-dev"
+            wget http://mod-auth-token.googlecode.com/files/mod_auth_token-1.0.5.tar.gz || \
+                    f_ "failed to fetch mod_auth_token"
+            tar xvfz mod_auth_token-1.0.5.tar.gz
+            cd mod_auth_token-1.0.5
+            rm -f configure
+            autoreconf -fi || f_ "failed to autoreconf mod_auth_token"
+            automake -f || f_ "failed to automake mod_auth_token"
+            ./configure || f_ "failed to configure mod_auth_token"
+            make || f_ "failed to compile successfully mod_auth_token"
+            make install || f_ "failed to install mod_auth_token"
+            cd ..
+            rm mod_auth_token-1.0.5.tar.gz
+            rm -rf mod_auth_token-1.0.5
+    }
+
+    #######################
+    # install http server
+    case $HTTP_SERVER in
+            apache) apt-get -y install apache2 libapache2-mod-fastcgi libapache2-mod-bw libapache2-mod-xsendfile
+                    a2enmod headers
+                    a2enmod auth_token
+                    if [ $? -ne 0 ]; then
+                            echo "mod_auth_token is not found, trying to install it"
+                            install_mod_auth_token
+                    fi
+                    if [ "${HTTP_SCHEMA}" == "https" ]; then
+                        a2enmod ssl
+                    fi
+                    ;;
+            lighttpd) apt-get -y install lighttpd
+                    ;;
+    esac
+
+    ##################
+    # install erlang and python
+    echo "installing system packages for erlang and python libraries"
+    apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
+            erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
+            erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
+            python-setuptools python-flup python-magic python-dev python-pythonmagick \
+            python-fuse sendmail python-imaging python-pycurl python-openid \
+            python-lxml python-pip || \
+            f_ "failed to install erlang packages and python libraries"
+
+
+    ######################
+    #Install python-crypto
+    #Remove any installed ubuntu version
+    apt-get -y remove python-crypto
+    # import crypto
+    echo "import sys
+    try:
+       import Crypto
+       from Crypto.Random import atfork
+       sys.exit(0)
+    except ImportError:
+       sys.exit(1)
+    " | python
+    if [ $? -ne 0 ]; then
+            echo "installing python-crypto"
+            python_crypto_url="http://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.3.tar.gz"
+            wget $python_crypto_url || f_ "failed to get python-crypto from $python_crypto_url"
+            tar xzf pycrypto-2.3.tar.gz || f_ "failed to untar pycrypto-2.3.tar.gz"
+            cd pycrypto-2.3
+            python setup.py install || f_ "failed to install python-crypto"
+            cd ..
+            rm -rf pycrypto-2.3
+    else
+            echo "python-crypto found"
+    fi
+
+    ######################
+    #Install paramiko
+    # import paramiko
+    echo "import sys
+    try:
+       import paramiko
+       sys.exit(0)
+    except ImportError:
+       sys.exit(1)
+    " | python
+    if [ $? -ne 0 ]; then
+            echo "installing paramiko"
+            paramiko_url="http://www.lag.net/paramiko/download/paramiko-1.7.7.1.tar.gz"
+            wget $paramiko_url || f_ "failed to get paramiko from $paramiko_url"
+            tar xzf paramiko-1.7.7.1.tar.gz || f_ "failed to untar paramiko-1.7.7.1.tar.gz"
+            cd paramiko-1.7.7.1
+            python setup.py install || f_ "failed to install paramiko"
+            cd ..
+            rm -rf paramiko-1.7.7.1
+    else
+            echo "paramiko found"
+    fi
+
+
+    ####################################################################
+    # MySQL installation
+    # in order to avoid mysql prompts it can be installed as:
+    echo "Installing MySQL"
+    MYSQL_ROOT_PWD=$DATABASE_ADMIN_PASSWORD
+    echo "mysql-server-5.1 mysql-server/root_password password $MYSQL_ROOT_PWD" > mysql.preseed
+    echo "mysql-server-5.1 mysql-server/root_password_again password $MYSQL_ROOT_PWD" >> mysql.preseed
+    echo "mysql-server-5.1 mysql-server/start_on_boot boolean true" >> mysql.preseed
+    cat mysql.preseed | sudo debconf-set-selections
+
+    apt-get -y install mysql-server python-mysqldb || f_ "failed to install MySQL"
+    rm mysql.preseed
+
+    ######################
+    # install django 1.3
+    install_django () {
+            wget https://www.djangoproject.com/download/1.3/tarball/ || f_ "failed to fetch Django-1.3.tar.gz"
+            mv index.html Django-1.3.tar.gz
+            tar xzf Django-1.3.tar.gz || f_ "failed to untar Django-1.3.tar.gz"
+            cd Django-1.3
+            python setup.py install || f_ "failed to install Django-1.3.tar.gz"
+    }
+
+    #from django import get_version as django_version
+    #django_version()
+
+    django_min_version=1.3
+    django_version=$(django-admin.py --version)
+    if [ $? -eq 0 ]; then
+            echo "Django version: $django_version found"
+            if [[ $django_version < $django_min_version ]]; then
+                    echo "remove existing Django version and install 1.3"
+                    apt-get -y remove python-django || f_ "failed to uninstall python-django"
+                    install_django
+            else
+                    echo "django version $django_version is ok"
+            fi
+    else
+            echo "django is not found, installing django 1.3"
+            install_django
+    fi
+
+
+
+    update_rabbitmq () {
+            wget http://www.rabbitmq.com/releases/rabbitmq-server/v2.5.1/rabbitmq-server_2.5.1-1_all.deb ||\
+                    f_ "failed to fetch rabbitmq-server_2.3.1-1"
+
+            dpkg -i rabbitmq-server_2.5.1-1_all.deb || f_ "failed to install rabbitmq-server_2.5.1-1"
+            rm rabbitmq-server_2.5.1-1_all.deb
+    }
+
+    ##############################################################
+    # update rabbitmq to a newer version, i.e. 2.5.1
+    if [[ $(dpkg -l rabbitmq-server) ]]; then
+            rabbit_version=$(dpkg -s rabbitmq-server | grep ^Version: | awk '{print $2}')
+            if [[ $rabbit_version < "2.5.1" ]]; then
+                    echo "Updating rabbitmq to 2.5"
+                    update_rabbitmq
+            else
+                    echo "rabbitmq-server is updated"
+            fi
+    else
+            echo "Updating rabbitmq"
+            update_rabbitmq
+    fi
+
+    ######################
+    #Install django-south
+    pip install South
+
+    ######################
+    #Install django-oauth
+    pip install django-oauth
+
+    ################
+    # install oauth2
+    pip install oauth2
+
+    #######################
+    # Install django-piston
+    # import piston
+    echo "import sys
+    try:
+       import piston
+       sys.exit(0)
+    except ImportError:
+       sys.exit(1)
+    " | python
+    if [ $? -ne 0 ]; then
+            echo "installing django-piston"
+            django_piston_url="http://bitbucket.org/jespern/django-piston"
+            hg clone $django_piston_url || f_ "failed to fetch django-piston from $django_piston_url"
+            cd django-piston
+            python setup.py install || f_ "failed to install django-piston"
+            cd ..
+            rm -rf django-piston
+    else
+            echo "django-piston found"
+    fi
+
+    #######################
+    # install celery
+    pip install Celery
+
+    #######################
+    # Install django-celery
+    pip install django-celery
+
+    #########################
+    # Install django-request
+    pip install django-request
+
+    ############################
+    # Install django-openid-auth
+    # import django_openid_auth
+    echo "import sys
+    try:
+       import django_openid_auth
+       sys.exit(0)
+    except ImportError:
+       sys.exit(1)
+    " | python
+    if [ $? -ne 0 ]; then
+            echo "installing django-openid-auth"
+            django_openid_auth_url="https://bitbucket.org/sramana/django-openid-auth"
+            hg clone $django_openid_auth_url || f_ "failed to fetch django-openid-auth from $django_openid_auth_url"
+            cd django-openid-auth
+            python setup.py install || f_ "failed to install django-openid-auth"
+            cd ..
+            rm -rf django-openid-auth
+    else
+            echo "django-openid-auth found"
+    fi
+
+}
+
 echo -en "\n\n\tStarting MSERVE "
 case $COMMAND in
 	install) echo -e "installation\n\n"
@@ -453,6 +719,10 @@ or uninstall it first (-c uninstall)."
 		;;
 	uninstall) echo -e "uninstall\n\n"
 		uninstall_mserve
+		exit
+		;;
+	dependencies) echo -e "uninstall\n\n"
+		install_dependencies
 		exit
 		;;
 	*) echo -e "unknown command $COMMAND\n\n"
@@ -489,9 +759,6 @@ check_os_release
 
 #########################################################################################
 
-
-
-
 ##################################################
 echo "PART-I installing MServe prerequisites"
 ##################################################
@@ -502,197 +769,7 @@ echo "PART-I installing MServe prerequisites"
 #sudo apt-get -y upgrade
 #sudo reboot
 
-#############################
-# update system repositories
-apt-get update || f_ "fail, could not update system repositories"
-
-apt-get -y install debconf-utils wget || f_ "failed to install debconf-utils wget"
-apt-get -y install git-core mercurial ffmpegthumbnailer || \
-	f_ "failed to install git-core mercurial ffmpegthumbnailer"
-
-
-##########################################
-# skip rabbitmq-server confirmation screen
-echo "rabbitmq-server	rabbitmq-server/upgrade_previous	note" > rabbitmq.preseed
-cat rabbitmq.preseed | sudo debconf-set-selections
-
-apt-get -y install rabbitmq-server || f_ "failed to install rabbitmq-server" || \
-	f_ "failed to install rabbitmq-server"
-rm rabbitmq.preseed
-
-##########################################
-# Setup Memcached
-apt-get -y install memcached python-memcache || f_ "failed to install memcached"
-
-###################################
-# install other basic prerequisites
-
-install_mod_auth_token() {
-	apt-get -y install autoconf libtool apache2-threaded-dev || \
-		f_ "failed to install autoconf libtool apache2-threaded-dev"
-	wget http://mod-auth-token.googlecode.com/files/mod_auth_token-1.0.5.tar.gz || \
-		f_ "failed to fetch mod_auth_token"
-	tar xvfz mod_auth_token-1.0.5.tar.gz
-	cd mod_auth_token-1.0.5
-	rm -f configure
-	autoreconf -fi || f_ "failed to autoreconf mod_auth_token"
-	automake -f || f_ "failed to automake mod_auth_token"
-	./configure || f_ "failed to configure mod_auth_token"
-	make || f_ "failed to compile successfully mod_auth_token"
-	make install || f_ "failed to install mod_auth_token"
-        cd ..
-        rm mod_auth_token-1.0.5.tar.gz
-        rm -rf mod_auth_token-1.0.5
-}
-
-#######################
-# install http server
-case $HTTP_SERVER in 
-	apache) apt-get -y install apache2 libapache2-mod-fastcgi libapache2-mod-bw libapache2-mod-xsendfile
-		a2enmod headers
-		a2enmod auth_token
-		if [ $? -ne 0 ]; then
-			echo "mod_auth_token is not found, trying to install it"
-	        	install_mod_auth_token
-		fi
-                if [ "${HTTP_SCHEMA}" == "https" ]; then
-                    a2enmod ssl
-                fi
-		;;
-        lighttpd) apt-get -y install lighttpd
-                ;;
-esac
-
-##################
-# install erlang and python
-echo "installing system packages for erlang and python libraries"
-apt-get -y install erlang-inets erlang-asn1 erlang-corba erlang-docbuilder \
-	erlang-edoc erlang-eunit erlang-ic erlang-inviso erlang-odbc erlang-parsetools \
-	erlang-percept erlang-ssh erlang-tools erlang-webtool erlang-xmerl erlang-nox \
-	python-setuptools python-flup python-magic python-dev python-pythonmagick \
-	python-fuse sendmail python-imaging python-pycurl python-openid \
-        python-lxml python-pip || \
-	f_ "failed to install erlang packages and python libraries"
-
-
-######################
-#Install python-crypto
-#Remove any installed ubuntu version
-apt-get -y remove python-crypto
-# import crypto
-echo "import sys
-try:
-   import Crypto
-   from Crypto.Random import atfork
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing python-crypto"
-	python_crypto_url="http://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.3.tar.gz"
-	wget $python_crypto_url || f_ "failed to get python-crypto from $python_crypto_url"
-	tar xzf pycrypto-2.3.tar.gz || f_ "failed to untar pycrypto-2.3.tar.gz"
-	cd pycrypto-2.3
-	python setup.py install || f_ "failed to install python-crypto"
-	cd ..
-	rm -rf pycrypto-2.3
-else
-	echo "python-crypto found"
-fi
-
-######################
-#Install paramiko
-# import paramiko
-echo "import sys
-try:
-   import paramiko
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing paramiko"
-	paramiko_url="http://www.lag.net/paramiko/download/paramiko-1.7.7.1.tar.gz"
-	wget $paramiko_url || f_ "failed to get paramiko from $paramiko_url"
-	tar xzf paramiko-1.7.7.1.tar.gz || f_ "failed to untar paramiko-1.7.7.1.tar.gz"
-	cd paramiko-1.7.7.1
-	python setup.py install || f_ "failed to install paramiko"
-	cd ..
-	rm -rf paramiko-1.7.7.1
-else
-	echo "paramiko found"
-fi
-
-
-####################################################################
-# MySQL installation
-# in order to avoid mysql prompts it can be installed as:
-echo "Installing MySQL"
-MYSQL_ROOT_PWD=$DATABASE_ADMIN_PASSWORD
-echo "mysql-server-5.1 mysql-server/root_password password $MYSQL_ROOT_PWD" > mysql.preseed
-echo "mysql-server-5.1 mysql-server/root_password_again password $MYSQL_ROOT_PWD" >> mysql.preseed
-echo "mysql-server-5.1 mysql-server/start_on_boot boolean true" >> mysql.preseed
-cat mysql.preseed | sudo debconf-set-selections
-
-apt-get -y install mysql-server python-mysqldb || f_ "failed to install MySQL"
-rm mysql.preseed
-
-######################
-# install django 1.3
-install_django () {
-	wget https://www.djangoproject.com/download/1.3/tarball/ || f_ "failed to fetch Django-1.3.tar.gz"
-	mv index.html Django-1.3.tar.gz 
-	tar xzf Django-1.3.tar.gz || f_ "failed to untar Django-1.3.tar.gz"
-	cd Django-1.3
-	python setup.py install || f_ "failed to install Django-1.3.tar.gz"
-}
-
-#from django import get_version as django_version
-#django_version()
-
-django_min_version=1.3
-django_version=$(django-admin.py --version)
-if [ $? -eq 0 ]; then
-	echo "Django version: $django_version found"
-	if [[ $django_version < $django_min_version ]]; then
-		echo "remove existing Django version and install 1.3"
-		apt-get -y remove python-django || f_ "failed to uninstall python-django"
-		install_django
-	else
-		echo "django version $django_version is ok"
-	fi
-else
-	echo "django is not found, installing django 1.3"
-	install_django	
-fi
-
-
-
-update_rabbitmq () {
-	wget http://www.rabbitmq.com/releases/rabbitmq-server/v2.5.1/rabbitmq-server_2.5.1-1_all.deb ||\
-		f_ "failed to fetch rabbitmq-server_2.3.1-1"
-
-	dpkg -i rabbitmq-server_2.5.1-1_all.deb || f_ "failed to install rabbitmq-server_2.5.1-1"
-	rm rabbitmq-server_2.5.1-1_all.deb
-}
-
-##############################################################
-# update rabbitmq to a newer version, i.e. 2.5.1
-if [[ $(dpkg -l rabbitmq-server) ]]; then
-	rabbit_version=$(dpkg -s rabbitmq-server | grep ^Version: | awk '{print $2}')
-	if [[ $rabbit_version < "2.5.1" ]]; then
-		echo "Updating rabbitmq to 2.5"
-		update_rabbitmq
-	else
-		echo "rabbitmq-server is updated"
-	fi
-else
-	echo "Updating rabbitmq"
-	update_rabbitmq
-fi
-
-
+install_dependencies || f_ "failed to install MServe dependencies"
 
 ##########################################
 # PART II 
@@ -721,73 +798,6 @@ cd
 mkdir mserve$$
 cd mserve$$
 
-######################
-#Install django-south
-pip install South
-
-######################
-#Install django-oauth
-pip install django-oauth
-
-################
-# install oauth2
-pip install oauth2
-
-#######################
-# Install django-piston
-# import piston
-echo "import sys
-try:
-   import piston
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing django-piston"
-	django_piston_url="http://bitbucket.org/jespern/django-piston"
-	hg clone $django_piston_url || f_ "failed to fetch django-piston from $django_piston_url"
-	cd django-piston
-	python setup.py install || f_ "failed to install django-piston"
-	cd ..
-	rm -rf django-piston
-else
-	echo "django-piston found"
-fi
-
-#######################
-# install celery
-pip install Celery
-
-#######################
-# Install django-celery
-pip install django-celery
-
-#########################
-# Install django-request
-pip install django-request
-
-############################
-# Install django-openid-auth
-# import django_openid_auth
-echo "import sys
-try:
-   import django_openid_auth
-   sys.exit(0)
-except ImportError:
-   sys.exit(1)
-" | python
-if [ $? -ne 0 ]; then
-	echo "installing django-openid-auth"
-	django_openid_auth_url="https://bitbucket.org/sramana/django-openid-auth"
-	hg clone $django_openid_auth_url || f_ "failed to fetch django-openid-auth from $django_openid_auth_url"
-	cd django-openid-auth
-	python setup.py install || f_ "failed to install django-openid-auth"
-	cd ..
-	rm -rf django-openid-auth
-else
-	echo "django-openid-auth found"
-fi
 
 #########################
 # Install mserve 
