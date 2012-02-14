@@ -1,0 +1,47 @@
+
+MServe IPR
+=============
+
+Software distributed/used/referenced in the source code
+
+============            ============                                        ============
+Library                 URL                                                 License
+============            ============                                        ============
+
+Django                  https://www.djangoproject.com/                      BSD
+django-piston           https://bitbucket.org/jespern/django-piston/        BSD
+django-request          https://github.com/kylef/django-request             BSD
+django-south            http://south.aeracode.org/                          Apache v2.0
+django-debug_toolbar	http://pypi.python.org/pypi/django-debug-toolbar    BSD
+django-oauth            http://bitbucket.org/david/django-oauth             BSD
+django-openid-auth	https://bitbucket.org/sramana/django-openid-auth    BSD
+python-oauth2           https://github.com/simplegeo/python-oauth2          MIT
+python-openid           http://pypi.python.org/pypi/python-openid/          Apache v2.0
+python-magic            http://pypi.python.org/pypi/python-magic/0.4.2      PSF
+python-pycurl           http://pypi.python.org/pypi/pycurl/7.18.1           LGPL v2.1
+python-fuse             http://pypi.python.org/pypi/fuse-python/0.2         LGPL v2.1
+jquery                  http://jquery.org/license/                          MIT + GPL v2
+jquery-ui               http://jqueryui.com/about                           MIT + GPL v2
+jquery-file-upload	https://github.com/blueimp/jQuery-File-Upload       MIT
+jquery-quicksand	http://razorjack.net/quicksand                      MIT + GPL v2
+jquery-address          http://www.asual.com/jquery/address/                MIT + GPL v2
+jquery-blockUI          http://jquery.malsup.com/block/                     MIT + GPL v3
+jquery-js-tree          http://www.jstree.com/                              MIT + GPL v3
+jquery-flot             http://code.google.com/p/flot/                      MIT
+============            ============                                        ============
+
+Software used at runtime
+
+============    ============                                    ============    =========
+Library         URL                                             License         Required
+============    ============                                    ============    =========
+RabbitMQ	http://git-scm.com/                             GPL             Replaceable
+MYSQL           http://www.mysql.com/                           GPL v2          Replaceable
+Celery          http://celeryproject.org/                       BSD
+FFMpeg          http://ffmpeg.org                               LGPL v2.1       Optional
+x264            http://www.videolan.org/developers/x264.html	GPL v2          Optional
+Lame            http://lame.sourceforge.net/                    LGPL            Optional
+Apache          http://httpd.apache.org/                        Apache v2
+mod auth token	http://code.google.com/p/mod-auth-token/	Apache v2
+Memcached	http://www.memcached.org/                       BSD
+============    ============                                    ============    =========
