@@ -814,7 +814,6 @@ else
 fi
 
 cp -a $MSERVE_CHECKOUT/* $MSERVE_TEMP || f_ "failed to copy mserve files in temp dir"
-#cp -a $MSERVE_CHECKOUT/{scripts,static,README.txt} $MSERVE_TEMP || f_ "failed to copy scripts, static in temp dir"
 
 cd $MSERVE_TEMP
 

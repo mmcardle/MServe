@@ -23,7 +23,7 @@ DESC="mserve service"
 USER=www-data
 INIT_LOG_DIR=/var/log/mserve
 SCRIPTNAME=/etc/init.d/$NAME
-hn=$HOSTNAME
+hn=`hostname`
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
