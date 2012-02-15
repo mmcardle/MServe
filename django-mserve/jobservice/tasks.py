@@ -75,7 +75,7 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
         return { "message" : "Copy from url failed error_code '%s'" % status }
     else:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mfile = MFile.objects.get(id=mfileid)
         filename = mfile.service.get_unique_name(filename)
         mfile.update_mfile(filename, file=File(open(tfile.name, 'r')))
@@ -112,7 +112,7 @@ def render_blender(inputs,outputs,options={},callbacks=[]):
         format="PNG"
 
     mfileid = inputs[0]
-    from mserve.dataservice.models import MFile
+    from dataservice.models import MFile
     mf = MFile.objects.get(id=mfileid)
     inputfile = mf.file.path
 

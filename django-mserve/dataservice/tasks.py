@@ -99,24 +99,24 @@ def _get_path(path,suffix=""):
     raise Exception("Could not get MFile any transports")
 
 def _save_joboutput_thumb(outputid,image):
-    from mserve.jobservice.models import JobOutput
+    from jobservice.models import JobOutput
     joboutput = JobOutput.objects.get(id=outputid)
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
     image.save(tfile.name)
     return _save_topath(tfile, joboutput.get_upload_thumb_path(), joboutput.thumb )
 
 def _save_joboutput(outputid, file):
-    from mserve.jobservice.models import JobOutput
+    from jobservice.models import JobOutput
     joboutput = JobOutput.objects.get(id=outputid)
     return _save_topath(file, joboutput.get_upload_path(), joboutput.file)
 
 def _save_backupfile(backupid, file):
-    from mserve.dataservice.models import BackupFile
+    from dataservice.models import BackupFile
     backupfile = BackupFile.objects.get(id=backupid)
     return _save_topath(file, backupfile.get_upload_path(), backupfile.file)
 
 def _save_thumb(mfileid,image):
-    from mserve.dataservice.models import MFile
+    from dataservice.models import MFile
     mfile = MFile.objects.get(id=mfileid)
     path = mfile.get_upload_thumb_path()
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
@@ -124,7 +124,7 @@ def _save_thumb(mfileid,image):
     return _save_topath(tfile, path, mfile.thumb)
 
 def _save_poster(mfileid,image):
-    from mserve.dataservice.models import MFile
+    from dataservice.models import MFile
     mfile = MFile.objects.get(id=mfileid)
     path = mfile.get_upload_poster_path()
     tfile = tempfile.NamedTemporaryFile(delete=True,suffix=".png")
@@ -132,7 +132,7 @@ def _save_poster(mfileid,image):
     return _save_topath(tfile,path, mfile.poster)
 
 def _save_proxy(mfileid,proxy):
-    from mserve.dataservice.models import MFile
+    from dataservice.models import MFile
     mfile = MFile.objects.get(id=mfileid)
     path = mfile.get_upload_proxy_path()
     return _save_topath(proxy, path, mfile.proxy)
@@ -483,7 +483,7 @@ def mimefile(inputs,outputs,options={},callbacks=[]):
         result = m.file(upath)
         mimetype = result.split(';')[0]
 
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         mf.mimetype = mimetype
         mf.save()
@@ -506,8 +506,8 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
 
-        from mserve.dataservice.models import MFile
-        from mserve.dataservice.models import BackupFile
+        from dataservice.models import MFile
+        from dataservice.models import BackupFile
 
         mf = MFile.objects.get(id=mfileid)
         path = _get_mfile(mfileid)
@@ -528,7 +528,7 @@ def email(inputs,outputs,options={},callbacks=[]):
     try:
         from django.core.mail import send_mail
 
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=inputs[0])
 
         message = "Your workflow on file '%s' has succedded\n" % (mf.name)
@@ -545,8 +545,8 @@ def email(inputs,outputs,options={},callbacks=[]):
 @task
 def continue_workflow_taskset(mfileid, jobid, nexttasksetid):
     try:
-        from mserve.jobservice.models import Job
-        from mserve.dataservice.models import MFile, DataServiceTaskSet
+        from jobservice.models import Job
+        from dataservice.models import MFile, DataServiceTaskSet
         prevjob = Job.objects.get(id=jobid)
         nexttaskset = DataServiceTaskSet.objects.get(id=nexttasksetid)
 
@@ -566,7 +566,7 @@ def continue_workflow_taskset(mfileid, jobid, nexttasksetid):
 def mfilefetch(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         path = _get_mfile(mfileid)
         file = open(path,'r')
@@ -583,7 +583,7 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
     """Return hex md5 digest for a Django FieldFile"""
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         path = _get_mfile(mfileid)
         file = open(path,'r')
@@ -598,7 +598,7 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
 
         logging.info("Verify MD5 calclated %s" % calculated_md5)
 
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         _mf = MFile.objects.get(id=mfileid)
         db_md5 = _mf.checksum
 
@@ -632,7 +632,7 @@ def md5file(inputs,outputs,options={},callbacks=[]):
         md5string = md5.hexdigest()
         logging.info("MD5 calclated %s" % (md5string ))
 
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         _mf = MFile.objects.get(id=mfileid)
         _mf.checksum = md5string
         _mf.save()
@@ -652,7 +652,7 @@ def posterimage_remote(inputs,outputs,options={},callbacks=[]):
     try:
         print inputs
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
 
         remoteservice = "http://jester/services/CpNP8KcttY9D4vunctgSRPIfZOdstOkUAVAl0tNKs/mfiles/"
@@ -686,7 +686,7 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
     try:
 
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
 
         widthS = options["width"]
@@ -762,7 +762,7 @@ def thumboutput(inputs,outputs,options={},callbacks=[]):
         height = int(heightS)
         width  = int(widthS)
 
-        from mserve.jobservice.models import JobOutput
+        from jobservice.models import JobOutput
         jo = JobOutput.objects.get(pk=inputid)
         path = jo.file.path
 
@@ -805,7 +805,7 @@ def thumbvideooutput(inputs,outputs,options={},callbacks=[]):
             if tiledS == "True" or tiledS == "true":
                 tiled = True
 
-        from mserve.jobservice.models import JobOutput
+        from jobservice.models import JobOutput
         jo = JobOutput.objects.get(pk=inputid)
         path = jo.file.path
 

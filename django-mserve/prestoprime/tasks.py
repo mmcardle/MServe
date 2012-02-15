@@ -38,7 +38,7 @@ def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
 
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         inputfile = mf.file.path
 
@@ -53,7 +53,7 @@ def mxftechmdextractor(inputs,outputs,options={},callbacks=[]):
         cmd = " ".join(args)
         p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
 
-        from mserve.jobservice.models import JobOutput
+        from jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput)
         jo.file.save('mxftechmdextractor.txt', ContentFile(p.stdout.read()), save=True)
 
@@ -70,7 +70,7 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         joboutput = outputs[0]
 
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         inputfile = mf.file.path
         outputfile = tempfile.NamedTemporaryFile()
@@ -91,7 +91,7 @@ def d10mxfchecksum(inputs,outputs,options={},callbacks=[]):
         outputfile.seek(0)
         suf = SimpleUploadedFile("mfile",outputfile.read(), content_type='text/plain')
 
-        from mserve.jobservice.models import JobOutput
+        from jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput)
         jo.file.save('d10mxfchecksum.txt', suf, save=True)
 
@@ -108,7 +108,7 @@ def mxfframecount(inputs,outputs,options={},callbacks=[]):
 
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         inputfile = mf.file.path
 
@@ -148,7 +148,7 @@ def mxfframecount(inputs,outputs,options={},callbacks=[]):
 def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
     try:
         mfileid = inputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         inputfile = mf.file.path
 
@@ -174,7 +174,7 @@ def extractd10frame(inputs,outputs,options={},callbacks=[],**kwargs):
         # Save to the thumbnail field
         suf = SimpleUploadedFile("mfile",temp_handle.read(), content_type='image/png')
 
-        from mserve.jobservice.models import JobOutput
+        from jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput.pk)
         jo.file.save('extractd10frame.png', suf , save=False)
         jo.save()

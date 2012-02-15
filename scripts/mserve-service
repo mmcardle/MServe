@@ -19,7 +19,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 NAME=mserve-service
 MSERVE_HOME=/opt/mserve
-DAEMON=$MSERVE_HOME/manage.py
+DAEMON=$MSERVE_HOME/django-mserve/manage.py
 DESC="mserve service"
 USER=www-data
 INIT_LOG_DIR=/var/log/mserve

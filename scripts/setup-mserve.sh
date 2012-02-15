@@ -809,12 +809,12 @@ if [ "$MSERVE_ARCHIVE" == "NOTSET" ]; then
 else
 	# use the provided mserve archive, we assume tgz file
 	echo " $MSERVE_ARCHIVE"
-        tar -C $MSERVE_CHECKOUT --extract --file=$MSERVE_ARCHIVE mserve || f_ "failed to untar MSERVE archive"
+        tar -C $MSERVE_CHECKOUT --extract --file=$MSERVE_ARCHIVE || f_ "failed to untar MSERVE archive"
         MSERVE_CHECKOUT="$MSERVE_CHECKOUT/mserve"
 fi
 
-cp -a $MSERVE_CHECKOUT/mserve/* $MSERVE_TEMP || f_ "failed to copy mserve files in temp dir"
-cp -a $MSERVE_CHECKOUT/{scripts,static,README.txt} $MSERVE_TEMP || f_ "failed to copy scripts, static in temp dir"
+cp -a $MSERVE_CHECKOUT/* $MSERVE_TEMP || f_ "failed to copy mserve files in temp dir"
+#cp -a $MSERVE_CHECKOUT/{scripts,static,README.txt} $MSERVE_TEMP || f_ "failed to copy scripts, static in temp dir"
 
 cd $MSERVE_TEMP
 
@@ -832,39 +832,39 @@ fi
 
 #####################################
 #Configuration of mserve settings.py
-mv $MSERVE_TEMP/settings.py $MSERVE_TEMP/settings_dist.py
-sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
-	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
-	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#; \
+mv $MSERVE_TEMP/django-mserve/settings.py $MSERVE_TEMP/django-mserve/settings_dist.py
+sed -e "s#MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}/django-mserve'#; \
+	s#MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
+	s#MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#; \
 	s#\('USER'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_USER\2#; \
 	s#\('PASSWORD'.*:.*'\).*\('.*\)\$#\1$MSERVE_DATABASE_PASSWORD\2#" \
-	$MSERVE_TEMP/settings_dist.py > $MSERVE_TEMP/settings.py
+	$MSERVE_TEMP/django-mserve/settings_dist.py > $MSERVE_TEMP/django-mserve/settings.py
 
 
 ###########################
 # modify restart.sh
-mv $MSERVE_TEMP/restart.sh $MSERVE_TEMP/restart_dist.sh
-sed -e "s#^MSERVE_HOME=/opt/mserve#MSERVE_HOME=${MSERVE_HOME}#; \
+mv $MSERVE_TEMP/django-mserve/restart.sh $MSERVE_TEMP/django-mserve/restart_dist.sh
+sed -e "s#^MSERVE_HOME=/opt/mserve#MSERVE_HOME=${MSERVE_HOME}/django-mserve#; \
 	s#^MSERVE_DATA=/var/opt/mserve-data#MSERVE_DATA=${MSERVE_DATA}#" \
-	$MSERVE_TEMP/restart_dist.sh > $MSERVE_TEMP/restart.sh
-chmod +x $MSERVE_TEMP/restart.sh
+	$MSERVE_TEMP/django-mserve/restart_dist.sh > $MSERVE_TEMP/django-mserve/restart.sh
+chmod +x $MSERVE_TEMP/django-mserve/restart.sh
 
 
 ####################
 # modify celaryd.sh
-mv $MSERVE_TEMP/celeryd.sh $MSERVE_TEMP/celeryd_dist.sh
-sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+mv $MSERVE_TEMP/django-mserve/celeryd.sh $MSERVE_TEMP/django-mserve/celeryd_dist.sh
+sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}/django-mserve'#; \
 	s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 	s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
-	$MSERVE_TEMP/celeryd_dist.sh > $MSERVE_TEMP/celeryd.sh
+	$MSERVE_TEMP/django-mserve/celeryd_dist.sh > $MSERVE_TEMP/django-mserve/celeryd.sh
 
-chmod +x $MSERVE_TEMP/celeryd.sh
+chmod +x $MSERVE_TEMP/django-mserve/celeryd.sh
 
 ############################
 # configure init scripts
 if [ -f $MSERVE_TEMP/scripts/mserve-service ]; then
 	mv $MSERVE_TEMP/scripts/mserve-service $MSERVE_TEMP/scripts/mserve-service_dist
-	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}/django-mserve'#; \
 		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
 		$MSERVE_TEMP/scripts/mserve-service_dist > $MSERVE_TEMP/scripts/mserve-service
@@ -875,7 +875,7 @@ fi
 
 if [ -f $MSERVE_TEMP/scripts/celeryd-service ]; then
 	mv $MSERVE_TEMP/scripts/celeryd-service $MSERVE_TEMP/scripts/celeryd-service_dist
-	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}'#; \
+	sed -e "s#^MSERVE_HOME='/opt/mserve'#MSERVE_HOME='${MSERVE_HOME}/django-mserve'#; \
 		s#^MSERVE_DATA='/var/opt/mserve-data'#MSERVE_DATA='${MSERVE_DATA}'#; \
 		s#^MSERVE_LOG='/var/log/mserve'#MSERVE_LOG='${MSERVE_LOG}'#" \
 		$MSERVE_TEMP/scripts/celeryd-service_dist > $MSERVE_TEMP/scripts/celeryd-service
@@ -1151,10 +1151,10 @@ JSON
 
 fi
 
-sudo -u www-data ${MSERVE_HOME}/manage.py syncdb --noinput || f_ "failed to configure mserve database"
-sudo -u www-data ${MSERVE_HOME}/manage.py schemamigration jobservice dataservice --auto
-sudo -u www-data ${MSERVE_HOME}/manage.py migrate --noinput
-sudo -u www-data ${MSERVE_HOME}/manage.py register_tasks dataservice
+sudo -u www-data ${MSERVE_HOME}/django-mserve/manage.py syncdb --noinput || f_ "failed to configure mserve database"
+sudo -u www-data ${MSERVE_HOME}/django-mserve/manage.py schemamigration jobservice dataservice --auto
+sudo -u www-data ${MSERVE_HOME}/django-mserve/manage.py migrate --noinput
+sudo -u www-data ${MSERVE_HOME}/django-mserve/manage.py register_tasks dataservice
 
 if [ -f initial_data.json ]; then
 	rm initial_data.json
@@ -1189,7 +1189,7 @@ if [ -x ${MSERVE_HOME}/scripts/mserve-service ]; then
 	service mserve-service start || f_ "service mserve-service start failed to start mserve"
 else
 	echo "no mserve init script found, starting mserve service manually"
-	${MSERVE_HOME}/restart.sh || f_ "failed to restart/etc mserve"
+	${MSERVE_HOME}/django-mserve/restart.sh || f_ "failed to restart/etc mserve"
 fi
 
 # start celeryd
@@ -1209,7 +1209,7 @@ if [ -x ${MSERVE_HOME}/scripts/celeryd-service ]; then
 
 else
 	echo "no celeryd init script found, starting celeryd service manually"
-	${MSERVE_HOME}/celeryd.sh || f_ "failed to restart celeryd"
+	${MSERVE_HOME}/django-mserve/celeryd.sh || f_ "failed to restart celeryd"
 fi
 
 # sometimes apache needs restarting

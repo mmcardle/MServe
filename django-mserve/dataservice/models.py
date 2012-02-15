@@ -1081,7 +1081,7 @@ class DataServiceWorkflow(models.Model):
             raise Exception("Workflow %s has no taskset to run", self.name)
 
         mfile = MFile.objects.get(id=mfileid)
-        from mserve.jobservice.models import Job
+        from jobservice.models import Job
         jobname = "Workflow %s - Task %s" % (self.name, thistask.name)
         job = Job(name=jobname, mfile=mfile)
         job.save()

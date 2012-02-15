@@ -32,11 +32,11 @@ from dataservice.forms import *
 from dataservice.models import *
 from django.http import *
 from django.shortcuts import redirect
-from mserve.dataservice.models import DataService
-from mserve.dataservice.models import MFile
-from mserve.jobservice.models import *
-from mserve.jobservice.models import Job
-from mserve.jobservice.models import JobOutput
+from dataservice.models import DataService
+from dataservice.models import MFile
+from jobservice.models import *
+from jobservice.models import Job
+from jobservice.models import JobOutput
 import dataservice.models as models
 import dataservice.usage_store as usage_store
 from piston.handler import BaseHandler

@@ -27,10 +27,10 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
 
-    (r'^', include('mserve.dataservice.urls')),
-    (r'^', include('mserve.jobservice.urls')),
-    (r'^', include('mserve.webdav.urls')),
-    (r'^', include('mserve.mserveoauth.urls')),
+    (r'^', include('dataservice.urls')),
+    (r'^', include('jobservice.urls')),
+    (r'^', include('webdav.urls')),
+    (r'^', include('mserveoauth.urls')),
 
     (r'^admin/', include(admin.site.urls)),
 

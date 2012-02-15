@@ -323,7 +323,7 @@ def digitalrapids(inputs,outputs,options={},callbacks=[]):
     
         mfileid = inputs[0]
         joboutput = outputs[0]
-        from mserve.dataservice.models import MFile
+        from dataservice.models import MFile
         mf = MFile.objects.get(id=mfileid)
         videopath = mf.file.path
 
@@ -340,7 +340,7 @@ def digitalrapids(inputs,outputs,options={},callbacks=[]):
 
         videofile = open(video,'r')
 
-        from mserve.jobservice.models import JobOutput
+        from jobservice.models import JobOutput
         jo = JobOutput.objects.get(id=joboutput)
         jo.file.save('transcode.mov', File(videofile), save=True)
 

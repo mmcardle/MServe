@@ -26,9 +26,9 @@
 #
 ################################################################################
 
-from mserve.dataservice.models import *
-from mserve.dataservice.utils import unique_id
-from mserve.webdav.models import *
+from dataservice.models import *
+from dataservice.utils import unique_id
+from webdav.models import *
 from datetime import datetime
 from datetime import tzinfo
 from datetime import timedelta

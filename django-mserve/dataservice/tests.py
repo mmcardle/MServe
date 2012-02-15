@@ -21,7 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-from mserve.dataservice.models import HostingContainer
+from dataservice.models import HostingContainer
 from django.test import TestCase
 from dataservice.models import *
 from dataservice.tasks import *
