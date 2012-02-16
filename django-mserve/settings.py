@@ -210,7 +210,7 @@ if DEBUG:
     INSTALLED_APPS += ('debug_toolbar',)
 
 # Do RASCC setup
-RASCC = True
+RASCC = False
 if RASCC:
     CELERY_IMPORTS += ("rassc.tasks",)
     INSTALLED_APPS += ('rassc',)
@@ -228,7 +228,7 @@ if POSTMARK:
     R3D_PASS="r3dpassword"
 
 # Do PrestoPRIME setup
-PRESTOPRIME = True
+PRESTOPRIME = False
 DEFAULT_DELIVERY_SUCCESS_CONSTANT_MIN = 15.0
 DEFAULT_DELIVERY_SUCCESS_MULTIPLIER_GB = 1.0
 DELIVERY_SUCCESS_METRIC = "http://mserve/deliverySuccess"

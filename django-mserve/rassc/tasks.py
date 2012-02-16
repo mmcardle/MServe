@@ -33,7 +33,7 @@ from celery.task import task
 from dataservice.tasks import _get_mfile
 from dataservice.tasks import _save_joboutput
 
-@task(default_retry_delay=5,max_retries=1,name="dumbtask")
+@task(default_retry_delay=5,max_retries=1)
 def dumbtask(inputs,outputs,options={},callbacks=[]):
     logging.info("Processing dumb task")
     try:
@@ -52,7 +52,7 @@ def dumbtask(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with dumb task %s" % e)
         raise e
 
-@task(default_retry_delay=15,max_retries=3,name="swirl")
+@task(default_retry_delay=15,max_retries=3)
 def swirl(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
@@ -74,7 +74,7 @@ def swirl(inputs,outputs,options={},callbacks=[]):
     except Exception ,e:
         logging.info("Error with swirl %s" % e)
 
-@task(default_retry_delay=15,max_retries=3,name="imodel")
+@task(default_retry_delay=15,max_retries=3)
 def imodel(inputs,outputs,options={},callbacks=[]):
         mfileid = inputs[0]
         path = _get_mfile(mfileid)

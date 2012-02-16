@@ -24,7 +24,7 @@
 
 task_descriptions = {}
 
-task_descriptions['digitalrapids'] = {
+task_descriptions['postmark.tasks.digitalrapids'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "video" },
@@ -32,7 +32,7 @@ task_descriptions['digitalrapids'] = {
         "options":[],
         "results" : []
 }
-task_descriptions['red3dmux'] = {
+task_descriptions['postmark.tasks.red3dmux'] = {
         "nbinputs" : 2,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "video" },
@@ -41,7 +41,7 @@ task_descriptions['red3dmux'] = {
         "options":["start_frame","end_frame"],
         "results" : []
 }
-task_descriptions['red2dtranscode'] = {
+task_descriptions['postmark.tasks.red2dtranscode'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "video" },
@@ -50,3 +50,10 @@ task_descriptions['red2dtranscode'] = {
         "options":["export_type","start_frame","end_frame"],
         "results" : []
 }
+
+import settings
+if settings.POSTMARK:
+    from jobservice import *
+    if 'task_descriptions' in task_descriptions:
+        for k in struct.task_descriptions.keys():
+            register_task_description(k, task_descriptions[k])

@@ -55,3 +55,10 @@ task_descriptions['prestoprime.tasks.extractd10frame'] = {
         "options":['frame'],
         "results" : []
     }
+
+import settings
+if settings.PRESTOPRIME:
+    from jobservice import *
+    if 'task_descriptions' in task_descriptions:
+        for k in struct.task_descriptions.keys():
+            register_task_description(k, task_descriptions[k])

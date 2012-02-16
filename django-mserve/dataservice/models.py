@@ -1083,7 +1083,7 @@ class DataServiceWorkflow(models.Model):
 
         mfile = MFile.objects.get(id=mfileid)
         from jobservice.models import Job
-        jobname = "Workflow %s - Task %s" % (self.name, thistask.name)
+        jobname = "Workflow %s - %s" % (self.name, thistask.name)
         job = Job(name=jobname, mfile=mfile)
         job.save()
         tsr = thistask.create_workflow_taskset(mfileid, job)

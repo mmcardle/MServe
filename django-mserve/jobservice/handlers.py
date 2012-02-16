@@ -106,7 +106,7 @@ class JobHandler(BaseHandler):
             nbinputs = task_description["nbinputs"]
             nboutputs= task_description["nboutputs"]
 
-            jobname = "%s Job" % jobtype
+            jobname = "%s" % jobtype
             job = mfile.do("POST","jobs",**{"name":jobname})
             job.save()
 

@@ -53,3 +53,6 @@ def save_task_description(task_name, task_description):
         TaskOption.objects.get_or_create(taskdescription=td, name=o)
     for r in task_description['results']:
         TaskResult.objects.get_or_create(taskdescription=td, name=r)
+
+for td in TaskDescription.objects.all():
+    register_task_description(td.task_name, td.get_json())

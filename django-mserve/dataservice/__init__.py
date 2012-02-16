@@ -8,3 +8,8 @@ task_descriptions['dataservice.tasks.backup_mfile'] = {
         "options":[],
         "results" : []
 }
+
+from jobservice import *
+if 'task_descriptions' in task_descriptions:
+    for k in struct.task_descriptions.keys():
+        register_task_description(k, task_descriptions[k])

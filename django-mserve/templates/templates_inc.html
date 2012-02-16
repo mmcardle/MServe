@@ -946,7 +946,7 @@
         </table>
         <div  id='joboutputs-${id}' ></div>
         <div  id='jobpreviewpaginatorheader-${id}' class="jobpaginators" ></div>
-        <div  id='jobpreviewpaginator-${id}' class="jobpaginators" ></div>
+        <table id='jobpreviewpaginator-${id}' class="jobpaginators" ></table>
     </div>
 </script>
 
@@ -1159,7 +1159,7 @@
                 <button id="mfile_download_button-${id}" onclick='window.open("/mfiles/${id}/file/")' >Download</button>
             </td>
         </tr>
-        <tr><td><h3>Related Files</h3></td><td><small><img src="/mservemedia/images/media-record.png" />&nbsp;Indicates current file</small></td></tr>
+        <tr><td><h3>Related Files</h3><small><img height="20" width="20" src="/mservemedia/images/star-file.png" />&nbsp;Indicates current file</small></td></tr>
         <tr>
             {%templatetag openvariable%}if relations.length!=0 {%templatetag closevariable%}
                 <td colspan="2" style="width: 400px; border: 0px solid red;" >
@@ -1276,10 +1276,20 @@
         </table>
     </div>
 
-     {%templatetag openvariable%}if id == $item.currentid{%templatetag closevariable%}
-        <div style="height: 30px;width: 30px;position: relative;left:195px;top:5x;background-image: url('/mservemedia/images/media-record.png') ;background-repeat: no-repeat;" ></div>
-     {%templatetag openvariable%}else{%templatetag closevariable%}
+    {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
+        {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" ></div>
+        {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" ></div>
+        {%templatetag openvariable%}else mimetype.startsWith("image") {%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" ></div>
+         {%templatetag openvariable%}else{%templatetag closevariable%}
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
+        {%templatetag openvariable%}/if{%templatetag closevariable%}
+    {%templatetag openvariable%}/if{%templatetag closevariable%}
 
+     {%templatetag openvariable%}if id == $item.currentid{%templatetag closevariable%}
+        <img src="/mservemedia/images/star-file.png" style="height: 40px;width: 40px;position: relative;left:195px;top:-20x;" />
      {%templatetag openvariable%}/if{%templatetag closevariable%}
 
 </div>
@@ -1395,7 +1405,7 @@
 </script>
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
-    <table border="0">
+    <table border="0" class="fluid">
         <tr><th colspan="2">${name}</th></tr>
         <tr>
             <td colspan="2">

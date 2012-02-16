@@ -105,6 +105,11 @@ def _save_joboutput_thumb(outputid,image):
     image.save(tfile.name)
     return _save_topath(tfile, joboutput.get_upload_thumb_path(), joboutput.thumb )
 
+def _save_joboutput_image(outputid, image, suffix=".png"):
+    tfile = tempfile.NamedTemporaryFile(delete=True, suffix=suffix)
+    image.save(tfile.name)
+    _save_joboutput(outputid, tfile)
+
 def _save_joboutput(outputid, file):
     from jobservice.models import JobOutput
     joboutput = JobOutput.objects.get(id=outputid)
@@ -368,7 +373,7 @@ def _thumbvideo(videopath,width,height,tiled=False):
         logging.error("Could not import pyffmpeg, failing back to ffmpegthumbnailer")
         return _thumbvideo_ffmpegthumbnailer(videopath,width,height,tiled=tiled)
 
-@task(default_retry_delay=15,max_retries=3,name="thumbvideo")
+@task(default_retry_delay=15,max_retries=3)
 def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -399,7 +404,7 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with thumbvideo %s" % e)
         raise e
 
-@task(default_retry_delay=15,max_retries=3,name="postervideo")
+@task(default_retry_delay=15,max_retries=3)
 def postervideo(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -430,7 +435,7 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with postervideo %s : %s" % (type(e),e))
         raise
 
-@task(default_retry_delay=15,max_retries=3,name="transcodevideo")
+@task(default_retry_delay=15,max_retries=3)
 def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
@@ -444,14 +449,15 @@ def transcodevideo(inputs,outputs,options={},callbacks=[]):
 
     transcode.close()
 
-    upload = open(transcode.name,'r')
-    _save_joboutput(joboutput, upload)
-    upload.close()
+    for joboutput in outputs:
+        video = open(transcode.name,'r')
+        _save_joboutput(joboutput, video)
+        video.close()
 
     return {"success":True, "message": "Transcode Successful"}
 
 
-@task(default_retry_delay=15,max_retries=3,name="proxyvideo")
+@task(default_retry_delay=15,max_retries=3)
 def proxyvideo(inputs,outputs,options={},callbacks=[]):
 
     mfileid = inputs[0]
@@ -464,14 +470,19 @@ def proxyvideo(inputs,outputs,options={},callbacks=[]):
     
     transcode.close()
 
-    upload = open(transcode.name,'r')
-    _save_proxy(mfileid, upload)
-    upload.close()
+    proxy = open(transcode.name,'r')
+    _save_proxy(mfileid, proxy)
+    proxy.close()
+
+    for joboutput in outputs:
+        video = open(transcode.name,'r')
+        _save_joboutput(joboutput, video)
+        video.close()
 
     return {"success":True, "message": "Proxy Successful"}
 
 
-@task(default_retry_delay=15,max_retries=3,name="mimefile")
+@task(default_retry_delay=15,max_retries=3)
 def mimefile(inputs,outputs,options={},callbacks=[]):
     try:
         mfileid = inputs[0]
@@ -523,7 +534,7 @@ def backup_mfile(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with backup_mfile %s" % e)
         raise
 
-@task(default_retry_delay=15,max_retries=3,name="email")
+@task(default_retry_delay=15,max_retries=3)
 def email(inputs,outputs,options={},callbacks=[]):
     try:
         from django.core.mail import send_mail
@@ -614,7 +625,7 @@ def md5fileverify(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with mime %s" % e)
         raise e
 
-@task(default_retry_delay=15,max_retries=3,name="md5file")
+@task(default_retry_delay=15,max_retries=3)
 def md5file(inputs,outputs,options={},callbacks=[]):
 
     """Return hex md5 digest for a Django FieldFile"""
@@ -646,41 +657,7 @@ def md5file(inputs,outputs,options={},callbacks=[]):
         logging.info("Error with md5 %s" % e)
         raise
 
-@task(default_retry_delay=15,max_retries=3,name="posterimage_remote")
-def posterimage_remote(inputs,outputs,options={},callbacks=[]):
-
-    try:
-        print inputs
-        mfileid = inputs[0]
-        from dataservice.models import MFile
-        mf = MFile.objects.get(id=mfileid)
-
-        remoteservice = "http://jester/services/CpNP8KcttY9D4vunctgSRPIfZOdstOkUAVAl0tNKs/mfiles/"
-
-        #response = cStringIO.StringIO()
-        resp = StringIO.StringIO()
-
-        pf = [  ('file', (pycurl.FORM_FILE, str(mf.file.path))), ]
-        c = pycurl.Curl()
-        c.setopt(c.POST, 1)
-        c.setopt(c.URL, remoteservice)
-        c.setopt(c.HTTPHEADER, [ 'Expect:', 'Content-Type: multipart/form-data' ] )
-        #c.setopt(c.HTTPHEADER, [ 'Expect:' ] )
-        c.setopt(c.WRITEFUNCTION, resp.write)
-
-        c.setopt(c.HTTPPOST, pf)
-        #c.setopt(c.VERBOSE, 1)
-
-        c.perform()
-        c.close()
-
-        print resp
-
-    except Exception as e:
-        logging.info("Error with posterimage %s" % e)
-        raise e
-
-@task(default_retry_delay=15,max_retries=3,name="posterimage")
+@task(default_retry_delay=15,max_retries=3)
 def posterimage(inputs,outputs,options={},callbacks=[]):
 
     try:
@@ -706,6 +683,9 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
 
             logging.info("Poster created %s" % (image))
 
+            for joboutput in outputs:
+                _save_joboutput_image(joboutput, image)
+
             for callback in callbacks:
                 subtask(callback).delay()
 
@@ -716,7 +696,7 @@ def posterimage(inputs,outputs,options={},callbacks=[]):
         #logging.info("Error with posterimage %s" % e)
         raise
 
-@task(default_retry_delay=15,max_retries=3,name="thumbimage")
+@task(default_retry_delay=15,max_retries=3)
 def thumbimage(inputs,outputs,options={},callbacks=[]):
     
     try:
@@ -735,10 +715,13 @@ def thumbimage(inputs,outputs,options={},callbacks=[]):
 
         if image:
 
-            if not _save_thumb(inputid,image):
+            if not _save_thumb(inputid, image):
                 thumbimage.retry([inputs,outputs,options,callbacks])
 
             logging.info("Thumbnail created %s" % (image))
+
+            for joboutput in outputs:
+                _save_joboutput_image(joboutput, image)
 
             for callback in callbacks:
                 subtask(callback).delay()

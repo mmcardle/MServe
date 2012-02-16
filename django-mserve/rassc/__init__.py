@@ -24,7 +24,7 @@
 
 task_descriptions = {}
 
-task_descriptions['dumbtask'] = {
+task_descriptions['rassc.tasks.dumbtask'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "image/jpeg" },
@@ -32,8 +32,7 @@ task_descriptions['dumbtask'] = {
         "options" : [],
         "results" :[]
     }
-task_descriptions['dataservice.tasks.dumbtask'] = task_descriptions['dumbtask']
-task_descriptions['swirl'] = {
+task_descriptions['rassc.tasks.swirl'] = {
         "nbinputs" : 1,
         "nboutputs" : 1,
         "input-0" : { "mimetype" : "image/jpg" },
@@ -41,8 +40,7 @@ task_descriptions['swirl'] = {
         "options" : [],
         "results" :[]
     }
-task_descriptions['dataservice.tasks.swirl'] =  task_descriptions['swirl']
-task_descriptions['imodel'] = {
+task_descriptions['rassc.tasks.imodel'] = {
         "nbinputs" : 1,
         "nboutputs" : 2,
         "input-0" : { "mimetype" : "application/json" },
@@ -51,11 +49,10 @@ task_descriptions['imodel'] = {
         "options" : [],
         "results" :[]
     }
-task_descriptions['dataservice.tasks.imodel'] =  task_descriptions['imodel']
-task_descriptions['thumbimage'] = {
-        "nbinputs" : 1,
-        "nboutputs" : 0,
-        "input-0" : { "mimetype" : "image/png" },
-        "options" : ['width','height'],
-        "results" :[]
-    }
+
+import settings
+if settings.RASCC:
+    from jobservice import *
+    if 'task_descriptions' in task_descriptions:
+        for k in struct.task_descriptions.keys():
+            register_task_description(k, task_descriptions[k])

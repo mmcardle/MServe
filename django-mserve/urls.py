@@ -25,24 +25,25 @@ from django.conf.urls.defaults import *
 from django.contrib import admin
 admin.autodiscover()
 
+import settings
+import os
+
+cwd = os.getcwd()
+DEV_STATIC_DIR = os.path.join(cwd, '..', 'static')
+DEV_THUMBS_DIR = os.path.join(settings.MSERVE_DATA, 'www-root', 'mservethumbs')
+
 urlpatterns = patterns('',
 
     (r'^', include('dataservice.urls')),
     (r'^', include('jobservice.urls')),
     (r'^', include('webdav.urls')),
     (r'^', include('mserveoauth.urls')),
-
+    (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': DEV_STATIC_DIR}),
+    (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': DEV_THUMBS_DIR}),
     (r'^admin/', include(admin.site.urls)),
-
 )
-import settings
+
 if settings.DEBUG:
-    import os
-    cwd = os.getcwd()
-    DEV_STATIC_DIR = os.path.join(cwd, '..', 'static')
-    DEV_THUMBS_DIR = os.path.join(settings.MSERVE_DATA, 'www-root', 'mservethumbs')
     urlpatterns += patterns('',
         (r'^test/', 'dataservice.views.test' ),
-        (r'^mservemedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root': DEV_STATIC_DIR}),
-        (r'^mservethumbs/(?P<path>.*)$', 'django.views.static.serve', {'document_root': DEV_THUMBS_DIR}),
     )
