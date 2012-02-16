@@ -415,16 +415,16 @@ def render_mfile(request, mfileid, form=AuthForm(), show=False):
     form.fields['dsid'].initial = mfile.id
     _dict = {}
 
-    _dict["thumburl"] = "/mservemedia/images/empty.png"
+    _dict["thumburl"] = settings.MEDIA_URL+"images/empty.png"
 
     if mfile.thumb == "":
-        _dict["thumburl"] = "/mservemedia/images/busy.gif"
+        _dict["thumburl"] = settings.MEDIA_URL+"images/busy.gif"
     else:
         _dict["thumburl"] = "%s" % (mfile.thumburl())
 
     if not show or mfile.file == '' or mfile.file == None:
-        _dict["altfile"] = "/mservemedia/images/empty.png"
-        _dict["thumburl"] = "/mservemedia/images/empty.png"
+        _dict["altfile"] = settings.MEDIA_URL+"images/empty.png"
+        _dict["thumburl"] = settings.MEDIA_URL+"images/empty.png"
         mfile.file = None
 
     _dict['verify'] = False

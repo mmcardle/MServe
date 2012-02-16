@@ -157,7 +157,7 @@ You also need to include this conditional style in the <head> of your HTML file 
     float:left;
     width:298px;
     height:233px;
-    background-image: url("/mservemedia/images/main_img.png");
+    background-image: url("../images/main_img.png");
     background-repeat: no-repeat;
 }
 .header_img #chart_div{
@@ -501,7 +501,7 @@ li.fluid a {
     margin: 1px;
     float:left;
     padding:1px;
-    background:url(/mservemedia/images/content_img.png) top no-repeat;
+    background:url(../images/content_img.png) top no-repeat;
     cursor: pointer;
 }
 
@@ -512,7 +512,7 @@ li.fluid a {
     margin: 1px;
     float:left;
     padding:1px;
-    background:url(/mservemedia/images/poster_img_4.png) top no-repeat;
+    background:url(../images/poster_img_4.png) top no-repeat;
 
 }
 
@@ -543,7 +543,7 @@ li.fluid a {
 }
 
 .title, .subtitle{
-    background-image:url('/mservemedia/images/transparent-white.png')
+    background-image:url('../images/transparent-white.png')
 }
 .thumb .subtitle, .thumb .title {
     padding-left:4px;
@@ -560,16 +560,16 @@ li.fluid a {
 }
 
 .readytoupload {
-    background-image: url('/mservemedia/images/go-up.png');
+    background-image: url('../images/go-up.png');
 }
 
 .uploading {
     text-align: center;
-    background-image: url('/mservemedia/images/busy.gif');
+    background-image: url('../images/busy.gif');
 }
 
 .spinner,.taskrunning{
-    background-image: url('/mservemedia/images/busy.gif');
+    background-image: url('../images/busy.gif');
     background-position: left;
     background-repeat: no-repeat;
     padding-left: 20px;
@@ -588,7 +588,7 @@ li.fluid a {
 }
 
 #progressbox {
-    background-image: url('/mservemedia/images/list-add.png');
+    background-image: url('../images/list-add.png');
 }
 
 .upload{
@@ -659,7 +659,7 @@ form.file_upload {
   height: 2.5em;
   line-height: 2.5em;
   border: 1px solid silver;
-  background-image: url('/mservemedia/images/go-up.png');
+  background-image: url('../images/go-up.png');
   background-repeat: no-repeat;
   background-position: center;
 }
@@ -733,7 +733,7 @@ form.file_upload button,
 .file_upload_progress .ui-progressbar-value,
 .file_upload_overall_progress .ui-progressbar-value,
 .progressbar div {
-  background: url('/mservemedia/js/jquery-file-upload/pbar-ani.gif');
+  background: url('../js/jquery-file-upload/pbar-ani.gif');
 }
 
 .file_upload_progress div {
@@ -782,7 +782,7 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 
 .fbg {
 	padding:0px 0 0 0;
-	//background:#393939 url(/mservemedia/images/fbg_bg.gif) bottom repeat-x;
+	//background:#393939 url(../images/fbg_bg.gif) bottom repeat-x;
 	margin:0px 0 0 0;
 }
 .fbg_resize {

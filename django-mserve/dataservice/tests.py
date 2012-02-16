@@ -210,8 +210,8 @@ class ClientTest(TestCase):
         self.image_mimetype = "image/jpeg"
         self.thumb_mimetype = "image/png"
         self.video_mimetype = "video/mp4"
-        self.thumb_image_url = '/mservemedia/images/image-x-generic.png'
-        self.thumb_generic_url = '/mservemedia/images/text-x-generic.png'
+        self.thumb_image_url = settings.MEDIA_URL+'images/image-x-generic.png'
+        self.thumb_generic_url = settings.MEDIA_URL+'images/text-x-generic.png'
 
         self.test_image_path = os.path.join(self.testfolder, self.image_name)
         self.test_video_path  = os.path.join(self.testfolder, self.video_name)
@@ -226,11 +226,6 @@ class ClientTest(TestCase):
 
         self.magicmime = magic.open(magic.MAGIC_MIME)
         self.magicmime.load()
-
-        from jobservice import register_task_description
-        from rassc import task_descriptions
-        register_task_description("rassc.tasks.swirl",task_descriptions["rassc.tasks.swirl"])
-
         
     def test_create_service(self):
 
@@ -291,7 +286,7 @@ class ClientTest(TestCase):
         js = json.loads(response.content)
         mfileid = js["id"]
         self.mfile_post_job_url = reverse('mfile_job', args=[mfileid])
-        response = self.c.post(self.mfile_post_job_url, {"name": "New Job", "jobtype": "rassc.tasks.swirl"})
+        response = self.c.post(self.mfile_post_job_url, {"name": "New Job", "jobtype": "dataservice.tasks.thumbimage"})
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         joboutputid = js["joboutput_set"][0]["id"]

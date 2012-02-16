@@ -23,7 +23,7 @@ function load_details_auth(authid){
                 var flashvars = { file:"/mservedata/"+msg.file,image:""+msg.posterurl,autostart:"false" };
                 var params = { allowfullscreen:"true", allowscriptaccess:"always" };
                 var attributes = { id:"player1", name:"player1" };
-                swfobject.embedSWF("/mservemedia/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
+                swfobject.embedSWF(MEDIA_URL+"/js/player.swf","container1","480","270","9.0.115","false",flashvars, params, attributes);
             }else if(msg.name.endsWith(".blend")){
                 $("#mfileRenderDetailsTemplate" ).tmpl( msg  ).appendTo( "#detailscontent" );
             }

@@ -356,7 +356,7 @@
                 </tr>
                 <tr>
                     <td>
-                        <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                        <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
                               <div>${mfile_set.length} files </div>
                               <div style="font-weight: bold">Latest Files :</div>
 
@@ -514,26 +514,26 @@
              {%templatetag openvariable%}if mfile_set[0] {%templatetag closevariable%}
                           <td class="service_preview_td" style="background-image: url(${mfile_set[0].thumburl});"></td>
              {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
+                          <td class="service_preview_td" style="background-image: url('{{MEDIA_URL}}images/text-x-generic-template.png');"></td>
              {%templatetag openvariable%}/if{%templatetag closevariable%}
 
              {%templatetag openvariable%}if mfile_set[1] {%templatetag closevariable%}
                           <td class="service_preview_td" style="background-image: url(${mfile_set[1].thumburl});"></td>
               {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
+                          <td class="service_preview_td" style="background-image: url('{{MEDIA_URL}}images/text-x-generic-template.png');"></td>
              {%templatetag openvariable%}/if{%templatetag closevariable%}
         </tr>
         <tr>
              {%templatetag openvariable%}if mfile_set[2] {%templatetag closevariable%}
                           <td style="background-image: url(${mfile_set[2].thumburl});"></td>
              {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
+                          <td class="service_preview_td" style="background-image: url('{{MEDIA_URL}}images/text-x-generic-template.png');"></td>
              {%templatetag openvariable%}/if{%templatetag closevariable%}
 
              {%templatetag openvariable%}if mfile_set[3] {%templatetag closevariable%}
                            <td class="service_preview_td" style="background-image: url(${mfile_set[3].thumburl});"></td>
              {%templatetag openvariable%}else{%templatetag closevariable%}
-                          <td class="service_preview_td" style="background-image: url('/mservemedia/images/text-x-generic-template.png');"></td>
+                          <td class="service_preview_td" style="background-image: url('{{MEDIA_URL}}images/text-x-generic-template.png');"></td>
              {%templatetag openvariable%}/if{%templatetag closevariable%}
         </tr>
     </table>
@@ -556,7 +556,7 @@
                                 {% endautoescape  %}
                     </div></td></tr>
             <tr><td>
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
                           <div>${mfile_set.length} files </div>
                           <div style="font-weight: bold">Latest Files :</div>
 
@@ -745,7 +745,7 @@
             </tr>
             <tr>
                 <td>
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
                         ${authname} access to ${basename}
                     </div>
                 </td>
@@ -998,7 +998,7 @@
                        </div></td></tr>
             <tr><td>
 
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
 
                     </div>
 
@@ -1033,7 +1033,7 @@
                        </div></td></tr>
             <tr><td>
 
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
                       <div>Size: ${size}</div>
                       <div style='font-size: x-small;'>Type</div>
                       <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
@@ -1069,7 +1069,7 @@
                     onmouseout="$('#id-${id}').hide();"
                  {%templatetag openvariable%}/if{%templatetag closevariable%}
             >
-            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0'  class='thumb' style="background-image: url(/mservemedia/images/icon_generic_120x120.png)">
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0'  class='thumb' style="background-image: url({{MEDIA_URL}}images/icon_generic_120x120.png)">
             <colgroup><col>
             </colgroup>
             <tbody>
@@ -1084,7 +1084,7 @@
             </tr>
             <tr>
                 <td>
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
                     </div>
                 </td>
             </tr>
@@ -1159,7 +1159,7 @@
                 <button id="mfile_download_button-${id}" onclick='window.open("/mfiles/${id}/file/")' >Download</button>
             </td>
         </tr>
-        <tr><td><h3>Related Files</h3><small><img height="20" width="20" src="/mservemedia/images/star-file.png" />&nbsp;Indicates current file</small></td></tr>
+        <tr><td><h3>Related Files</h3><small><img height="20" width="20" src="{{MEDIA_URL}}images/star-file.png" />&nbsp;Indicates current file</small></td></tr>
         <tr>
             {%templatetag openvariable%}if relations.length!=0 {%templatetag closevariable%}
                 <td colspan="2" style="width: 400px; border: 0px solid red;" >
@@ -1171,7 +1171,7 @@
                             </td>
                             <td style="padding-top: 20px;text-align: center">
                                 <div><strong>${name}</strong></div>
-                                <img title="relates" alt="relates" src="/mservemedia/images/go-next.png" />
+                                <img title="relates" alt="relates" src="{{MEDIA_URL}}images/go-next.png" />
                             </td>
                             <td>
                                {% templatetag openvariable %}tmpl( relation.right,  { "currentid" : id, } ) "#mfileClickableTemplate" {% templatetag closevariable %}
@@ -1214,7 +1214,7 @@
             </tr>
             <tr>
                 <td>
-                    <div class='info' style='background-image: url(/mservemedia/images/transparent-white.png); position:relative' id='id-${id}'>
+                    <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
                           <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
@@ -1235,13 +1235,13 @@
 
     {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
         {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_video.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_text.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("image") {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_image.png') ;background-repeat: no-repeat;" ></div>
          {%templatetag openvariable%}else{%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}/if{%templatetag closevariable%}
     {%templatetag openvariable%}/if{%templatetag closevariable%}
 </li>
@@ -1262,7 +1262,7 @@
                                 {% endautoescape  %}
                         </div></td></tr>
             <tr><td>
-                    <div style=';background-image: url(/mservemedia/images/transparent-white.png); position:relative' >
+                    <div style=';background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' >
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
                           <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
@@ -1278,18 +1278,18 @@
 
     {%templatetag openvariable%}if mimetype{%templatetag closevariable%}
         {%templatetag openvariable%}if mimetype.startsWith("video") || name.endsWith("mxf")  {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_video.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_video.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("text") {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_text.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_text.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}else mimetype.startsWith("image") {%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_image.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_image.png') ;background-repeat: no-repeat;" ></div>
          {%templatetag openvariable%}else{%templatetag closevariable%}
-        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('/mservemedia/images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
+        <div style="height: 50px;width: 50px;position: relative;left:195px;top:0px;background-image: url('{{MEDIA_URL}}images/icon_generic.png') ;background-repeat: no-repeat;" ></div>
         {%templatetag openvariable%}/if{%templatetag closevariable%}
     {%templatetag openvariable%}/if{%templatetag closevariable%}
 
      {%templatetag openvariable%}if id == $item.currentid{%templatetag closevariable%}
-        <img src="/mservemedia/images/star-file.png" style="height: 40px;width: 40px;position: relative;left:195px;top:-20x;" />
+        <img src="{{MEDIA_URL}}images/star-file.png" style="height: 40px;width: 40px;position: relative;left:195px;top:-20x;" />
      {%templatetag openvariable%}/if{%templatetag closevariable%}
 
 </div>
@@ -1309,7 +1309,7 @@
                                 {% endautoescape  %}
                         </div></td></tr>
             <tr><td>
-                    <div style=';background-image: url(/mservemedia/images/transparent-white.png); position:relative' >
+                    <div style=';background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' >
                           <div>Size: ${size}</div>
                           <div style='font-size: x-small;'>Type</div>
                           <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
@@ -1340,7 +1340,7 @@
             </tr>
             <tr>
                 <td>
-                   <div style=';background-image: url(/mservemedia/images/transparent-white.png); position:relative' >
+                   <div style=';background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' >
                        <button >Choose</button>
                    </div>
                 </td>
