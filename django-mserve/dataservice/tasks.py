@@ -396,6 +396,9 @@ def thumbvideo(inputs,outputs,options={},callbacks=[]):
 
         image = _thumbvideo(videopath,width,height,tiled=tiled)
 
+        for joboutput in outputs:
+            _save_joboutput_image(joboutput, image)
+
         if not _save_thumb(mfileid,image):
             thumbvideo.retry([inputs,outputs,options,callbacks])
 
@@ -427,8 +430,12 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
 
         image = _thumbvideo(videopath,width,height,tiled=tiled)
 
+        for joboutput in outputs:
+            _save_joboutput_image(joboutput, image)
+
         if not _save_poster(mfileid,image):
             postervideo.retry([inputs,outputs,options,callbacks])
+
 
         return {"success":True,"message":"Poster '%sx%s' of video successful"%(width,height)}
     except Exception, e:
