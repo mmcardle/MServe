@@ -40,5 +40,5 @@ Setup MServe
 * install - will install a fresh MServe deployment
 * update - will update the current MServe deployment to the latest version
 * uninstall - will uninstall the current deployment
-* dependencies - will install all librarys MServe idepends on
+* dependencies - will install all librarys MServe depends on
 
