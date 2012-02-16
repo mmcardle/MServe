@@ -399,7 +399,7 @@
                         folder_structure : auth.folder_structure
                     } )
 
-                    $.getScript('/mservemedia/js/blueimp-jQuery-File-Upload-cc02381/jquery.fileupload-ui.js');
+                    $.getScript('/mservemedia/js/jquery-file-upload/jquery.fileupload-ui.js');
 
                     $(".single-accordion").accordion({
 			collapsible: true
@@ -615,7 +615,7 @@
                         folder_structure : service.folder_structure
                     } )
 
-                    $.getScript('/mservemedia/js/blueimp-jQuery-File-Upload-cc02381/jquery.fileupload-ui.js');
+                    $.getScript('/mservemedia/js/jquery-file-upload/jquery.fileupload-ui.js');
                     
                     $(".single-accordion").accordion({
 			collapsible: true
