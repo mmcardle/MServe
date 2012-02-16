@@ -61,6 +61,7 @@ function create_job_output_paginator(job){
             $(joboutputs.slice(start,end)).each(function(index,joboutput){
                 if(joboutput.file != ""){
                     $( "#jobOutputTemplate" ).tmpl( joboutput ) .appendTo( jobpaginator );
+                    $("#joboutput-"+joboutput.id+"-createmfile-button").button().click(function(){create_mfile_from_joboutput(joboutput)})
                 }else{
                     $('<div></div>').html("<span class='red'>Output '"+joboutput.name+"' Empty&nbsp;</span>").appendTo( jobpaginator );
                 }
@@ -99,6 +100,22 @@ function load_render_preview(mfileid){
       }
    }
  });
+}
+
+
+function create_mfile_from_joboutput(joboutput){
+     name = $("#joboutput-"+joboutput.id+"-createmfile-name").val()
+     $.ajax({
+       type: "POST",
+       url: '/joboutputs/'+joboutput.id+"/mfile/",
+       data: "name="+name,
+       success: function(mfile){
+           $("#mserve").mserve('addMFile',mfile)
+       },
+       error: function(msg){
+           showError("Error creating new file","Could not create a new file from this job output")
+       }
+     });
 }
 
 function load_jobs_mfile(mfileid){
@@ -173,6 +190,7 @@ function update_job_outputs(job){
     $(job.joboutput_set).each(function(index, joboutput){
         if(joboutput.file != ""){
             $( "#jobOutputTemplate" ).tmpl( joboutput ) .appendTo( "#jobpreviewpaginator-"+job.id );
+            $("#joboutput-"+joboutput.id+"-createmfile-button").button().click(function(){create_mfile_from_joboutput(joboutput)})
         }else{
             $('<div></div>').html("<span class='red'>Output '"+joboutput.name+"' Empty&nbsp;</span>").appendTo( "#jobpreviewpaginator-"+job.id  );
         }

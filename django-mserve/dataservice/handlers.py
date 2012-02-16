@@ -76,6 +76,7 @@ from models import DataService
 from models import RemoteMServeService
 from models import MFolder
 from models import MFile
+from models import Relationship
 from models import BackupFile
 from models import ManagementProperty
 from models import Auth
@@ -640,6 +641,18 @@ class BackupFileHandler(BaseHandler):
         except:
             raise
 
+class RelationshipHandler(BaseHandler):
+    """
+
+    The piston handler for the :class:`.Relationship` class
+
+    This allows reading of Relationship objects
+
+    """
+    allowed_methods = ('GET')
+    model = Relationship
+    fields = ('name', 'left', 'right')
+
 
 class MFolderHandler(BaseHandler):
     """
@@ -683,8 +696,9 @@ class MFileHandler(BaseHandler):
     model = MFile
     fields = ('name', 'id', 'file', 'checksum', 'size', 'mimetype', 'thumb',
                 'poster', 'proxy', 'created', 'updated', 'thumburl', \
-                'posterurl', 'proxyurl', 'reportnum',\
-                ('folder', ('id', 'name')))
+                'posterurl', 'proxyurl', 'reportnum', 'relations',
+                ('folders', ('id', 'name') )
+            )
 
     def read(self, request, mfileid=None, serviceid=None,
                 authid=None, field=None):

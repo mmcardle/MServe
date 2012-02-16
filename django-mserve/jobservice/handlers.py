@@ -92,13 +92,13 @@ class JobHandler(BaseHandler):
             for v in request.POST:
                 options[v]=request.POST[v]
 
-            logging.info("Request for job type '%s' with options %s" % (jobtype,options) )
+            logging.info("Request for job type '%s' with options %s" % (jobtype, options) )
 
             task_description = None
             try:
                 task_description = get_task_description(jobtype)
             except Exception as e:
-                logging.error("No job description for job type '%s' %s" % (jobtype,e) )
+                logging.error("No job description for job type '%s' %s" % (jobtype, e) )
                 r = rc.BAD_REQUEST
                 r.write("\nJob has no description - Creation Failed!")
                 return r
@@ -106,7 +106,8 @@ class JobHandler(BaseHandler):
             nbinputs = task_description["nbinputs"]
             nboutputs= task_description["nboutputs"]
 
-            job = mfile.do("POST","jobs",**{"name":"Job"})
+            jobname = "%s Job" % jobtype
+            job = mfile.do("POST","jobs",**{"name":jobname})
             job.save()
 
             for i in range(1,nbinputs):
@@ -209,18 +210,27 @@ class JobOutputHandler(BaseHandler):
                 file = request.FILES["thumb"]
                 joboutput.thumb.save("thumb.png", file, save=True)
                 return {"message":"updated job output thumb"}
-
-            if field == "file":
+            elif field == "file":
                 file = request.FILES["file"]
                 joboutput.file.save(joboutput.name, file, save=True)
                 logging.info("request.FILES SAVED")
                 return {"message":"updated job output"}
+            elif field == "mfile":
+                name = request.POST.get("name","new-mfile")
+                mfile = joboutput.job.mfile.service.create_mfile(name,
+                    file=joboutput.job.mfile.file, post_process=True,
+                    folder=joboutput.job.mfile.folder)
+                relname = "created by %s" % joboutput.job.name
+                rel = Relationship(entity1=joboutput.job.mfile, entity2=mfile,
+                                name=relname)
+                rel.save()
+                return mfile
             else:
                 r = rc.BAD_REQUEST
                 r.write("Invalid Request! no file in request.")
                 return r
-        except Exception as e:
-            raise e
+        except:
+            raise
 
     def read(self, request, outputid, field=None):
         if outputid:

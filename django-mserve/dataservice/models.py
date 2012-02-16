@@ -61,6 +61,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.db.models.signals import post_init
 from django.db.models.signals import pre_delete
+from django.db.models import Q
 from django.core.urlresolvers import reverse
 from django.core.files import File
 from django.db.models import Count, Max, Min, Avg, Sum, StdDev, Variance
@@ -1707,6 +1708,21 @@ class MFolder(NamedBase):
         super(MFolder, self).save(*args, **kwargs)
 
 
+class Relationship(models.Model):
+    ''' A relationship between two MFiles '''
+    name = models.CharField(max_length=200)
+    """Name of the relationship"""
+    entity1 = models.ForeignKey('MFile', related_name="related_left")
+    """The :class:`.Mfile` of the first entity in the relationship"""
+    entity2 = models.ForeignKey('MFile', related_name="related_right")
+    """The :class:`.Mfile` of the second entity in the relationship"""
+
+    def left(self):
+        return self.entity1.serialize()
+
+    def right(self):
+        return self.entity2.serialize()
+
 class MFile(NamedBase):
     """
     An MFile represents a single file on the system at a service
@@ -1747,6 +1763,9 @@ class MFile(NamedBase):
             "workflows": ["GET", "POST"],
             "jobs": ["GET", "POST"],
             }
+
+    def relations(self):
+        return Relationship.objects.filter(Q(entity1=self)|Q(entity2=self))
 
     def stats_url(self):
         """The REST API url for stats for this MFile, used by html views"""
@@ -1851,6 +1870,24 @@ class MFile(NamedBase):
                 return self
             return HttpResponseBadRequest()
         return HttpResponseNotFound()
+
+    def serialize(self):
+        """Called by piston handlers to return a flat version of the model """
+        mfiledict = {}
+        mfiledict["id"] = self.id
+        mfiledict["name"] = self.name
+        mfiledict["file"] = self.file
+        mfiledict["mimetype"] = self.mimetype
+        mfiledict["updated"] = self.updated
+        mfiledict["thumburl"] = self.thumburl()
+        mfiledict["thumb"] = self.thumb
+        mfiledict["created"] = self.created
+        mfiledict["checksum"] = self.checksum
+        mfiledict["posterurl"] = self.posterurl()
+        mfiledict["poster"] = self.poster
+        mfiledict["reportnum"] = self.reportnum
+        mfiledict["size"] = self.size
+        return mfiledict
 
     def clean_base(self, authid):
         """Called by an Auth to return a cleaned version of this mfile"""

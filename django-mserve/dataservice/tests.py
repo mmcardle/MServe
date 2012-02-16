@@ -221,6 +221,11 @@ class ClientTest(TestCase):
 
         self.magicmime = magic.open(magic.MAGIC_MIME)
         self.magicmime.load()
+
+        from jobservice import register_task_description
+        from rassc import task_descriptions
+        register_task_description("swirl",task_descriptions["swirl"])
+
         
     def test_create_service(self):
 
@@ -264,6 +269,29 @@ class ClientTest(TestCase):
 
     def test_create_mfile(self):
         response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response.status_code,200)
+
+    def test_create_job(self):
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        mfileid = js["id"]
+        self.mfile_post_job_url = reverse('mfile_job', args=[mfileid])
+        response = self.c.post(self.mfile_post_job_url, {"name": "New Job", "jobtype": "md5file"})
+        self.failUnlessEqual(response.status_code,200)
+
+    def test_create_mfile_from_joboutput(self):
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        mfileid = js["id"]
+        self.mfile_post_job_url = reverse('mfile_job', args=[mfileid])
+        response = self.c.post(self.mfile_post_job_url, {"name": "New Job", "jobtype": "swirl"})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        joboutputid = js["joboutput_set"][0]["id"]
+        self.joboutput_mfile_url = reverse('joboutput_mfile', args=[joboutputid])
+        response = self.c.post(self.joboutput_mfile_url, {"name": "New Mfile"})
         self.failUnlessEqual(response.status_code,200)
 
     def test_get_mfile(self):

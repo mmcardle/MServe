@@ -1104,6 +1104,8 @@
                     <td>
                         <h3>${name}</h3>
                         <dl>
+                            <dt>ID</dt>
+                            <dd>${id}</dd>
                             <dt>Checksum</dt>
                             <dd>${checksum}</dd>
                             <dt>Mime</dt>
@@ -1153,10 +1155,34 @@
          {%templatetag openvariable%}/if{%templatetag closevariable%}
         </tr>
         <tr>
-            <td colspan="2">
-                <h5>Actions</h5>
+            <td colspan="2"><h3>Actions</h3>
                 <button id="mfile_download_button-${id}" onclick='window.open("/mfiles/${id}/file/")' >Download</button>
             </td>
+        </tr>
+        <tr><td><h3>Related Files</h3></td><td><small><img src="/mservemedia/images/media-record.png" />&nbsp;Indicates current file</small></td></tr>
+        <tr>
+            {%templatetag openvariable%}if relations.length!=0 {%templatetag closevariable%}
+                <td colspan="2" style="width: 400px; border: 0px solid red;" >
+                    <table border="0" style="overflow: scroll;border: 0px solid green">
+                    {%templatetag openvariable%}each(index, relation) relations{%templatetag closevariable%}
+                        <tr>
+                            <td>
+                               {% templatetag openvariable %}tmpl( relation.left,  { "currentid" : id, } ) "#mfileClickableTemplate" {% templatetag closevariable %}
+                            </td>
+                            <td style="padding-top: 20px;text-align: center">
+                                <div><strong>${name}</strong></div>
+                                <img title="relates" alt="relates" src="/mservemedia/images/go-next.png" />
+                            </td>
+                            <td>
+                               {% templatetag openvariable %}tmpl( relation.right,  { "currentid" : id, } ) "#mfileClickableTemplate" {% templatetag closevariable %}
+                            </td>
+                        </tr>
+                    {%templatetag openvariable%}/each{%templatetag closevariable%}
+                    </table>
+                </td>
+            {%templatetag openvariable%}else{%templatetag closevariable%}
+                <td><em>No related files</em></td>
+            {%templatetag openvariable%}/if{%templatetag closevariable%}
         </tr>
         </table>
     </div>
@@ -1221,28 +1247,41 @@
 </li>
 </script>
 
-<script id="mfileChooserTemplate" type="text/x-jquery-tmpl">
-<div id="${id}" class="infoholder mfile-chooser">
-    <div  class='fluid' >
-            <table cellpadding='0' cellspacing='0' style='' class='thumb'>
+
+<script id="mfileClickableTemplate" type="text/x-jquery-tmpl">
+<div class="infoholder" onclick='$("#mserve").mserve("showMFile","${id}" )'>
+    <div id="image-${id}" class='fluid' >
+            <table id="mfile-table-${id}" cellpadding='0' cellspacing='0' style='background-image:url("${thumburl}");' class='thumb'>
             <colgroup><col>
             </colgroup>
             <tbody>
-            <tr>
-                <td>
-                    <div class='title'>Choose</div>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                   <div style=';background-image: url(/mservemedia/images/transparent-white.png); position:relative' >
-                       <button >Choose</button>
-                   </div>
-                </td>
-            </tr>
+            <tr><td>
+                    <div class='title'>
+                                {% autoescape off %}
+                                    ${getShort(name,20)}
+                                {% endautoescape  %}
+                        </div></td></tr>
+            <tr><td>
+                    <div style=';background-image: url(/mservemedia/images/transparent-white.png); position:relative' >
+                          <div>Size: ${size}</div>
+                          <div style='font-size: x-small;'>Type</div>
+                          <div style='font-size: xx-small;text-align: center'>${mimetype}</div>
+                          <div style='font-size: x-small;'>Created: ${created}</div>
+                          <div style='font-size: x-small;'>Updated: ${updated}</div>
+                          <div style='font-size: xx-small;'>Checksum:</div>
+                          <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
+                      </div>
+                </td></tr>
             </tbody>
         </table>
     </div>
+
+     {%templatetag openvariable%}if id == $item.currentid{%templatetag closevariable%}
+        <div style="height: 30px;width: 30px;position: relative;left:195px;top:5x;background-image: url('/mservemedia/images/media-record.png') ;background-repeat: no-repeat;" ></div>
+     {%templatetag openvariable%}else{%templatetag closevariable%}
+
+     {%templatetag openvariable%}/if{%templatetag closevariable%}
+
 </div>
 </script>
 
@@ -1270,6 +1309,32 @@
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
                       </div>
                 </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</script>
+
+
+<script id="mfileChooserTemplate" type="text/x-jquery-tmpl">
+<div id="${id}" class="infoholder mfile-chooser">
+    <div  class='fluid' >
+            <table cellpadding='0' cellspacing='0' style='' class='thumb'>
+            <colgroup><col>
+            </colgroup>
+            <tbody>
+            <tr>
+                <td>
+                    <div class='title'>Choose</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                   <div style=';background-image: url(/mservemedia/images/transparent-white.png); position:relative' >
+                       <button >Choose</button>
+                   </div>
+                </td>
+            </tr>
             </tbody>
         </table>
     </div>
@@ -1330,21 +1395,24 @@
 </script>
 
 <script id="jobOutputTemplate" type="text/x-jquery-tmpl">
-    <table>
-        <tr><th>${name}</th></tr>
+    <table border="0">
+        <tr><th colspan="2">${name}</th></tr>
         <tr>
-            <td>
+            <td colspan="2">
                 {%templatetag openvariable%}if thumburl != "" {%templatetag closevariable%}
                     <a  target='_blank' href='/joboutputs/${id}/file/' ><img id="joboutput-${id}" src='${thumburl}' /></a>
                 {%templatetag openvariable%}else{%templatetag closevariable%}
                     <a target='_blank' href='/joboutputs/${id}/file/' style="color:green;font-weight: bold;font-variant: small-caps;font-size: large" >Download Output</a>
-                {%templatetag openvariable%}/if  {%templatetag closevariable%}
+                {%templatetag openvariable%}/if{%templatetag closevariable%}
             </td>
+        </tr>
+        <tr><td><label for="joboutput-${id}-createmfile-name">Save as new file</label></td></tr>
+        <tr>
+            <td><input id="joboutput-${id}-createmfile-name" value="${name}" /></td>
+            <td><button id="joboutput-${id}-createmfile-button">Save file</button></td>
         </tr>
     </table>
 </script>
-
-
 
 <div style="display:none">
 
