@@ -192,6 +192,7 @@ class ClientTest(TestCase):
         self.container_name = "testingcontainer"
         self.service_name = "testingservice"
         self.mfile_name = "testmfile"
+        self.unauthclient = Client()
         self.c = Client()
         User.objects.create_superuser(self.username, 'myemail@tempuri.com', self.password)
         self.c.login(username=self.username, password=self.password)
@@ -227,7 +228,32 @@ class ClientTest(TestCase):
 
         self.magicmime = magic.open(magic.MAGIC_MIME)
         self.magicmime.load()
-        
+
+    def test_unauth_html(self):
+        self.failUnlessEqual(self.unauthclient.get(reverse('home'), follow=True).status_code,200)
+        self.failUnlessEqual(self.unauthclient.get(reverse('usage')).status_code,200)
+        self.failUnlessEqual(self.unauthclient.get(reverse('traffic')).status_code,200)
+        self.failUnlessEqual(self.unauthclient.get(reverse('stats')).status_code,200)
+        self.failUnlessEqual(self.unauthclient.get(reverse('tasks')).status_code,200)
+
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        mfileid = js["id"]
+        self.failUnlessEqual(self.unauthclient.get(reverse('videoplayer',args=[mfileid])).status_code,200)
+        self.failUnlessEqual(self.unauthclient.get(reverse('stats',args=[mfileid])).status_code,200)
+
+        authid = self.service.auth_set.all()[0].id
+        self.failUnlessEqual(self.unauthclient.get(reverse('browse',args=[authid])).status_code,200)
+        self.failUnlessEqual(self.unauthclient.get(reverse('stats',args=[authid])).status_code,200)
+
+    def test_admin_html(self):
+        self.failUnlessEqual(self.c.get(reverse('home')).status_code,200)
+        self.failUnlessEqual(self.c.get(reverse('usage')).status_code,200)
+        self.failUnlessEqual(self.c.get(reverse('traffic')).status_code,200)
+        self.failUnlessEqual(self.c.get(reverse('stats')).status_code,200)
+        self.failUnlessEqual(self.c.get(reverse('stats')).status_code,200)
+
     def test_create_service(self):
 
         response = self.c.post(self.service_post_url, {"name": self.service_name, "container": self.hc.id})

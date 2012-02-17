@@ -90,15 +90,17 @@ MOBILE_UAS = [
 MOBILE_UAS_HINTS = [ 'SymbianOS', 'Opera Mini', 'iPhone', 'iPad' ]
 
 def append_dict(_dict, request):
-    """Detect and append mobile user agents to a dict """
+    """Detect and append mobile user agents to a dict"""
     mobile_browser = False
-    uagent = request.META['HTTP_USER_AGENT'].lower()[0:4]
-    if (uagent in MOBILE_UAS):
-        mobile_browser = True
-    else:
-        for hint in MOBILE_UAS_HINTS:
-            if request.META['HTTP_USER_AGENT'].find(hint) > 0:
-                mobile_browser = True
+    uagent = request.META.get('HTTP_USER_AGENT', None)
+    if uagent:
+        uagent = uagent.lower()[0:4]
+        if (uagent in MOBILE_UAS):
+            mobile_browser = True
+        else:
+            for hint in MOBILE_UAS_HINTS:
+                if request.META.get('HTTP_USER_AGENT').find(hint) > 0:
+                    mobile_browser = True
 
     _dict['mobile_browser'] = mobile_browser
     if request.user.is_authenticated() and request.user.is_staff:
@@ -241,9 +243,9 @@ def traffic(request ):
 
 def stats(request, baseid=None):
     from jobservice.models import Job
-    job_json = Job.get_job_plots(request,baseid=baseid)
-    mfile_json = MFile.get_mfile_plots(request,baseid=baseid)
-    usage_json = Usage.get_usage_plots(request,baseid=baseid)
+    job_json = Job.get_job_plots(request, baseid=baseid)
+    mfile_json = MFile.get_mfile_plots(request, baseid=baseid)
+    usage_json = Usage.get_usage_plots(request, baseid=baseid)
     json = job_json + mfile_json + usage_json
     if json == None:
         return HttpResponseNotFound()
