@@ -436,7 +436,6 @@ def postervideo(inputs,outputs,options={},callbacks=[]):
         if not _save_poster(mfileid,image):
             postervideo.retry([inputs,outputs,options,callbacks])
 
-
         return {"success":True,"message":"Poster '%sx%s' of video successful"%(width,height)}
     except Exception, e:
         logging.info("Error with postervideo %s : %s" % (type(e),e))

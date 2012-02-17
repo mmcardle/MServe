@@ -112,6 +112,9 @@ class Job(NamedBase):
         super(Job, self).__init__(*args, **kwargs)
         self.metrics = job_metrics
 
+    def url(self):
+        return reverse('job',args=[self.id])
+
     @staticmethod
     def get_job_plots(request, baseid=None):
         taskstates = TaskState.objects.none()
@@ -379,6 +382,9 @@ class JobOutput(NamedBase):
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     file  = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage(),max_length=FILE_FIELD_LENGTH)
     thumb = models.ImageField(upload_to=utils.create_filename,null=True,storage=storage.getthumbstorage())
+
+    def mfile_url(self):
+        return reverse('joboutput_mfile',args=[self.id])
 
     def get_upload_path(self):
         return reverse('joboutput_upload',args=[self.id])

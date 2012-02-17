@@ -145,7 +145,7 @@ class ServiceRequestHandler(BaseHandler):
     """
     allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = ServiceRequest
-    fields = ('id', 'name', 'reason', 'state', 'status', 'time', 'ctime',
+    fields = ('id', 'name', 'reason', 'state', 'status', 'time', 'ctime', 'url',
              ('profile', ('id', 'user')))
 
     def update(self, request, servicerequestid=None):
@@ -274,7 +274,7 @@ class HostingContainerHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = HostingContainer
     fields = ('name', 'id', 'created', 'default_profile', 'default_path',
-                'reportnum', 'thumbs',
+                'reportnum', 'thumbs', 'services_url',
                 ('dataservice_set',
                 ('name', 'id', 'reportnum', 'starttime', 'endtime', 'thumbs',
                     'mfile_set')),
@@ -338,9 +338,9 @@ class DataServiceHandler(BaseHandler):
     allowed_methods = ('GET', 'POST', 'DELETE', 'PUT')
     model = DataService
     fields = ('name', 'id', 'created', 'reportnum', 'starttime', 'endtime',
-                'mfile_set', 'job_set', 'mfolder_set', 'thumbs',
-                'folder_structure', 'subservices_url', 'stats_url',
-                'usage_url', 'priority', 'properties_url', 'url',
+                'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'mfiles_url',
+                'folder_structure', 'subservices_url', 'url', 'stats_url',
+                'usage_url', 'priority', 'properties_url', 'profiles_url',
                 'webdav_url', 'auth_set')
     exclude = ('pk')
 
@@ -468,7 +468,7 @@ class DataServiceProfileHandler(BaseHandler):
     """
     allowed_methods = ('GET')
     model = DataServiceProfile
-    fields = ('name', 'id', 'workflows')
+    fields = ('name', 'id', 'workflows', 'tasksets_url', 'tasks_url')
 
     def read(self, request, serviceid):
         service = DataService.objects.get(id=serviceid)
@@ -500,7 +500,7 @@ class DataServiceTaskSetHandler(BaseHandler):
     """
     allowed_methods = ('GET', 'PUT', 'POST', 'DELETE')
     model = DataServiceTaskSet
-    fields = ('name', 'id', 'tasks', 'order')
+    fields = ('name', 'id', 'tasks', 'order', 'url')
 
     def read(self, request, serviceid, profileid, tasksetid=None):
         if tasksetid:
@@ -556,7 +556,7 @@ class DataServiceTaskHandler(BaseHandler):
     """
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = DataServiceTask
-    fields = ('name', 'task_name', 'id', 'condition', 'args')
+    fields = ('name', 'task_name', 'id', 'condition', 'args', 'url')
 
     def read(self, request, serviceid, profileid, taskid=None):
         if taskid:
@@ -696,8 +696,8 @@ class MFileHandler(BaseHandler):
     model = MFile
     fields = ('name', 'id', 'file', 'checksum', 'size', 'mimetype', 'thumb',
                 'poster', 'proxy', 'created', 'updated', 'thumburl', \
-                'posterurl', 'proxyurl', 'reportnum', 'relations',
-                ('folders', ('id', 'name') )
+                'posterurl', 'proxyurl', 'reportnum', 'relations', 'url',
+                'jobs_url', ('folders', ('id', 'name') )
             )
 
     def read(self, request, mfileid=None, serviceid=None,
@@ -996,13 +996,14 @@ class AuthHandler(BaseHandler):
     allowed_methods = ('GET', 'POST')
     model = Auth
     fields = ('authname', 'browse_url', 'id', 'auth_set', 'urls', 'methods',
-            'basename', 'thumburl',
+            'basename', 'thumburl', 'base_url', 'jobs_url', 'usage_url',
+            'mfiles_url',
             ('roles', ('id', 'rolename', 'description', 'methods')))
 
     def read(self, request, containerid=None, serviceid=None,
                 mfileid=None, authid=None, murl=None):
         if authid and not murl:
-            return self.model.objects.get(id=id).do("GET")
+            return self.model.objects.get(id=authid).do("GET")
         if containerid:
             container = HostingContainer.objects.get(pk=containerid)
             return container.do("GET", "auths")

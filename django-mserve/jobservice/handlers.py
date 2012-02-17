@@ -63,8 +63,9 @@ class JobServiceHandler(BaseHandler):
 
 class JobHandler(BaseHandler):
     model = Job
-    allowed_methods = ('GET','POST','DELETE')
-    fields = ('id','name','created','taskset_id','joboutput_set','tasks')
+    allowed_methods = ('GET', 'POST', 'DELETE')
+    fields = ('id', 'name', 'created', 'taskset_id', 'joboutput_set', 'tasks',
+              'url')
 
     def create(self, request, mfileid=None):
 
@@ -185,8 +186,9 @@ class JobHandler(BaseHandler):
 
 class JobOutputHandler(BaseHandler):
     model = JobOutput
-    allowed_methods = ('GET','POST','PUT')
-    fields = ('id','job_id','name','thumb','thumburl','file','mimetype')
+    allowed_methods = ('GET', 'POST', 'PUT')
+    fields = ('id', 'job_id', 'name', 'thumb', 'thumburl', 'file', 'mimetype',
+                'mfile_url')
 
     def update(self, request, outputid, field=None):
         if outputid:

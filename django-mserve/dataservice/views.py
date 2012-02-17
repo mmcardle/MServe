@@ -251,23 +251,6 @@ def stats(request, baseid=None):
     return HttpResponse(_json, mimetype="application/json")
 
 def render_base(request, baseid):
-    """Render a specified base """
-    try:
-        base = NamedBase.objects.get(id=baseid)
-
-        if utils.is_container(base):
-            return render_container(request, baseid)
-
-        if utils.is_service(base):
-            return render_service(request, baseid)
-
-        if utils.is_mfile(base):
-            return render_mfile(request, baseid, show=True)
-
-    except NamedBase.DoesNotExist:
-        logging.info("Request to browse %s ,\
-            ID does not relate to a service/container/mfile object." , baseid )
-
     try:
         auth = Auth.objects.get(id=baseid)
 
@@ -281,17 +264,13 @@ def render_base(request, baseid):
 
         logging.debug("final auth %s" , (auth.id))
         base = parent.base
-        #if utils.is_container(base):
-        #    return render_container_auth(request, baseid)
 
         if utils.is_service(base):
             return render_service_auth(request, auth)
 
-        #if utils.is_mfile(base):
-        #    return render_mfile_auth(request, auth)
-
         _dict = {}
         _dict["error"] = "Error displaying the auth with id='%s' " % baseid
+        print _dict
         return render_to_response('error.html', append_dict(_dict, request), \
                 context_instance=RequestContext(request))
 
@@ -299,7 +278,12 @@ def render_base(request, baseid):
         logging.info("Request to browse '%s' , \
             ID does not relate to a auth object." , baseid)
 
-    return Http404()
+    _dict = {}
+    _dict["error"] = "Error displaying the auth with id='%s' " % baseid
+    resp = render_to_response('error.html', append_dict(_dict, request), \
+                context_instance=RequestContext(request))
+    resp.status_code = 404
+    return resp
 
 def test(request):
     """Render the test page"""
@@ -313,82 +297,6 @@ def profile(request):
     _dict = {}
     return render_to_response('user.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))
-
-def render_container(request, containerid, form=DataServiceForm()):
-    """Render the container page"""
-    container = HostingContainer.objects.get(pk=containerid)
-    auths = Auth.objects.filter(base=container.id)
-    services = DataService.objects.filter(container=container.id)
-    properties = ManagementProperty.objects.filter(base=container.id)
-    usage = container.get_usage()
-    managementpropertyform = ManagementPropertyForm()
-    hcform = HostingContainerForm(instance=container)
-
-    subserviceform = SubServiceForm()
-    serviceform = DataServiceForm()
-
-    _dict = {}
-    _dict["container"] = container
-    _dict["hcform"] = hcform
-    _dict["services"] = services
-    _dict["properties"] = properties
-    _dict["form"] = form
-    _dict["managementpropertyform"] = managementpropertyform
-    _dict["subserviceform"] = subserviceform
-    _dict["serviceform"] = serviceform
-    _dict["auths"] = auths
-    _dict["usage"] = usage
-
-    return render_to_response('container.html', append_dict(_dict, request), \
-            context_instance=RequestContext(request))
-
-@staff_member_required
-def render_container_auth(request, authid):
-    """Render the container auth page"""
-    #container = HostingContainer.objects.get(pk=id)
-    hca = Auth.objects.get(pk=authid)
-    container = hca.base
-    auths = hca.auth_set.all()
-    services = DataService.objects.filter(container=container.id)
-    properties = ManagementProperty.objects.filter(base=container.id)
-    usage = hca.get_usage()
-    usagesummary = hca.get_usage_summary()
-    managementpropertyform = ManagementPropertyForm()
-    _dict = {}
-    _dict["container"] = container
-    _dict["services"] = services
-    _dict["properties"] = properties
-    _dict["managementpropertyform"] = managementpropertyform
-    _dict["auths"] = auths
-    _dict["usage"] = usage
-    _dict["usagesummary"] = usagesummary
-    
-    return render_to_response('container.html', append_dict(_dict, request), \
-            context_instance=RequestContext(request))
-
-def render_service(request, serviceid, form=MFileForm()):
-    """Render the service page"""
-    service = DataService.objects.get(pk=serviceid)
-    mfiles = MFile.objects.filter(service=service).order_by('created').reverse()
-    properties = ManagementProperty.objects.filter(base=service)
-    auths = Auth.objects.filter(base=serviceid)
-    managementpropertyform = ManagementPropertyForm()
-    dataservicetaskform = DataServiceTaskForm()
-    subserviceform = SubServiceForm()
-    form.fields['sid'].initial = service.id
-    _dict = {}
-    _dict["properties"] = properties
-    _dict["managementpropertyform"] = managementpropertyform
-    _dict["dataservicetaskform"] = dataservicetaskform
-    _dict["subserviceform"] = subserviceform
-    _dict["service"] = service
-    _dict["mfiles"] = mfiles
-    _dict["auths"] = auths
-    _dict["form"] = form
-    _dict["usage"] = service.get_usage()
-    _dict["usagesummary"] = service.get_usage_summary()
-    return render_to_response( 'service.html', append_dict(_dict, request), \
-        context_instance=RequestContext(request))
 
 def render_service_auth(request, auth):
     """Render the service auth page"""
@@ -405,52 +313,6 @@ def render_service_auth(request, auth):
     return render_to_response('auths/service_auth.html', \
         append_dict(_dict, request),\
         context_instance=RequestContext(request))
-
-def render_mfile(request, mfileid, form=AuthForm(), show=False):
-    """Render the mfile page"""
-    mfile = MFile.objects.get(pk=mfileid)
-
-    auths = Auth.objects.filter(base=mfileid)
-
-    form.fields['dsid'].initial = mfile.id
-    _dict = {}
-
-    _dict["thumburl"] = settings.MEDIA_URL+"images/empty.png"
-
-    if mfile.thumb == "":
-        _dict["thumburl"] = settings.MEDIA_URL+"images/busy.gif"
-    else:
-        _dict["thumburl"] = "%s" % (mfile.thumburl())
-
-    if not show or mfile.file == '' or mfile.file == None:
-        _dict["altfile"] = settings.MEDIA_URL+"images/empty.png"
-        _dict["thumburl"] = settings.MEDIA_URL+"images/empty.png"
-        mfile.file = None
-
-    _dict['verify'] = False
-    if request.GET.has_key('verify') and request.GET['verify'] is not None:
-        check = utils.md5_for_file(mfile.file)
-        _dict['verifychecksum'] = check
-        _dict['verifystate'] = (check == mfile.checksum)
-        _dict['verify'] = True
-
-    _dict["mfile"] = mfile
-    _dict["fullaccess"] = True
-    _dict["auths"] = auths
-    _dict["formtarget"] = "/mfileauth/"
-    _dict["usage"] = mfile.get_usage()
-    _dict["usagesummary"] = mfile.get_usage_summary()
-    
-    return render_to_response('mfile.html', append_dict(_dict, request), \
-            context_instance=RequestContext(request))
-
-def render_mfile_auth(request, auth):
-    """Render the mfile auth page"""
-    _dict = {}
-    _dict["auth"] = auth
-    return render_to_response('auths/mfile_auth.html', \
-            append_dict(_dict, request), \
-            context_instance=RequestContext(request))
 
 def videoplayer(request, mfileid):
     mfile = get_object_or_404(MFile,id=mfileid)

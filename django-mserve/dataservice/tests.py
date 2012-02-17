@@ -136,6 +136,7 @@ class TaskTest(TestCase):
         mfile = self.service.create_mfile(self.image_name, file=self.test_video )
         job = mfile.create_job(self.job_name)
         output = JobOutput(name=self.joboutput_name, job=job, mimetype="image/png")
+        output.save()
         postervideo([mfile.id],[output.id], options={"width":"210","height":"120"})
 
         updatedmfile = MFile.objects.get(id=mfile.id)
@@ -276,7 +277,7 @@ class ClientTest(TestCase):
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         mfileid = js["id"]
-        self.mfile_post_job_url = reverse('mfile_job', args=[mfileid])
+        self.mfile_post_job_url = reverse('mfile_jobs', args=[mfileid])
         response = self.c.post(self.mfile_post_job_url, {"name": "New Job", "jobtype": "dataservice.tasks.md5file"})
         self.failUnlessEqual(response.status_code,200)
 
@@ -285,7 +286,7 @@ class ClientTest(TestCase):
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         mfileid = js["id"]
-        self.mfile_post_job_url = reverse('mfile_job', args=[mfileid])
+        self.mfile_post_job_url = reverse('mfile_jobs', args=[mfileid])
         response = self.c.post(self.mfile_post_job_url, {"name": "New Job", "jobtype": "dataservice.tasks.thumbimage"})
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)

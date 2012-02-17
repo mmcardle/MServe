@@ -103,7 +103,7 @@ function showTooltip(x, y, contents) {
             data = $this.data('mserve');
                 $.ajax({
                    type: "GET",
-                   url: '/traffic/',
+                   url: traffic_url,
 
                    success: function(msg){
 

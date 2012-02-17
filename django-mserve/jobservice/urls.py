@@ -36,11 +36,11 @@ joboutput_handler = Resource(JobOutputHandler)
 
 urlpatterns = patterns('',
 
-    url(r'^mfiles/(?P<mfileid>[^/]+)/jobs/$', job_handler, name="mfile_job"),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/jobs/$', job_handler, name="mfile_jobs"),
     url(r'^services/(?P<serviceid>[^/]+)/jobs/$', jobservice_handler),
-    url(r'^auths/(?P<authid>[^/]+)/jobs/$', job_handler),
-    url(r'^jobs/$', job_handler),
-    url(r'^jobs/(?P<jobid>[^/]+)/$', job_handler),
+    url(r'^auths/(?P<authid>[^/]+)/jobs/$', job_handler, name="auth_jobs"),
+    url(r'^jobs/$', job_handler, name="jobs"),
+    url(r'^jobs/(?P<jobid>[^/]+)/$', job_handler, name="job"),
     url(r'^joboutputs/(?P<outputid>[^/]+)/$', joboutput_handler, name="joboutput"),
     url(r'^joboutputs/(?P<outputid>[^/]+)/file/$', joboutput_handler, {"field":"file"}, name="joboutput_upload"),
     # Creates an MFile from a job Output
@@ -48,6 +48,6 @@ urlpatterns = patterns('',
     url(r'^joboutputs/(?P<outputid>[^/]+)/thumb/$', joboutput_handler, {"field":"thumb"}, name="joboutput_upload_thumb"),
 
     # Tasks
-    url(r'^tasks/', 'jobservice.views.list_tasks'),
+    url(r'^tasks/', 'jobservice.views.list_tasks', name="tasks"),
 
 )

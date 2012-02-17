@@ -129,7 +129,7 @@
                 data = $("#createserviceform-"+container.id).serialize()
                 $.ajax({
                        type: "POST",
-                       url: '/containers/'+container.id+'/services/',
+                       url: container.services_url,
                        data: data,
                        success: function(service){
                             $(".container-message-"+container.id).remove()
@@ -156,7 +156,7 @@
 
             $.ajax({
                type: "GET",
-               url: "/containers/",
+               url: hostingcontainers_url,
                success: function(containers){
                     console.log("loading containers")
 
@@ -181,7 +181,7 @@
                          $.ajax({
                            type: "POST",
                            data: data,
-                           url: '/containers/',
+                           url: hostingcontainers_url,
                            success: function(container){
                                $(obj).mserve('initContainer', container, true)
                            },
@@ -311,170 +311,178 @@
     loadServiceAuth: function(url, tab, authid) {
         var defaults = {};
         var options = $.extend(defaults, options);
-
         return this.each(function() {
             var o = options;
             var obj = $(this);
 
             var $this = $(this), data = $this.data('mserve')
-             $.ajax({
+
+            $.ajax({
                type: "GET",
-               url: url+"/base/",
+               url: url,
                success: function(auth){
-                   data[authid] = auth
+                    $.ajax({
+                       type: "GET",
+                       url: auth.base_url,
+                       success: function(authbase){
+                           data[authid] = authbase
 
-                   $(auth.mfile_set).each( function(index, mfile){
-                        data[mfile.id] = mfile
-                   })
+                           $(authbase.mfile_set).each( function(index, mfile){
+                                data[mfile.id] = mfile
+                           })
 
-                    $tabs = $("#tabsTemplate").tmpl( {"tabid":authid,"tabs":[
-                        {name:"Service Data",id:"servicetab-"+authid,url:url},
-                        {name:"Jobs",id:"jobstab-"+authid,url:url+"/jobs"},
-                        {name:"Usage",id:"usagetab-"+authid,url:url+"/usage"}
-                    ]} )
-                
-                    $table = $("#mserveTemplate").tmpl()
+                            $tabs = $("#tabsTemplate").tmpl( {"tabid":authid,"tabs":[
+                                {name:"Service Data",id:"servicetab-"+authid,url:url},
+                                {name:"Jobs",id:"jobstab-"+authid,url:auth.jobs_url},
+                                {name:"Usage",id:"usagetab-"+authid,url:auth.usage_url}
+                            ]} )
 
-                    $this.mserve( "loadRemoteServices", authid, $table.find('#import-accordion') )
+                            $table = $("#mserveTemplate").tmpl()
 
-                    $table.find("#importbutton").button(
-                        {icons: {primary: "ui-icon-circle-plus"}}
-                        ).click( function(){
-                            create_new_import_ui_dialog(authid,remoteservice_url,consumer_url)
-                    })
+                            $this.mserve( "loadRemoteServices", authid, $table.find('#import-accordion') )
 
-                    $table.find("#mserve-new-folder-button").button(
-                        {icons: {primary: "ui-icon-circle-plus"}}
-                        ).click( function(){
-                            selected = $("#mfoldertreecontainer").jstree('get_selected')
-                            alert("TODO - Create folder at "+selected)
-                    })
+                            $table.find("#importbutton").button(
+                                {icons: {primary: "ui-icon-circle-plus"}}
+                                ).click( function(){
+                                    create_new_import_ui_dialog(authid,remoteservice_url,consumer_url)
+                            })
 
-                    $(obj).append($tabs);
-                    $servicetab = $("#servicetab-"+authid);
-                    $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files,  or Drag and Drop files"})  );
-                    $servicetab.append("<input  type=\"checkbox\" id=\"fileuploadautobutton\" /><label for=\"fileuploadautobutton\">Auto upload</label>");
-                    $servicetab.append($table);
+                            $table.find("#mserve-new-folder-button").button(
+                                {icons: {primary: "ui-icon-circle-plus"}}
+                                ).click( function(){
+                                    selected = $("#mfoldertreecontainer").jstree('get_selected')
+                                    alert("TODO - Create folder at "+selected)
+                            })
 
-                    $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
-                    $("#usagetab-"+authid).append($usageHolderTemplate);
+                            $(obj).append($tabs);
+                            $servicetab = $("#servicetab-"+authid);
+                            $servicetab.append( $("#messageTemplate").tmpl({"message":"Here is a list of files stored at this MServe Service, click File Upload to upload more files,  or Drag and Drop files"})  );
+                            $servicetab.append("<input  type=\"checkbox\" id=\"fileuploadautobutton\" /><label for=\"fileuploadautobutton\">Auto upload</label>");
+                            $servicetab.append($table);
 
-                    $("#jobstab-"+authid).append("<div id='jobspaginatorheader'></div><div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
+                            $usageHolderTemplate  = $("#usageHolderTemplate").tmpl()
+                            $("#usagetab-"+authid).append($usageHolderTemplate);
 
-                    $($tabs).tabs()
-                    _loadusage = function(){
-                        $usageHolderTemplate.find("#mservelast24").mserveusage('stats', ["last24"], '/stats/'+authid+'/' )
-                        $usageHolderTemplate.find("#mservelast1").mserveusage('stats', ["last1"], '/stats/'+authid+'/' )
-                        $usageHolderTemplate.find("#mservejobs").mserveusage('stats', ["jobs"], '/stats/'+authid+'/' )
-                        $usageHolderTemplate.find("#mservejobstype").mserveusage('stats', ["jobsbytype"], '/stats/'+authid+'/' )
-                        $usageHolderTemplate.find("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '/stats/'+authid+'/')
-                        $usageHolderTemplate.find("#usagesummary").mserveusage('usagesummary', '/auths/'+authid+'/usagesummary/' )
-                    }
+                            $("#jobstab-"+authid).append("<div id='jobspaginatorheader'></div><div id='jobspaginator'><div class='spinner'><span class='red'>Loading Jobs...</span></div></div>");
 
-                    function do_tab(tab){
-                        if (tab == "usagetab-"+authid || tab =="usage") {
-                            _loadusage()
-                        }else if(tab == "servicetab-"+authid || tab =="" || !tab) {
-                            // Fix for fileupload being 0px height when tab changes
-                            $("#fileupload").css("height","274px")
-                        }else if(tab == "configtab-"+authid || tab =="config") {
-                            // Do nothing for config tab
-                        }else if(tab == "jobstab-"+authid || tab =="jobs") {
-                            loadJobs("/auths/"+authid+"/jobs/")
-                        }
-                    }
-
-                    $tabs.bind('tabsshow', function(event, ui) {
-                        do_tab(ui.panel.id)
-                    });
-
-                    if(tab!=undefined){
-                        $tabs.tabs('select', '#' + tab+"tab-"+authid);
-                    }
-
-                    $this.mserve( "loadMTree", {
-                        serviceid : authid ,
-                        mfolder_set : auth.mfolder_set,
-                        mfile_set : auth.mfile_set,
-                        folder_structure : auth.folder_structure
-                    } )
-
-                    $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
-
-                    $(".single-accordion").accordion({
-			collapsible: true
-                    }).accordion( "activate" , false );
-
-                    $uploadbutton = $("#fileuploadautobutton").button()
-                    $selectallbutton = $("#selectall").button()
-                    $("label[for=fileuploadautobutton] span").text("Autoupload is off")
-
-                    $uploadbutton.click(function(){
-                        autoupload = $('#fileupload').fileupload('option','autoUpload');
-                        $('#fileupload').fileupload('option','autoUpload',!autoupload);
-                        if(autoupload){
-                            $("label[for=fileuploadautobutton] span").text("Autoupload is off")
-                        }else{
-                            $("label[for=fileuploadautobutton] span").text("Autoupload is on")
-                        }
-                    })
-
-                    $('#fileupload').fileupload({
-                        previewMaxWidth: 100,
-                        previewMaxHeight: 20,
-                        dataType: 'json',
-                        url: "/auths/"+authid+"/mfiles/",
-                        add: function (e, data) {
-                            $("#fileupload-accordion:not(:has(.ui-accordion-content-active))").accordion("activate", 0)
-                            var that = $(this).data('fileupload');
-                            that._adjustMaxNumberOfFiles(-data.files.length);
-                            data.isAdjusted = true;
-                            data.isValidated = that._validate(data.files);
-                            data.context = that._renderUpload(data.files)
-                                .appendTo($(this).find('.files')).fadeIn(function () {
-                                    // Fix for IE7 and lower:
-                                    $(this).show();
-                                }).data('data', data);
-                            if ((that.options.autoUpload || data.autoUpload) &&
-                                    data.isValidated) {
-                                data.jqXHR = data.submit();
+                            $($tabs).tabs()
+                            _loadusage = function(){
+                                $usageHolderTemplate.find("#mservelast24").mserveusage('stats', ["last24"], '/stats/'+authid+'/' )
+                                $usageHolderTemplate.find("#mservelast1").mserveusage('stats', ["last1"], '/stats/'+authid+'/' )
+                                $usageHolderTemplate.find("#mservejobs").mserveusage('stats', ["jobs"], '/stats/'+authid+'/' )
+                                $usageHolderTemplate.find("#mservejobstype").mserveusage('stats', ["jobsbytype"], '/stats/'+authid+'/' )
+                                $usageHolderTemplate.find("#deliverySuccess").mserveusage('stats', ["http://mserve/deliverySuccess"], '/stats/'+authid+'/')
+                                $usageHolderTemplate.find("#usagesummary").mserveusage('usagesummary', '/auths/'+authid+'/usagesummary/' )
                             }
-                        },
-                        done: function (e, data) {
-                            $(obj).mserve('addMFile',data.result)
-                            l = $(this).find("#tabs-"+authid).length
 
-                            var that = $(this).data('fileupload');
-                            if (data.context) {
-                                data.context.each(function (index) {
-                                    file=data.result
-                                    if (file.error) {
-                                        that._adjustMaxNumberOfFiles(1);
+                            function do_tab(tab){
+                                if (tab == "usagetab-"+authid || tab =="usage") {
+                                    _loadusage()
+                                }else if(tab == "servicetab-"+authid || tab =="" || !tab) {
+                                    // Fix for fileupload being 0px height when tab changes
+                                    $("#fileupload").css("height","274px")
+                                }else if(tab == "configtab-"+authid || tab =="config") {
+                                    // Do nothing for config tab
+                                }else if(tab == "jobstab-"+authid || tab =="jobs") {
+                                    loadJobs("/auths/"+authid+"/jobs/")
+                                }
+                            }
+
+                            $tabs.bind('tabsshow', function(event, ui) {
+                                do_tab(ui.panel.id)
+                            });
+
+                            if(tab!=undefined){
+                                $tabs.tabs('select', '#' + tab+"tab-"+authid);
+                            }
+
+                            $this.mserve( "loadMTree", {
+                                serviceid : authid ,
+                                mfolder_set : authbase.mfolder_set,
+                                mfile_set : authbase.mfile_set,
+                                folder_structure : authbase.folder_structure
+                            } )
+
+                            $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
+
+                            $(".single-accordion").accordion({
+                                collapsible: true
+                            }).accordion( "activate" , false );
+
+                            $uploadbutton = $("#fileuploadautobutton").button()
+                            $selectallbutton = $("#selectall").button()
+                            $("label[for=fileuploadautobutton] span").text("Autoupload is off")
+
+                            $uploadbutton.click(function(){
+                                autoupload = $('#fileupload').fileupload('option','autoUpload');
+                                $('#fileupload').fileupload('option','autoUpload',!autoupload);
+                                if(autoupload){
+                                    $("label[for=fileuploadautobutton] span").text("Autoupload is off")
+                                }else{
+                                    $("label[for=fileuploadautobutton] span").text("Autoupload is on")
+                                }
+                            })
+
+                            $('#fileupload').fileupload({
+                                previewMaxWidth: 100,
+                                previewMaxHeight: 20,
+                                dataType: 'json',
+                                url: auth.mfiles_url,
+                                add: function (e, data) {
+                                    $("#fileupload-accordion:not(:has(.ui-accordion-content-active))").accordion("activate", 0)
+                                    var that = $(this).data('fileupload');
+                                    that._adjustMaxNumberOfFiles(-data.files.length);
+                                    data.isAdjusted = true;
+                                    data.isValidated = that._validate(data.files);
+                                    data.context = that._renderUpload(data.files)
+                                        .appendTo($(this).find('.files')).fadeIn(function () {
+                                            // Fix for IE7 and lower:
+                                            $(this).show();
+                                        }).data('data', data);
+                                    if ((that.options.autoUpload || data.autoUpload) &&
+                                            data.isValidated) {
+                                        data.jqXHR = data.submit();
                                     }
-                                    $(this).fadeOut(function () {
-                                        that._renderDownload([file])
+                                },
+                                done: function (e, data) {
+                                    $(obj).mserve('addMFile',data.result)
+                                    l = $(this).find("#tabs-"+authid).length
+
+                                    var that = $(this).data('fileupload');
+                                    if (data.context) {
+                                        data.context.each(function (index) {
+                                            file=data.result
+                                            if (file.error) {
+                                                that._adjustMaxNumberOfFiles(1);
+                                            }
+                                            $(this).fadeOut(function () {
+                                                that._renderDownload([file])
+                                                    .css('display', 'none')
+                                                    .replaceAll(this)
+                                                    .fadeIn(function () {
+                                                        // Fix for IE7 and lower:
+                                                        $(this).show();
+                                                    });
+                                            });
+                                        });
+                                    } else {
+                                        that._renderDownload(data.result)
                                             .css('display', 'none')
-                                            .replaceAll(this)
+                                            .appendTo($(this).find('.files'))
                                             .fadeIn(function () {
                                                 // Fix for IE7 and lower:
                                                 $(this).show();
                                             });
-                                    });
-                                });
-                            } else {
-                                that._renderDownload(data.result)
-                                    .css('display', 'none')
-                                    .appendTo($(this).find('.files'))
-                                    .fadeIn(function () {
-                                        // Fix for IE7 and lower:
-                                        $(this).show();
-                                    });
-                            }
-                        }
+                                    }
+                                }
+                            });
+                            data["cache"][authid] = $(obj.clone(true,true))
+                       }
                     });
-                    data["cache"][authid] = $(obj.clone(true,true))
                }
-            });
+            })
+
+
 
         });
     },
@@ -575,8 +583,18 @@
                         $usageHolderTemplate.find("#usagesummary").mserveusage('usagesummary', service.usage_url )
                     }
 
-                    $("#profilepaginator").mserve( "serviceprofiles", service.id )
-                    service_loadmanagementproperties(service.id, service.properties_url );
+                    $("#profilepaginator").mserve( "serviceprofiles", service )
+
+                    $.ajax({
+                       type: "GET",
+                       url: service.properties_url,
+                       success: function(properties){
+                           $.each(properties, function(i, property){
+                                render_managementproperty(service.id, service.properties_url, property)
+                           });
+                       }
+                     });
+
                     $("#managementpropertybutton").button().click(
                         function(){
                             service_postmanagementproperty_ajax(
@@ -639,7 +657,7 @@
                         previewMaxWidth: 100,
                         previewMaxHeight: 20,
                         dataType: 'json',
-                        url: "/services/"+service.id+"/mfiles/",
+                        url: service.mfiles_url,
                         add: function (e, data) {
                             $("#fileupload-accordion:not(:has(.ui-accordion-content-active))").accordion("activate", 0)
                             var that = $(this).data('fileupload');
@@ -712,7 +730,7 @@
 
         });
     },
-    get_mfile_thumb: function(mfileid, depth){
+    get_mfile_thumb: function(mfile, depth){
 
         var defaults = {};
         var options = $.extend(defaults, options);
@@ -728,14 +746,14 @@
             }else{
                $.ajax({
                    type: "GET",
-                   url: "/mfiles/"+mfileid+"/",
+                   url: mfile.url,
                    success: function(newmfile){
                         if(newmfile.thumb != ""){
-                            var mfilecache = $(data.allcontent[0]).find("#mfile-table-"+mfileid)
+                            var mfilecache = $(data.allcontent[0]).find("#mfile-table-"+mfile.id)
                             mfilecache.css("background-image", "url('"+newmfile.thumburl+"')");
-                            $("#mfile-table-"+mfileid).css("background-image", "url('"+newmfile.thumburl+"')");
+                            $("#mfile-table-"+mfile.id).css("background-image", "url('"+newmfile.thumburl+"')");
                         }else{
-                            setTimeout(mservetimeout,3000 ,obj,mfileid, depth+1)
+                            setTimeout(mservetimeout, 3000 ,obj, mfile, depth+1)
                         }
                    }
                });
@@ -743,7 +761,7 @@
 
         });
     },
-    updatemfile : function( mfileid, options ) {
+    updatemfile : function( mfile, options ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -755,21 +773,21 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                $("#newjobbutton-"+mfileid ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
-                $('#newjobbutton-'+mfileid).click(function(){
-                    $("#mfileid").val(mfileid);
+                $("#newjobbutton-"+mfile.id ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
+                $('#newjobbutton-'+mfile.id).click(function(){
+                    $("#mfileid").val(mfile.id);
                     $("#dialog-new-job-dialog-form").dialog( "open" );
                 });
-                $("#deletemfilebutton-"+mfileid ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
-                    obj.mserve('deletemfile', mfileid)
+                $("#deletemfilebutton-"+mfile.id ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
+                    obj.mserve('deletemfile', mfile)
                 });
 
                 if(options.pollthumb){
-                    obj.mserve('get_mfile_thumb', mfileid, 1)
+                    obj.mserve('get_mfile_thumb', mfile, 1)
                 }
             });
     },
-    deletemfile : function(mfileid) {
+    deletemfile : function(mfile) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -786,11 +804,11 @@
                                 "Delete mfile?": function() {
                                      $.ajax({
                                        type: "DELETE",
-                                       url: '/mfiles/'+mfileid+"/",
+                                       url: mfile.url,
                                        success: function(msg){
-                                            $(data.allcontent[0]).find("#mfileholder-"+mfileid).remove()
-                                            $("#mfileholder-"+mfileid).hide('slide')
-                                            $("#mfoldertreecontainer").jstree('delete_node',"#"+mfileid)
+                                            $(data.allcontent[0]).find("#mfileholder-"+mfile.id).remove()
+                                            $("#mfileholder-"+mfile.id).hide('slide')
+                                            $("#mfoldertreecontainer").jstree('delete_node',"#"+mfile.id)
                                        },
                                        error: function(msg){
                                             alert( "Failure On Delete " + msg );
@@ -821,7 +839,7 @@
                 var $mft = $("#mfileTemplate" ).tmpl( mfile )
 
                 // Update MFile before cloning
-                $(obj).mserve('updatemfile', mfile.id, {"pollthumb":"true"})
+                $(obj).mserve('updatemfile', mfile, {"pollthumb":"true"})
 
                 $mft.find("#newjobbutton-"+mfile.id ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
                 $mft.find('#newjobbutton-'+mfile.id).click(function(){
@@ -829,7 +847,7 @@
                     $("#dialog-new-job-dialog-form").dialog( "open" );
                 });
                 $mft.find("#deletemfilebutton-"+mfile.id ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
-                    obj.mserve('deletemfile', mfile.id)
+                    obj.mserve('deletemfile', mfile)
                 });
 
                 data.allcontent.prepend($mft.clone(true,true))
@@ -902,6 +920,8 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
+                mfile = data[id]
+
                 var $filteredData = data.allcontent.find('#mfileposterholder-'+id);
 
                 if(!$filteredData.length>0){
@@ -923,7 +943,7 @@
                 $(obj).mserve()
                 $.ajax({
                    type: "GET",
-                   url: '/mfiles/'+id+"/jobs/",
+                   url: mfile.jobs_url,
                    success: function(msg){
                         if(msg.length > 0){
                             $("#mfilecurrentjobscontainer").empty()
@@ -946,7 +966,7 @@
 
                 $.ajax({
                    type: "GET",
-                   url: "/tasks/",
+                   url: tasks_url,
                    success: function(jobdescriptions){
                         var job = $form.find(".jobtype")
                         var args = $form.find(".args" )
@@ -1002,7 +1022,7 @@
                                         $chooser.find("button").button().click(function( ){
                                             $.ajax({
                                                type: "GET",
-                                               url: "/users/",
+                                               url: users_url,
                                                success: function(user){
                                                     $("#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder").empty()
                                                     create_new_choose_mfile_ui_dialog()
@@ -1174,7 +1194,7 @@
                  });
             });
     },
-    serviceprofiles : function(serviceid){
+    serviceprofiles : function(service){
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -1187,11 +1207,11 @@
 
                 $.ajax({
                    type: "GET",
-                   url: "/tasks/",
+                   url: tasks_url,
                    success: function(tasks){
                         $.ajax({
                            type: "GET",
-                           url: "/services/"+serviceid+"/profiles/",
+                           url: service.profiles_url,
                            success: function(profiles){
 
                                 if(profiles.length==0){
@@ -1213,19 +1233,23 @@
                                     navigation: true
                                 }).accordion( "activate" , false )
 
-                                $(profiles).each(function(pindex,profile){
-                                    $(profile.workflows).each(function(windex,workflow){
+                                $(profiles).each(function(pindex, profile){
+                                    $(profile.workflows).each(function(windex, workflow){
+                                        var _tasksets = {}
+                                        $(workflow.tasksets).each(function(tsindex, taskset){
+                                            _tasksets[taskset.id] = taskset
+                                        });
                                         $("#addbutton-taskset-"+workflow.id).button({icons: {primary: "ui-icon-disk"}}).click(
                                         function(){
                                                  data = $("#newtasksetform-workflow-"+workflow.id).serialize()
                                                  $.ajax({
                                                    type: "POST",
                                                    data: data,
-                                                   url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/',
+                                                   url: profile.tasksets_url,
                                                    success: function(newtaskset){
                                                         var tasksettmpl = $("#taskSetTemplate" ).tmpl( newtaskset, {"workflowid" : workflow.id} )
                                                         tasksettmpl.appendTo("#workflowbody-"+workflow.id );
-                                                        updatetasksetbuttons(serviceid, profile.id, workflow.id, newtaskset)
+                                                        updatetasksetbuttons(service, profile, workflow.id, newtaskset)
                                                    },
                                                    error: function(msg){
                                                         showError("Error Adding Task Set",msg.responseText)
@@ -1242,7 +1266,7 @@
                                         })
                                         $("#workflowbody-savebutton-"+workflow.id).button().click(
                                             function(){
-                                                $("#workflowbody-"+workflow.id).find(".taskset").each( function(tindex,taskset){
+                                                $("#workflowbody-"+workflow.id).find(".taskset").each( function(tindex, taskset){
                                                     $("#workflowsavedmsg-"+workflow.id).hide()
                                                     var tasksetid = $(taskset).attr("data-taskid")
                                                     var index = $(taskset).parent().children().index(taskset)
@@ -1252,13 +1276,13 @@
                                                      $.ajax({
                                                            type: "PUT",
                                                            data: data,
-                                                           url: '/services/'+serviceid+'/profiles/'+profile.id+'/tasksets/'+tasksetid+'/',
+                                                           url: _tasksets[tasksetid].url,
                                                            success: function(updatedtaskset){
                                                                var tasksettmpl = $("#taskSetTemplate").tmpl( updatedtaskset , {"workflowid":workflow.id} )
                                                                $( "#taskset-"+updatedtaskset.id ).replaceWith(tasksettmpl);
-                                                               updatetasksetbuttons(serviceid, profile.id, workflow.id, updatedtaskset)
+                                                               updatetasksetbuttons(service, profile, workflow.id, updatedtaskset)
                                                                $(updatedtaskset.tasks).each(function(newtindex, task){
-                                                                    updatetaskbuttons(serviceid, profile.id, updatedtaskset.id, task.id)
+                                                                    updatetaskbuttons(service, profile.id, updatedtaskset.id, task)
                                                                 });
                                                            },
                                                            error: function(msg){
@@ -1271,9 +1295,9 @@
                                         )
 
                                         $(workflow.tasksets).each(function(tsindex,taskset){
-                                            updatetasksetbuttons(serviceid, profile.id, workflow.id, taskset)
+                                            updatetasksetbuttons(service, profile, workflow.id, taskset)
                                             $(taskset.tasks).each(function(tindex, task){
-                                                updatetaskbuttons(serviceid, profile.id, taskset.id, task.id)
+                                                updatetaskbuttons(service, profile.id, taskset.id, task)
                                             });
                                         });
                                     });
@@ -1311,7 +1335,7 @@
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#hiddenqscontainer")
 
                 $(mfile_set).each( function(index, mfile) {
-                    $(obj).mserve( 'updatemfile', mfile.id, {"pollthumb":"false"})
+                    $(obj).mserve( 'updatemfile', mfile, {"pollthumb":"false"})
                 });
 
                 var servicecontent = $('#hiddenqscontainer').clone(true,true)
@@ -1447,23 +1471,22 @@ function load_user(userurl,consumerurl,template){
 
 
 
-function mservetimeout(obj,mfileid,depth){
-    $(obj).mserve('get_mfile_thumb', mfileid , depth )
+function mservetimeout(obj,mfile,depth){
+    $(obj).mserve('get_mfile_thumb', mfile , depth )
 }
 
-function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
-
+function updatetasksetbuttons(service, profile, workflowid, taskset){
     $("#addbutton-task-"+taskset.id).button({icons: {primary: "ui-icon-disk"}}).click(
         function(){
                  data = $("#newtaskform-taskset-"+taskset.id).serialize()
                  $.ajax({
                    type: "POST",
                    data: data,
-                   url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/',
+                   url: profile.tasks_url,
                    success: function(newtask){
                         var tasktmpl = $("#taskTemplate" ).tmpl( newtask, {"tasksetid" : taskset.id} )
                         tasktmpl.appendTo( "#tasksetbody-"+taskset.id );
-                        updatetaskbuttons(serviceid, profileid, taskset.id, newtask.id)
+                        updatetaskbuttons(service, profile.id, taskset.id, newtask)
                    },
                    error: function(msg){
                         showError("Error Adding Task",msg.responseText)
@@ -1471,11 +1494,10 @@ function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
                  });
         }
     )
-
     deletefunction = function(){
          $.ajax({
            type: "DELETE",
-           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasksets/'+taskset.id+'/',
+           url: taskset.url,
            success: function(msg){
                $( "#taskset-"+taskset.id ).remove();
            },
@@ -1487,13 +1509,13 @@ function updatetasksetbuttons(serviceid, profileid, workflowid, taskset){
     $("#deletetasksetbutton-"+taskset.id).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
 }
 
-function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
+function updatetaskbuttons(service, profileid, tasksetid, task){
     deletefunction = function(){
          $.ajax({
            type: "DELETE",
-           url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
+           url: task.url,
            success: function(msg){
-               $( "#task-"+taskid ).remove();
+               $( "#task-"+task.id ).remove();
            },
            error: function(msg){
                 showError("Error Deleting Task",msg.responseText)
@@ -1501,15 +1523,15 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
          });
     }
     updatefunction = function(){
-            data = $("#taskform-task-"+taskid).serialize()
+            data = $("#taskform-task-"+task.id).serialize()
              $.ajax({
                type: "PUT",
                data: data,
-               url: '/services/'+serviceid+'/profiles/'+profileid+'/tasks/'+taskid+'/',
+               url: task.url,
                success: function(task){
                    var tasktmpl = $("#taskTemplate" ).tmpl( task, {"tasksetid" : tasksetid} )
-                    $( "#task-"+taskid ).replaceWith(tasktmpl);
-                    updatetaskbuttons(serviceid, profileid, tasksetid, taskid)
+                    $( "#task-"+task.id ).replaceWith(tasktmpl);
+                    updatetaskbuttons(serviceid, profileid, tasksetid, task)
 
                },
                error: function(msg){
@@ -1517,8 +1539,8 @@ function updatetaskbuttons(serviceid, profileid, tasksetid, taskid){
                 }
              });
         }
-    $("#edittaskbutton-"+taskid).button({icons: {primary: "ui-icon-disk"}}).click(updatefunction)
-    $("#deletetaskbutton-"+taskid).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
+    $("#edittaskbutton-"+task.id).button({icons: {primary: "ui-icon-disk"}}).click(updatefunction)
+    $("#deletetaskbutton-"+task.id).button({icons: {primary: "ui-icon-trash"}}).click(deletefunction)
 }
 
 function user_request_service(requesturl){
@@ -1562,21 +1584,20 @@ function user_request_service(requesturl){
      });
 }
 
-function delete_service_request(url,request){
-
+function delete_service_request(request){
      $.ajax({
        type: "DELETE",
-       url: url+request.id+"/",
+       url: request.url,
        success: function(msg){
             $("#request-"+request.id).remove()
        }
      });
 }
-function update_service_request(requesturl,request,data){
+function update_service_request(requesturl, request, data){
 
      $.ajax({
        type: "PUT",
-       url: requesturl+request.id+"/",
+       url: request.url,
        data: data,
        success: function(request){
             $("#request-"+request.id).remove()
@@ -1629,7 +1650,7 @@ function load_user_requests(requesturl){
 
 function make_request_buttons(requesturl,request){
     $("#delete-button-"+request.id).button().click(function(){
-        delete_service_request(requesturl,request)
+        delete_service_request(request)
     })
     $("#approve-button-"+request.id).button().click(function(){
         //update_service_request(requesturl,request,{"state":"A"})
@@ -1650,7 +1671,7 @@ function mycallback(val,data){
 function chooseContainer(data){
     $.ajax({
        type: "GET",
-       url: "/containers/",
+       url: hostingcontainers_url,
        success: function(msg){
             containers = msg;
             choices = []
@@ -1725,7 +1746,7 @@ function ajax_update_consumer_oauth(id,oauth_token,consumerurl){
      });
 }
 
-function ajax_delete_consumer_oauth(id,oauth_token,consumerurl){
+function ajax_delete_consumer_oauth(id, oauth_token, consumerurl){
      $.ajax({
        type: "DELETE",
        url: consumerurl+"/"+id+"/"+oauth_token+"/",
@@ -1735,77 +1756,8 @@ function ajax_delete_consumer_oauth(id,oauth_token,consumerurl){
      });
 }
 
-var serviceid = ""
-function loadMFiles(sid){
-    serviceid = sid
-    reloadMFiles();
-}
-
-function reloadMFiles(newfileid){
-    $.ajax({
-       type: "GET",
-       url: "/services/"+serviceid+"/mfiles/",
-       success: function(msg){
-            mfiles = msg;
-
-            if(mfiles.length==0){
-                 $("#mfilemessages").append("<div id='nofiles' class='message' >No Files</div>");
-                return;
-            }else{
-                $("#nofiles").remove()
-            }
-
-            function onChangePage(new_page_index) {
-
-                if(this.recordsperpage){
-                    start = (new_page_index-1)*this.recordsperpage
-                    end   = (new_page_index)*this.recordsperpage
-                }else{
-                    start = (new_page_index-1)*1
-                    end   = (new_page_index)*1
-                }
-                if(end>mfiles.length){
-                    end=mfiles.length;
-                }
-
-                $( "#managedresourcesmfilescontent" ).empty()
-                $( "#mfileTemplate" ).tmpl( mfiles.slice(start,end) ) .appendTo( "#managedresourcesmfilescontent" );
-
-                for(var i=start; i<end; i++){
-                    (function() {
-                        var gid = i;
-                        var gmfileid = mfiles[gid].id;
-                        mfile_buttons(gmfileid)
-                    })();
-                }
-
-                if(newfileid != null){
-                    $("#image-"+newfileid).show('drop')
-                }
-
-                return false;
-            }
-
-            $servicetab.find("#containerpaginator").smartpaginator({ totalrecords: mfiles.length, recordsperpage: 12, initval:1 , next: 'Next',
-                prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
-            });
-
-            onChangePage(1)
-       }
-     });
-}
-
 function showMFolder(mfolderid){
     $("#mservetree").mserve( 'showMFolder' , mfolderid);
-}
-
-function doMFileButtons(mfile){
-    (function() {
-        var gid = mfile.id;
-        var gmfileid = mfile.id;
-        mfile_buttons(gmfileid)
-        get_mfile_thumb(mfile)
-    })();
 }
 
 function showmfiledialog(gmfileid){
@@ -1821,15 +1773,7 @@ function mfile_buttons(gmfileid){
         $("#mfileid").val(gmfileid);
         $("#dialog-new-job-dialog-form").dialog( "open" );
     });
-    //$("#deletemfilebutton-"+gmfileid ).button({ icons: { primary: "ui-icon-trash"}, text: false });
-    //$('#deletemfilebutton-'+gmfileid).click(function(){
-    //    $("#mservetree").mserve('deletemfile', gmfileid)
-    //});
 }
-
-function mfile_delete(mfileid){
-        $("#mservetree").mserve('deletemfile', mfileid)
- }
 
 $(document).ready(function(){
 	$('.accordion .head').click(function() {
@@ -1851,48 +1795,4 @@ function getPoster(mfileid){
             window.setTimeout("getPoster(\'"+mfileid+"\')",1000)
         }
     });
- }
-
-function add_auth_method(roleid){
-
-
-    $( '#dialog-mfile-dialog' ).dialog({
-            resizable: false,
-            modal: true,
-            buttons: {
-                    "Delete mfile?": function() {
-                         $.ajax({
-                           type: "DELETE",
-                           url: '/mfile/'+mfileid+"/",
-                           success: function(msg){
-                                showMessage("File Deleted","The mfile has been deleted.")
-                           },
-                           error: function(msg){
-                             alert( "Failure On Delete " + msg );
-                           }
-                         });
-                            $( this ).dialog( "close" );
-                    },
-                    Cancel: function() {
-                            $( this ).dialog( "close" );
-                    }
-            }
-    });
-
-    var methods = prompt("What methods do you wish to add\nComma separated", "");
-    if (methods == null)
-        return;
-    if (methods == "")
-        return;
-    $.ajax({
-       type: "PUT",
-       url: '/roles/'+roleid+"/",
-       data: "methods="+methods,
-       success: function(msg){
-           poplulate_methods(roleid,msg["methods"])
-       },
-       error: function(msg){
-         alert( "Failure to add methods '" + methods + "'\nStatus: '" + msg.status+ "'\nResponse Text:\n" + msg.responseText);
-       }
-     });
- }
+}

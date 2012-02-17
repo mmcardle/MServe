@@ -75,64 +75,17 @@ function create_job_output_paginator(job){
         onChangePage(1)
 }
 
-function load_render_preview(mfileid){
-
- $.ajax({
-   type: "GET",
-   url: "/mfiles/"+mfileid+"/jobs/",
-   success: function(msg){
-      var thumbs = []
-
-      $(msg).each(function(index,job){
-            tasks = job.tasks
-
-            if(job.joboutput_set.length > 0){
-                thumbs.push(job.joboutput_set[0].thumburl)
-            }
-        });
-
-      for(i in msg){
-            
-      }
-      $("#previewcontent").append("<div style='clear:both' ></div>")
-      for(i in thumbs){
-        $("#previewcontent").append("<img src='"+thumbs[i]+"' />")
-      }
-   }
- });
-}
-
-
 function create_mfile_from_joboutput(joboutput){
      name = $("#joboutput-"+joboutput.id+"-createmfile-name").val()
      $.ajax({
        type: "POST",
-       url: '/joboutputs/'+joboutput.id+"/mfile/",
+       url: joboutput.mfile_url,
        data: "name="+name,
        success: function(mfile){
            $("#mserve").mserve('addMFile',mfile)
        },
        error: function(msg){
            showError("Error creating new file","Could not create a new file from this job output")
-       }
-     });
-}
-
-function load_jobs_mfile(mfileid){
-     $.ajax({
-       type: "GET",
-       url: '/mfiles/'+mfileid+"/jobs/",
-       success: function(msg){
-            if(msg.length > 0){
-                $("#jobspaginator").empty()
-            }
-
-            $(msg).each(function(index,job){
-                create_job_holder(job,$("#jobspaginator"))
-                if(!job.tasks.ready){
-                    check_job(job,mfileid)
-                }
-            });
        }
      });
 }
@@ -173,7 +126,7 @@ function create_job_holder(job, paginator){
         $('#jobprogressbar-'+id).click(function() { toggle_job(job);     });
 
         $("#jobdeletebutton-"+id ).button({ icons: { primary: "ui-icon-circle-close"}, text: false });
-        $("#jobdeletebutton-"+id ).click(function() {           delete_job(id) });
+        $("#jobdeletebutton-"+id ).click(function() { delete_job(job) });
 
         update_job_outputs(job)
 
@@ -202,7 +155,7 @@ function get_joboutput_thumb(job){
        if(depth>3){ return }
        $.ajax({
            type: "GET",
-           url: "/jobs/"+job.id+"/",
+           url: job.url,
            success: function(newjob){
             $(newjob.joboutput_set).each(function(index, joboutput){
                 if(joboutput.thumb != ""){
@@ -229,25 +182,6 @@ function toggle_job(job){
     $('#joboutputs-'+job.id).toggle('slide');
     $('#jobpreviewpaginatorheader-'+job.id).show('blind');
     $('#jobpreviewpaginator-'+job.id).toggle('blind');
-}
-
-function create_access_job(mfileid){
-    var data = { name: 'access' };
-    var result = decodeURIComponent($.param(data));
-     $.ajax({
-       type: "POST",
-       data: result,
-       url: "/mfiles/"+mfileid+"/workflows/",
-       success: function(msg){
-                create_job_holder(msg,$("#jobspaginator"))
-                if(!msg.ready){
-                    check_job(msg)
-                }
-       },
-       error: function(msg){
-            showError("Error starting job","Could not start an access job")
-       }
-     });
 }
 
 function mfile_job_ajax(mfileid,data){
@@ -277,7 +211,7 @@ function check_job(job){
     var tasks = job.tasks
      $.ajax({
        type: "GET",
-       url: '/jobs/'+job.id+"/",
+       url: job.url,
        success: function(msg){
         var allDone = true
 
@@ -307,7 +241,6 @@ function check_job(job){
             if(msg.tasks.failed){
                 $('#jobinfo-'+job.id).addClass('ui-state-error')
             }else{
-                console.log(msg)
                 create_job_holder(msg,$("#jobspaginator"))
                 //create_job_output_paginator(msg)
                 update_job_outputs(msg)
@@ -318,7 +251,7 @@ function check_job(job){
        }
      });
  }
-function delete_job(jobid){
+function delete_job(job){
     $( '#dialog-job-dialog' ).dialog({
             resizable: false,
             modal: true,
@@ -326,10 +259,10 @@ function delete_job(jobid){
                     "Delete Job?": function() {
                               $.ajax({
                                type: "DELETE",
-                               url: '/jobs/'+jobid+"/",
+                               url: job.url,
                                success: function(msg){
-                                    $('#job-'+jobid).hide('blind')
-                                    $('#jobheader-'+jobid).hide()
+                                    $('#job-'+job.id).hide('blind')
+                                    $('#jobheader-'+job.id).hide()
                                },
                                error: function(msg){
                                     showError("Job Deleted Error","Could not delete the job")

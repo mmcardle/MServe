@@ -90,177 +90,6 @@ function load_service_iframe(authid,url,consumerurl) {
      });
 }
 
-function create_new_service_ui_dialog(containerid) {
-        // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
-        $( "#dialog:ui-dialog" ).dialog( "destroy" );
-
-        var name = $( "#name" ),
-                allFields = $( [] ).add( name ),
-                tips = $( ".validateTips" );
-
-        function updateTips( t ) {
-                tips.text( t )
-                        .addClass( "ui-state-highlight" );
-                setTimeout(function() {
-                        tips.removeClass( "ui-state-highlight", 1500 );
-                }, 500 );
-        }
-
-        $( "#service-dialog" ).dialog({
-                autoOpen: false,
-                height: 300,
-                width: 350,
-                modal: true,
-                buttons: {
-                        "Create Service": function() {
-                                var bValid = true;
-                                allFields.removeClass( "ui-state-error" );
-                                if ( bValid ) {
-                                        var data = $("#service-form").serialize()
-                                        $.ajax({
-                                           type: "POST",
-                                           url: '/containers/'+containerid+'/services/',
-                                           data: data,
-                                           success: function(service){
-                                                render_service(service,containerid)
-                                           },
-                                           error: function(msg){
-                                                showMessage("Error",msg.responseText)
-                                            }
-                                         });
-                                        $( this ).dialog( "close" );
-                                }
-                        },
-                        Cancel: function() {
-                                $( this ).dialog( "close" );
-                        }
-                },
-                close: function() {
-                        allFields.val( "" ).removeClass( "ui-state-error" );
-                }
-        });
-
-        $( "#service-dialog" ).dialog( "open" );
-}
-
-function create_new_subservice_ui_dialog(serviceid,containerid) {
-        // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
-        $( "#dialog:ui-dialog" ).dialog( "destroy" );
-
-
-        var name = $( "#name" ),
-                allFields = $( [] ).add( name ),
-                tips = $( ".validateTips" );
-
-        function updateTips( t ) {
-                tips
-                        .text( t )
-                        .addClass( "ui-state-highlight" );
-                setTimeout(function() {
-                        tips.removeClass( "ui-state-highlight", 1500 );
-                }, 500 );
-        }
-
-
-        $( "#subservice-dialog" ).dialog({
-                autoOpen: false,
-                height: 300,
-                width: 350,
-                modal: true,
-                buttons: {
-                        "Create Service": function() {
-                                var bValid = true;
-                                allFields.removeClass( "ui-state-error" );
-                                if ( bValid ) {
-                                        var data = $("#subservice-form").serialize()
-                                        $.ajax({
-                                           type: "POST",
-                                           url: '/containers/'+containerid+'/subservices/',
-                                           data: data,
-                                           success: function(service){
-                                                render_service(service,containerid)
-                                           },
-                                           error: function(msg){
-                                                showMessage("Error",msg.responseText)
-                                            }
-                                         });
-                                        $( this ).dialog( "close" );
-                                }
-                        },
-                        Cancel: function() {
-                                $( this ).dialog( "close" );
-                        }
-                },
-                close: function() {
-                        allFields.val( "" ).removeClass( "ui-state-error" );
-                }
-        });
-
-        $( "#subservice-dialog" ).dialog( "open" );
-}
-
-
-function create_new_add_auth_ui_dialog(authid) {
-		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
-		$( "#dialog:ui-dialog" ).dialog( "destroy" );
-
-		var authmethods = $( "#authmethods" ),
-                        email = $( "#email" ),
-			allFields = $( [] ).add( authmethods ).add( email ),
-			tips = $( ".validateTips" );
-
-		function updateTips( t ) {
-			tips
-				.text( t )
-				.addClass( "ui-state-highlight" );
-			setTimeout(function() {
-				tips.removeClass( "ui-state-highlight", 1500 );
-			}, 500 );
-		}
-
-
-		$( "#dialog-add-methods-dialog-form" ).dialog({
-			autoOpen: false,
-			height: 300,
-			width: 350,
-			modal: true,
-			buttons: {
-				"Create an account": function() {
-					var bValid = true;
-					allFields.removeClass( "ui-state-error" );
-					if ( bValid ) {
-                                                var amethods = authmethods.val()
-                                                $.ajax({
-                                                   type: "POST",
-                                                   url: '/auth/'+authid+"/",
-                                                   data: "methods="+authmethods.val(),
-                                                   success: function(msg){
-                                                       var authhtml = $( "#authTemplate" ).tmpl( msg );
-                                                       authhtml.prependTo( "#authcontent" )
-                                                       authhtml.show('slide')
-                                                   }
-                                                 });
-						$( this ).dialog( "close" );
-					}
-				},
-				Cancel: function() {
-					$( this ).dialog( "close" );
-				}
-			},
-			close: function() {
-				allFields.val( "" ).removeClass( "ui-state-error" );
-			}
-		});
-
-		$( "#createauthbutton" )
-                .button()
-                .click(function() {
-                        $( "#dialog-add-methods-dialog-form" ).dialog( "open" );
-                });
-	}
-
-
-
 function create_new_job_ui_dialog(mfileid, servicepage) {
     // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
     $( "#dialog:ui-dialog" ).dialog( "destroy" );
@@ -286,7 +115,7 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
 
     $.ajax({
        type: "GET",
-       url: "/tasks/",
+       url: tasks_url,
        success: function(jobdescriptions){
 
             jobtypes = jobdescriptions['regular']
@@ -340,7 +169,7 @@ function create_new_job_ui_dialog(mfileid, servicepage) {
                             $chooser.find("button").button().click(function( ){
                                 $.ajax({
                                    type: "GET",
-                                   url: "/users/",
+                                   url: users_url,
                                    success: function(user){
                                         $("#dialog-choose-mfile-dialog-form #dialog-choose-mfile-mfileholder").empty()
                                         create_new_choose_mfile_ui_dialog()
@@ -441,67 +270,4 @@ function create_new_choose_mfile_ui_dialog() {
             }
     });
     $( "#dialog-choose-mfile-dialog-form").dialog( "open" );
-}
-
-function create_new_add_method_ui_dialog(roleid) {
-    // a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
-    $( "#dialog:ui-dialog" ).dialog( "destroy" );
-
-    var methods = $( "#methods" ),
-    allFields = $( [] ).add( methods ),
-    tips = $( ".validateTips" );
-
-    function updateTips( t ) {
-            tips
-                    .text( t )
-                    .addClass( "ui-state-highlight" );
-            setTimeout(function() {
-                    tips.removeClass( "ui-state-highlight", 1500 );
-            }, 500 );
-    }
-
-    $( "#dialog-add-role-dialog-form" ).dialog({
-            autoOpen: false,
-            height: 300,
-            width: 350,
-            modal: true,
-            buttons: {
-                    "Add Methods": function() {
-                            var bValid = true;
-                            allFields.removeClass( "ui-state-error" );
-
-                            if ( bValid ) {
-                                        $.ajax({
-                                           type: "PUT",
-                                           url: '/roles/'+roleid+"/",
-                                           data: "methods="+methods.value,
-                                           success: function(msg){
-                                               poplulate_methods(roleid,msg["methods"])
-                                           }
-                                         });
-                                    $( this ).dialog( "close" );
-                            }
-                    },
-                    Cancel: function() {
-                            $( this ).dialog( "close" );
-                    }
-            },
-            close: function() {
-                    allFields.val( "" ).removeClass( "ui-state-error" );
-            }
-    });
-
-    $( ".addmethods" )
-        .button()
-        .click(function() {
-                $( "#dialog-add-role-dialog-form").dialog( "open" );
-    });
-}
-
-function poplulate_methods(roleid, methods){
-   $('.methods'+roleid).empty()
-   $.each(methods, function(i,item){
-        id = $("&nbsp;&nbsp;<span>"+item+"&nbsp;</span>&nbsp;")
-        $(id).appendTo('.methods'+roleid);
-   });
 }

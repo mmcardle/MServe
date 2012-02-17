@@ -204,6 +204,10 @@ class ServiceRequest(models.Model):
         '''set ordering to time'''
         ordering = ["-time"]
 
+    def url(self):
+        """The REST API url for this Service Request"""
+        return reverse('user_request', args=[self.id])
+
     def ctime(self):
         ''' Return the time for this request was made'''
         return self.time.ctime()
@@ -831,6 +835,10 @@ class HostingContainer(NamedBase):
         """The REST API url for stats for this container - used by html views"""
         return reverse('stats', args=[self.id])
 
+    def services_url(self):
+        """The REST API url for usage for this container"""
+        return reverse('hostingcontainer_services', args=[self.id])
+
     def usage_url(self):
         """The REST API url for usage for this container"""
         return reverse('hostingcontainer_usagesummary', args=[self.id])
@@ -1053,6 +1061,16 @@ class DataServiceProfile(models.Model):
     name = models.CharField(max_length=200)
     """The name of the profile"""
 
+    def tasksets_url(self):
+        """The REST API url for the tasksets this DataServiceProfile"""
+        return reverse('dataservice_profiles_tasksets',
+                        args=[self.service.id, self.id])
+
+    def tasks_url(self):
+        """The REST API url for the tasks this DataServiceProfile"""
+        return reverse('dataservice_profiles_tasks',
+                        args=[self.service.id, self.id])
+
     def __unicode__(self):
         return "Profile %s for %s" % (self.name, self.service.name)
 
@@ -1063,7 +1081,7 @@ class DataServiceWorkflow(models.Model):
     """The :class:`.DataServiceProfile` that this workflow relates to"""
     name = models.CharField(max_length=200)
     """The name of the workflow"""
-    
+
     def __unicode__(self):
         return "Workflow %s for %s" % (self.name, self.profile.name)
 
@@ -1111,6 +1129,12 @@ class DataServiceTaskSet(models.Model):
     class Meta:
         ordering = ["order"]
 
+    def url(self):
+        """The REST API url for this DataServiceTaskSet"""
+        return reverse('dataservice_profiles_tasksets',
+                        args=[self.workflow.profile.service.id,
+                            self.workflow.profile.id, self.id])
+
     def create_workflow_taskset(self, mfileid, job):
         """Create a set of tasks, add them to the queue to be executed"""
         in_tasks = filter(lambda t : t != None ,
@@ -1135,6 +1159,12 @@ class DataServiceTask(models.Model):
     args = models.TextField(blank=True, null=True)
     """Arguments to be passed to the task execution"""
 
+    def url(self):
+        """The REST API url for this DataServiceTask"""
+        return reverse('dataservice_profiles_tasks',
+                        args=[  self.taskset.workflow.profile.service.id,
+                                self.taskset.workflow.profile.id, self.id])
+                            
     def create_workflow_task(self, mfileid, job):
         """Creates a celery executable task for this DataServiceTask"""
         task_name = self.task_name
@@ -1236,12 +1266,20 @@ class DataService(NamedBase):
         return reverse('dataservice_usagesummary', args=[self.id])
 
     def properties_url(self):
-        """The REST API url for properties for this container"""
+        """The REST API url for properties for this service"""
         return reverse('dataservice_props', args=[self.id])
 
+    def profiles_url(self):
+        """The REST API url for properties for this service"""
+        return reverse('dataservice_profiles', args=[self.id])
+
     def subservices_url(self):
-        """The REST API url for subservice for this container"""
+        """The REST API url for subservice for this service"""
         return reverse('dataservice_subservices', args=[self.id])
+
+    def mfiles_url(self):
+        """The REST API url for mfiles for this service"""
+        return reverse('dataservice_mfiles', args=[self.id])
 
     def get_folder_for_paths(self, paths):
         """Tries to find a folder at the specified paths ['path','to','folder'] """
@@ -1764,13 +1802,21 @@ class MFile(NamedBase):
             "jobs": ["GET", "POST"],
             }
 
+    def url(self):
+        """The REST API url for this MFile"""
+        return reverse('mfile', args=[self.id])
+
     def relations(self):
         return Relationship.objects.filter(Q(entity1=self)|Q(entity2=self))
 
     def stats_url(self):
         """The REST API url for stats for this MFile, used by html views"""
         return reverse('stats', args=[self.id])
-    
+
+    def jobs_url(self):
+        """The REST API url for jobs for this MFile"""
+        return reverse('mfile_jobs', args=[self.id])
+
     def usage_url(self):
         """The REST API url for usage for this MFile"""
         return reverse('mfile_usagesummary', args=[self.id])
@@ -2334,6 +2380,18 @@ class Auth(Base):
     def usage_url(self):
         """The REST API url for usage"""
         return reverse('auth_usagesummary', args=[self.id])
+
+    def base_url(self):
+        """The REST API url for the base object this auth is for"""
+        return reverse('auth_base', args=[self.id])
+
+    def jobs_url(self):
+        """The REST API url for the jobs for this auth"""
+        return reverse('auth_jobs', args=[self.id])
+
+    def mfiles_url(self):
+        """The REST API url for the jobs for this auth"""
+        return reverse('auth_mfiles', args=[self.id])
 
     def __init__(self, *args, **kwargs):
         super(Auth, self).__init__(*args, **kwargs)
