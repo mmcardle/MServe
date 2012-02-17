@@ -3,6 +3,54 @@
     RS={{STATIC_URL}}
 </script>
 
+<script id="userTemplate" type="text/x-jquery-tmpl">
+
+    {%templatetag openvariable%}if !staff{%templatetag closevariable%}
+    <h1>Resources you own</h1>
+    
+    <div id="user_mfilepager" ></div>
+    <div id="user_mfilemessages"></div>
+    <div id="user_mfileholder" ></div>
+
+    <h1>Resources you have access to</h1>
+
+    <div id="user_authpager"></div>
+    <div id="user_authmessages"></div>
+    <div id="user_authholder"></div>
+    <div class="clr"></div>
+    {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+    <table border="0" style="width: 80%">
+    <tr>
+        {%templatetag openvariable%}if !staff{%templatetag closevariable%}
+        <td style="width:30%">
+            <h1>Request a Service</h1>
+            <div id="user-request-service" >
+                <form id="user-request-service-form"  >
+                    <div id="user-request-service-form-errors" style="color:red;font-weight: bold"></div>
+                    {{ servicerequestform.as_p }}
+                </form>
+
+                <button id="user-request-service-button"  >Request a Service</button>
+            </div>
+        </td>
+        {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+        <td style="width:35%">
+            <h1>Pending Requests</h1>
+            <div id="pending-requests"></div>
+        </td>
+
+        <td style="width:35%">
+            <h1>Requests</h1>
+            <div id="done-requests"></div>
+        </td>
+     </tr>
+    </table>
+    <div class="clr"></div>
+
+</script>
+
 <script id="template-upload" type="text/x-jquery-tmpl">
     <tr class="template-upload{%templatetag openvariable%}if error{%templatetag closevariable%} ui-state-error{%templatetag openvariable%}/if{%templatetag closevariable%}">
         <td class="preview"></td>
@@ -1058,9 +1106,9 @@
 <script id="mfolderTemplate" type="text/x-jquery-tmpl">
 
  {%templatetag openvariable%}if parent {%templatetag closevariable%}
-    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline"  onclick="showMFolder('${id}');"  >
+    <li class="infoholder ${parent.id}" data-id="mfolderholder-${id}" id="mfolderholder-${id}"  style="display: inline">
  {%templatetag openvariable%}else{%templatetag closevariable%}
-    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline"  onclick="showMFolder('${id}');"  >
+    <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline">
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
     <div id="image-${id}" class='fluid'
@@ -1157,6 +1205,7 @@
         <tr>
             <td colspan="2"><h3>Actions</h3>
                 <button id="mfile_download_button-${id}" onclick='window.open("/mfiles/${id}/file/")' >Download</button>
+                <button class="mfile_delete_button-${id}" >Delete</button>
             </td>
         </tr>
         <tr><td><h3>Related Files</h3><small><img height="20" width="20" src="{{MEDIA_URL}}images/star-file.png" />&nbsp;Indicates current file</small></td></tr>
@@ -1196,7 +1245,7 @@
     <li class="infoholder rootfolder ${id}" data-id="mfileholder-${id}" id="mfileholder-${id}" style="display: inline" >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-    <div id="image-${id}" class='fluid'  onclick='$("#mserve").mserve("showMFile","${id}" )'
+    <div id="image-${id}" class='fluid'  onclick='$("#mserve").mserve("selectMFileNode","${id}" )'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
                     onmouseout="$('#id-${id}').hide();"
@@ -1223,7 +1272,6 @@
                           <div style='font-size: xx-small;'>Checksum:</div>
                           <div style='font-size: xx-small;text-align: center;'>${checksum}</div>
                         
-                        <button id="newjobbutton-${id}" onclick="showmfiledialog('${id}')" >New Job</button>
                         <button id="deletemfilebutton-${id}" onclick='$("#mserve").mserve("deletemfile","${id}")' >Delete</button>
                       </div>
                 </td>

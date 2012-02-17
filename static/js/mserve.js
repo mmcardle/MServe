@@ -45,7 +45,7 @@
                     $this.empty()
                     $(this).mserve('loadContainers');
                 }else{
-
+                    $(this).mserve('loadUser');
                 }
             }else if(page.startsWith('/services/')){
                 var str = page.split(/\//g)
@@ -162,6 +162,7 @@
 
                     $this.append("<div id='containertabs' ><ul></ul></div>");
                     $("#containertabs").tabs().tabs( "add", "#tabs-services" , "Container Management" );
+
                     $servicetab = $("<div><table><tr><td id='td1'></td><td style='width:100%' id='td2'></td></tr></table></div>");
                     $servicetab.appendTo($("#tabs-services"))
                     $servicetab.find('#td1').append( $("#messageTemplate").tmpl({"message":"Welcome to the container managment page of MServe. You can create new containers and manage existing ones from here"})  );
@@ -174,6 +175,9 @@
                     $servicetab.find("input[type='text']").addClass("text ui-widget-content ui-corner-all")
                     $servicetab.find("input[type='password']").addClass("text ui-widget-content ui-corner-all")
                     $servicetab.find("select").addClass("ui-widget-content ui-corner-all")
+
+                    $("#containertabs").tabs().tabs( "add", "#tabs-requests" , "Service Requests" );
+                    $(this).mserve('loadRequests', $("#tabs-requests"), true);
 
                     $("#createcontainerbutton").button()
                     $("#createcontainerbutton" ).click(function() {
@@ -227,6 +231,39 @@
              });
 
         });
+    },
+    loadRequests: function( obj, staff ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+                $user = $("#userTemplate").tmpl( {staff : staff} )
+
+                obj.append($user)
+                $('#user-request-service-button').click( function(){
+                    user_request_service(user_requests_url)
+                });
+                load_user(users_url, consumer_url,"#mfileTemplate");
+                load_user_requests(user_requests_url);
+            });
+    },
+    loadUser: function( obj, staff ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var $this = $(this),
+                data = $this.data('mserve');
+                $this.append("<div id='usertabs' ><ul></ul></div>");
+                $("#usertabs").tabs().tabs( "add", "#tabs-user" , "User" );
+                $(this).mserve('loadRequests', $("#tabs-user"), false );
+            });
     },
     showServiceTab: function( service, tab ) {
 
@@ -773,11 +810,6 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                $("#newjobbutton-"+mfile.id ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
-                $('#newjobbutton-'+mfile.id).click(function(){
-                    $("#mfileid").val(mfile.id);
-                    $("#dialog-new-job-dialog-form").dialog( "open" );
-                });
                 $("#deletemfilebutton-"+mfile.id ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
                     obj.mserve('deletemfile', mfile)
                 });
@@ -841,15 +873,6 @@
                 // Update MFile before cloning
                 $(obj).mserve('updatemfile', mfile, {"pollthumb":"true"})
 
-                $mft.find("#newjobbutton-"+mfile.id ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
-                $mft.find('#newjobbutton-'+mfile.id).click(function(){
-                    $("#mfileid").val(mfile.id);
-                    $("#dialog-new-job-dialog-form").dialog( "open" );
-                });
-                $mft.find("#deletemfilebutton-"+mfile.id ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
-                    obj.mserve('deletemfile', mfile)
-                });
-
                 data.allcontent.prepend($mft.clone(true,true))
                
                 selected = $("#mfoldertreecontainer").jstree("get_selected")
@@ -907,6 +930,16 @@
                 });
             });
     },
+    selectMFileNode : function( id ) {
+
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            $("#mfoldertreecontainer").jstree("deselect_all")
+            $("#mfoldertreecontainer").jstree("select_node", $("#"+id))
+        })
+    },
     showMFile : function( id ) {
 
             var defaults = {};
@@ -927,7 +960,8 @@
                 if(!$filteredData.length>0){
                     var $mfpt = $("#mfilePosterTemplate" ).tmpl( data[id] )
                     data.allcontent.append($mfpt)
-                    $mfpt.find("#mfile_download_button-"+id).button()
+                    $mfpt.find("#mfile_download_button-"+id).button()                   
+                    $mfpt.find(".mfile_delete_button-"+id).button()
                     $filteredData = $mfpt
                 }
 
@@ -940,7 +974,6 @@
                         $(obj).mserve('createMFileJob', id, postdata)
                 })
 
-                $(obj).mserve()
                 $.ajax({
                    type: "GET",
                    url: mfile.jobs_url,
@@ -962,6 +995,10 @@
                     adjustHeight: 'dynamic',
                     duration: 800,
                     easing: null
+                }, function(){
+                    $(".mfile_delete_button-"+id).each(function(index, delbut){
+                        $(delbut).click(function(){ $(obj).mserve('deletemfile',mfile) })
+                    })
                 });
 
                 $.ajax({
@@ -1343,6 +1380,7 @@
                 data["allcontent"]= servicecontent
 
                 var $filteredData = servicecontent.find('li.rootfolder');
+                console.log($filteredData )
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
@@ -1425,7 +1463,7 @@ function load_user(userurl,consumerurl,template){
                 return false;
             }
 
-            $("#user_mfileholder").smartpaginator({ totalrecords: mfiles.length, recordsperpage: mfilesperpage, initval:1 , next: 'Next',
+            $("#user_mfilepager").smartpaginator({ totalrecords: mfiles.length, recordsperpage: mfilesperpage, initval:1 , next: 'Next',
                 prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage
             });
 
@@ -1445,7 +1483,7 @@ function load_user(userurl,consumerurl,template){
                 return false;
             }
 
-            $("#user_authholder").smartpaginator({ totalrecords: myauths.length, recordsperpage: authsperpage, initval:1 , next: 'Next',
+            $("#user_authpager").smartpaginator({ totalrecords: myauths.length, recordsperpage: authsperpage, initval:1 , next: 'Next',
                 prev: 'Prev', first: 'First', last: 'Last', theme: 'smartpagewhite', onchange: onChangePage2
             });
 
@@ -1756,43 +1794,9 @@ function ajax_delete_consumer_oauth(id, oauth_token, consumerurl){
      });
 }
 
-function showMFolder(mfolderid){
-    $("#mservetree").mserve( 'showMFolder' , mfolderid);
-}
-
-function showmfiledialog(gmfileid){
-        create_new_job_ui_dialog(gmfileid,true)
-        $("#mfileid").val(gmfileid);
-        $("#dialog-new-job-dialog-form").dialog( "open" );
-}
-
-function mfile_buttons(gmfileid){
-    $("#newjobbutton-"+gmfileid ).button({icons: {primary: "ui-icon-transferthick-e-w"}, text: false});
-    $('#newjobbutton-'+gmfileid).click(function(){
-        create_new_job_ui_dialog(gmfileid,true)
-        $("#mfileid").val(gmfileid);
-        $("#dialog-new-job-dialog-form").dialog( "open" );
-    });
-}
-
 $(document).ready(function(){
 	$('.accordion .head').click(function() {
 		$(this).next().toggle('slow');
 		return false;
 	}).next().hide();
 });
-
-function mfile_get(mfileid){
-        window.open("/mfiles/"+mfileid+"/file/")
-}
-
-function getPoster(mfileid){
-    url = '/mfile/'+mfileid+'/'
-    $.getJSON(url, function(data) {
-        if(data.poster!=""){
-            $("#mfileposter").attr("src", "/"+data.posterurl)
-        }else{
-            window.setTimeout("getPoster(\'"+mfileid+"\')",1000)
-        }
-    });
-}
