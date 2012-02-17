@@ -270,12 +270,6 @@ def render_base(request, baseid):
         if utils.is_service(base):
             return render_service_auth(request, auth)
 
-        _dict = {}
-        _dict["error"] = "Error displaying the auth with id='%s' " % baseid
-        print _dict
-        return render_to_response('error.html', append_dict(_dict, request), \
-                context_instance=RequestContext(request))
-
     except Auth.DoesNotExist:
         logging.info("Request to browse '%s' , \
             ID does not relate to a auth object." , baseid)
