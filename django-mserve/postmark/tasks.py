@@ -22,6 +22,7 @@
 #
 ########################################################################
 from celery.task import task
+import pycurl
 import logging
 import os
 import re
@@ -30,16 +31,18 @@ import datetime
 import shutil
 import os.path
 import time
-from django.core.files import File
-from django.core.files.uploadedfile import SimpleUploadedFile
 import dataservice.utils as utils
 import settings as settings
 import paramiko
 import uuid
+import tarfile
+import simplejson as json
+from django.core.files import File
+from django.core.files.uploadedfile import SimpleUploadedFile
 from ssh import MultiSSHClient
 from dataservice.models import MFile
 from jobservice.models import JobOutput
-import tarfile
+from django.shortcuts import render_to_response
 
 def tar_files(temp_tarfile, files):
     tar = tarfile.open(temp_tarfile, "w:gz")
@@ -88,7 +91,7 @@ def _ssh_r2d(file, export_type, tmpimage, start_frame=1, end_frame=2):
 
     return result
 
-@task(name="red2dtranscode")
+@task
 def red2dtranscode(inputs,outputs,options={},callbacks=[]):
 
     started = datetime.datetime.now()
@@ -205,7 +208,7 @@ def _ssh_r3d(left_eye_file,right_eye_file,tmpimage, start_frame=1, end_frame=2):
     return result
 
 
-@task(name="red3dmux")
+@task
 def red3dmux(inputs,outputs,options={},callbacks=[]):
 
     logging.info("Inputs %s"% (inputs))
@@ -310,7 +313,7 @@ def _drop_folder(filepath,inputfolder,outputfolder):
         raise e
 
 
-@task(name="digitalrapids")
+@task
 def digitalrapids(inputs,outputs,options={},callbacks=[]):
 
     baseinputdir    = settings.DIGITAL_RAPIDS_INPUT_DIR
@@ -351,3 +354,99 @@ def digitalrapids(inputs,outputs,options={},callbacks=[]):
     except Exception as e:
         logging.info("Error with digitalrapids %s" % e)
         raise e
+
+
+class RequestReader:
+
+    def __init__(self, tmpl, vars):
+        self.finished = False
+        self.POSTSTRING = str(render_to_response(tmpl,vars,
+                mimetype='text/xml'))
+
+    def read_cb(self, size):
+        assert len(self.POSTSTRING) <= size
+        if not self.finished:
+            self.finished = True
+            return self.POSTSTRING
+        else:
+            # Nothing more to read
+            return ""
+
+    def __len__(self):
+        return  len(self.POSTSTRING)
+
+class ResponseWriter:
+   def __init__(self):
+       self.contents = ''
+
+   def body_callback(self, buf):
+       self.contents = self.contents + buf
+
+
+def fims_transformrequest(url, vars):
+    transformRequestReader = RequestReader("transformRequest.tmpl.xml", vars)
+    transformResponseWriter = ResponseWriter()
+
+    c = pycurl.Curl()
+    c.setopt(c.URL, url)
+    c.setopt(c.POST, 1)
+    c.setopt(c.POSTFIELDSIZE, len(transformRequestReader))
+    c.setopt(c.READFUNCTION, transformRequestReader.read_cb)
+    c.setopt(c.WRITEFUNCTION, transformResponseWriter.body_callback)
+    if settings.DEBUG:
+        c.setopt(c.VERBOSE, 1)
+    c.perform()
+    status = c.getinfo(c.HTTP_CODE)
+    if status>=400:
+        raise Exception("FIMS MEWS service returned an error %s " % status)
+    c.close()
+    transformjs = json.loads(transformResponseWriter.contents)
+    return transformjs
+
+
+def fims_job_queryrequest(url):
+    jobQueryResponseWriter = ResponseWriter()
+    c = pycurl.Curl()
+    c.setopt(c.URL, url)
+    c.setopt(c.WRITEFUNCTION, jobQueryResponseWriter.body_callback)
+    if settings.DEBUG:
+        c.setopt(c.VERBOSE, 1)
+    c.perform()
+    status = c.getinfo(c.HTTP_CODE)
+    if status>=400:
+        raise Exception("FIMS MEWS service returned an error %s " % status)
+    c.close()
+    jobjs = json.loads(jobQueryResponseWriter.contents)
+    return jobjs
+
+
+@task
+def fims_mews(inputs, outputs, options={}, callbacks=[]):
+
+    bmcontent_locator = ""
+    jobguid = utils.unique_id()
+    transfer_locator = ""
+    transfer_destination = ""
+
+    transform_vars = {'bmcontent_locator': bmcontent_locator,
+            'jobguid': jobguid,
+            'transfer_locator':transfer_locator,
+            'transfer_destination':transfer_destination }
+
+    js = fims_transformrequest(settings.FIMS_MEWS_URL_TRANSFORM, transform_vars)
+    jobGUID = js["transformAck"]["operationInfo"]["jobID"]["jobGUID"]
+
+    max_polls=5
+    js_resp = fims_job_queryrequest(settings.FIMS_MEWS_URL_JOBQUERY+jobGUID)
+    status = js_resp ["queryJobRequest"]["queryJobInfo"]["jobInfo"]["status"]\
+                    ["code"]
+                    
+    while status == "running" and max_polls >= 0:
+        time.sleep(5)
+        js_resp = fims_job_queryrequest(settings.FIMS_MEWS_URL_JOBQUERY+jobGUID)
+        print js_resp
+        status = js_resp ["queryJobRequest"]["queryJobInfo"]["jobInfo"]["status"]\
+                    ["code"]
+        max_polls = max_polls -1
+
+    return js_resp

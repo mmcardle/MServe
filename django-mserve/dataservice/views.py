@@ -54,6 +54,7 @@ from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotFound
 from django.core.urlresolvers import reverse
 from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -281,8 +282,61 @@ def render_base(request, baseid):
     resp.status_code = 404
     return resp
 
+
+@csrf_exempt
+def test_transformrequest(request):
+    """Render the test_transformrequest page"""
+    resp = {
+       "transformAck" : {
+          "operationInfo" : {
+             "jobID" : {
+                "jobGUID" : "CDDA518D-4A42-45d0-A866-9C340AA98C11",
+                "serviceProviderJobID" : "121e23e9-2168-46f1-a891-7f6bb8bdbddb"
+             },
+             "operationName" : "transformrequest",
+             "profileID" : "",
+             "status" : {
+                "code" : "queued",
+                "description" : "Pending"
+             }
+          }
+       }
+    }
+    return HttpResponse(simplejson.dumps(resp), mimetype="application/json")
+
+
+@csrf_exempt
+def test_queryjobrequest(request, jobid):
+    """Render the test_transformrequest page"""
+    if jobid:
+        resp = {
+            "queryJobRequest" : {
+                "queryJobInfo" : {
+                    "jobInfo" : {
+                        "jobID" : {
+                            "jobGUID" : "CDDA518D-4A42-45d0-A866-9C340AA98C11",
+                            "serviceProviderJobID" : "121e23e9-2168-46f1-a891-7f6bb8bdbddb"
+                        },
+                        "operationName" : "transformrequest",
+                        "priority" : "immediate",
+                        "status" : {
+                            "code" : "running",
+                            "description" : "In Progress"
+                        }
+                    }
+                }
+            }
+        }
+        return HttpResponse( simplejson.dumps(resp), mimetype="application/json")
+    else:
+        resp = {
+            "active transfers" : 1,
+            "transfer_id_1" : "CDDA518D-4A42-45d0-A866-9C340AA98C11"
+        }
+        return HttpResponse( simplejson.dumps(resp), mimetype="application/json")
+
+
 def test(request):
-    """Render the test page"""
     _dict = {}
     return render_to_response('test.html', append_dict(_dict, request), \
             context_instance=RequestContext(request))

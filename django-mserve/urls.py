@@ -46,4 +46,6 @@ urlpatterns = patterns('',
 if settings.DEBUG:
     urlpatterns += patterns('',
         (r'^test/', 'dataservice.views.test' ),
+        (r'^transformrequest/', 'dataservice.views.test_transformrequest' ),
+        (r'^queryjobrequest/(?P<jobid>.*)$', 'dataservice.views.test_queryjobrequest' ),
     )
