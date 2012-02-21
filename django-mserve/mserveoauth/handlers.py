@@ -66,7 +66,8 @@ class ProtectedResourceHandler(BaseHandler):
 
         return retdict
 
-
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
 def oauth_access_token(request):
 
     oauth_server, oauth_request = pauth.initialize_server_request(request)
@@ -111,6 +112,7 @@ class ReceiveHandler(BaseHandler):
             ACCESS_TOKEN_URL = cc.remote_service.get_access_token_url()
 
             resp, content = client.request(ACCESS_TOKEN_URL, "POST")
+            print content
             access_token = dict(cgi.parse_qsl(content))
 
             RESOURCE_URL = remote_service.get_protected_resource_url()
