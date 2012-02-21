@@ -439,6 +439,8 @@ def fims_mews(inputs, outputs, options={}, callbacks=[]):
     js = fims_transformrequest(settings.FIMS_MEWS_URL_TRANSFORM, transform_vars)
     jobGUID = js["transformAck"]["operationInfo"]["jobID"]["jobGUID"]
 
+    # TODO: instead of having max_polls use the status field to break
+    # when the job fails (dont know what these statuses are yet)
     max_polls=5
     js_resp = fims_job_queryrequest(settings.FIMS_MEWS_URL_JOBQUERY+jobGUID)
     status = js_resp ["queryJobRequest"]["queryJobInfo"]["jobInfo"]["status"]\
