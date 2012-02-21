@@ -192,6 +192,7 @@ class ClientTest(TestCase):
         self.container_name = "testingcontainer"
         self.service_name = "testingservice"
         self.mfile_name = "testmfile"
+        self.mfile_name_2 = "testmfile2"
         self.unauthclient = Client()
         self.c = Client()
         User.objects.create_superuser(self.username, 'myemail@tempuri.com', self.password)
@@ -298,6 +299,24 @@ class ClientTest(TestCase):
         response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
         self.failUnlessEqual(response.status_code,200)
 
+    def test_update_mfile(self):
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        mfileid = js["id"]
+        self.mfile_url = reverse('mfile', args=[mfileid])
+        response = self.c.put(self.mfile_url, {"name": self.mfile_name})
+        self.failUnlessEqual(response.status_code,200)
+        response2 = self.c.post(self.mfile_post_url, {"name":self.mfile_name_2, "serviceid" : self.service.id})
+        self.failUnlessEqual(response2.status_code,200)
+        js2 = json.loads(response2.content)
+        mfileid2 = js2["id"]
+        self.mfile_url_2 = reverse('mfile', args=[mfileid2])
+
+        # Check we cant update the name of an mfile to an existing
+        response3 = self.c.put(self.mfile_url_2, {"name": self.mfile_name})
+        self.failUnlessEqual(response3.status_code,400)
+
     def test_create_job(self):
         response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
         self.failUnlessEqual(response.status_code,200)
@@ -326,18 +345,12 @@ class ClientTest(TestCase):
         self.failUnlessEqual(response.status_code,200)
         js = json.loads(response.content)
         mfileid1 = js["id"]
-
         response2 = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
         self.failUnlessEqual(response2.status_code,200)
         js = json.loads(response2.content)
         mfileid2 = js["id"]
-
         mfile_relationship_url = reverse('mfile_relationships', args=[mfileid1])
-
         response3 = self.c.post(mfile_relationship_url, {"name":"is related to", "mfileid" : mfileid2})
-
-        print response3
-
         self.failUnlessEqual(response3.status_code,200)
 
     def test_get_mfile(self):
@@ -1297,7 +1310,7 @@ class APITest(TestCase):
         shouldbe503_3 = mfile.do("PUT","auths",request=badrequest)
         self.failUnlessEqual(type(shouldbe503_3), HttpResponseBadRequest)
 
-        # POST container
+        # POST MFile
         shouldbe403_2 = mfile.do("POST","properties")
         self.failUnlessEqual(type(shouldbe403_2), HttpResponseForbidden)
 
@@ -1315,7 +1328,7 @@ class APITest(TestCase):
         shouldbe503_5 = mfile.do("POST","auths",request=badrequest)
         self.failUnlessEqual(type(shouldbe503_5), HttpResponseBadRequest)
 
-        # DELETE container
+        # DELETE mfile
         shouldbe403_4 = mfile.do("DELETE","usages")
         self.failUnlessEqual(type(shouldbe403_4), HttpResponseForbidden)
 

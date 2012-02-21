@@ -748,42 +748,26 @@ class MFileHandler(BaseHandler):
         if field:
             return HttpResponseNotAllowed(['POST'])
         logging.info("Deleting mfile %s ", mfileid)
-        #MFile.objects.get(id=id).delete()
         MFile.objects.get(id=mfileid).do("DELETE")
         return rc.DELETED
 
-    def update(self, request, mfileid, field=None):
-
-        mfile = MFile.objects.get(pk=mfileid)
-        if field == "thumb":
-            utils.write_request_to_field(request, mfile.thumb, 'thumb.png')
-            return {"message": "updated thumb"}
-        if field == "poster":
-            utils.write_request_to_field(request, mfile.poster, 'poster.png')
-            return {"message": "updated poster"}
-        if field == "proxy":
-            utils.write_request_to_field(request, mfile.proxy, 'proxy.mp4')
-            return {"message": "updated proxy"}
-
-        form = UpdateMFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            postfile = request.FILES['file']
+    def update(self, request, mfileid):
+        try:
             mfile = MFile.objects.get(pk=mfileid)
-            logging.info("Update %s with file %s", mfileid, postfile)
-            mfile.file = postfile
-            mfile.name = postfile.name
-            mfile.size = postfile.size
+            mfile.name = request.POST.get("name", mfile.name)
+            existing = MFile.objects.filter(name=mfile.name, 
+                                folder=mfile.folder, service=mfile.service)\
+                                .exclude(id=mfile.id)
+            if existing:
+                response = rc.BAD_REQUEST
+                response.write("Invalid Request! Mfile with name %s already \
+                                exists" % mfile.name)
+                return response
             mfile.save()
-            mfile.post_process()
-            backup = BackupFile(name="backup_%s" % postfile.name,
-                    mfile=mfile, mimetype=mfile.mimetype,
-                    checksum=mfile.checksum, file=postfile
-                   )
-            backup.save()
             return mfile
-        else:
+        except:
+            raise 
             response = rc.BAD_REQUEST
-            logging.info("Bad Form %s", form)
             response.write("Invalid Request!")
             return response
 

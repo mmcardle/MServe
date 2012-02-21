@@ -961,6 +961,27 @@
             $("#mfoldertreecontainer").jstree("select_node", $("#"+id))
         })
     },
+    renameMFile : function( mfile ) {
+
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            console.log(mfile)
+            name = prompt("New Name", mfile.name);
+            console.log(name)
+            if(name){
+                $.ajax({
+                   type: "PUT",
+                   url: mfile.url,
+                   data: "name="+name,
+                   success: function(mfile){
+                        console.log(mfile)
+                   }
+                });
+            }
+        })
+    },
     createMFileRelationship_ajax : function( mfile1, mfileid2, name ) {
 
         var defaults = {};
@@ -1076,7 +1097,8 @@
                 if(!$filteredData.length>0){
                     var $mfpt = $("#mfilePosterTemplate" ).tmpl( data[id] )
                     data.allcontent.append($mfpt)
-                    $mfpt.find("#mfile_download_button-"+id).button()                   
+                    $mfpt.find(".mfile_rename_button-"+id).button()
+                    $mfpt.find("#mfile_download_button-"+id).button()
                     $mfpt.find(".mfile_delete_button-"+id).button()
                     $mfpt.find(".mfile_relationship_button-"+id).button()
                     $filteredData = $mfpt
@@ -1118,6 +1140,9 @@
                     })
                     $(".mfile_relationship_button-"+id).each(function(index, delbut){
                         $(delbut).click(function(){ $(obj).mserve('createMFileRelationship', mfile) })
+                    })
+                    $(".mfile_rename_button-"+id).each(function(index, renamebut){
+                        $(renamebut).click(function(){ $(obj).mserve('renameMFile', mfile) })
                     })
                 });
 
