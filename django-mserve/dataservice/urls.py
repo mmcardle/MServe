@@ -52,6 +52,7 @@ dataservice_profile_handler = Resource(DataServiceProfileHandler)
 dataservice_task_handler = Resource(DataServiceTaskHandler)
 dataservice_taskset_handler = Resource(DataServiceTaskSetHandler)
 mfile_handler = Resource(MFileHandler)
+mfile_relationship_handler = Resource(RelationshipHandler)
 backupfile_handler = Resource(BackupFileHandler)
 mfolder_handler = Resource(MFolderHandler)
 mfile_contents_handler = Resource(MFileContentsHandler)
@@ -102,6 +103,7 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<mfileid>[^/]+)/usagesummary/$', usagesummary_handler, name='mfile_usagesummary'),
     url(r'^mfiles/(?P<mfileid>[^/]+)/auths/$', auth_handler),
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler, name='mfile_download'),
+    url(r'^mfiles/(?P<mfileid>[^/]+)/relationships/$', mfile_relationship_handler, name='mfile_relationships'),
 
     # Auth URLs
     url(r'^auths/$', auth_handler, name='auths' ),

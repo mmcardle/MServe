@@ -1761,6 +1761,9 @@ class Relationship(models.Model):
     def right(self):
         return self.entity2.serialize()
 
+    def __unicode__(self):
+        return "%s -> %s " % (self.entity1, self.entity2)
+
 class MFile(NamedBase):
     """
     An MFile represents a single file on the system at a service
@@ -1806,12 +1809,13 @@ class MFile(NamedBase):
         """The REST API url for this MFile"""
         return reverse('mfile', args=[self.id])
 
-    def relations(self):
-        return Relationship.objects.filter(Q(entity1=self)|Q(entity2=self))
-
     def stats_url(self):
         """The REST API url for stats for this MFile, used by html views"""
         return reverse('stats', args=[self.id])
+
+    def relationships_url(self):
+        """The REST API url for relationships for this MFile"""
+        return reverse('mfile_relationships', args=[self.id])
 
     def jobs_url(self):
         """The REST API url for jobs for this MFile"""
@@ -1837,6 +1841,9 @@ class MFile(NamedBase):
         """The REST API url for uploading a new proxy"""
         return reverse('mfile_upload_proxy', args=[self.id])
 
+    def relations(self):
+        return Relationship.objects.filter(Q(entity1=self)|Q(entity2=self))
+    
     @staticmethod
     def get_mfile_plots(request, baseid=None):
         """Get any plots to be charted in the GUI, currently return []"""

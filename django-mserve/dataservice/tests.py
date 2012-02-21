@@ -321,6 +321,25 @@ class ClientTest(TestCase):
         response = self.c.post(self.joboutput_mfile_url, {"name": "New Mfile"})
         self.failUnlessEqual(response.status_code,200)
 
+    def test_create_mfile_relationship(self):
+        response = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response.status_code,200)
+        js = json.loads(response.content)
+        mfileid1 = js["id"]
+
+        response2 = self.c.post(self.mfile_post_url, {"name":self.mfile_name, "serviceid" : self.service.id})
+        self.failUnlessEqual(response2.status_code,200)
+        js = json.loads(response2.content)
+        mfileid2 = js["id"]
+
+        mfile_relationship_url = reverse('mfile_relationships', args=[mfileid1])
+
+        response3 = self.c.post(mfile_relationship_url, {"name":"is related to", "mfileid" : mfileid2})
+
+        print response3
+
+        self.failUnlessEqual(response3.status_code,200)
+
     def test_get_mfile(self):
         service = self.hc.create_data_service(self.service_name)
         service.save()

@@ -649,9 +649,38 @@ class RelationshipHandler(BaseHandler):
     This allows reading of Relationship objects
 
     """
-    allowed_methods = ('GET')
+    allowed_methods = ('GET', 'POST')
     model = Relationship
     fields = ('name', 'left', 'right')
+
+    def read(self, request, mfileid):
+        mfile = MFile.objects.get(id=mfileid)
+        return mfile.relations()
+
+    def create(self, request, mfileid):
+
+        mfileid_left = mfileid
+        mfileid_right = request.POST.get("mfileid", None)
+        relationship_name = request.POST.get("name", None)
+
+        if mfileid_right == None:
+            response = rc.BAD_REQUEST
+            logging.info("Bad Request to relationship create handler %s", request.POST)
+            response.write("Invalid Request! No mfileid in POST fields")
+            return response
+        elif relationship_name == None:
+            response = rc.BAD_REQUEST
+            logging.info("Bad Request to relationship create handler %s", request.POST)
+            response.write("Invalid Request! No name in POST fields")
+            return response
+        else:
+            mfile_left = MFile.objects.get(id=mfileid_left)
+            mfile_right = MFile.objects.get(id=mfileid_right)
+            relationship = Relationship(entity1=mfile_left,
+                                entity2=mfile_right,
+                                name=relationship_name)
+            relationship.save()
+            return relationship
 
 
 class MFolderHandler(BaseHandler):
@@ -697,7 +726,7 @@ class MFileHandler(BaseHandler):
     fields = ('name', 'id', 'file', 'checksum', 'size', 'mimetype', 'thumb',
                 'poster', 'proxy', 'created', 'updated', 'thumburl', \
                 'posterurl', 'proxyurl', 'reportnum', 'relations', 'url',
-                'jobs_url', ('folder', ('id', 'name') )
+                'relationships_url', 'jobs_url', ('folder', ('id', 'name') )
             )
 
     def read(self, request, mfileid=None, serviceid=None,
