@@ -52,44 +52,51 @@
                 var serviceid = str[2]
                 var url = "/"+str[1]+"/"+serviceid
                 var tab = str[3]
+                var mfile = str[4]
+
+                data["currentserviceurl"] = url
 
                 if(!data.cache[serviceid]){
                     console.log("Service is not cached")
                     $this.empty()
-                    $(this).mserve('loadService', url, tab);
+                    $(this).mserve('loadService', url, tab, mfile);
                 }else{
                     data.allcontent = data.contentcache[serviceid]
                     if($(this).find("#tabs-"+serviceid).length <= 0){
                         console.log("Service is cached - but not on service page")
                         $(this).empty()
-                        $(this).mserve('loadService', url, tab);
+                        $(this).mserve('loadService', url, tab, mfile);
                     }else{
                         console.log("Service is cached and on service page - showing tab")
-                        $(this).mserve('showServiceTab', data[serviceid], tab);
+                        $(this).mserve('showServiceTab', data[serviceid], tab, mfile);
                     }
                 }
             }else if(page.startsWith('/auths/')){
-                var str2 = page.split(/\//g)
-                var authid = str2[2]
-                var authurl = "/"+str2[1]+"/"+authid
-                var authtab = str2[3]
+                var authstr = page.split(/\//g)
+                var authid = authstr[2]
+                var authurl = "/"+authstr[1]+"/"+authid
+                var authtab = authstr[3]
+                var authmfile = authstr[4]
+
+                data["currentserviceurl"] = authurl
 
                 if(!data.cache[authid]){
                     console.log("Auth is not cached")
                     $this.empty()
-                    $(this).mserve('loadServiceAuth', authurl, authtab, authid);
+                    $(this).mserve('loadServiceAuth', authurl, authtab, authid, authmfile);
                 }else{
                     data.allcontent = data.contentcache[authid]
                     if($(this).find("#tabs-"+authid).length <= 0){
                         console.log("ServiceAuth is cached - but not on service page")
                         $(this).empty()
-                        $(this).mserve('loadServiceAuth', authurl, authtab, authid);
+                        $(this).mserve('loadServiceAuth', authurl, authtab, authid, authmfile);
                     }else{
-                        console.log("Service is cached and on service page - showing tab")
-                        $(this).mserve('showServiceTab', data[authid], authtab, authid);
+                        console.log("ServiceAuth is cached and on service page - showing tab")
+                        $(this).mserve('showServiceTab', data[authid], authtab, authmfile);
                     }
                 }
             }else if(page.startsWith('/mfiles/')){
+                console.log("loading MFile page "+page)
                 var str = page.split(/\//g)
                 url = str[1]+"/"+str[2]
                 tab = str[3]
@@ -97,6 +104,7 @@
             }else{
                 console.log("dont know how to load "+page)
             }
+            data["currentpage"] = page
             $.address.value(page);
         });
     },
@@ -265,7 +273,7 @@
                 $(this).mserve('loadRequests', $("#tabs-user"), false );
             });
     },
-    showServiceTab: function( service, tab ) {
+    showServiceTab: function( service, tab, mfile ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -278,6 +286,11 @@
                     $tabs.tabs('select', '#' + tab+"tab-"+service.id);
                 }else{
                     $tabs.tabs('select', '#servicetab-'+service.id);
+                }
+                if(mfile){
+                    $($this).mserve('showMFile', mfile)
+                }else{
+                    $($this).mserve('showService', service.id)
                 }
             });
     },
@@ -345,7 +358,7 @@
 
             });
     },
-    loadServiceAuth: function(url, tab, authid) {
+    loadServiceAuth: function(url, tab, authid, mfile) {
         var defaults = {};
         var options = $.extend(defaults, options);
         return this.each(function() {
@@ -353,7 +366,6 @@
             var obj = $(this);
 
             var $this = $(this), data = $this.data('mserve')
-
             $.ajax({
                type: "GET",
                url: url,
@@ -363,6 +375,7 @@
                        url: auth.base_url,
                        success: function(authbase){
                            data[authid] = authbase
+                           data["mfiles"] = authbase.mfile_set
 
                            $(authbase.mfile_set).each( function(index, mfile){
                                 data[mfile.id] = mfile
@@ -439,6 +452,10 @@
                                 mfile_set : authbase.mfile_set,
                                 folder_structure : authbase.folder_structure
                             } )
+
+                            if(mfile!=undefined){
+                                $(obj).mserve('showMFile', mfile)
+                            }
 
                             $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
 
@@ -523,7 +540,7 @@
 
         });
     },
-    loadService: function(url, tab) {
+    loadService: function(url, tab, mfile) {
         var defaults = {};
         var options = $.extend(defaults, options);
 
@@ -532,13 +549,13 @@
             var obj = $(this);
 
             var $this = $(this), data = $this.data('mserve')
-            console.log("Loading "+url)
              $.ajax({
                type: "GET",
                url: url,
                success: function(service){
 
                    data[service.id] = service
+                   data["mfiles"] = service.mfile_set
 
                    $(service.mfile_set).each( function(index, mfile){
                         data[mfile.id] = mfile
@@ -669,6 +686,10 @@
                         mfile_set : service.mfile_set,
                         folder_structure : service.folder_structure
                     } )
+
+                    if(mfile!=undefined){
+                        $(obj).mserve('showMFile', mfile)
+                    }
 
                     $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
                     
@@ -940,6 +961,99 @@
             $("#mfoldertreecontainer").jstree("select_node", $("#"+id))
         })
     },
+    createMFileRelationship_ajax : function( mfile1, mfileid2, name ) {
+
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            $.ajax({
+               type: "POST",
+               url: mfile1.relationships_url,
+               data: "mfileid="+mfileid2+"&name="+name,
+               success: function(rela){
+                    console.log(rela)
+               }
+            });
+        })
+    },
+    createMFileRelationship : function( mfile ) {
+
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var o = options;
+            var obj = $(this);
+            var $this = $(this),
+            data = $this.data('mserve');
+            $(obj).mserve('chooseMFile', data["mfiles"], mfile, "createMFileRelationship_ajax" )
+        })
+    },
+    chooseMFile : function( mfiles, mfile, callback ) {
+        
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                cdialog = $("#dialogTemplate").tmpl( {"id": Math.floor(Math.random()*1000) , "message" : "Please input a relationship and choose a file", "title": "Input Required"} )
+                listbox = $('<ol id="selectable">')
+                $(mfiles).each(function(index, mfile){
+                    m = $('<li class="ui-widget-content" data-id='+mfile.id+' style="backgroundimage"><span class="selectablespan">'+getShort(mfile.name,25)+'<span></li>')
+                    m.appendTo(listbox)
+                    m.css("background-image", "url('"+mfile.thumburl+"')");
+                })
+                errorbox = $("<div></div>")
+                namelabel = $('<label for="name" >Relationship</label>')
+                relationbox = $('<input style="margin:4px" type="text" id="name" ></input>')
+                cdialog.append(errorbox).append(namelabel).append(relationbox).append(listbox)
+
+                cdialog.dialog({
+                        autoOpen: false,
+                        height: 520,
+                        width: 400,
+                        modal: true,
+                        buttons: {
+                                "Choose": function() {
+                                    errorbox.empty()
+                                    relation = relationbox.val()
+                                    selected = $( "#selectable li.ui-selected" )
+                                    if(selected.length>1){
+                                        errormsg = $( "#strongMessageTemplate" ).tmpl( {"message":"Please choose a single file"} )
+                                        errorbox.append(errormsg)
+                                    }else{
+                                        mfile2 = selected.attr("data-id")
+                                        if(!mfile2){
+                                            $(listbox).addClass( "ui-state-error" );
+                                            errormsg = $( "#strongMessageTemplate" ).tmpl( {"message":"Please choose a file"} )
+                                            errorbox.append(errormsg)
+                                        }else if (relation == ""){
+                                            $(relationbox).addClass( "ui-state-error" );
+                                            errormsg = $( "#strongMessageTemplate" ).tmpl( {"message":"Please enter a name for the relationship"} )
+                                            errorbox.append(errormsg)
+                                        }else{
+                                            $(obj).mserve(callback, mfile, mfile2 , relation )
+                                            $( this ).dialog( "close" );
+                                        }
+                                    }
+                                },
+                                Cancel: function() {
+                                        $( this ).dialog( "close" );
+                                        cdialog.remove()
+                                }
+                        },
+                        close: function() {
+                                cdialog.remove()
+                        }
+                });
+
+                cdialog.dialog( "open" );
+                $( "#selectable" ).selectable();
+        })
+    },
     showMFile : function( id ) {
 
             var defaults = {};
@@ -953,6 +1067,8 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
+                currentservicepage = data["currentserviceurl"]
+                $.address.value(currentservicepage+'/mfile/'+id);
                 mfile = data[id]
 
                 var $filteredData = data.allcontent.find('#mfileposterholder-'+id);
@@ -962,6 +1078,7 @@
                     data.allcontent.append($mfpt)
                     $mfpt.find("#mfile_download_button-"+id).button()                   
                     $mfpt.find(".mfile_delete_button-"+id).button()
+                    $mfpt.find(".mfile_relationship_button-"+id).button()
                     $filteredData = $mfpt
                 }
 
@@ -997,7 +1114,10 @@
                     easing: null
                 }, function(){
                     $(".mfile_delete_button-"+id).each(function(index, delbut){
-                        $(delbut).click(function(){ $(obj).mserve('deletemfile',mfile) })
+                        $(delbut).click(function(){ $(obj).mserve('deletemfile', mfile) })
+                    })
+                    $(".mfile_relationship_button-"+id).each(function(index, delbut){
+                        $(delbut).click(function(){ $(obj).mserve('createMFileRelationship', mfile) })
                     })
                 });
 
@@ -1361,7 +1481,7 @@
                 var o = options;
                 var obj = $(this);
                 var $this = $(this),
-                data = $this.data('mserve');
+                mservedata = $this.data('mserve');
 
                 var serviceid = o.serviceid
                 var mfolder_set = o.mfolder_set
@@ -1376,11 +1496,10 @@
                 });
 
                 var servicecontent = $('#hiddenqscontainer').clone(true,true)
-                data.contentcache[serviceid] = servicecontent
-                data["allcontent"]= servicecontent
+                mservedata.contentcache[serviceid] = servicecontent
+                mservedata["allcontent"]= servicecontent
 
                 var $filteredData = servicecontent.find('li.rootfolder');
-                console.log($filteredData )
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'

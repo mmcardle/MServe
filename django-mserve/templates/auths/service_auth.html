@@ -57,10 +57,25 @@
 <div id="mserve"></div>
 
 <script type="text/javascript">
-    $(document).ready(function() {
-        $("#mserve").mserve('init')
-        $("#mserve").mserve('loadpage', '{% url auth auth.id %}')
+$(document).ready(function() {
+    $(function() {
+            console.log("Loading URL from hash ... "+window.location.hash)
+            $("#mserve").mserve('init')
+	    // Event handlers
+	    $.address.init(function(event){
+	    }).change(function(event) {
+                url = event.value
+                console.log("Loading via mserve: " + url);
+                $("#mserve").mserve('loadpage', url)
+	    })
     });
+});
+
+$(document).ready(function() {
+    //$("#mserve").mserve('init')
+    //$("#mserve").mserve('loadpage', '{% url auth auth.id %}')
+});
+
 </script>
 
 

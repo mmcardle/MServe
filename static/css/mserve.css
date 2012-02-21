@@ -249,6 +249,12 @@ h1,h2,h3,h4,h5,h6 {
     clear:both;
 }
 
+#feedback { font-size: 1.4em; }
+#selectable .ui-selecting { background: #FECA40; background-position: left; background-repeat: no-repeat}
+#selectable .ui-selected { background: #F39814; background-position: left; background-repeat: no-repeat}
+#selectable { list-style-type: none; margin: 0; padding: 0; width: 90%; }
+#selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; background-position: top left; background-repeat: no-repeat }
+#selectable .selectablespan { background-image:url('../images/transparent-white.png'); padding: 2px;}
 
 h2 {
     font-variant: small-caps;
