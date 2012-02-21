@@ -423,6 +423,9 @@ def fims_job_queryrequest(url):
 @task
 def fims_mews(inputs, outputs, options={}, callbacks=[]):
 
+    # TODO: Create the correct paths for the FIMS MEWS service to be able to
+    # see the MFile content
+
     bmcontent_locator = ""
     jobguid = utils.unique_id()
     transfer_locator = ""
@@ -448,5 +451,7 @@ def fims_mews(inputs, outputs, options={}, callbacks=[]):
         status = js_resp ["queryJobRequest"]["queryJobInfo"]["jobInfo"]["status"]\
                     ["code"]
         max_polls = max_polls -1
+
+    # TODO: Save the result from transfer_destination and transfer_locator?
 
     return js_resp
