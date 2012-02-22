@@ -68,7 +68,7 @@ def _get_mfile(mfileid):
     if os.path.exists(mf.file.path):
         return mf.file.path
     else:
-        return _get_path(mf.get_download_path(),suffix=mf.name)
+        return _get_path(mf.download_url(),suffix=mf.name)
 
 def _get_path(path,suffix=""):
     for name in settings.FILE_TRANSPORTS.keys():

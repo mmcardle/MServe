@@ -1825,7 +1825,7 @@ class MFile(NamedBase):
         """The REST API url for usage for this MFile"""
         return reverse('mfile_usagesummary', args=[self.id])
 
-    def get_download_path(self):
+    def download_url(self):
         """The REST API url for downloading this MFile"""
         return reverse('mfile_download', args=[self.id])
 

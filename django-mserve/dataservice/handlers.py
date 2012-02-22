@@ -726,7 +726,8 @@ class MFileHandler(BaseHandler):
     fields = ('name', 'id', 'file', 'checksum', 'size', 'mimetype', 'thumb',
                 'poster', 'proxy', 'created', 'updated', 'thumburl', \
                 'posterurl', 'proxyurl', 'reportnum', 'relations', 'url',
-                'relationships_url', 'jobs_url', ('folder', ('id', 'name') )
+                'download_url', 'relationships_url',
+                'jobs_url', ('folder', ('id', 'name') )
             )
 
     def read(self, request, mfileid=None, serviceid=None,
