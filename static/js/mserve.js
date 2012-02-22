@@ -287,8 +287,10 @@
                 }else{
                     $tabs.tabs('select', '#servicetab-'+service.id);
                 }
-                if(mfile){
+                if(tab == "mfile" && mfile){
                     $($this).mserve('showMFile', mfile)
+                }else if(tab == "mfolder" && mfile){
+                    $($this).mserve('showMFolder', mfile)
                 }else{
                     $($this).mserve('showService', service.id)
                 }
@@ -401,7 +403,7 @@
                                 {icons: {primary: "ui-icon-circle-plus"}}
                                 ).click( function(){
                                     selected = $("#mfoldertreecontainer").jstree('get_selected')
-                                    alert("TODO - Create folder at "+selected)
+                                    $(obj).mserve("createMFolder", authbase, selected)
                             })
 
                             $(obj).append($tabs);
@@ -455,8 +457,10 @@
 
                             data["currentfolderstructure"] = authbase.folder_structure
 
-                            if(mfile!=undefined){
+                            if(tab=="mfile" && mfile!=undefined){
                                 $(obj).mserve('showMFile', mfile)
+                            }else if (tab=="mfolder" && mfile!=undefined){
+                                $(obj).mserve('showMFolder', mfile)
                             }
 
                             $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
@@ -578,7 +582,7 @@
                         {icons: {primary: "ui-icon-circle-plus"}}
                         ).click( function(){
                             selected = $("#mfoldertreecontainer").jstree('get_selected')
-                            alert("TODO - Create folder at "+selected)
+                            $(obj).mserve("createMFolder", service, selected)
                     })
 
                     $(obj).append($tabs);
@@ -691,8 +695,11 @@
 
                     data["currentfolderstructure"] = service.folder_structure
 
-                    if(mfile!=undefined){
+                    if(tab=="mfile" && mfile!=undefined){
                         $(obj).mserve('showMFile', mfile)
+                    }else if (tab=="mfolder" && mfile!=undefined){
+                        console.log("showfolder")
+                        $(obj).mserve('showMFolder', mfile)
                     }
 
                     $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
@@ -772,26 +779,6 @@
 
         });
     },
-    loadMFile: function(url) {
-        var defaults = {};
-        var options = $.extend(defaults, options);
-
-        return this.each(function() {
-            var o = options;
-            var obj = $(this);
-
-            var $this = $(this), data = $this.data('mserve')
-
-             $.ajax({
-               type: "GET",
-               url: url,
-               success: function(mfile){
-                    $this.append(mfile.name)
-               }
-            });
-
-        });
-    },
     get_mfile_thumb: function(mfile, depth){
 
         var defaults = {};
@@ -823,6 +810,21 @@
 
         });
     },
+    updateMFolder : function( mfolder) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+                var $this = $(this),
+                data = $this.data('mserve');
+                console.log(mfolder)
+                $(data.allcontent).find("#deletemfolderbutton-"+mfolder.id).button()
+                $("#deletemfolderbutton-"+mfolder.id).button()
+            });
+    },
     updatemfile : function( mfile, options ) {
 
             var defaults = {};
@@ -835,10 +837,13 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                if (data.allcontent){
-                    var poster = data.allcontent.find('#mfileposterholder-'+mfile.id);
-                    var $mfpt = $("#mfilePosterTemplate" ).tmpl( mfile )
+                console.log("updatemfile "+mfile)
 
+                if (data.allcontent){
+                    var poster = $('#mfileposterholder-'+mfile.id);
+                    poster.remove()
+                    var $mfpt = $("#mfilePosterTemplate" ).tmpl( mfile )
+                
                     $mfpt.find(".mfile_download_button-"+mfile.id).button()
                     $mfpt.find(".mfile_delete_button-"+mfile.id).each(function(index, delbut){
                         $(delbut).button().click(function(){ $(obj).mserve('deletemfile', mfile) })
@@ -850,8 +855,13 @@
                         $(renamebut).button().click(function(){ $(obj).mserve('renameMFile', mfile) })
                     })
 
-                    poster.replaceWith($mfpt)
+                    //console.log(poster)
+                    //console.log($mfpt)
+                    //poster.replaceWith($mfpt)
+
+                    data.allcontent.remove("#mfileposterholder-"+mfile.id)
                     data[mfile.id] = mfile
+                    console.log(mfile)
                     $(obj).mserve('showMFile', mfile.id)
                 }
 
@@ -896,6 +906,51 @@
                                 }
                         }
                 });
+            });
+    },
+    addMFolder : function( mfolder ){
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+
+                var $this = $(this),
+                data = $this.data('mserve');
+                data[mfolder.id] = mfolder
+
+                var $mft = $("#mfolderTemplate" ).tmpl( mfolder )
+
+                $(obj).mserve('updateMFolder', mfolder)
+
+                data.allcontent.prepend($mft.clone(true,true))
+
+                selected = $("#mfoldertreecontainer").jstree("get_selected")
+                if($(selected).hasClass("service")){
+                    $('#qscontainer').prepend($mft)
+                    $mft.show('slide');
+                }
+
+
+
+                if(mfolder.parent){
+                    pnode = $("#mfoldertreecontainer #"+mfolder.parent.id)
+                }else{
+                    pnode = $("#mfoldertreecontainer .service")
+                }
+
+                $("#mfoldertreecontainer").jstree("create", pnode, "first",
+                    {"data" : {
+                            "title" : mfolder.name,
+                            "icon" : mfolder.thumburl
+                            },
+                        "attr" : {
+                            "id": mfolder.id,
+                            "class" : "mfolder"
+                            }
+                    }, null, true    );
             });
     },
     addMFile : function( mfile ){
@@ -947,8 +1002,16 @@
                 var o = options;
                 var $this = $(this),
                 data = $this.data('mserve');
+                currentservicepage = data["currentserviceurl"]
+                $.address.value(currentservicepage);
                 $("#mfilejobcontainer").hide()
+                $("#mserve-folder-button-container").show()
                 var $filteredData = data.allcontent.find('li.rootfolder');
+                if($filteredData.length==0){
+                    $(".nofiles").show()
+                }else{
+                    $(".nofiles").hide()
+                }
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
@@ -964,23 +1027,34 @@
                 var o = options;
                 var $this = $(this),
                 data = $this.data('mserve');
-
+                currentservicepage = data["currentserviceurl"]
+                $.address.value(currentservicepage+'/mfolder/'+mfolderid);
                 var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
+                if($filteredData.length==0){
+                    $(".nofiles").show()
+                }else{
+                    $(".nofiles").hide()
+                }
                 $("#mfilejobcontainer").hide()
+                $("#mserve-folder-button-container").show()
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
                 });
             });
     },
-    selectMFileNode : function( id ) {
+    selectNode : function( id ) {
 
         var defaults = {};
         var options = $.extend(defaults, options);
 
         return this.each(function() {
             $("#mfoldertreecontainer").jstree("deselect_all")
-            $("#mfoldertreecontainer").jstree("select_node", $("#"+id))
+            if(id){
+                $("#mfoldertreecontainer").jstree("select_node", $("#"+id))
+            }else{
+                $("#mfoldertreecontainer").jstree("select_node", $(".service"))
+            }
         })
     },
     renameMFile : function( mfile ) {
@@ -1039,12 +1113,14 @@
         var options = $.extend(defaults, options);
 
         return this.each(function() {
+            var o = options;
+            var obj = $(this);
             $.ajax({
                type: "POST",
                url: mfile1.relationships_url,
                data: "mfileid="+mfileid2+"&name="+name,
                success: function(rela){
-                    console.log(rela)
+                   $(obj).mserve('updatemfile', mfile1)
                }
             });
         })
@@ -1159,6 +1235,8 @@
                 }
 
                 $("#mfilejobcontainer").show()
+                $("#mserve-folder-button-container").hide()
+                
                 $("#mfilecreatejobcontainer").empty().append($("#jobSubmitTemplate").tmpl())
                 var $form = $("#mfilecreatejobcontainer").find("form")
 
@@ -1184,6 +1262,7 @@
                    }
                  });
 
+                $(".nofiles").hide()
                 $('#qscontainer').quicksand($filteredData, {
                     adjustHeight: 'dynamic',
                     duration: 800,
@@ -1395,6 +1474,74 @@
 
             });
     },
+    deleteMFolder : function( id, url, parent) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+                var $this = $(this),
+                data = $this.data('mserve');
+
+                $.ajax({
+                    type: "DELETE",
+                    url: url,
+                    success: function(folder){
+                        $("#mfoldertreecontainer").jstree("remove", "#"+id);
+                        $(data.allcontent).find("#mfolderholder-"+id).remove()
+                        console.log("selectNode "+parent)
+                        $(obj).mserve('selectNode', parent)
+                    },
+                    error: function(msg){
+                        showError("Error creating folder", msg.responseText)
+                    }
+                });
+            });
+    },
+    createMFolder : function( service, selection ) {
+
+            var defaults = {};
+            var options = $.extend(defaults, options);
+
+            return this.each(function() {
+                var o = options;
+                var obj = $(this);
+                var $this = $(this)
+
+                if(selection.length>1){
+                    showError("Error", "Please Select a single folder")
+                    return
+                }
+
+                selectionid = selection.attr("id")
+                postdata = {}
+                if(selectionid && selectionid != service.id){
+                    postdata["parent"] = selectionid
+                }
+
+                callback = function(name){
+                     postdata["name"] = name
+                     $.ajax({
+                       type: "POST",
+                       data: postdata,
+                       url: service.mfolders_url,
+                       success: function(folder){
+                           $(obj).mserve("addMFolder", folder)
+                           if(postdata["parent"]){
+                              $(obj).mserve("showMFolder", selectionid)
+                           }
+                       },
+                       error: function(msg){
+                           showError("Error creating folder", msg.responseText)
+                       }
+                     });
+                }
+                $(obj).mserve("getInput", "Enter new folder name", "newfolder", callback)
+
+            });
+    },
     createMFileJob : function( mfileid, postdata ) {
 
             var defaults = {};
@@ -1572,6 +1719,9 @@
 
                 $(mfile_set).each( function(index, mfile) {
                     $(obj).mserve( 'updatemfile', mfile, {"pollthumb":"false"})
+                });
+                $(mfolder_set).each( function(index, mfolder) {
+                    $(obj).mserve( 'updateMFolder', mfolder)
                 });
 
                 var servicecontent = $('#hiddenqscontainer').clone(true,true)

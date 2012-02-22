@@ -225,9 +225,16 @@
         <table class="ui-widget-content" style="table-layout: fixed;width: 100%;" border="0">
             <tr>
                 <td style="width: 15%">
-                    <button id="mserve-new-folder-button" style="display: none;">New Folder</button>
+                    
                     <div id="mfoldertreecontainer"></div></td>
                 <td style="width: 65%">
+                    <div id="mserve-folder-button-container" style="margin:10px">
+                        <button id="mserve-new-folder-button" style="">New Folder</button>
+                    </div>
+                    <div class="nofiles" style="display: none">
+                        {% templatetag openvariable %}tmpl( {"message":"No Files"} ) "#messageTemplate" {% templatetag closevariable %}
+                    </div>
+
                     <ul id="qscontainer" ></ul>
                     <ul id="hiddenqscontainer" style="display: none"></ul>
                     <table id="mfilejobcontainer" style="width: 100%;display: none;" border="0" >
@@ -1111,7 +1118,7 @@
     <li class="infoholder rootfolder" data-id="mfolderholder-${id}" id="mfolderholder-${id}" style="display: inline">
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-    <div id="image-${id}" class='fluid'
+    <div id="image-${id}" class='fluid' onclick='$("#mserve").mserve("selectNode","${id}" )'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
                     onmouseout="$('#id-${id}').hide();"
@@ -1133,6 +1140,14 @@
             <tr>
                 <td>
                     <div class='info' style='background-image: url({{MEDIA_URL}}images/transparent-white.png); position:relative' id='id-${id}'>
+
+                         {%templatetag openvariable%}if parent {%templatetag closevariable%}
+                            <button id="deletemfolderbutton-${id}" onclick='$("#mserve").mserve("deleteMFolder","${id}","${url}","${parent.id}")' >Delete</button>
+                         {%templatetag openvariable%}else{%templatetag closevariable%}
+                            <button id="deletemfolderbutton-${id}" onclick='$("#mserve").mserve("deleteMFolder","${id}","${url}")' >Delete</button>
+                         {%templatetag openvariable%}/if{%templatetag closevariable%}
+
+
                     </div>
                 </td>
             </tr>
@@ -1247,7 +1262,7 @@
     <li class="infoholder rootfolder ${id}" data-id="mfileholder-${id}" id="mfileholder-${id}" style="display: inline" >
  {%templatetag openvariable%}/if{%templatetag closevariable%}
 
-    <div id="image-${id}" class='fluid'  onclick='$("#mserve").mserve("selectMFileNode","${id}" )'
+    <div id="image-${id}" class='fluid'  onclick='$("#mserve").mserve("selectNode","${id}" )'
                   {%templatetag openvariable%}if !mobile_browser {%templatetag closevariable%}
                     onmouseover="$('#id-${id}').show();"
                     onmouseout="$('#id-${id}').hide();"

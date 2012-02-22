@@ -1281,6 +1281,10 @@ class DataService(NamedBase):
         """The REST API url for mfiles for this service"""
         return reverse('dataservice_mfiles', args=[self.id])
 
+    def mfolders_url(self):
+        """The REST API url for mfolders for this service"""
+        return reverse('dataservice_mfolders', args=[self.id])
+
     def get_folder_for_paths(self, paths):
         """Tries to find a folder at the specified paths ['path','to','folder'] """
         try:
@@ -1661,6 +1665,10 @@ class MFolder(NamedBase):
     duplicate_of = models.ForeignKey('MFolder', null=True,
                                     blank=True, related_name='duplicated_from')
     """The :class:`.MFolder` if this folder is a duplicate of another"""
+
+    def url(self):
+        """The REST API url for this MFolder"""
+        return reverse('mfolder', args=[self.id])
 
     def get_folder_for_paths(self, paths):
         """Tries to find a folder at the specified paths ['path','to','folder'] """

@@ -105,6 +105,10 @@ urlpatterns = patterns('',
     url(r'^mfiles/(?P<mfileid>[^/]+)/file/$', mfile_contents_handler, name='mfile_download'),
     url(r'^mfiles/(?P<mfileid>[^/]+)/relationships/$', mfile_relationship_handler, name='mfile_relationships'),
 
+    # MFolder URLs
+    url(r'^mfolders/$', mfolder_handler, name="mfolders"  ),
+    url(r'^mfolders/(?P<mfolderid>[^/]+)/$', mfolder_handler, name="mfolder" ),
+
     # Auth URLs
     url(r'^auths/$', auth_handler, name='auths' ),
     url(r'^auths/(?P<authid>[^/]+)/$', auth_handler, name='auth'  ),

@@ -341,7 +341,7 @@ class DataServiceHandler(BaseHandler):
                 'mfile_set', 'job_set', 'mfolder_set', 'thumbs', 'mfiles_url',
                 'folder_structure', 'subservices_url', 'url', 'stats_url',
                 'usage_url', 'priority', 'properties_url', 'profiles_url',
-                'webdav_url', 'auth_set')
+                'mfolders_url', 'webdav_url', 'auth_set')
     exclude = ('pk')
 
     def read(self, request, serviceid=None, containerid=None, suburl=None):
@@ -693,7 +693,11 @@ class MFolderHandler(BaseHandler):
     """
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     model = MFolder
-    fields = ('name', 'id', 'parent')
+    fields = ('name', 'id', 'parent', 'url')
+
+    def delete(self, request, mfolderid=None):
+        self.model.objects.get(id=mfolderid).delete()
+        return rc.DELETED
 
     def read(self, request, mfolderid=None, serviceid=None, authid=None):
         if mfolderid:
@@ -706,6 +710,24 @@ class MFolderHandler(BaseHandler):
             return auth.do("GET", "mfolders")
         return []
 
+    def create(self, request, serviceid):
+
+        parent_id = request.POST.get("parent", None)
+        folder_name = request.POST.get("name", None)
+
+        if folder_name == None:
+            response = rc.BAD_REQUEST
+            logging.info("Bad Request to mfolder create handler %s", request.POST)
+            response.write("Invalid Request! No name in POST fields")
+            return response
+        else:
+            parent_folder = None
+            if parent_id:
+                parent_folder = MFolder.objects.get(id=parent_id)
+
+            service = DataService.objects.get(id=serviceid)
+            mfolder = service.create_mfolder(folder_name, parent=parent_folder)
+            return mfolder
 
 class MFileHandler(BaseHandler):
     """
