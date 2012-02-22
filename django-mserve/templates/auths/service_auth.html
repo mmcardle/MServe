@@ -59,22 +59,28 @@
 <script type="text/javascript">
 $(document).ready(function() {
     $(function() {
+        $("#mserve").mserve('init')
+
+        hashsplit = window.location.hash.split(/\//g)
+        if(hashsplit.length==0 || hashsplit.length==1 && hashsplit[0] == ""  ){
+            console.log("Loading URL from path ... "+window.location.pathname)
+            var locations = window.location.pathname.split(/\//g)
+            var authid = locations[2]
+            $("#mserve").mserve('loadpage', "/auths/"+authid+"/")
+        }else{
             console.log("Loading URL from hash ... "+window.location.hash)
-            $("#mserve").mserve('init')
-	    // Event handlers
-	    $.address.init(function(event){
-	    }).change(function(event) {
-                url = event.value
-                console.log("Loading via mserve: " + url);
-                $("#mserve").mserve('loadpage', url)
-	    })
+            $("#mserve").mserve('loadpage', window.location.hash.substring(1))
+        }
+
+        // Event handlers
+        $.address.init(function(event){
+        }).change(function(event) {
+            url = event.value
+            console.log("Loading via mserve: " + url);
+        })
     });
 });
 
-$(document).ready(function() {
-    //$("#mserve").mserve('init')
-    //$("#mserve").mserve('loadpage', '{% url auth auth.id %}')
-});
 
 </script>
 

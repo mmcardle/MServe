@@ -453,6 +453,8 @@
                                 folder_structure : authbase.folder_structure
                             } )
 
+                            data["currentfolderstructure"] = authbase.folder_structure
+
                             if(mfile!=undefined){
                                 $(obj).mserve('showMFile', mfile)
                             }
@@ -687,6 +689,8 @@
                         folder_structure : service.folder_structure
                     } )
 
+                    data["currentfolderstructure"] = service.folder_structure
+
                     if(mfile!=undefined){
                         $(obj).mserve('showMFile', mfile)
                     }
@@ -831,9 +835,27 @@
                 var $this = $(this),
                 data = $this.data('mserve');
 
-                $("#deletemfilebutton-"+mfile.id ).button({icons: {primary: "ui-icon-trash"}, text: false}).click(function(){
-                    obj.mserve('deletemfile', mfile)
-                });
+                if (data.allcontent){
+                    var poster = data.allcontent.find('#mfileposterholder-'+mfile.id);
+                    var $mfpt = $("#mfilePosterTemplate" ).tmpl( mfile )
+
+                    $mfpt.find(".mfile_download_button-"+mfile.id).button()
+                    $mfpt.find(".mfile_delete_button-"+mfile.id).each(function(index, delbut){
+                        $(delbut).button().click(function(){ $(obj).mserve('deletemfile', mfile) })
+                    })
+                    $mfpt.find(".mfile_relationship_button-"+mfile.id).each(function(index, relbut){
+                        $(relbut).button().click(function(){ $(obj).mserve('createMFileRelationship', mfile) })
+                    })
+                    $mfpt.find(".mfile_rename_button-"+mfile.id).each(function(index, renamebut){
+                        $(renamebut).button().click(function(){ $(obj).mserve('renameMFile', mfile) })
+                    })
+
+                    poster.replaceWith($mfpt)
+                    data[mfile.id] = mfile
+                    $(obj).mserve('showMFile', mfile.id)
+                }
+
+                $("#mfoldertreecontainer").jstree('rename_node',"#"+mfile.id, mfile.name)
 
                 if(options.pollthumb){
                     obj.mserve('get_mfile_thumb', mfile, 1)
@@ -967,19 +989,48 @@
         var options = $.extend(defaults, options);
 
         return this.each(function() {
-            console.log(mfile)
-            name = prompt("New Name", mfile.name);
-            console.log(name)
-            if(name){
+            var o = options;
+            var obj = $(this);
+            callback = function(name){
                 $.ajax({
                    type: "PUT",
                    url: mfile.url,
                    data: "name="+name,
                    success: function(mfile){
-                        console.log(mfile)
+                        $(obj).mserve( 'updatemfile', mfile, {"pollthumb":"false"})
                    }
                 });
             }
+            $(obj).mserve("getInput", "Enter new name", mfile.name, callback)
+        })
+    },
+    getInput : function( title, value, callback ) {
+
+        var defaults = {};
+        var options = $.extend(defaults, options);
+
+        return this.each(function() {
+
+            // Build dialog markup
+            var win = $('<div><p>'+title+'</p></div>');
+            var userInput = $('<input type="text" value="'+value+'" style="width:100%"></input>');
+            userInput.appendTo(win);
+
+            // Display dialog
+            $(win).dialog({
+                'modal': true,
+                'buttons': {
+                    'Ok': function() {
+                        $(this).dialog('close');
+                        callback($(userInput).val());
+                    },
+                    'Cancel': function() {
+                        $(this).dialog('close');
+                    }
+                }
+            });
+
+
         })
     },
     createMFileRelationship_ajax : function( mfile1, mfileid2, name ) {
@@ -1008,10 +1059,10 @@
             var obj = $(this);
             var $this = $(this),
             data = $this.data('mserve');
-            $(obj).mserve('chooseMFile', data["mfiles"], mfile, "createMFileRelationship_ajax" )
+            $(obj).mserve('chooseMFile', mfile, "createMFileRelationship_ajax" )
         })
     },
-    chooseMFile : function( mfiles, mfile, callback ) {
+    chooseMFile : function( mfile, callback ) {
         
         var defaults = {};
         var options = $.extend(defaults, options);
@@ -1019,36 +1070,39 @@
         return this.each(function() {
                 var o = options;
                 var obj = $(this);
+                var $this = $(this),
+                data = $this.data('mserve');
 
                 cdialog = $("#dialogTemplate").tmpl( {"id": Math.floor(Math.random()*1000) , "message" : "Please input a relationship and choose a file", "title": "Input Required"} )
-                listbox = $('<ol id="selectable">')
-                $(mfiles).each(function(index, mfile){
-                    m = $('<li class="ui-widget-content" data-id='+mfile.id+' style="backgroundimage"><span class="selectablespan">'+getShort(mfile.name,25)+'<span></li>')
-                    m.appendTo(listbox)
-                    m.css("background-image", "url('"+mfile.thumburl+"')");
-                })
                 errorbox = $("<div></div>")
                 namelabel = $('<label for="name" >Relationship</label>')
                 relationbox = $('<input style="margin:4px" type="text" id="name" ></input>')
-                cdialog.append(errorbox).append(namelabel).append(relationbox).append(listbox)
-
+                cdialog.append(errorbox).append(namelabel).append(relationbox)
+                choosertree = $('<div id="choosertree">')
+                cdialog.append(choosertree)
+                choosertree.jstree({
+                     "json_data" : data["currentfolderstructure"],
+                     "themes" : {"theme" : "default"},
+                     "plugins" : [ "themes", "json_data", "ui", "crrm"]
+                    }
+                ).bind("loaded.jstree", function (event, data) {
+                    choosertree.jstree("open_node", ".service");
+                });
+                
                 cdialog.dialog({
-                        autoOpen: false,
-                        height: 520,
-                        width: 400,
-                        modal: true,
+                        autoOpen: false, height: 520, width: 400, modal: true,
                         buttons: {
                                 "Choose": function() {
                                     errorbox.empty()
                                     relation = relationbox.val()
-                                    selected = $( "#selectable li.ui-selected" )
+                                    selected = choosertree.jstree("get_selected")
                                     if(selected.length>1){
                                         errormsg = $( "#strongMessageTemplate" ).tmpl( {"message":"Please choose a single file"} )
                                         errorbox.append(errormsg)
                                     }else{
-                                        mfile2 = selected.attr("data-id")
+                                        mfile2 = selected.attr("id")
                                         if(!mfile2){
-                                            $(listbox).addClass( "ui-state-error" );
+                                            $(choosertree).addClass( "ui-state-error" );
                                             errormsg = $( "#strongMessageTemplate" ).tmpl( {"message":"Please choose a file"} )
                                             errorbox.append(errormsg)
                                         }else if (relation == ""){
@@ -1070,9 +1124,9 @@
                                 cdialog.remove()
                         }
                 });
-
+                
                 cdialog.dialog( "open" );
-                $( "#selectable" ).selectable();
+
         })
     },
     showMFile : function( id ) {
@@ -1098,7 +1152,7 @@
                     var $mfpt = $("#mfilePosterTemplate" ).tmpl( data[id] )
                     data.allcontent.append($mfpt)
                     $mfpt.find(".mfile_rename_button-"+id).button()
-                    $mfpt.find("#mfile_download_button-"+id).button()
+                    $mfpt.find(".mfile_download_button-"+id).button()
                     $mfpt.find(".mfile_delete_button-"+id).button()
                     $mfpt.find(".mfile_relationship_button-"+id).button()
                     $filteredData = $mfpt
@@ -1548,7 +1602,7 @@
                             }
                         }
                 }).bind("loaded.jstree", function (event, data) {
-                    $("#mfoldertreecontainer").jstree("open_all");
+                    $("#mfoldertreecontainer").jstree("open_node", "#"+serviceid);
                 });
             });
     }
@@ -1562,7 +1616,7 @@
     } else if ( typeof method === 'object' || ! method ) {
       return methods.init.apply( this, arguments );
     } else {
-      $.error( 'Method ' +  method + ' does not exist on jQuery.tooltip' );
+      $.error( 'Method ' +  method + ' does not exist on jQuery.mserve' );
     }
 
   };
