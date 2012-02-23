@@ -2,9 +2,9 @@
 Developing MServe 
 #################
 
-------------------
+------------------------
 Development Environment
-------------------
+------------------------
 
 Assuming you have downloaded the MServe source into a directory names **mserve**. First install the mserve dependencies::
   
@@ -106,7 +106,7 @@ Running a task asynchronously::
 
 
 Where to look for errors
-------------------
+---------------------------
 
 Logs
 -------
@@ -124,10 +124,10 @@ Live Server::
   /var/log/apache/error.log
 
 Tests not running
-+++++++++++++++
+++++++++++++++++++
 
 Tasks not submitted
-+++++++++++++++
++++++++++++++++++++
 
 Tasks submitted but not running
-+++++++++++++++
++++++++++++++++++++++++++++++++++
