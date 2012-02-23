@@ -40,12 +40,12 @@ Welcome to MServe's documentation!
 |                            |                            |
 |                            |                            |
 +----------------------------+----------------------------+
-| **MServe Internal API**    |                            |
+| **MServe Internal API**    |  **Developing MServe**     |
 +----------------------------+----------------------------+
-| .. toctree::               |                            |
-|    :maxdepth: 3            |                            |
+| .. toctree::               |  .. toctree::              |
+|    :maxdepth: 3            |     :maxdepth: 3           |
 |                            |                            |
-|    dataservice             |                            |
+|    dataservice             |     developing             |
 |                            |                            |
 |                            |                            |
 |                            |                            |
