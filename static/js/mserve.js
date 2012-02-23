@@ -282,18 +282,16 @@
                 var o = options;
                 var $this = $(this),
                 data = $this.data('mserve');
-                if(tab){
-                    $tabs.tabs('select', '#' + tab+"tab-"+service.id);
-                }else{
-                    $tabs.tabs('select', '#servicetab-'+service.id);
-                }
                 if(tab == "mfile" && mfile){
                     $($this).mserve('showMFile', mfile)
                 }else if(tab == "mfolder" && mfile){
                     $($this).mserve('showMFolder', mfile)
+                }else if(tab){
+                    $tabs.tabs('select', '#' + tab+"tab-"+service.id);
                 }else{
-                    $($this).mserve('showService', service.id)
+                    $tabs.tabs('select', '#servicetab-'+service.id);
                 }
+                
             });
     },
     loadRemoteServices: function(authid, accordian) {
@@ -376,11 +374,16 @@
                        type: "GET",
                        url: auth.base_url,
                        success: function(authbase){
+
                            data[authid] = authbase
                            data["mfiles"] = authbase.mfile_set
+                           data["mfolders"] = authbase.mfolder_set
 
                            $(authbase.mfile_set).each( function(index, mfile){
                                 data[mfile.id] = mfile
+                           })
+                           $(authbase.mfolder_set).each( function(index, mfolder){
+                                data[mfolder.id] = mfolder
                            })
 
                             $tabs = $("#tabsTemplate").tmpl( {"tabid":authid,"tabs":[
@@ -390,7 +393,7 @@
                             ]} )
 
                             $table = $("#mserveTemplate").tmpl()
-
+                            $table.find("#mserve-container-title").html(authbase.name)
                             $this.mserve( "loadRemoteServices", authid, $table.find('#import-accordion') )
 
                             $table.find("#importbutton").button(
@@ -401,10 +404,7 @@
 
                             $table.find("#mserve-new-folder-button").button(
                                 {icons: {primary: "ui-icon-circle-plus"}}
-                                ).click( function(){
-                                    selected = $("#mfoldertreecontainer").jstree('get_selected')
-                                    $(obj).mserve("createMFolder", authbase, selected)
-                            })
+                            )
 
                             $(obj).append($tabs);
                             $servicetab = $("#servicetab-"+authid);
@@ -453,15 +453,9 @@
                                 mfolder_set : authbase.mfolder_set,
                                 mfile_set : authbase.mfile_set,
                                 folder_structure : authbase.folder_structure
-                            } )
+                            } , mfile)
 
                             data["currentfolderstructure"] = authbase.folder_structure
-
-                            if(tab=="mfile" && mfile!=undefined){
-                                $(obj).mserve('showMFile', mfile)
-                            }else if (tab=="mfolder" && mfile!=undefined){
-                                $(obj).mserve('showMFolder', mfile)
-                            }
 
                             $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
 
@@ -562,9 +556,14 @@
 
                    data[service.id] = service
                    data["mfiles"] = service.mfile_set
+                   data["mfolders"] = service.mfolder_set
+                   data["service"] = service
 
                    $(service.mfile_set).each( function(index, mfile){
                         data[mfile.id] = mfile
+                   })
+                   $(service.mfolder_set).each( function(index, mfolder){
+                        data[mfolder.id] = mfolder
                    })
 
                     $tabs = $("#tabsTemplate").tmpl( {"tabid":service.id,"tabs":[
@@ -575,15 +574,13 @@
                     ]} )
 
                     $table = $("#mserveTemplate").tmpl()
-
+                    
+                    $table.find("#mserve-container-title").html(service.name)
                     $table.find('#import-accordion').hide()
 
                     $table.find("#mserve-new-folder-button").button(
                         {icons: {primary: "ui-icon-circle-plus"}}
-                        ).click( function(){
-                            selected = $("#mfoldertreecontainer").jstree('get_selected')
-                            $(obj).mserve("createMFolder", service, selected)
-                    })
+                    )
 
                     $(obj).append($tabs);
                     $servicetab = $("#servicetab-"+service.id);
@@ -691,16 +688,9 @@
                         mfolder_set : service.mfolder_set,
                         mfile_set : service.mfile_set,
                         folder_structure : service.folder_structure
-                    } )
+                    } , mfile )
 
                     data["currentfolderstructure"] = service.folder_structure
-
-                    if(tab=="mfile" && mfile!=undefined){
-                        $(obj).mserve('showMFile', mfile)
-                    }else if (tab=="mfolder" && mfile!=undefined){
-                        console.log("showfolder")
-                        $(obj).mserve('showMFolder', mfile)
-                    }
 
                     $.getScript(MEDIA_URL+'js/jquery-file-upload/jquery.fileupload-ui.js');
                     
@@ -820,7 +810,6 @@
                 var obj = $(this);
                 var $this = $(this),
                 data = $this.data('mserve');
-                console.log(mfolder)
                 $(data.allcontent).find("#deletemfolderbutton-"+mfolder.id).button()
                 $("#deletemfolderbutton-"+mfolder.id).button()
             });
@@ -836,8 +825,6 @@
 
                 var $this = $(this),
                 data = $this.data('mserve');
-
-                console.log("updatemfile "+mfile)
 
                 if (data.allcontent){
                     var poster = $('#mfileposterholder-'+mfile.id);
@@ -855,14 +842,8 @@
                         $(renamebut).button().click(function(){ $(obj).mserve('renameMFile', mfile) })
                     })
 
-                    //console.log(poster)
-                    //console.log($mfpt)
-                    //poster.replaceWith($mfpt)
-
                     data.allcontent.remove("#mfileposterholder-"+mfile.id)
                     data[mfile.id] = mfile
-                    console.log(mfile)
-                    $(obj).mserve('showMFile', mfile.id)
                 }
 
                 $("#mfoldertreecontainer").jstree('rename_node',"#"+mfile.id, mfile.name)
@@ -928,12 +909,10 @@
                 data.allcontent.prepend($mft.clone(true,true))
 
                 selected = $("#mfoldertreecontainer").jstree("get_selected")
-                if($(selected).hasClass("service")){
+                if($(selected).hasClass("service") || selected == 0){
                     $('#qscontainer').prepend($mft)
                     $mft.show('slide');
                 }
-
-
 
                 if(mfolder.parent){
                     pnode = $("#mfoldertreecontainer #"+mfolder.parent.id)
@@ -969,12 +948,12 @@
                 var $mft = $("#mfileTemplate" ).tmpl( mfile )
 
                 // Update MFile before cloning
-                $(obj).mserve('updatemfile', mfile, {"pollthumb":"true"})
+                $(obj).mserve('updatemfile', mfile, {"pollthumb":true})
 
                 data.allcontent.prepend($mft.clone(true,true))
                
                 selected = $("#mfoldertreecontainer").jstree("get_selected")
-                if($(selected).hasClass("service")){
+                if($(selected).hasClass("service") || selected.length ==0){
                     $('#qscontainer').prepend($mft)
                     $mft.show('slide');
                 }
@@ -1000,12 +979,24 @@
 
             return this.each(function() {
                 var o = options;
+                var obj = $(this);
                 var $this = $(this),
                 data = $this.data('mserve');
+                service = data[serviceid]
                 currentservicepage = data["currentserviceurl"]
                 $.address.value(currentservicepage);
                 $("#mfilejobcontainer").hide()
-                $("#mserve-folder-button-container").show()
+                $("#mserve-container-title").html(service.name)
+
+                buttons = $("#mserve-title-buttons")
+                buttons.empty()
+                newfolderbutton = $('<button >New Folder</button>')
+                newfolderbutton.button().click(function(){
+                        $(obj).mserve("createMFolder", null,  service)
+                })
+                buttons.append(newfolderbutton)
+
+                $("#mserve-titlebar-container").show()
                 var $filteredData = data.allcontent.find('li.rootfolder');
                 if($filteredData.length==0){
                     $(".nofiles").show()
@@ -1025,8 +1016,10 @@
 
             return this.each(function() {
                 var o = options;
+                var obj = $(this);
                 var $this = $(this),
                 data = $this.data('mserve');
+                mfolder = data[mfolderid]
                 currentservicepage = data["currentserviceurl"]
                 $.address.value(currentservicepage+'/mfolder/'+mfolderid);
                 var $filteredData = $(data.allcontent[0]).find('li.'+mfolderid);
@@ -1036,7 +1029,17 @@
                     $(".nofiles").hide()
                 }
                 $("#mfilejobcontainer").hide()
-                $("#mserve-folder-button-container").show()
+                $("#mserve-container-title").html("<h3>"+mfolder.name+"</h3>")
+
+                buttons = $("#mserve-title-buttons")
+                buttons.empty()
+                newfolderbutton = $('<button >New Folder</button>')
+                newfolderbutton.button().click(function(){
+                        $(obj).mserve("createMFolder", mfolder)
+                })
+                buttons.append(newfolderbutton)
+
+                $("#mserve-titlebar-container").show()
                 $('#qscontainer').quicksand($filteredData, {
                   duration: 800,
                   easing: 'easeInOutQuad'
@@ -1071,7 +1074,7 @@
                    url: mfile.url,
                    data: "name="+name,
                    success: function(mfile){
-                        $(obj).mserve( 'updatemfile', mfile, {"pollthumb":"false"})
+                        $(obj).mserve( 'updatemfile', mfile, {"pollthumb":false})
                    }
                 });
             }
@@ -1234,8 +1237,8 @@
                     $filteredData = $mfpt
                 }
 
-                $("#mfilejobcontainer").show()
-                $("#mserve-folder-button-container").hide()
+                
+                $("#mserve-titlebar-container").hide()
                 
                 $("#mfilecreatejobcontainer").empty().append($("#jobSubmitTemplate").tmpl())
                 var $form = $("#mfilecreatejobcontainer").find("form")
@@ -1277,6 +1280,7 @@
                     $(".mfile_rename_button-"+id).each(function(index, renamebut){
                         $(renamebut).click(function(){ $(obj).mserve('renameMFile', mfile) })
                     })
+                    $("#mfilejobcontainer").show('slow')
                 });
 
                 $.ajax({
@@ -1500,7 +1504,7 @@
                 });
             });
     },
-    createMFolder : function( service, selection ) {
+    createMFolder : function( parentfolder, service ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -1508,17 +1512,14 @@
             return this.each(function() {
                 var o = options;
                 var obj = $(this);
-                var $this = $(this)
 
-                if(selection.length>1){
-                    showError("Error", "Please Select a single folder")
-                    return
-                }
-
-                selectionid = selection.attr("id")
                 postdata = {}
-                if(selectionid && selectionid != service.id){
-                    postdata["parent"] = selectionid
+                if(parentfolder){
+                    id = parentfolder.id
+                    postdata["parent"] = id
+                    url = parentfolder.url
+                }else{
+                    url = service.mfolders_url
                 }
 
                 callback = function(name){
@@ -1526,11 +1527,11 @@
                      $.ajax({
                        type: "POST",
                        data: postdata,
-                       url: service.mfolders_url,
+                       url: url,
                        success: function(folder){
                            $(obj).mserve("addMFolder", folder)
                            if(postdata["parent"]){
-                              $(obj).mserve("showMFolder", selectionid)
+                              $(obj).mserve("showMFolder", id)
                            }
                        },
                        error: function(msg){
@@ -1698,7 +1699,7 @@
             });
 
     },
-    loadMTree : function( options ) {
+    loadMTree : function( options, node ) {
 
             var defaults = {};
             var options = $.extend(defaults, options);
@@ -1718,7 +1719,7 @@
                 $("#mfileTemplate").tmpl(mfile_set).appendTo("#hiddenqscontainer")
 
                 $(mfile_set).each( function(index, mfile) {
-                    $(obj).mserve( 'updatemfile', mfile, {"pollthumb":"false"})
+                    $(obj).mserve( 'updatemfile', mfile, {"pollthumb":false})
                 });
                 $(mfolder_set).each( function(index, mfolder) {
                     $(obj).mserve( 'updateMFolder', mfolder)
@@ -1753,6 +1754,7 @@
                         }
                 }).bind("loaded.jstree", function (event, data) {
                     $("#mfoldertreecontainer").jstree("open_node", "#"+serviceid);
+                    $(obj).mserve("selectNode", node);
                 });
             });
     }
@@ -1762,6 +1764,7 @@
 
     // Method calling logic
     if ( methods[method] ) {
+        console.log(method, arguments)
       return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));
     } else if ( typeof method === 'object' || ! method ) {
       return methods.init.apply( this, arguments );

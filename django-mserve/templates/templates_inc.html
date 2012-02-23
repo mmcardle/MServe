@@ -228,8 +228,13 @@
                     
                     <div id="mfoldertreecontainer"></div></td>
                 <td style="width: 65%">
-                    <div id="mserve-folder-button-container" style="margin:10px">
-                        <button id="mserve-new-folder-button" style="">New Folder</button>
+                    <div id="mserve-titlebar-container" style="margin:10px">
+                        <table>
+                            <tr>
+                                <td><h2 style="width:200px" id="mserve-container-title"></h2></td>
+                                <td><div id="mserve-title-buttons" style="margin:10px"></div></td>
+                            </tr>
+                        </table>
                     </div>
                     <div class="nofiles" style="display: none">
                         {% templatetag openvariable %}tmpl( {"message":"No Files"} ) "#messageTemplate" {% templatetag closevariable %}

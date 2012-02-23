@@ -119,7 +119,7 @@ urlpatterns = patterns('',
     url(r'^auths/(?P<authid>[^/]+)/base/$', auth_handler, {"murl":"base"}, name="auth_base"),
     url(r'^auths/(?P<authid>[^/]+)/services/$', dataservice_handler),
     url(r'^auths/(?P<authid>[^/]+)/mfiles/$', mfile_handler, name="auth_mfiles"),
-    url(r'^auths/(?P<authid>[^/]+)/mfolders/$', mfolder_handler),
+    url(r'^auths/(?P<authid>[^/]+)/mfolders/$', mfolder_handler, name="auth_mfolders"),
     url(r'^auths/(?P<authid>[^/]+)/file/$', mfile_contents_handler, name='auth_download'),
 
     # Other URLs

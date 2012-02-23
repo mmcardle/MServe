@@ -710,8 +710,12 @@ class MFolderHandler(BaseHandler):
             return auth.do("GET", "mfolders")
         return []
 
-    def create(self, request, serviceid):
-
+    def create(self, request, serviceid=None, authid=None, mfolderid=None):
+        """
+        We get passed in either a serviceid or an authid representing the
+        service or service auth.
+        The mfolderid can come from the paramater above or in the POST body
+        """
         parent_id = request.POST.get("parent", None)
         folder_name = request.POST.get("name", None)
 
@@ -722,12 +726,23 @@ class MFolderHandler(BaseHandler):
             return response
         else:
             parent_folder = None
-            if parent_id:
-                parent_folder = MFolder.objects.get(id=parent_id)
 
-            service = DataService.objects.get(id=serviceid)
-            mfolder = service.create_mfolder(folder_name, parent=parent_folder)
-            return mfolder
+            if serviceid:
+                if parent_id:
+                    parent_folder = MFolder.objects.get(id=parent_id)
+                service = DataService.objects.get(id=serviceid)
+                mfolder = service.create_mfolder(folder_name, parent=parent_folder)
+                return mfolder
+            elif authid:
+                if parent_id:
+                    parent_folder = MFolder.objects.get(id=parent_id)
+                auth = Auth.objects.get(id=authid)
+                mfolder = auth.get_real_base().create_mfolder(folder_name, parent=parent_folder)
+                return mfolder
+            elif mfolderid:
+                parent_folder = MFolder.objects.get(id=mfolderid)
+                mfolder = parent_folder.service.create_mfolder(folder_name, parent=parent_folder)
+                return mfolder
 
 class MFileHandler(BaseHandler):
     """

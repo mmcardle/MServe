@@ -1540,7 +1540,7 @@ class DataService(NamedBase):
         servicedict["mfile_set"] = self.mfile_set
         servicedict["mfolder_set"] = self.mfolder_set
         servicedict["folder_structure"] = self._folder_structure(id=authid)
-
+        servicedict["mfolders_url"] = reverse('auth_mfolders', args=[authid])
         jobs = []
         for j in self.jobs():
             jobs.append(j.clean_base(authid))
