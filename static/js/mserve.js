@@ -872,9 +872,7 @@
                                        type: "DELETE",
                                        url: mfile.url,
                                        success: function(msg){
-                                            $(data.allcontent[0]).find("#mfileholder-"+mfile.id).remove()
-                                            $("#mfileholder-"+mfile.id).hide('slide')
-                                            $("#mfoldertreecontainer").jstree('delete_node',"#"+mfile.id)
+                                            $("#mfoldertreecontainer").jstree("remove", "#"+mfile);
                                        },
                                        error: function(msg){
                                             alert( "Failure On Delete " + msg );
