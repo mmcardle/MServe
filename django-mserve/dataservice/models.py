@@ -2406,7 +2406,7 @@ The **base** field is the object (HostingContainer, DataService or MFile)
 that this auth give access to
 
 When a HostingContainer is created, one Auth object is created with the name
-**full** and methods and urls from the **containeradmin** ins static.py
+**full** and methods and urls from the **containeradmin** in static.py
 
 ::
 
