@@ -25,7 +25,7 @@ The **priority** of the service is display here; this controls what queue the ta
 Webdav Access
 --------------
 
-This is the `WebDAV <http://en.wikipedia.org/wiki/WebDAV/>`_ url for accessing the service over the *dav* protocol. WebDAV allow file system access to content stored in MServe, and manipluation of the folder struture
+This is the `WebDAV <http://en.wikipedia.org/wiki/WebDAV>`_ url for accessing the service over the *dav* protocol. WebDAV allow file system access to content stored in MServe, and manipluation of the folder struture
 
 WebDAV can be mounted using the following command (davfs2 on Ubuntu)::
 

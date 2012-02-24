@@ -21,6 +21,18 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+"""
+
+MServe Job Models
+------------------
+
+::
+
+ This class defines all the MServe jobservice django models
+
+https://docs.djangoproject.com/en/dev/topics/db/models/
+
+"""
 import time
 import datetime
 import logging

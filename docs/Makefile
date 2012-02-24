@@ -37,6 +37,8 @@ clean:
 	-rm -rf $(BUILDDIR)/*
 
 html:
+	$(BUILDDIR)/../../django-mserve/manage.py graph_models dataservice -x parent,duplicate_of -X Usage,BackupFile,MFolder,ServiceRequest,MServeProfile,RemoteMServeService,ManagementProperty -d -o ./images/dataservice_dot.png
+	$(BUILDDIR)/../../django-mserve/manage.py graph_models jobservice -X Usage,NamedBase -d -o ./images/jobservice_dot.png
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

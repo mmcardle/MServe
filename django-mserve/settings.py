@@ -190,6 +190,7 @@ INSTALLED_APPS = (
     'djcelery',
     'request',
     'south',
+    'django_extensions'
 )
 
 # Setup debug toolbar

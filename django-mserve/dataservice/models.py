@@ -1,15 +1,3 @@
-"""
-
-MServe Models
----------------
-
-::
-
- This class defines all the MServe dataservice django models
-
-https://docs.djangoproject.com/en/dev/topics/db/models/
-
-"""
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -33,6 +21,18 @@ https://docs.djangoproject.com/en/dev/topics/db/models/
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+"""
+
+MServe Data Models
+-------------------
+
+::
+
+ This class defines all the MServe dataservice django models
+
+https://docs.djangoproject.com/en/dev/topics/db/models/
+
+"""
 import logging
 import datetime
 import time
@@ -476,8 +476,17 @@ class Usage(models.Model):
 class Base(models.Model):
     """
 
-    The Base object is an abstract objects that hold functionality common to
-    any resource
+    The Base object is an abstract objects that hold functionality common to any resource
+
+    The abstract **Base** class inheirits from the django models.Model class and provides functionality for most of the main MServe models.
+
+    The **id** field is the unique capaibility id for the object.
+
+    The **methods** field contains the valid methods allowed on this object, a subset of ["GET", "PUT", "POST", "DELETE"], and is initialised as []
+
+    The **urls** field contains the valid urls that are allowed on this object. For example the *url* part of /objects/<capability-id>/<url>/
+
+    The **do** method is called by the handlers to try to perform **methods** on **urls**, and calls the **check** method to make sure this is allowed
 
     """
     id = models.CharField(primary_key=True, max_length=ID_FIELD_LENGTH)
@@ -711,8 +720,23 @@ class Base(models.Model):
 
 class NamedBase(Base):
     """
-    NamedBase is a concrete class that all resources inheirit from. It hold the
-    usage field where all usage against a resource is recorded.
+    The concrete class **NamedBase**  class is the concrete class that the main MServe models inheirit from.
+    It hold the usage field where all usage against a resource is recorded.
+
+    It provides an additional name field so resources can be named.
+
+    The **metric** field holds a list of the metrics this object can report, this should be populated by the super class in its constructor
+
+    The **save** method loops over the **metrics list** and calls **get_updated_value_for_metric(metric)** and **get_updated_rate_for_metric(metric)** on the superclass
+    which allows the superclass resource to update their usage. The first time the object is saved the **get_value_for_metric(metric)** and **get_rate_for_metric(metric)**
+    will be called, allowing the resource to provide initial values on creation.
+
+    The **save** method of any superclass should create a unique capability and assigns this to the id field the first time the object is saved.
+
+    The **usages** field stores the usage objects, related to this resource
+
+    The **reportnum field**
+
     """
     metrics = []
     """A list of metric to report - default [] """
@@ -1222,9 +1246,9 @@ class DataService(NamedBase):
     A DataService hold a logic structure of :class:`.MFile` objects and
     :class:`.MFolder` objects that represent a file system.
 
-    A DataService can be in one of many :class:`DataServiceProfile`,
-    each of which has different tasks that are run upon ingest, update and
-    access of Mfiles
+    A DataService can be in one of many :class:`DataServiceProfile`
+    objects, each of which has different tasks that are run upon ingest, update
+    and access of Mfiles
 
     """
     container = models.ForeignKey(HostingContainer, blank=True, null=True)
@@ -1657,7 +1681,12 @@ class RemoteMServeService(models.Model):
 
 
 class MFolder(NamedBase):
-    """A MFolder is a representation of a file system folder in a service"""
+    """
+    
+    A MFolder is a representation of a file system folder in a
+    :class:`DataService`
+
+    """
     service = models.ForeignKey(DataService)
     """The :class:`.DataService` that this folder belongs to"""
     parent = models.ForeignKey('self', null=True, blank=True)
@@ -1774,7 +1803,7 @@ class Relationship(models.Model):
 
 class MFile(NamedBase):
     """
-    An MFile represents a single file on the system at a service
+    An MFile represents a single file at a :class:`DataService`
     """
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     empty = models.BooleanField(default=False)
@@ -1801,7 +1830,7 @@ class MFile(NamedBase):
     updated = models.DateTimeField(auto_now=True)
     """The last time the file was updated"""
     duplicate_of = models.ForeignKey('MFile', null=True)
-    """The duplicate of this file. Not the same as :class:`BackupFile`"""
+    """The duplicate of this file. **Not** the same as :class:`BackupFile`"""
 
     methods = ["GET", "POST", "PUT", "DELETE"]
     urls = {

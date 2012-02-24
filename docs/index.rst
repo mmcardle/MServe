@@ -46,7 +46,7 @@ Welcome to MServe's documentation!
 |    :maxdepth: 3            |     :maxdepth: 3           |
 |                            |                            |
 |    dataservice             |     developing             |
-|                            |                            |
+|    jobservice              |                            |
 |                            |                            |
 |                            |                            |
 +----------------------------+----------------------------+

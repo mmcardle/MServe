@@ -1,12 +1,178 @@
-#################
-Developing MServe 
-#################
+#################################
+MServe Development Guide
+#################################
+
+------------------------
+Introduction
+------------------------
+
+DataService Models
+--------------------
+
+.. automodule:: dataservice.models
+
+Base class
++++++++++++
+
+.. autoclass:: dataservice.models.Base
+    :noindex:
+    
+NamedBase class
++++++++++++++++++
+
+.. autoclass:: dataservice.models.NamedBase
+    :noindex:
+
+::
+
+  # Get a NamedBase from the database
+  from dataservice.models import NamedBase
+  base = NamedBase.object.get(id="baseid")
+  
+Hosting Container class
+++++++++++++++++++++++++
+
+.. autoclass:: dataservice.models.HostingContainer
+    :noindex:
+
+::
+
+  # Create a new HostingContainer
+  from dataservice.models import HostingContainer
+  hostingcontainer = HostingContainer.create_container("New Container")
+
+DataService class
+++++++++++++++++++++++++
+
+.. autoclass:: dataservice.models.DataService
+    :noindex:
+
+::
+
+  # Create a new DataService
+  from dataservice.models import HostingContainer
+
+  # Either Create a new HostingContainer
+  hostingcontainer = HostingContainer.create_container("New Container")
+
+  # Or get an existing HostingContainer from the database
+  hostingcontainer = HostingContainer.objects.get(id="hostingcontainerid")
+  dataservice = hostingcontainer.create_data_service("New DataService")
+  
+
+MFile class
+++++++++++++++++++++++++
+
+.. autoclass:: dataservice.models.MFile
+  :noindex:
+
+::
+
+  # Create a new MFile
+  from dataservice.models import DataService
+
+  # First get an existing DataService from the database
+  dataservice = DataService.objects.get(id="dataserviceid")
+
+  # Create an Empty Mfile
+  mfile = dataservice.create_mfile("New MFile")
+
+  # Or, Create an MFile from some data
+  from django.core.files.base import ContentFile
+  mfile = dataservice.create_mfile("New MFile", file=ContentFile("some content for the file"))
+
+  # Or, Create an MFile from a file in the POST of a django request object
+  mfile = dataservice.create_mfile("New MFile", file=request.POST['fileparam'])
+
+See Django `Request <https://docs.djangoproject.com/en/dev/ref/request-response/>`_ object
+
+Querying
+^^^^^^^^^^^^^^
+
+::
+
+  from dataservice.models import MFile
+
+  # Get all MFiles
+  mfiles = MFile.objects.all()
+
+  # Get MFiles at a service
+  mfiles = MFile.objects.filter(service=somedataservice)
+  #or
+  mfiles = somedataservice.mfiles_set.all()
+
+  # Search by exact name
+  mfiles = MFile.objects.filter(name=="myfile")
+
+  # Search by partial name
+  mfiles = MFile.objects.filter(name__contains=="myfile")
+
+  # Search by folder
+  mfiles = MFile.objects.filter(folder==somefolder)
+
+  # Search by size
+  mfiles = MFile.objects.filter(size__gt==1024)
+
+  # Chaining searches
+  mfiles = MFile.objects.filter(folder==somefolder).exclude(name="myfile")
+
+MFolder class
+++++++++++++++++++++++++
+
+.. autoclass:: dataservice.models.MFolder
+    :noindex:
+    
+::
+
+  # Create a new MFolder
+  from dataservice.models import DataService
+
+  # First get an existing DataService from the database
+  dataservice = DataService.objects.get(id="dataserviceid")
+
+  # Create an MFolder at the root of the service
+  mfolder1 = dataservice.create_mfolder("folder1")
+
+  # Create a sub MFolder
+  submfolder2 = dataservice.create_mfolder("subfolder1", parent=mfolder1)
+
+  # Create an MFile in a folder
+  mfile = dataservice.create_mfile("New MFile", folder=submfolder)
+
+Auth class
+++++++++++++++++++++++++
+
+.. autoclass:: dataservice.models.Auth
+    :noindex:
+
+DataService Object Model Graph
+++++++++++++++++++++++++++++++
+
+.. image:: images/dataservice_dot.png
+
+JobService Models
+--------------------
+
+.. automodule:: jobservice.models
+
+JobService Object Model Graph
+++++++++++++++++++++++++++++++
+
+.. image:: images/jobservice_dot.png
+
+URLS
+------------------
+
+Handler
+------------------
+
+.. automodule:: dataservice.handlers
 
 ------------------------
 Development Environment
 ------------------------
 
-Assuming you have downloaded the MServe source into a directory names **mserve**. First install the mserve dependencies::
+Assuming you have downloaded the MServe sourceand extracted into a directory named **mserve**. First install the mserve dependencies::
   
   sudo mserve/scripts/setup-mserve.sh dependencies
 

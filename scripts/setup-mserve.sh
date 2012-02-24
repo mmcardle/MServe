@@ -646,6 +646,10 @@ except ImportError:
     # install oauth2
     pip install oauth2
 
+    ################
+    # install django_extensions
+    pip install django-extensions
+
     #######################
     # Install django-piston
     # import piston
