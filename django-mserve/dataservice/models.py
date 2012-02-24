@@ -1803,7 +1803,7 @@ class Relationship(models.Model):
 
 class MFile(NamedBase):
     """
-    An MFile represents a single file at a :class:`DataService`
+    An MFile represents a single file in a :class:`DataService`
     """
     # TODO : Add bitmask to MFile for deleted,remote,input,output, etc
     empty = models.BooleanField(default=False)
@@ -2369,8 +2369,8 @@ class BackupFile(NamedBase):
 
 class ManagementProperty(models.Model):
     """
-    A Management Property holds configuration parameters for HostingContainers
-    DataServices and MFiles
+A Management Property holds configuration parameters for HostingContainers
+DataServices and MFiles
     """
     base = models.ForeignKey(NamedBase)
     """The resource this Property relates to"""
@@ -2399,8 +2399,118 @@ class ManagementProperty(models.Model):
 
 class Auth(Base):
     """
-    An Auth object is a capability to access a HostingContainer, DataService
-    or MFile
+An Auth object represents a capability to access a HostingContainer,
+DataService or MFile
+
+The **base** field is the object (HostingContainer, DataService or MFile)
+that this auth give access to
+
+When a HostingContainer is created, one Auth object is created with the name
+**full** and methods and urls from the **containeradmin** ins static.py
+
+::
+
+ "containeradmin": {
+    "methods" : ["GET","PUT","POST","DELETE"],
+    "urls" : {
+        "auths":["GET","PUT","POST","DELETE"],
+        "properties":["GET","PUT"],
+        "usages":["GET"],
+        "services":["GET","POST"],
+        }
+    }
+
+When a DataService is created, two Auth objects are created with the names
+**full** and **customer** and methods and urls from the **serviceadmin**
+and **servicecustomer** object in static.py
+
+::
+    
+ "serviceadmin" : {
+    "methods" : ["GET","PUT","POST","DELETE"],
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],
+        "properties":["GET","PUT"],
+        "usages":["GET"],
+        "mfiles":["GET","POST","PUT","DELETE"],
+        "jobs":["GET","POST","PUT","DELETE"],
+        "mfolders":["GET","POST","PUT","DELETE"],
+        "profiles":["GET"],
+        "base":["GET"],
+        }
+    }
+ 
+::
+
+ "servicecustomer" : {
+    "methods" : ["GET"],
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],
+        "properties":["GET"],
+        "usages":["GET"],
+        "mfiles":["GET","POST","PUT","DELETE"],
+        "jobs":["GET","POST","PUT","DELETE"],
+        "mfolders":["GET","POST","PUT","DELETE"],
+        "base":["GET"],
+        }
+    }
+
+When a MFile is created, one Auth object is created with the name
+**owner** and methods and urls from the **mfileowner** object in static.py
+
+::
+
+ "mfileowner": {
+    "methods" : ["GET","PUT","POST","DELETE"],
+    "urls": {
+        "auths":["GET","PUT","POST","DELETE"],
+        "properties":["GET"],
+        "usages":["GET"],
+        "file":["GET","PUT","POST","DELETE"],
+        "base":["GET","PUT","POST","DELETE"],
+        }
+    }
+
+There are other Auths that MFiles can have , the **mfilereadwrite**  and
+**mfilereadonly** objects in static.py give read only and read-write permissions
+to an Auth
+
+::
+
+    "mfilereadwrite" : {
+        "methods" : ["GET","PUT","POST","DELETE"],
+        "urls": {
+            "auths":["GET","PUT","POST","DELETE"],
+            "properties":["GET"],
+            "usages":["GET"],
+            "file":["GET","PUT","POST","DELETE"],
+            "base":["GET"],
+            }
+        }
+    ,
+    "mfilereadonly" : {
+        "methods" : ["GET"],
+        "urls": {
+            "auths":["GET","PUT","POST","DELETE"],
+            "properties":["GET"],
+            "usages":["GET"],
+            "file":["GET"],
+            }
+        }
+    }
+
+In order to programatically create Auths from a base object
+
+::
+
+    from dataservice.models import Auth
+    from dataservice.static import static
+    roles_and_urls = static.default_roles["mfilereadonly"]
+    mfileauth_owner = Auth(base=mfile, authname="owner")
+    mfileauth_owner.setroles(roles_and_urls)
+    mfileauth_owner.save()
+
+
     """
     authname = models.CharField(max_length=50)
     """Name for the Auth"""
