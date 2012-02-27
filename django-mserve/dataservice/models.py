@@ -735,7 +735,7 @@ class NamedBase(Base):
 
     The **usages** field stores the usage objects, related to this resource
 
-    The **reportnum field**
+    The **reportnum field** is an auto incremented counter to indicate the last usage report that was generated
 
     """
     metrics = []
@@ -2399,13 +2399,23 @@ DataServices and MFiles
 
 class Auth(Base):
     """
-An Auth object represents a capability to access a HostingContainer,
-DataService or MFile
+An Auth object represents a capability to access a :class:`HostingContainer`,
+:class:`DataService` or :class:`MFile`, or to another **Auth** object
 
-The **base** field is the object (HostingContainer, DataService or MFile)
-that this auth give access to
+The **base** field is the object (:class:`HostingContainer`, 
+:class:`DataService` or :class:`MFile`) that this Auth object gives access to
+and can be **null**
 
-When a HostingContainer is created, one Auth object is created with the name
+The **parent** field is the object :class:`Auth` that this Auth object gives
+access to and can be **null**
+
+One of either the **base** or **parent** must not be null.
+
+The **id** field is the unguessable webkey that can be given to third parties
+to delegate a restricted set of allowed actions on the **base** object or the
+**parent** auth object
+
+When a :class:`HostingContainer` is created, one Auth object is created with the name
 **full** and methods and urls from the **containeradmin** in static.py
 
 ::
@@ -2420,7 +2430,7 @@ When a HostingContainer is created, one Auth object is created with the name
         }
     }
 
-When a DataService is created, two Auth objects are created with the names
+When a :class:`DataService` is created, two Auth objects are created with the names
 **full** and **customer** and methods and urls from the **serviceadmin**
 and **servicecustomer** object in static.py
 
@@ -2455,7 +2465,7 @@ and **servicecustomer** object in static.py
         }
     }
 
-When a MFile is created, one Auth object is created with the name
+When a :class:`MFile` is created, one Auth object is created with the name
 **owner** and methods and urls from the **mfileowner** object in static.py
 
 ::
@@ -2510,6 +2520,14 @@ In order to programatically create Auths from a base object
     mfileauth_owner.setroles(roles_and_urls)
     mfileauth_owner.save()
 
+The **roles_csv** field gives a comma separated list of roles that this auth
+gives access to, the roles are defined in the default_roles object of the
+static.py class
+
+The **check** method has to make sure that the method/url combination is firstly
+allowed by the Auth object itself and secondly allowed by the **parent** Auth or
+the **base** object, whichever is non null. This recurses up through all parent
+objects until a base object is checked.
 
     """
     authname = models.CharField(max_length=50)

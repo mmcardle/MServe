@@ -57,6 +57,14 @@ metric_job = "http://mserve/job"
 job_metrics = [metric_job]
 
 class TaskDescription(models.Model):
+    """
+    A TaskDescription defines the structure of single executable task that a
+    client can invoke directly on an :class:`MFile` or can be set to run on
+    ingest, access, update or periodically.
+
+    The **task_name** field gives a descriptive name for the task
+
+    """
     task_name = models.CharField(max_length=200, blank=True, null=True)
 
     def get_json(self):
@@ -80,6 +88,16 @@ class TaskDescription(models.Model):
         return "%s" % (self.task_name);
 
 class TaskResult(models.Model):
+    """
+    A TaskResult defines a result of running a task, these are intended to be
+    small bounded results, as opposed to :class:`JobOutputs` which are intended
+    to hold large data files
+
+    The **taskdescription** is the owning :class:`TaskDescription`
+
+    The **name** field gives a descriptive name for the result
+
+    """
     taskdescription = models.ForeignKey('TaskDescription', related_name="results")
     name = models.CharField(max_length=200, blank=True, null=True)
 
@@ -87,6 +105,16 @@ class TaskResult(models.Model):
         return "%s" % (self.name);
 
 class TaskOption(models.Model):
+    """
+    A TaskOption defines a simple input to a task, eg (width or height). These
+    will be displayed to the user for input in the ui, and the value passed to
+    the runtime executing task in the **options** parameter.
+
+    The **taskdescription** is the owning :class:`TaskDescription`
+
+    The **name** field gives a descriptive name for the option
+
+    """
     taskdescription = models.ForeignKey('TaskDescription', related_name="options")
     name = models.CharField(max_length=200, blank=True, null=True)
 
@@ -94,6 +122,19 @@ class TaskOption(models.Model):
         return "%s" % (self.name);
 
 class TaskInput(models.Model):
+    """
+    A TaskInput defines a file input to a task, which will normally be an
+    :class:`dataservice.MFile` , the id is passed of an existing MFile, and they will be
+    passed to the executing tasks in the **inputs** array
+
+    The **taskdescription** is the owning :class:`TaskDescription`
+
+    The **num** field gives the index of the MFile
+
+    The **mimetype** field gives the mimetype of the input and allows for
+    possible filtering when creating the task
+
+    """
     taskdescription = models.ForeignKey('TaskDescription', related_name="inputs")
     num = models.IntegerField()
     mimetype = models.CharField(max_length=200, blank=True, null=True)
@@ -102,6 +143,18 @@ class TaskInput(models.Model):
         return "%s" % (self.mimetype);
 
 class TaskOutput(models.Model):
+    """
+    A TaskInput defines a file output from a task, :class:`JobOutput` are
+    created automatically, the id is passed of an existing empty JobOutput is
+    then passed to the executing tasks in the **outputs** array
+
+    The **taskdescription** is the owning :class:`TaskDescription`
+    
+    The **num** field gives the index of the JobOutput
+
+    The **mimetype** field gives the mimetype of the output
+
+    """
     taskdescription = models.ForeignKey('TaskDescription', related_name="outputs")
     num = models.IntegerField()
     mimetype = models.CharField(max_length=200, blank=True, null=True)
@@ -114,6 +167,23 @@ class JobASyncResult(models.Model):
     job = models.ForeignKey('Job')
 
 class Job(NamedBase):
+    """
+    A Job defines a instance of an executing celery TaskSet. A task set is made
+    up of multiple tasks executed in parallel
+
+    The **mfile** field is an :class:`MFile` that the Job is related to and
+    will also be the first input in the **inputs** array for each task in the
+    task set
+
+    The **taskset_id** field is the id of the executing celery taskset
+
+    The method **tasks** returns the results of the tasks, their execution
+    status, amount of tasks in the task set that have succedded, amount of tasks
+    in the task set that have failed.
+
+    The method **get_job_plots** is used by the ui to plot the results of jobs
+
+    """
     mfile  = models.ForeignKey(MFile)
     taskset_id = models.CharField(max_length=200)
 
@@ -390,6 +460,21 @@ class Job(NamedBase):
         return dict
 
 class JobOutput(NamedBase):
+    """
+    A JobOutput defines a file output of an executing Task
+
+    The **job** field is an :class:`Job` that the JobOuptut is owned by
+
+    The **file** field is the django FileField and holds the location of the
+    actually content
+
+    The **mimetype** field is the mimetype of the resultant file and can be used
+    in the UI for display
+
+    The **thumb** field is a thumbnail of the resultant file and can be used
+    in the UI for display
+
+    """
     job   = models.ForeignKey(Job)
     mimetype = models.CharField(max_length=200,blank=True,null=True)
     file  = models.FileField(upload_to=utils.create_filename,blank=True,null=True,storage=storage.getdiscstorage(),max_length=FILE_FIELD_LENGTH)

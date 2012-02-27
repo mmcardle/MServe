@@ -21,6 +21,18 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+"""
+
+JobService Handlers
+----------------------
+
+::
+
+ This class jobservice/handlers.py defines the piston handlers for the jobservice module
+
+For more information see :class:`dataservice.handlers`
+
+"""
 from django.http import HttpResponseNotFound
 import os
 import shutil

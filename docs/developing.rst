@@ -114,7 +114,7 @@ Querying
   mfiles = MFile.objects.filter(size__gt==1024)
 
   # Chaining searches
-  mfiles = MFile.objects.filter(folder==somefolder).exclude(name="myfile")
+  mfiles = MFile.objects.filter(folder==somefolder).exclude(name=="myfile")
 
 MFolder class
 ++++++++++++++++++++++++
@@ -155,24 +155,43 @@ JobService Models
 
 .. automodule:: jobservice.models
 
+.. autoclass:: jobservice.models.TaskDescription
+  :noindex:
+
+.. autoclass:: jobservice.models.TaskInput
+  :noindex:
+
+.. autoclass:: jobservice.models.TaskOutput
+  :noindex:
+
+.. autoclass:: jobservice.models.TaskResult
+  :noindex:
+
+.. autoclass:: jobservice.models.Job
+  :noindex:
+
 JobService Object Model Graph
 ++++++++++++++++++++++++++++++
 
 .. image:: images/jobservice_dot.png
 
 URLS
-------------------
+----------
 
-Handler
-------------------
+TODO: info on urls
+
+Handlers
+----------
 
 .. automodule:: dataservice.handlers
+
+.. automodule:: jobservice.handlers
 
 ------------------------
 Development Environment
 ------------------------
 
-Assuming you have downloaded the MServe sourceand extracted into a directory named **mserve**. First install the mserve dependencies::
+Assuming you have downloaded the MServe source and extracted into a directory named **mserve**. First install the mserve dependencies::
   
   sudo mserve/scripts/setup-mserve.sh dependencies
 
