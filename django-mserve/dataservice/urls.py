@@ -1,15 +1,3 @@
-"""
-
-MServe URLS
------------
-
-::
-
- This class defines the MServe URL mapping for the dataservice module
-
-https://docs.djangoproject.com/en/dev/topics/http/urls/
-
-"""
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -33,6 +21,18 @@ https://docs.djangoproject.com/en/dev/topics/http/urls/
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+"""
+
+MServe URLS
+-----------
+
+::
+
+ This class defines the MServe URL mapping for the dataservice module
+
+https://docs.djangoproject.com/en/dev/topics/http/urls/
+
+"""
 from django.conf.urls.defaults import *
 
 # Uncomment the next two lines to enable the admin:

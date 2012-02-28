@@ -32,7 +32,7 @@ Welcome to MServe's documentation!
 | **MServe REST API**        | **Code Examples**          |
 +----------------------------+----------------------------+
 | .. toctree::               | .. toctree::               |
-|    :maxdepth: 2            |    :maxdepth: 2            |
+|    :maxdepth: 2            |    :maxdepth: 3            |
 |                            |                            |
 |    api                     |    codeexamples            |
 |                            |                            |

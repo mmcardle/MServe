@@ -209,7 +209,7 @@ Get Service Details
                 String host = "localhost";
                 String id = ""; ###### Get this from MServe ######
 
-                URL getresourcesurl = new URL(protocol + "://" + host + "/services/" + id +"/");
+                URL url = new URL(protocol + "://" + host + "/services/" + id +"/");
                 HttpClient client = new HttpClient();
                 HttpMethod method = new GetMethod(url.toString());
                 method.setRequestHeader("Accept", "application/json");
@@ -270,6 +270,11 @@ Upload a File to a Service
 
                 File f = <some file>
 
+                String protocol = "http";
+                String host = "localhost";
+                String id = ""; ###### Get this from MServe ######
+
+                URL url = new URL(protocol + "://" + host + "/services/" + id +"/");
                 HttpClient client = new HttpClient();
                 PostMethod filePost = new PostMethod(url);
                 filePost.setRequestHeader("Accept", "application/json");
@@ -304,4 +309,83 @@ Upload a File to a Service
                     throw new RuntimeException(ex);
             }
         }
+    }
+
+
+Submit a Job
+++++++++++++++++
+
+::
+
+    String url = protocol + "://" + host + "/mfiles/" + mfileid +"/jobs/"
+    PostMethod postMethod = new PostMethod(joburl.toString());
+    postMethod.setRequestHeader("Accept", "application/json");
+
+    NameValuePair[] data = {
+      new NameValuePair("jobtype", "dataservice.tasks.mimefile"),
+    };
+
+    postMethod.setRequestBody(data);
+    client.executeMethod(postMethod);
+
+    InputStream poststream = postMethod.getResponseBodyAsStream();
+
+    BufferedReader postbuf = new BufferedReader(new InputStreamReader(poststream));
+    String postoutput = "";
+    String poststr;
+    while (null != ((poststr = postbuf.readLine()))) {
+        postoutput += poststr;
+    }
+    postbuf.close();
+    postMethod.releaseConnection();
+
+    JSONObject postjsonob = new JSONObject(postoutput);
+
+    System.out.println("doFilePostToREST output "+postjsonob.toString(4));
+
+    String jobid = postjsonob.getString("id");
+
+Submit a Job with parameters
+++++++++++++++++++++++++++++++
+
+::
+
+    ... As Above
+
+    NameValuePair[] data = {
+      new NameValuePair("jobtype", "dataservice.tasks.thumbimage"),
+      new NameValuePair("width", "100"),
+      new NameValuePair("height", "100"),
+    };
+
+    ... As Above
+
+
+Poll for Job status
++++++++++++++++++++++++++
+
+::
+
+    String url = protocol + "://" + host + "/jobs/" + jobid +"/"
+    HttpClient client = new HttpClient();
+    HttpMethod method = new GetMethod(url);
+    method.setRequestHeader("Accept", "application/json");
+    Boolean success = Boolean.FALSE;
+    while(!success){
+        client.executeMethod(method);
+        InputStream stream = method.getResponseBodyAsStream();
+
+        BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+        String output = "";
+        String str;
+        while (null != ((str = buf.readLine()))) {
+            output += str;
+        }
+        buf.close();
+
+        JSONObject postjsonob = new JSONObject(output);
+        JSONObject tasks = postjsonob.getJSONObject("tasks");
+        success = tasks.getBoolean("successful");
+        System.out.println("job "+success);
+        Thread.sleep(1000);
     }

@@ -170,6 +170,56 @@ JobService Models
 .. autoclass:: jobservice.models.Job
   :noindex:
 
+A Job can be created with the following code::
+
+  # Create a new Job
+  from dataservice.models import DataService
+  from celery.task.sets import subtask
+  from celery.task.sets import TaskSet
+
+  # First get an existing MFile from the database
+  dataservice = DataService.objects.get(id="dataserviceid")
+  mfile = dataservice.mfile_set.get(id=="somemfileid")
+
+  # Create a Job related to the MFile
+  job = mfile.create_job("New Job")
+
+  # Define inputs and outputs
+  inputs = [mfile.id]
+  outputs = []
+
+  # Decide which task to run
+  jobtype = "dataservice.tasks.mimefile"
+
+  # Create a celery task
+  task = subtask(task=jobtype,args=[inputs,outputs])
+
+  # Add the task to a task set, could create more parallel tasks here
+  ts = TaskSet(tasks=[task])
+  tsr = ts.apply_async()
+  tsr.save()
+
+  # Update the job with the taskset id
+  job.taskset_id=tsr.taskset_id
+  job.save()
+
+  # Wait to complete
+  # .... sleep
+
+  # Get results
+  job.tasks()
+
+You can send a tasks to a specific named queue by creating the task liek this::
+
+    # The queue a task goes to is defined by the routing key
+    # In a standard MServe service there are 2 queues, normal.# and priority.#
+    queue = "priority.%s" % (task_name)
+    options = {"routing_key": queue}
+    task = subtask(task=task_name, args=[[mfileid], []], options=options)
+
+.. autoclass:: jobservice.models.JobOutput
+  :noindex:
+
 JobService Object Model Graph
 ++++++++++++++++++++++++++++++
 
