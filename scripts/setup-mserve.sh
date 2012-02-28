@@ -674,11 +674,11 @@ except ImportError:
 
     #######################
     # install celery
-    pip install Celery
+    pip install Celery==2.3.3
 
     #######################
     # Install django-celery
-    pip install django-celery
+    pip install django-celery==2.3.3
 
     #########################
     # Install django-request
