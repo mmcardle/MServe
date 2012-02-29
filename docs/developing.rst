@@ -307,6 +307,16 @@ Then follow the commands::
   cd ~
   ./setup-mserve.sh -a mserve.tar.gz
 
+
+Building MServe Docs
+---------------------
+
+In the docs folder in the MServe checkout run::
+
+ make html
+
+For the full documentation to be build the MServe modules must be importable on the machine doing the build
+
 ------------------
 Debugging MServe
 ------------------
