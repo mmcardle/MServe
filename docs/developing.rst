@@ -228,13 +228,13 @@ JobService Object Model Graph
 URLS
 ----------
 
-TODO: info on urls
+.. automodule:: dataservice.urls
+.. automodule:: jobservice.urls
 
 Handlers
 ----------
 
 .. automodule:: dataservice.handlers
-
 .. automodule:: jobservice.handlers
 
 ------------------------
@@ -358,11 +358,34 @@ Live Server::
   /var/log/apache/access.log
   /var/log/apache/error.log
 
-Tests not running
-++++++++++++++++++
+Tests being submitted but not running
+++++++++++++++++++++++++++++++++++++++
 
-Tasks not submitted
-+++++++++++++++++++
+Check the celery tasks are running, by default there should be 5 **normal** queues and 5 **priority** queues plus **celerycam** and **celerybeat**::
 
-Tasks submitted but not running
-+++++++++++++++++++++++++++++++++
+ # ps -ef | grep celery
+ www-data 24401     1 10:35:27 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
+ www-data 24409 24401 00:10:33 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
+ www-data 24410 24401 00:10:28 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
+ www-data 24411 24401 00:10:31 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
+ www-data 24412 24401 00:11:45 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
+ www-data 24413 24401 00:10:28 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
+ www-data 24424     1 10:40:28 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
+ root     24444     1 02:56:19 /usr/bin/python /opt/mserve/manage.py celerycam --detach -f celerycam.log --pidfile=/var/opt/mserve-data/celerycam.pid
+ www-data 24447 24424 00:02:41 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
+ www-data 24449 24424 00:02:46 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
+ www-data 24450 24424 00:02:37 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
+ www-data 24451 24424 00:02:54 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
+ www-data 24452 24424 00:02:46 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
+ root     24467     1 00:00:01 /usr/bin/python /opt/mserve/manage.py celerybeat --detach -f celerybeat.log --pidfile=/var/opt/mserve-data/celerybeat.pid
+
+Tasks not being submitted
+++++++++++++++++++++++++++
+
+Check if the task appears in the avaliable tasks list ::
+
+ curl http://host/tasks/
+
+If you are developing your own tasks then make sure they are registered::
+
+ {MSERVE_HOME}/django-mserve/manage.py register_tasks <app-name>

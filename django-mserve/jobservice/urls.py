@@ -21,6 +21,30 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
+"""
+
+JobService URLS
+------------------
+
+::
+
+ This class defines the MServe URL mapping for the jobservice module
+
+https://docs.djangoproject.com/en/dev/topics/http/urls/
+
+
+The model prefixes for the jobservice are
+
+* :class:`jobservice.models.Job` has the prefix **jobs**
+* :class:`jobservice.models.JobOutput` has the prefix **joboutputs**
+
+For example to get details of a container::
+
+ GET /jobs/<job-id>/
+
+will return a JSON object containing the job details
+
+"""
 from django.conf.urls.defaults import *
 
 # Uncomment the next two lines to enable the admin:

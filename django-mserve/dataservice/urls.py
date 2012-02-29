@@ -23,14 +23,50 @@
 ########################################################################
 """
 
-MServe URLS
------------
+DataService URLS
+------------------
 
 ::
 
  This class defines the MServe URL mapping for the dataservice module
 
 https://docs.djangoproject.com/en/dev/topics/http/urls/
+
+Most of urls defined in MServe relate to a specific model and are normally one of the following forms
+
+::
+
+ /<model-prefix>/
+ /<model-prefix>/<instance-id>/
+ /<model-prefix>/<instance-id>/<childmodel-prefix>/
+
+Each model has a prefix
+
+* :class:`dataservice.models.HostingContainer` has the prefix **containers**
+* :class:`dataservice.models.DataService` has the prefix **services**
+* :class:`dataservice.models.MFile` has the prefix **mfiles**
+* :class:`dataservice.models.MFolder` has the prefix **mfolders**
+
+For example to get details of a container::
+
+ GET /containers/<container-id>/
+
+will return a JSON object containing the container details
+
+To get all the services of a container::
+
+ GET /containers/<container-id>/services/
+
+will return a JSON array containing the containers services
+
+To create a service within a container (with appropriate POST parameters)::
+
+ POST /containers/<container-id>/services/
+
+will return a JSON object containing the new service.
+
+The other url patterns defined here relate to standard django user functionality
+OpenID functionality and standard django views
 
 """
 from django.conf.urls.defaults import *
