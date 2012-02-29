@@ -1,4 +1,3 @@
-"""The Mserve dataservice module """
 ########################################################################
 #
 # University of Southampton IT Innovation Centre, 2011
@@ -22,7 +21,7 @@
 #	Created for Project :		PrestoPrime
 #
 ########################################################################
-
+"""The Mserve views module """
 # pylint: disable-msg=W0613
 
 import utils
