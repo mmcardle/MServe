@@ -721,7 +721,7 @@ class Base(models.Model):
 class NamedBase(Base):
     """
     The concrete class **NamedBase**  class is the concrete class that the main MServe models inheirit from.
-    It hold the usage field where all usage against a resource is recorded.
+    It holds the usage field where all usage against a resource is recorded.
 
     It provides an additional name field so resources can be named.
 

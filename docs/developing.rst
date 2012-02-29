@@ -384,7 +384,7 @@ Tasks not being submitted
 
 Check if the task appears in the avaliable tasks list ::
 
- curl http://host/tasks/
+ curl http://mservehost/tasks/
 
 If you are developing your own tasks then make sure they are registered::
 
