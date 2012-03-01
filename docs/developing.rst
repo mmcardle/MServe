@@ -254,6 +254,12 @@ Edit the **settings_dev.py**
 * Set the **MSERVE_LOG** to the directory where you want to save the development log file (DEFAULT=os.getcwd())
 * Set the **DBNAME** to the name of the developement database (DEFAULT=mservedbdev)
 
+Create the dev databases (if not using sqlite)::
+
+ CREATE DATABASE mservedbdev; FLUSH PRIVILEGES;
+ CREATE USER 'root'@'%' IDENTIFIED BY 'pass';
+ GRANT ALL ON mservedbdev.* TO 'root';
+
 Setup the database::
 
   python mserve/django-mserve/manage.py syncdb
