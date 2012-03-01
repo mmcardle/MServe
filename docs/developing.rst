@@ -274,6 +274,17 @@ Run the development service::
 Visit `127.0.0.1:8000 <http://127.0.0.1:8000>`_ in your browser, output will be to the console window
 
 
+Running the FUSE mount daemon
+-----------------------------
+
+Run the command::
+
+  sudo python mserve/django-mserve/mservefuse.py /export/mserve
+
+Then browse to::
+
+  ls /export/mserve/<service-customer-auth-id>/
+
 Testing
 ------------------
 
