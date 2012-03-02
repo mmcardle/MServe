@@ -337,9 +337,24 @@ For the full documentation to be build the MServe modules must be importable on 
 Upgrading MServe
 ------------------
 
-MServe can be upgrade using the setup-mserve script, but it would be prudent before an upgrade to save the database::
+MServe can be upgrade using the setup-mserve script, but it would be prudent before an upgrade to save the database
+Its also a good idea to save each app individually, in case there is a problem importing later::
 
- ./manage.py dumpdata dataservice jobservice mserveoauth > data_dump.json
+ ./manage.py dumpdata dataservice > dataservice_data.json
+ ./manage.py dumpdata jobservice  > jobservice_data.json
+ ./manage.py dumpdata mserveoauth > mserveoauth_data.json
+ ./manage.py dumpdata djcelery > djcelery_data.json
+ ./manage.py dumpdata auth > auth_data.json
+ ./manage.py dumpdata admin > admin_data.json
+ ./manage.py dumpdata contentypes > contentypes_data.json
+ ./manage.py dumpdata sites > sites_data.json
+ ./manage.py dumpdata sessions > sessions_data.json
+ ./manage.py dumpdata django_openid_auth > django_openid_auth_data.json
+ ./manage.py dumpdata piston > piston_data.json
+ ./manage.py dumpdata webdav > webdav_data.json
+ ./manage.py dumpdata request > request_data.json
+ ./manage.py dumpdata south > south_data.json
+
 
 or if you have you own models in an app called **your-app**::
 
@@ -353,7 +368,7 @@ If this is **successful** then nothing more needs to be done, as the upgrade han
 
 If this is **unsuccessful** then you may have to do a clean install and import data ::
 
- ./manage.py loaddata data_dump.json
+ ./manage.py loaddata *_data.json
 
 
 Common Errors
