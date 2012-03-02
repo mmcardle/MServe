@@ -819,15 +819,18 @@ class APITest(TestCase):
     def test_roles(self):
         container = HostingContainer.create_container("HostingContainer")
         for auth in container.auth_set.all():
-            roles = auth.getroles()
+            roles = auth.roles()
+            self.assertTrue( "containeradmin" in roles )
 
         service = container.create_data_service("Service1")
         for auth in service.auth_set.all():
-            roles = auth.getroles()
+            roles = auth.roles()
+            self.assertTrue( "serviceadmin" in roles or "servicecustomer" in roles )
 
         mfile = service.do("POST","mfiles",name="FullFile",file=ContentFile('new content'))
         for auth in mfile.auth_set.all():
-            roles = auth.getroles()
+            roles = auth.roles()
+            self.assertTrue( "mfileowner" in roles )
             
     def test_container(self):
         container = HostingContainer.create_container("HostingContainer1")
@@ -857,7 +860,7 @@ class APITest(TestCase):
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
         self.failUnlessEqual(auths[0].authname,"full")
-        self.failUnlessEqual(len(auths[0].geturls()),4)
+        self.failUnlessEqual(len(auths[0].urls()),4)
 
         kwargs_2 = {"505authname": {"roles" : ""} }
         request = make_request(post=kwargs_2)
@@ -932,7 +935,7 @@ class APITest(TestCase):
         auths = service.do("PUT","auths",request=request)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),2)
-        self.failUnlessEqual(len(auths[0].geturls()),8)
+        self.failUnlessEqual(len(auths[0].urls()),8)
 
         kwargs_2 = {"505authname":[]}
         request = make_request(post=kwargs_2)
@@ -1095,7 +1098,7 @@ class APITest(TestCase):
         auths = service_auth.do("PUT","auths",request=request)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),8)
+        self.failUnlessEqual(len(auths[0].urls()),8)
 
         badrequest = make_request(post={"505authname":""})
         shouldbe503_3 = service_auth.do("PUT","auths",request=badrequest)
@@ -1218,7 +1221,7 @@ class APITest(TestCase):
         auths = service_auth.do("PUT","auths",request=request)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),8)
+        self.failUnlessEqual(len(auths[0].urls()),8)
 
         badrequest = make_request(post={"505authname":[]})
         shouldbe503_3 = service_auth.do("PUT","auths",request=badrequest)
@@ -1304,7 +1307,7 @@ class APITest(TestCase):
         auths = mfile.do("PUT","auths",request=request)
         self.failUnlessEqual(type(auths[0]), Auth)
         self.failUnlessEqual(len(auths),1)
-        self.failUnlessEqual(len(auths[0].geturls()),5)
+        self.failUnlessEqual(len(auths[0].urls()),5)
 
         badrequest = make_request(post={"505authname":[]})
         shouldbe503_3 = mfile.do("PUT","auths",request=badrequest)
