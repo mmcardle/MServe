@@ -358,7 +358,7 @@ Its also a good idea to save each app individually, in case there is a problem i
 
 or if you have you own models in an app called **your-app**::
 
-  ./manage.py dumpdata dataservice jobservice mserveoauth your-app > data_dump.json
+  ./manage.py dumpdata your-app > your-app_data.json
 
 Then perform the upgrade::
 
