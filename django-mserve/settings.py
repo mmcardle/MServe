@@ -39,6 +39,17 @@ except ImportError:
     MSERVE_LOG='/var/log/mserve'
     DBNAME='mservedb'
     IMODEL_HOME='/opt/iModel-1.0-beta-3-SNAPSHOT'
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME' : DBNAME,             # Or path to database file if using sqlite3.
+            'USER' : 'root',        # Not used with sqlite3.
+            'PASSWORD' : 'pass',       # Not used with sqlite3.
+            'HOST' : '',            # Set to empty string for localhost. Not used with sqlite3.
+            'PORT' : '',            # Set to empty string for default. Not used with sqlite3.
+        }
+    }
+
 
 
 logging.basicConfig(
@@ -57,16 +68,7 @@ ADMINS = (
 )
 
 MANAGERS = ADMINS
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-	'NAME' : DBNAME,             # Or path to database file if using sqlite3.
-	'USER' : 'root',        # Not used with sqlite3.
-	'PASSWORD' : 'pass',       # Not used with sqlite3.
-	'HOST' : '',            # Set to empty string for localhost. Not used with sqlite3.
-	'PORT' : '',            # Set to empty string for default. Not used with sqlite3.
-    }
-}
+
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name

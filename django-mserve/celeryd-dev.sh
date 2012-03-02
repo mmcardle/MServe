@@ -4,9 +4,11 @@ COMMAND=$1
 if [ -z "${COMMAND}" ] ; then
         COMMAND="restart"
 fi
-MSERVE_HOME=/home/mm/dev/mserve/django-mserve/
-MSERVE_DATA=/home/mm/mserve-test-data/
-MSERVE_LOG=/home/mm/dev/mserve/django-mserve/
+
+MSERVE_HOME=/home/jjw/Work/Projects/MServe/Code/Projects/mserve/django-mserve/
+MSERVE_DATA=/home/jjw/Work/Projects/MServe/Code/mserve-test-data/
+MSERVE_LOG=/home/jjw/Work/Projects/MServe/Code/
+
 hn=`hostname`
 ${MSERVE_HOME}manage.py celeryd_multi ${COMMAND} -E --logfile=${MSERVE_LOG}celeryd%n.log -l DEBUG 2 -n:1 normal.$hn -n:2 priority.$hn -Q:1 normal_tasks -Q:2 priority_tasks -c 5 --pidfile=${MSERVE_DATA}celeryd%n.pid
 

@@ -259,7 +259,7 @@ Setup the database::
   python mserve/django-mserve/manage.py syncdb
   python mserve/django-mserve/manage.py migrate dataservice
   python mserve/django-mserve/manage.py migrate jobservice
-  python mserve/django-mserve/manage.py migrate celery
+  python mserve/django-mserve/manage.py migrate djcelery
 
 Run the development service::
 
