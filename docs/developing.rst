@@ -254,6 +254,12 @@ Edit the **settings_dev.py**
 * Set the **MSERVE_LOG** to the directory where you want to save the development log file (DEFAULT=os.getcwd())
 * Set the **DBNAME** to the name of the developement database (DEFAULT=mservedbdev)
 
+Create the dev databases (if not using sqlite)::
+
+ CREATE DATABASE mservedbdev; FLUSH PRIVILEGES;
+ CREATE USER 'root'@'%' IDENTIFIED BY 'pass';
+ GRANT ALL ON mservedbdev.* TO 'root';
+
 Setup the database::
 
   python mserve/django-mserve/manage.py syncdb
@@ -267,6 +273,17 @@ Run the development service::
 
 Visit `127.0.0.1:8000 <http://127.0.0.1:8000>`_ in your browser, output will be to the console window
 
+
+Running the FUSE mount daemon
+-----------------------------
+
+Run the command::
+
+  sudo python mserve/django-mserve/mservefuse.py /export/mserve
+
+Then browse to::
+
+  ls /export/mserve/<service-customer-auth-id>/
 
 Testing
 ------------------
@@ -317,6 +334,54 @@ In the docs folder in the MServe checkout run::
 
 For the full documentation to be build the MServe modules must be importable on the machine doing the build
 
+Upgrading MServe
+------------------
+
+MServe can be upgrade using the setup-mserve script, but it would be prudent before an upgrade to save the database
+Its also a good idea to save each app individually, in case there is a problem importing later::
+
+ ./manage.py dumpdata dataservice > dataservice_data.json
+ ./manage.py dumpdata jobservice  > jobservice_data.json
+ ./manage.py dumpdata mserveoauth > mserveoauth_data.json
+ ./manage.py dumpdata djcelery > djcelery_data.json
+ ./manage.py dumpdata auth > auth_data.json
+ ./manage.py dumpdata admin > admin_data.json
+ ./manage.py dumpdata contentypes > contentypes_data.json
+ ./manage.py dumpdata sites > sites_data.json
+ ./manage.py dumpdata sessions > sessions_data.json
+ ./manage.py dumpdata django_openid_auth > django_openid_auth_data.json
+ ./manage.py dumpdata piston > piston_data.json
+ ./manage.py dumpdata webdav > webdav_data.json
+ ./manage.py dumpdata request > request_data.json
+ ./manage.py dumpdata south > south_data.json
+
+
+or if you have you own models in an app called **your-app**::
+
+  ./manage.py dumpdata your-app > your-app_data.json
+
+Then perform the upgrade::
+
+  ./setup-mserve.sh -c update -a mserve.tar.gz
+
+If this is **successful** then nothing more needs to be done, as the upgrade handles data and schema migration
+
+If this is **unsuccessful** then you may have to do a clean install and import data ::
+
+ ./manage.py loaddata *_data.json
+
+
+Common Errors
++++++++++++++++++
+
+The install script reads variables from $MSERVE_HOME/.installation_summary.txt, if it cant find this file it will fail and
+keep prompting for the mysql password, even if you supply it . This may have been caused by the install script failing
+mid install, so the location of this file may have moved to a temporary directory called /opt/mserve-$DATE/
+
+If this is the case the script can be run with the extra parameter pointing to this directory::
+
+  ./setup-mserve.sh -a mserve.tar.gz -m /opt/mserve-$DATE/
+
 ------------------
 Debugging MServe
 ------------------
@@ -363,10 +428,10 @@ Development::
 
 Live Server::
 
-  /var/log/mserve/mserve.log
-  /var/log/mserve/celeryd{n}.log (where n is the number of the queue)
-  /var/log/apache/access.log
-  /var/log/apache/error.log
+ /var/log/mserve/mserve.log
+ /var/log/mserve/celeryd{n}.log (where n is the number of the queue)
+ /var/log/apache/access.log
+ /var/log/apache/error.log
 
 Tests being submitted but not running
 ++++++++++++++++++++++++++++++++++++++
@@ -381,13 +446,13 @@ Check the celery tasks are running, by default there should be 5 **normal** queu
  www-data 24412 24401 00:11:45 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
  www-data 24413 24401 00:10:28 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q priority_tasks -c 5 -l DEBUG -n priority.mserve
  www-data 24424     1 10:40:28 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
- root     24444     1 02:56:19 /usr/bin/python /opt/mserve/manage.py celerycam --detach -f celerycam.log --pidfile=/var/opt/mserve-data/celerycam.pid
+ root     24444     1 02:56:19 /usr/bin/python /opt/mserve/manage.py celerycam --detach -f celerycam.log
  www-data 24447 24424 00:02:41 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
  www-data 24449 24424 00:02:46 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
  www-data 24450 24424 00:02:37 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
  www-data 24451 24424 00:02:54 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
  www-data 24452 24424 00:02:46 /usr/bin/python /opt/mserve/manage.py celeryd -E -Q normal_tasks -c 5 -l DEBUG -n normal.mserve
- root     24467     1 00:00:01 /usr/bin/python /opt/mserve/manage.py celerybeat --detach -f celerybeat.log --pidfile=/var/opt/mserve-data/celerybeat.pid
+ root     24467     1 00:00:01 /usr/bin/python /opt/mserve/manage.py celerybeat --detach -f celerybeat.log
 
 Tasks not being submitted
 ++++++++++++++++++++++++++
