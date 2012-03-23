@@ -44,11 +44,12 @@ from dataservice.models import MFile
 from jobservice.models import JobOutput
 from django.shortcuts import render_to_response
 
-def tar_files(temp_tarfile, files):
+def tar_files(temp_tarfile, base_dir, files):
     tar = tarfile.open(temp_tarfile, "w:gz")
     for name in files:
-        (head,tail) = os.path.split(name)
-        tar.add(name,arcname=tail)
+        fname = os.path.join(base_dir, name)
+        aname = os.path.relpath(fname, base_dir)
+        tar.add(fname, arcname=aname)
     tar.close()
 
 
@@ -72,15 +73,15 @@ def get_files(directory, prefix=None, suffix=None, after=None):
     return _files
 
 
-def _ssh_r2d(file, export_type, tmpimage, start_frame=1, end_frame=2):
+def _ssh_r2d(file, export_type, tmp_folder, start_frame=1, end_frame=2):
 
     ssh = MultiSSHClient()
 
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(settings.R3D_HOST, username=settings.R3D_USER, password=settings.R3D_PASS)
-    output_file_dir,output_file_name = os.path.split(tmpimage)
+    #output_file_dir,output_file_name = os.path.split(tmpimage)
 
-    command = "redline --i %s --outDir %s -o %s --exportPreset %s -s %s -e %s" % (file, output_file_dir, output_file_name, export_type, start_frame, end_frame)
+    command = "redline --i %s --outDir %s/%s --exportPreset %s -s %s -e %s" % (file, tmp_folder, export_type, start_frame, end_frame)
     logging.info(command)
 
     stdin, stdout, stderr = ssh.exec_command(command)
@@ -120,21 +121,9 @@ def red2dtranscode(inputs,outputs,options={},callbacks=[]):
 
         file_path=input_mfile.file.path
         file_relative= os.path.join(file_path.replace(file_local_mount,remote_mount))
-        tfile_uuid = "r2d-image-"+str(uuid.uuid4())
+        tfile_uuid = "r2d-transcode-"+str(uuid.uuid4())
         remoteimage = os.path.join(remote_mount,tfile_uuid)
-
-        if export_type == "tiff":
-            suffix = "."+("0".zfill(6))+".tif"
-            localimage = os.path.join(file_local_mount,tfile_uuid,tfile_uuid+suffix)
-        elif export_type == "avid":
-            input_name = input_mfile.name.split(".")[0]
-            fname = input_name+".mxf"
-            localimage = os.path.join(file_local_mount,"MXF",fname)
-        elif export_type == "fcp":
-            fname = tfile_uuid+".mov"
-            localimage = os.path.join(file_local_mount,fname)
-        else:
-            raise Exception("Unknown export type '%s'" % export_type)
+        localimage = os.path.join(file_local_mount,tfile_uuid)
 
         logging.info("file_local_mount %s" % file_local_mount)
         logging.info("file_path %s" % file_path)
@@ -143,28 +132,12 @@ def red2dtranscode(inputs,outputs,options={},callbacks=[]):
         logging.info("localimage %s" % localimage)
 
         result = _ssh_r2d(file_relative,export_type,remoteimage,start_frame=start_frame,end_frame=end_frame)
-        outputfile = None
 
-        if export_type == "tiff":
-            localdir = os.path.join(file_local_mount,tfile_uuid)
-            temp_tarfile = tempfile.NamedTemporaryFile('wb')
-            tar_files(temp_tarfile.name, [localdir] )
-            outputfile = open(temp_tarfile.name, 'r')
-
-        if export_type == "avid":
-            localdir = os.path.join(file_local_mount,"MXF")
-            files = get_files(localdir, prefix=input_mfile.name[:8], after=started)
-            logging.info(files)
-            temp_tarfile = tempfile.NamedTemporaryFile('wb')
-            tar_files(temp_tarfile.name, files )
-            outputfile = open(temp_tarfile.name, 'r')
-
-        if export_type == "fcp":
-            files = [localimage]
-            logging.info(files)
-            temp_tarfile = tempfile.NamedTemporaryFile('wb')
-            tar_files(temp_tarfile.name, files )
-            outputfile = open(temp_tarfile.name, 'r')
+        localdir = os.path.join(file_local_mount,tfile_uuid)
+        files = os.listdir(localdir)
+        temp_tarfile = tempfile.NamedTemporaryFile('wb')
+        tar_files(temp_tarfile.name, localdir, files)
+        outputfile = open(temp_tarfile.name, 'r')
 
         logging.info("outputfile %s", outputfile)
 
