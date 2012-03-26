@@ -4,38 +4,47 @@ MServe IPR
 
 Software distributed/used/referenced in the source code
 
-============            ============                                        ============
-Library                 URL                                                 License
-============            ============                                        ============
+============            			============                                        ============
+Library                 			URL                                                 License
+============            			============                                        ============
 
-Django                  https://www.djangoproject.com/                      BSD
-django-piston           https://bitbucket.org/jespern/django-piston/        BSD
-django-request          https://github.com/kylef/django-request             BSD
-django-south            http://south.aeracode.org/                          Apache v2.0
-django-debug_toolbar	http://pypi.python.org/pypi/django-debug-toolbar    BSD
-django-oauth            http://bitbucket.org/david/django-oauth             BSD
-django-openid-auth      https://bitbucket.org/sramana/django-openid-auth    BSD
-python-oauth2           https://github.com/simplegeo/python-oauth2          MIT
-python-openid           http://pypi.python.org/pypi/python-openid/          Apache v2.0
-python-magic            http://pypi.python.org/pypi/python-magic/0.4.2      PSF
-python-pycurl           http://pypi.python.org/pypi/pycurl/7.18.1           LGPL v2.1
-python-fuse             http://pypi.python.org/pypi/fuse-python/0.2         LGPL v2.1
-jquery                  http://jquery.org/license/                          MIT + GPL v2
-jquery-ui               http://jqueryui.com/about                           MIT + GPL v2
-jquery-file-upload      https://github.com/blueimp/jQuery-File-Upload       MIT
-jquery-quicksand        http://razorjack.net/quicksand                      MIT + GPL v2
-jquery-address          http://www.asual.com/jquery/address/                MIT + GPL v2
-jquery-blockUI          http://jquery.malsup.com/block/                     MIT + GPL v3
-jquery-js-tree          http://www.jstree.com/                              MIT + GPL v3
-jquery-flot             http://code.google.com/p/flot/                      MIT
-============            ============                                        ============
+Django                  			https://www.djangoproject.com/                      BSD
+django-debug_toolbar				http://pypi.python.org/pypi/django-debug-toolbar    BSD
+django-oauth            			http://bitbucket.org/david/django-oauth             BSD
+django-openid-auth      			https://bitbucket.org/sramana/django-openid-auth    BSD
+django-piston           			https://bitbucket.org/jespern/django-piston/        BSD
+django-request          			https://github.com/kylef/django-request             BSD
+django-south            			http://south.aeracode.org/                          Apache v2.0
+excanvas							http://code.google.com/p/explorercanvas/			Apache v2.0		license/apache-2.0-license.txt
+jquery                  			http://jquery.org/license/                          MIT				license/jquery-license.txt
+jquery-address          			http://www.asual.com/jquery/address/                MIT				license/jquery-license.txt
+jquery-blockUI          			http://jquery.malsup.com/block/                     MIT				license/jquery-blockUI-license.txt
+jquery-colorhelpers					http://code.google.com/p/flot/source/browse/trunk/jquery.colorhelpers.js
+																						MIT				license/jquery-colorhelpers-license.txt
+jquery-dateplustimepicker			https://github.com/manfer/jQuery-DatePlusTime-Picker
+																						MIT				license/jquery-dateplustimepicker-license.txt
+jquery-file-upload      			https://github.com/blueimp/jQuery-File-Upload       MIT				license/jquery-fileupload-license.txt
+jquery-flot             			http://code.google.com/p/flot/                      MIT				license/jquery-flot-license.txt
+jquery-js-tree          			http://www.jstree.com/                              MIT				license/jquery-jstree-license.txt
+jquery-quicksand        			http://razorjack.net/quicksand                      MIT				license/jquery-quicksand-license.txt
+jquery-relatize_date				https://github.com/github/jquery-relatize_date		?		Rick Olson (http://techno-weenie.net/)
+jquery-smartpaginator				http://www.egrappler.com/jquery-pagination-plugin-smart-paginator/
+																						Non-standard	license/jquery-smartpaginator-license.txt
+jquery-tmpl							https://github.com/jquery/jquery-tmpl				MIT				license/jquery-tmpl-license.txt
+jquery-ui               			http://jqueryui.com/about                           MIT				license/jqueryUI-license.txt
+number_format routine from php.js	http://kevin.vanzonneveld.net						MIT				license/php.js-license.txt
+python-fuse             			http://pypi.python.org/pypi/fuse-python/0.2         LGPL v2.1
+python-magic            			http://pypi.python.org/pypi/python-magic/0.4.2      PSF
+python-oauth2           			https://github.com/simplegeo/python-oauth2          MIT
+python-openid           			http://pypi.python.org/pypi/python-openid/          Apache v2.0
+python-pycurl           			http://pypi.python.org/pypi/pycurl/7.18.1           LGPL v2.1
+============            			============                                        ============
 
 jquery smart paginator: 
 Site: http://www.egrappler.com/jquery-pagination-plugin-smart-paginator/
 License: http://www.egrappler.com/license/
-
-
 The license is not completely clear though...
+
 
 Software used at runtime
 
