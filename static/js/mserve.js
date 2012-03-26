@@ -1308,7 +1308,7 @@
                                var nbinputs = jobdescriptions['descriptions'][selected]['nbinputs']
 
                                if(targs.length == 0){
-                                    $form.find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguements"} ))
+                                    $form.find(".argsmessage").append($( "#messageTemplate" ).tmpl( {"message":"This Job type takes no arguments"} ))
                                }
 
                                for(t in targs){
