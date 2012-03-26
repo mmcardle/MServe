@@ -84,7 +84,7 @@ def copyfromurl(inputs,outputs,options={},callbacks=[]):
         for callback in callbacks:
             subtask(callback).delay()
         
-    return { "message" : "Copy from url was successfull"}
+    return { "message" : "Copy from url was successful"}
 
 # Blender Command Line API
 #
