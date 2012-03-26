@@ -940,7 +940,7 @@ configure_apache () {
             ServerAdmin webmaster@localhost
             RewriteEngine On
             RewriteCond %{HTTPS} !=on
-            RewriteRule ^(.*) https://%{SERVER_NAME}/$1 [R,L]
+            RewriteRule ^(.*) https://%{SERVER_NAME}/\$1 [R,L]
             </VirtualHost>" > $_redirect || f_ "failed to create mserve http to https redirect correctly"
         fi
 	local _target=/etc/apache2/sites-available/mserve
@@ -962,7 +962,7 @@ configure_apache () {
 	RewriteCond %{REQUEST_FILENAME} !-f\n\
 	RewriteRule ^/(.*)$ /mysite.fcgi/\$1 [QSA,L]\n\n\
         <Location /dl/>\n\
-            SetEnvIf Request_URI '^.*/([^/]*)$' FILENAME=$1\n\
+            SetEnvIf Request_URI '^.*/([^/]*)$' FILENAME=\$1\n\
             Header set 'Content-disposition' 'attachment; filename=%{FILENAME}e'\n\
             UnsetEnv FILENAME\n\
             AuthTokenSecret 'ugeaptuk6'\n\
