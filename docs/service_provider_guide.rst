@@ -10,7 +10,7 @@ There is only one way in which you can be given access to an MServe Service.
 
 * Directly given an URL by a administrator provider
 
-   http(s)://<hostname.fullyqualified>/browse/<unique-capability-id>/
+   http(s)://<hostname.fully-qualified>/browse/<unique-capability-id>/
 
 Configuring a Service
 **********************
@@ -18,14 +18,14 @@ Configuring a Service
 Properties
 -----------
 
-The **start** and **end** time of the service is displayed here (currently uneditable)
+The **start** and **end** time of the service is displayed here (currently not editable)
 
 The **priority** of the service is display here; this controls what queue the tasks for this service are assigned to, either **High** or **Low**
 
 Webdav Access
 --------------
 
-This is the `WebDAV <http://en.wikipedia.org/wiki/WebDAV>`_ url for accessing the service over the *dav* protocol. WebDAV allow file system access to content stored in MServe, and manipluation of the folder struture
+This is the `WebDAV <http://en.wikipedia.org/wiki/WebDAV>`_ url for accessing the service over the *dav* protocol. WebDAV allow file system access to content stored in MServe, and manipulation of the folder structure
 
 WebDAV can be mounted using the following command (davfs2 on Ubuntu)::
 
@@ -66,7 +66,7 @@ Tasks can be added by using the form under each task set, tasks set are run in o
 Tasks require the following information
 
 * Task Name - A descriptive name for the Task, ie. "Thumbnail images"
-* Task - The name of the task to run - ie. "thumbimage"
+* Task - The name of the task to run - e.g. "thumb_image"
 * Condition - A precondition for the task, which if evaluated to True or left blank lets the task run.
 * Argument - A set of json encoded arguments passed to the task at execution
 
