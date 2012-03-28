@@ -1,4 +1,18 @@
+/////////////////////////////////////////////////////////////////////////
+//
+// This software is distributed WITHOUT ANY WARRANTY, without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+// PURPOSE, except where stated in the License Agreement supplied with
+// the software.
+//
+// Received by Mark McArdle, University of Southampton IT Innovation 
+// Centre in good faith 2011-03-18 from 
+// https://github.com/github/jquery-relatize_date
+//
+/////////////////////////////////////////////////////////////////////////
+
 // All credit goes to Rick Olson.
+
 (function($) {
   $.fn.relatizeDate = function() {
     return $(this).each(function() {

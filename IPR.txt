@@ -1,47 +1,59 @@
-
 MServe IPR
-=============
+============
 
 Software distributed/used/referenced in the source code
 
-============            ============                                        ============
-Library                 URL                                                 License
-============            ============                                        ============
+============            			============                                        ============	============
+Library                 			URL                                                 License			License file
+============            			============                                        ============	============
 
-Django                  https://www.djangoproject.com/                      BSD
-django-piston           https://bitbucket.org/jespern/django-piston/        BSD
-django-request          https://github.com/kylef/django-request             BSD
-django-south            http://south.aeracode.org/                          Apache v2.0
-django-debug_toolbar	http://pypi.python.org/pypi/django-debug-toolbar    BSD
-django-oauth            http://bitbucket.org/david/django-oauth             BSD
-django-openid-auth	https://bitbucket.org/sramana/django-openid-auth    BSD
-python-oauth2           https://github.com/simplegeo/python-oauth2          MIT
-python-openid           http://pypi.python.org/pypi/python-openid/          Apache v2.0
-python-magic            http://pypi.python.org/pypi/python-magic/0.4.2      PSF
-python-pycurl           http://pypi.python.org/pypi/pycurl/7.18.1           LGPL v2.1
-python-fuse             http://pypi.python.org/pypi/fuse-python/0.2         LGPL v2.1
-jquery                  http://jquery.org/license/                          MIT + GPL v2
-jquery-ui               http://jqueryui.com/about                           MIT + GPL v2
-jquery-file-upload	https://github.com/blueimp/jQuery-File-Upload       MIT
-jquery-quicksand	http://razorjack.net/quicksand                      MIT + GPL v2
-jquery-address          http://www.asual.com/jquery/address/                MIT + GPL v2
-jquery-blockUI          http://jquery.malsup.com/block/                     MIT + GPL v3
-jquery-js-tree          http://www.jstree.com/                              MIT + GPL v3
-jquery-flot             http://code.google.com/p/flot/                      MIT
-============            ============                                        ============
+Django                  			https://www.djangoproject.com/                      BSD				licenses/django-license.txt
+django-debug_toolbar				http://pypi.python.org/pypi/django-debug-toolbar    BSD				licenses/django-debug_toolbar-license.txt
+django-oauth            			http://bitbucket.org/david/django-oauth             BSD				licenses/django-oauth-license.txt
+django-openid-auth      			https://bitbucket.org/sramana/django-openid-auth    BSD				licenses/django-openid-license.txt
+django-piston           			https://bitbucket.org/jespern/django-piston/        BSD				licenses/django-piston-license.txt
+django-request          			https://github.com/kylef/django-request             BSD				licenses/django-request-license.txt
+django-south            			http://south.aeracode.org/                          Apache v2.0		licenses/apache-2.0-license.txt
+excanvas							http://code.google.com/p/explorercanvas/			Apache v2.0		licenses/apache-2.0-license.txt
+jquery                  			http://jquery.org/license/                          MIT				licenses/jquery-license.txt
+jquery-address          			http://www.asual.com/jquery/address/                MIT				licenses/jquery-license.txt
+jquery-blockUI          			http://jquery.malsup.com/block/                     MIT				licenses/jquery-blockUI-license.txt
+jquery-colorhelpers					http://code.google.com/p/flot/source/browse/trunk/jquery.colorhelpers.js
+																						MIT				licenses/jquery-colorhelpers-license.txt
+jquery-dateplustimepicker			https://github.com/manfer/jQuery-DatePlusTime-Picker
+																						MIT				licenses/jquery-dateplustimepicker-license.txt
+jquery-file-upload      			https://github.com/blueimp/jQuery-File-Upload       MIT				licenses/jquery-fileupload-license.txt
+jquery-flot             			http://code.google.com/p/flot/                      MIT				licenses/jquery-flot-license.txt
+jquery-js-tree          			http://www.jstree.com/                              MIT				licenses/jquery-jstree-license.txt
+jquery-quicksand        			http://razorjack.net/quicksand                      MIT				licenses/jquery-quicksand-license.txt
+jquery-relatize_date				https://github.com/github/jquery-relatize_date		Public domain
+jquery-smartpaginator				http://www.egrappler.com/jquery-pagination-plugin-smart-paginator/
+																						Non-standard	licenses/jquery-smartpaginator-license.txt
+jquery-tmpl							https://github.com/jquery/jquery-tmpl				MIT				licenses/jquery-tmpl-license.txt
+jquery-ui               			http://jqueryui.com/about                           MIT				licenses/jqueryUI-license.txt
+Kaltura HTML5 Video Player Library	http://www.kaltura.org/project/HTML5_Video_Media_JavaScript_Library
+																						MIT				licenses/kaltura-license.txt
+number_format routine from php.js	http://kevin.vanzonneveld.net						MIT				licenses/php.js-license.txt
+fusepy								http://code.google.com/p/fusepy/					Non-standard	licenses/fusepy-license.txt
+python-magic            			http://pypi.python.org/pypi/python-magic/0.4.2      PSF license		licenses/PSF-license.txt
+python-oauth2           			https://github.com/simplegeo/python-oauth2          MIT				licenses/python-oauth2-license.txt
+python-openid           			http://pypi.python.org/pypi/python-openid/          Apache v2.0		licenses/apache-2.0-license.txt
+python-pycurl           			http://pypi.python.org/pypi/pycurl/7.18.1           LGPL v2.1		licenses/LGPL-2.1-license.txt
+============            			============                                        ============	============
+
 
 Software used at runtime
 
 ============    ============                                    ============    =========
 Library         URL                                             License         Required
 ============    ============                                    ============    =========
-RabbitMQ	http://git-scm.com/                             GPL             Replaceable
+RabbitMQ        http://git-scm.com/                             GPL             Replaceable
 MYSQL           http://www.mysql.com/                           GPL v2          Replaceable
 Celery          http://celeryproject.org/                       BSD
 FFMpeg          http://ffmpeg.org                               LGPL v2.1       Optional
 x264            http://www.videolan.org/developers/x264.html	GPL v2          Optional
 Lame            http://lame.sourceforge.net/                    LGPL            Optional
 Apache          http://httpd.apache.org/                        Apache v2
-mod auth token	http://code.google.com/p/mod-auth-token/	Apache v2
-Memcached	http://www.memcached.org/                       BSD
+mod auth token	http://code.google.com/p/mod-auth-token/	    Apache v2
+Memcached       http://www.memcached.org/                       BSD
 ============    ============                                    ============    =========

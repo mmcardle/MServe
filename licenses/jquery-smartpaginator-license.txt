@@ -1,0 +1,16 @@
+All files at egrappler.com are free for personal and commercial use. However, you cannot redistribute, sale, re-upload these files. Do not offer download links at your site without written consent of the author.
+
+[Note from Stephen Phillips, University of Southampton IT Innovation Centre:
+
+I emailed the author 2012-03-26 seeking the following clarification:
+"I am guessing that the intention of the license statement is to let people use it for what they like but not to provide alternative download locations.
+
+"However, the statement "you cannot redistribute" creates a problem for us as we would like to include your javascript plugin as part of the source code of our service (which will then go on GitHub).  This is what I would call "redistributing".
+
+"Please can you give us permission to include your smart paginator plugin as part of the source code of our web application?"
+
+I received the following response:
+
+"Yes, you are absolutely correct, that particular statement is only for preventing downloads from other sites. Its only meant for blogger who share resources from other blogs. You are absolutely free to use smart paginator and redistribute the files with your application."
+
+]

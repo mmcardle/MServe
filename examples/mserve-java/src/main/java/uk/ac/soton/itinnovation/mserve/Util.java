@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////
 //
-//  University of Southampton IT Innovation Centre, 2010
+// © University of Southampton IT Innovation Centre, 2010
 //
 // Copyright in this library belongs to the University of Southampton
 // University Road, Highfield, Southampton, UK, SO17 1BJ
@@ -18,19 +18,12 @@
 //
 //	Created By :			Mark McArdle
 //	Created Date :			02-Jul-2009
-//	Created for Project :
+//	Created for Project :	PrestoPRIME
 //
 /////////////////////////////////////////////////////////////////////////
 //
 //
 /////////////////////////////////////////////////////////////////////////
-//
-//	Last commit info    :   $ $
-//                          $ $
-//                          $ $
-//
-/////////////////////////////////////////////////////////////////////////
-
 
 package uk.ac.soton.itinnovation.mserve;
 
