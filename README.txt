@@ -27,7 +27,7 @@ To set up MServe
 
 ./scripts/setup-mserve.sh 
 
- usage: ./setup-mserve.sh [-m mserve home] [-d mserve data] [-s http server] [-t mserve tarball]
+ usage: ./setup-mserve.sh [-m mserve home] [-d mserve data] [-s http server] [-a mserve tarball]
 	OPTIONS:
 	-c <install|update|uninstall|dependencies>  # script operation, default: install
 	-m <MSERVE home directory>                  # default: /var/opt/mserve
