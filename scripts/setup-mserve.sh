@@ -807,7 +807,7 @@ MSERVE_TEMP=`mktemp -d`
 # Install mserve 
 echo -n "installing mserve from"
 if [ "$MSERVE_ARCHIVE" == "NOTSET" ]; then
-	mserve_url="git://soave.it-innovation.soton.ac.uk/git/mserve"
+	mserve_url="git://github.com/itinnov-mserve/MServe.git"
 	echo " $mserve_url"
 	git clone $mserve_url $MSERVE_CHECKOUT || f_ "failed to fetch mserve from $mserve_url"
 else
